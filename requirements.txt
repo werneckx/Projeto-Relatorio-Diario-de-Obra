@@ -1,0 +1,10 @@
+Flask
+Flask-Cors
+Flask-Migrate
+Flask-SQLAlchemy
+python-dotenv
+PyMySQL
+Werkzeug
+flask-login
+qrcode[pil]
+pdfkit

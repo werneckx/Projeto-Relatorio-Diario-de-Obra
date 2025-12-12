@@ -1,0 +1,319 @@
+{% extends "base.html" %}
+
+{% block title %}
+{% if view_mode %}Visualizar{% elif item and item.id %}Editar{% else %}Cadastrar{% endif %} Usuário
+{% endblock %}
+
+{% block content %}
+<div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div
+        class="mb-6 p-4 rounded-lg flex items-center gap-3 border shadow-sm transition-all
+   {{ 'bg-red-100 text-red-700 border-red-200' if category == 'danger' else 'bg-green-100 text-green-700 border-green-200' }}">
+        <i class="fas {{ 'fa-exclamation-circle' if category == 'danger' else 'fa-check-circle' }}"></i>
+        <span class="text-sm font-bold">{{ message }}</span>
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-slate-800">
+            {% if view_mode %}Visualizar{% elif item and item.id %}Editar{% else %}Novo{% endif %} Usuário
+        </h1>
+        <p class="text-sm text-slate-500">Gestão de credenciais, status e acessos operacionais.</p>
+    </div>
+
+    <form action="{{ url_for('auth.gerar_usuario') }}" method="POST" id="mainForm" class="space-y-6 rdo-form">
+        <input type="hidden" name="id" value="{{ item.id if item and item.id }}">
+        <input type="hidden" name="categoria" value="usuario">
+
+        <section class="bg-white rounded-lg p-6 border shadow-sm">
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <h3
+                        class="font-semibold text-slate-800 border-l-2 border-blue-600 pl-3 uppercase text-sm tracking-wide">
+                        Informações Pessoais</h3>
+                </div>
+
+                <div class="flex items-center h-10 px-4 bg-slate-50 border rounded-lg shadow-inner">
+                    <label
+                        class="relative inline-flex items-center group {{ 'cursor-not-allowed opacity-60' if view_mode else 'cursor-pointer' }}">
+                        <input type="checkbox" name="status" class="sr-only peer" {{ 'checked' if (item and item.status)
+                            or not item }} {{ 'disabled' if view_mode }}>
+                        <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer 
+         peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] 
+         after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full 
+         after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        <span
+                            class="ml-3 text-[10px] font-bold transition-colors {{ 'text-blue-600' if (item and item.status) or not item else 'text-slate-400' }}"
+                            id="statusLabel">
+                            {{ 'Acesso Liberado' if (item and item.status) or not item else
+                            'Acesso Bloqueado' }}
+                        </span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div class="md:col-span-2 space-y-1">
+                    <label class="text-xs font-bold text-slate-500 uppercase">Nome Completo <span
+                            class="text-red-500">*</span></label>
+                    <input type="text" name="nome" value="{{ item.nome if item }}"
+                        class="w-full border rounded-lg px-3 py-2 transition h-10 {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}"
+                        {{ 'readonly' if view_mode }} required>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-slate-500 uppercase">CPF (Somente números)
+                        <span class="text-red-500">*</span></label>
+                    <input type="text" id="cpf" name="cpf" value="{{ item.cpf if item }}" placeholder="00000000000"
+                        maxlength="11"
+                        class="w-full border rounded-lg px-3 py-2 h-10 {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}"
+                        {{ 'readonly' if view_mode }} required>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-slate-500 uppercase">Papel / Cargo <span
+                            class="text-red-500">*</span></label>
+                    <div class="relative h-10">
+                        <button type="button" id="roleDropdownBtn" {{ 'disabled' if view_mode }}
+                            class="w-full flex items-center justify-between border rounded-lg px-3 bg-slate-50 h-full transition focus:ring-2 focus:ring-blue-500 outline-none {{ 'cursor-not-allowed' if view_mode }}">
+                            <span id="selectedRoleText" class="truncate">{{ item.papel if
+                                item and item.papel else
+                                'Selecione...' }}</span>
+                            <i class="fas fa-chevron-down text-xs"></i>
+                        </button>
+                        <div id="roleDropdownContent"
+                            class="hidden absolute z-30 w-full mt-1 bg-white border rounded shadow-xl overflow-hidden">
+                            <div class="p-2 space-y-1">
+                                {% set list_papeis = [('Leitor', 'Leitor (Ler
+                                informações)'), ('Operador', "Usuário
+                                (RDOs)"), ('Gestor', "Gestor (Controle)"), ('Admin',
+                                'Admin (Total)')] %}
+                                {% for val, label in list_papeis %}
+                                <label
+                                    class="flex items-center p-2 rounded hover:bg-slate-50 cursor-pointer transition">
+                                    <input type="radio" name="papel" value="{{ val }}"
+                                        class="role-radio w-4 h-4 text-blue-600" {{ 'checked' if item and
+                                        item.papel==val }} {{ 'disabled' if view_mode }} {# <--- CORREÇÃO APLICADA AQUI
+                                        #} required>
+                                    <span class="ml-3 text-sm text-slate-700">{{
+                                        label }}</span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="md:col-span-2 space-y-1">
+                    <label class="text-xs font-bold text-slate-500 uppercase">E-mail Corporativo
+                        <span class="text-red-500">*</span></label>
+                    <input type="email" name="email" value="{{ item.email if item }}"
+                        class="w-full border rounded-lg px-3 py-2 h-10 transition {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}"
+                        {{ 'readonly' if view_mode }} required>
+                </div>
+            </div>
+        </section>
+
+        <section class="bg-white rounded-lg p-6 border shadow-sm">
+            <div class="flex items-center gap-3 mb-6">
+                <div
+                    class="w-10 h-10 rounded bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+                    <i class="fas fa-building"></i>
+                </div>
+                <h3
+                    class="font-semibold text-slate-800 border-l-2 border-emerald-600 pl-3 uppercase text-sm tracking-wide">
+                    Acesso a Obras <span class="text-red-500">*</span></h3>
+            </div>
+
+            <div class="relative w-full max-w-lg">
+                <button type="button" id="obraDropdownBtn" {{ 'disabled' if view_mode }}
+                    class="w-full flex items-center justify-between border rounded-lg px-4 py-2 bg-slate-50 hover:bg-slate-100 focus:ring-2 focus:ring-emerald-500 outline-none h-10 {{ 'cursor-not-allowed' if view_mode }}">
+                    <span id="selectedCountText">Selecione as obras...</span>
+                    <i class="fas fa-chevron-down text-xs"></i>
+                </button>
+                <div id="obraDropdownContent"
+                    class="hidden absolute z-20 w-full mt-1 bg-white border rounded shadow-xl overflow-hidden">
+                    <div class="max-h-56 overflow-y-auto p-2">
+                        <label
+                            class="flex items-center p-2 mb-2 border-b bg-slate-50 font-bold text-emerald-700 cursor-pointer rounded transition">
+                            <input type="checkbox" id="selectAllObras" class="mr-2" {{ 'disabled' if view_mode }}>
+                            Selecionar Todas
+                        </label>
+                        {% for obra in todas_obras %}
+                        <label class="flex items-center p-2 rounded hover:bg-slate-50 cursor-pointer transition">
+                            <input type="checkbox" name="obras_permitidas" value="{{ obra.id }}"
+                                class="obra-checkbox w-4 h-4 text-emerald-600 rounded" {{ 'checked' if item and obra in
+                                item.obras_permitidas }} {{ 'disabled' if view_mode }}>
+                            <span class="ml-3 text-sm text-slate-700">{{ obra.nome }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        {# INÍCIO DA MODIFICAÇÃO: Oculta a seção de segurança no modo de visualização #}
+        {% if not view_mode %}
+        <section class="bg-white rounded-lg p-6 border shadow-sm">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h3
+                        class="font-semibold text-slate-800 border-l-2 border-red-600 pl-3 uppercase text-sm tracking-wide">
+                        Segurança</h3>
+                </div>
+                {% if not (item and item.id) %}
+                <button type="button" onclick="togglePasswords()"
+                    class="text-blue-600 text-xs font-bold hover:underline flex items-center gap-1">
+                    <i class="fas fa-eye" id="eyeIcon"></i> <span id="eyeText">Visualizar
+                        Senhas</span>
+                </button>
+                {% endif %}
+            </div>
+
+
+            {% if not (item and item.id) %}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div class="relative">
+                    <input type="password" name="senha" id="senha"
+                        placeholder="Nova Senha (Opcional, padrão EnfilSA@) *"
+                        pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
+                        class="w-full border rounded-lg px-3 py-2 h-10 outline-none pr-10 focus:ring-2 focus:ring-red-500 transition">
+                </div>
+                <div class="relative">
+                    <input type="password" id="senha_confirm" placeholder="Confirmar Senha *"
+                        class="w-full border rounded-lg px-3 py-2 h-10 outline-none focus:ring-2 focus:ring-red-500 transition">
+                </div>
+            </div>
+            {% endif %}
+
+            {% if item and item.id %}
+            <button type="button" onclick="confirmReset('{{ item.id }}')"
+                class="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 px-6 rounded-lg font-bold text-xs uppercase transition tracking-wider">Resetar
+                Senha para Padrão (EnfilSA@)</button>
+            {% endif %}
+        </section>
+        {% endif %}
+        {# FIM DA MODIFICAÇÃO #}
+
+        <div class="flex flex-col sm:flex-row gap-3 pt-4 border-t">
+            {% if view_mode %}
+            {# MOSTRA: Botão "Editar" e "Voltar" no modo de visualização #}
+            <a href="{{ url_for('auth.editar_usuario', id=item.id) }}"
+                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-sm text-center transition flex items-center justify-center gap-2">
+                <i class="fas fa-edit"></i> Editar Usuário
+            </a>
+            <a href="{{ url_for('auth.lista_usuarios') }}"
+                class="flex-1 bg-white border border-slate-300 text-slate-500 font-bold py-3 rounded-lg text-center transition hover:bg-slate-50">Voltar
+                para Lista</a>
+            {% else %}
+            {# MOSTRA: Botões "Salvar" e "Cancelar" no modo de edição/cadastro #}
+            <button type="submit" id="submitBtn"
+                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-sm flex items-center justify-center gap-2 transition">
+                <span id="btnText">Salvar Cadastro</span>
+                <i class="fas fa-spinner fa-spin hidden" id="spinner"></i>
+            </button>
+            <a href="{{ url_for('auth.lista_usuarios') }}"
+                class="flex-1 flex items-center justify-center bg-white border border-slate-300 text-slate-500 py-3 rounded-lg font-semibold transition hover:bg-slate-50">Cancelar</a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<script>
+    function togglePasswords() {
+        const p1 = document.getElementById('senha');
+        const p2 = document.getElementById('senha_confirm');
+        const icon = document.getElementById('eyeIcon');
+        const isPass = p1.type === 'password';
+        p1.type = isPass ? 'text' : 'password';
+        if (p2) p2.type = isPass ? 'text' : 'password';
+        icon.classList.replace(isPass ? 'fa-eye' : 'fa-eye-slash', isPass ? 'fa-eye-slash' : 'fa-eye');
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // Lógica do Switch Status dinâmico
+        const statusToggle = document.querySelector('input[name="status"]');
+        const statusLabel = document.getElementById('statusLabel');
+        if (statusToggle && statusLabel) {
+            statusToggle.addEventListener('change', function () {
+                statusLabel.innerText = this.checked ? "Acesso Liberado" : "Acesso Bloqueado";
+                statusLabel.classList.toggle('text-blue-600', this.checked);
+                statusLabel.classList.toggle('text-slate-400', !this.checked);
+            });
+        }
+
+        // CPF: Números apenas
+        document.getElementById('cpf')?.addEventListener('input', (e) => e.target.value = e.target.value.replace(/\D/g, ""));
+
+        // Dropdowns Logic
+        const trigger = (btn, content) => btn?.addEventListener('click', (e) => {
+            if (btn.disabled) return;
+            content.classList.toggle('hidden'); e.stopPropagation();
+        });
+        trigger(document.getElementById('roleDropdownBtn'), document.getElementById('roleDropdownContent'));
+        trigger(document.getElementById('obraDropdownBtn'), document.getElementById('obraDropdownContent'));
+
+        // Automação Admin
+        document.querySelectorAll('.role-radio').forEach(radio => {
+            radio.addEventListener('change', () => {
+                document.getElementById('selectedRoleText').innerText = radio.parentElement.innerText.trim();
+                if (radio.value === 'Admin') {
+                    document.querySelectorAll('.obra-checkbox').forEach(c => c.checked = true);
+                    updateCount();
+                }
+            });
+        });
+
+        const selectAll = document.getElementById('selectAllObras');
+        const checkboxes = document.querySelectorAll('.obra-checkbox');
+
+        selectAll?.addEventListener('change', () => {
+            checkboxes.forEach(b => b.checked = selectAll.checked);
+            updateCount();
+        });
+
+        function updateCount() {
+            const count = document.querySelectorAll('.obra-checkbox:checked').length;
+            document.getElementById('selectedCountText').innerText = count === 0 ? "Selecione as obras..." : (count === checkboxes.length ? "Todas selecionadas" : `${count} obra(s) selecionada(s)`);
+        }
+        checkboxes.forEach(b => b.addEventListener('change', updateCount));
+        updateCount();
+
+        // Animação Salvar
+        document.getElementById('mainForm').addEventListener('submit', function (e) {
+            if (!this.checkValidity()) return;
+            const s1 = document.getElementById('senha')?.value;
+            const s2 = document.getElementById('senha_confirm')?.value;
+            if (s1 && s1 !== s2) { e.preventDefault(); alert("Senhas não conferem!"); return; }
+
+            document.getElementById('btnText').innerText = "Salvando...";
+            document.getElementById('spinner').classList.remove('hidden');
+            document.getElementById('submitBtn').disabled = true;
+        });
+
+        document.addEventListener('click', () => {
+            document.getElementById('roleDropdownContent')?.classList.add('hidden');
+            document.getElementById('obraDropdownContent')?.classList.add('hidden');
+        });
+    });
+
+    function confirmReset(id) {
+        if (confirm("Resetar senha deste usuário para 'EnfilSA@'?")) {
+            fetch(`/auth/usuario/reset/${id}`, { method: 'POST' })
+                .then(res => res.ok ? alert("Senha resetada com sucesso!") : alert("Erro ao resetar."));
+        }
+    }
+</script>
+{% endblock %}

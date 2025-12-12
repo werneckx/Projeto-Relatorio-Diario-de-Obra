@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block title %}Dashboard Operacional RDO{% endblock %}
+
+{% block content %}
+
+<div class="w-full">
+
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-slate-800">Dashboard Operacional RDO</h1>
+        <p class="text-sm text-slate-500">Visão consolidada com dados operacionais.</p>
+    </div>
+
+    <!-- Actions -->
+    <section class="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 mb-6">
+        <a href="{{ url_for('auth.adicionar_rdo') }}"
+            class="block bg-white rounded-lg p-4 border hover:shadow transition">
+            <div class="flex gap-4 items-center">
+                <div class="w-12 h-12 rounded-lg bg-blue-600 text-white flex items-center justify-center">
+                    <i class="fas fa-edit"></i>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-slate-800">Gerar Novo RDO</h3>
+                    <p class="text-xs text-slate-500">Criar relatório diário.</p>
+                </div>
+            </div>
+        </a>
+
+        <a href="{{ url_for('auth.lista_rdo') }}" class="block bg-white rounded-lg p-4 border hover:shadow transition">
+            <div class="flex gap-4 items-center">
+                <div class="w-12 h-12 rounded-lg bg-cyan-600 text-white flex items-center justify-center">
+                    <i class="fas fa-list-alt"></i>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-slate-800">Listagem de RDOs</h3>
+                    <p class="text-xs text-slate-500">Pesquisar e filtrar.</p>
+                </div>
+            </div>
+        </a>
+
+        <a href="{{ url_for('auth.cadastro_list', categoria='obra') }}"
+            class="block bg-white rounded-lg p-4 border hover:shadow transition">
+            <div class="flex gap-4 items-center">
+                <div class="w-12 h-12 rounded-lg bg-gray-700 text-white flex items-center justify-center">
+                    <i class="fas fa-building"></i>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-slate-800">Cadastros Gerais</h3>
+                    <p class="text-xs text-slate-500">Obras, clima, usuários.</p>
+                </div>
+            </div>
+        </a>
+    </section>
+
+    <!-- KPIs -->
+    <section class="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-6">
+        <div class="bg-white rounded-lg p-4 border">
+            <p class="text-xs text-slate-500 uppercase">RDOs no Mês</p>
+            <h2 class="text-2xl font-bold text-slate-800">124</h2>
+            <p class="text-xs text-emerald-600">+15.5%</p>
+        </div>
+
+        <div class="bg-white rounded-lg p-4 border">
+            <p class="text-xs text-slate-500 uppercase">Obras Ativas</p>
+            <h2 class="text-2xl font-bold text-slate-800">18</h2>
+            <p class="text-xs text-slate-400">9 em execução</p>
+        </div>
+
+        <div class="bg-white rounded-lg p-4 border">
+            <p class="text-xs text-slate-500 uppercase">Pendências</p>
+            <h2 class="text-2xl font-bold text-slate-800">4</h2>
+            <p class="text-xs text-red-600">+72h em aberto</p>
+        </div>
+
+        <div class="bg-white rounded-lg p-4 border">
+            <p class="text-xs text-slate-500 uppercase">Conformidade</p>
+            <h2 class="text-2xl font-bold text-slate-800">98.5%</h2>
+            <p class="text-xs text-slate-400">Mensal</p>
+        </div>
+    </section>
+
+    <!-- CHARTS -->
+    <section class="grid gap-6 grid-cols-1 lg:grid-cols-3">
+        <div class="bg-white rounded-lg p-6 border lg:col-span-2">
+            <h3 class="text-lg font-semibold text-slate-800 mb-4">Evolução (7 dias)</h3>
+            <canvas id="lineChart" height="140"></canvas>
+        </div>
+
+        <div class="space-y-6">
+            <div class="bg-white rounded-lg p-4 border">
+                <h4 class="text-sm font-semibold text-slate-800 mb-3">Mão de Obra</h4>
+                <canvas id="barChart" height="120"></canvas>
+            </div>
+
+            <div class="bg-white rounded-lg p-4 border">
+                <h4 class="text-sm font-semibold text-slate-800 mb-3">Status</h4>
+                <canvas id="doughnutChart" height="120"></canvas>
+            </div>
+        </div>
+    </section>
+
+</div>
+
+<script>
+    new Chart(document.getElementById("lineChart"), {
+        type: "line",
+        data: {
+            labels: ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"],
+            datasets: [{
+                data: [18, 22, 25, 21, 30, 28, 32],
+                borderColor: "#2563eb",
+                backgroundColor: "rgba(37,99,235,0.15)",
+                tension: 0.35,
+                borderWidth: 2,
+                pointRadius: 3
+            }]
+        },
+        options: { plugins: { legend: { display: false } } }
+    });
+
+    new Chart(document.getElementById("barChart"), {
+        type: "bar",
+        data: {
+            labels: ["Eng./Téc.", "Geral", "Admin"],
+            datasets: [{
+                data: [26, 150, 39],
+                backgroundColor: ["#2563eb", "#6b7280", "#0ea5e9"],
+                borderRadius: 6
+            }]
+        },
+        options: { plugins: { legend: { display: false } } }
+    });
+
+    new Chart(document.getElementById("doughnutChart"), {
+        type: "doughnut",
+        data: {
+            labels: ["Aprovados", "Revisão", "Reprov.", "Rascunho"],
+            datasets: [{
+                data: [75, 10, 5, 10],
+                backgroundColor: ["#10b981", "#0ea5e9", "#ef4444", "#d1d5db"]
+            }]
+        },
+        options: { cutout: "60%" }
+    });
+</script>
+
+{% endblock %}

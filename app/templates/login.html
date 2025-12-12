@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | Enfil</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styleForm.css') }}">
+
+    <style>
+        body {
+            background: url("{{ url_for('static', filename='image.jpg') }}") no-repeat center center fixed;
+            background-size: cover;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        body::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.1);
+            z-index: 0;
+        }
+
+        .login-page {
+            flex: 1;
+            display: flex;
+            justify-content: left;
+            align-items: center;
+            padding-left: 10%;
+            position: relative;
+            z-index: 1;
+        }
+
+        .login-container {
+            max-width: 400px;
+            width: 90%;
+            color: white;
+            background-color: var(--dark-grey);
+            padding: 2.5rem;
+            text-align: left;
+            animation: fadeIn 0.5s ease-out;
+            position: relative;
+            z-index: 2;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .login-header {
+            margin-bottom: 2rem;
+        }
+
+        .login-logo {
+            max-height: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .form-control {
+            background-color: var(--medium-grey) !important;
+            border-color: var(--dark-grey) !important;
+            color: white !important;
+            margin-top: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 1.2rem;
+            text-align: left;
+        }
+
+        .login-actions {
+            justify-content: center;
+            margin-top: 2rem;
+        }
+
+        .login-actions .button-base {
+            width: 100%;
+            background-color: var(--primary);
+            color: white !important;
+        }
+
+        .alert {
+            padding: 0.75rem 1rem;
+            margin-bottom: 1rem;
+            border-radius: 0.25rem;
+            font-size: 0.9rem;
+        }
+
+        .alert-error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        footer {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            padding: 5px;
+            font-size: 0.70rem;
+            color: #ffffff;
+            background: rgba(0, 0, 0, 0.3);
+        }
+    </style>
+
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='icons/icone.png') }}">
+</head>
+
+<body>
+
+    <div class="login-page">
+        <div class="login-container form-card">
+
+            <div class="login-header">
+                <img src="{{ url_for('static', filename='logo/logopretoebranco.png') }}" alt="Logo da Empresa"
+                    class="login-logo">
+                <h2>Fazer login</h2>
+            </div>
+
+            <!-- EXIBIR MENSAGENS -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            <!-- FORMULÁRIO CORRIGIDO -->
+            <form method="POST" action="{{ url_for('auth.login_post') }}">
+
+                <div class="form-group">
+                    <label for="email"><i class="fas fa-envelope"></i> E-mail:</label>
+                    <input type="email" id="email" name="email" class="form-control" required
+                        placeholder="seu.email@enfil.com.br" autofocus>
+                </div>
+
+                <div class="form-group">
+                    <label for="senha"><i class="fas fa-lock"></i> Senha:</label>
+                    <input type="password" id="senha" name="senha" class="form-control" required placeholder="••••••••">
+                </div>
+
+                <div class="form-actions login-actions">
+                    <button type="submit" class="button-base button-primary" style="color: white;">
+                        <i class="fas fa-sign-in-alt"></i> Entrar
+                    </button>
+                </div>
+
+                <p class="forgot-password">
+                    <a href="#" style="color: #ffffff; ">Esqueceu sua senha?</a>
+                </p>
+            </form>
+
+        </div>
+    </div>
+
+    <footer>
+        <p>© 2025 Enfil SA Controle Ambiental | Desenvolvido por Edson Rodrigues</p>
+    </footer>
+
+</body>
+
+</html>

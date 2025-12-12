@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        /* Estilos específicos para o rodapé */
+        .footer-content {
+            width: 100%;
+            height: 20mm;
+            /* Altura do rodapé */
+            display: flex;
+            justify-content: flex-end;
+            /* Alinha o conteúdo à direita */
+            padding-right: 15mm;
+            /* Margem direita (se o wkhtmltopdf não aplicar a margem correta) */
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+            font-size: 10px;
+            color: #888;
+        }
+
+        .qr-code-box {
+            position: absolute;
+            /* Para garantir que ele se posicione no canto */
+            right: 0;
+            top: 0;
+            width: 20mm;
+            height: 20mm;
+        }
+
+        .qr-code-box img {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="footer-content">
+        <div class="qr-code-box">
+            <img src="{{ qr_code }}" alt="QR code de validação">
+        </div>
+    </div>
+</body>
+
+</html>

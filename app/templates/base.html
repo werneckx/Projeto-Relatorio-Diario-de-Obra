@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Meu Site{% endblock %}</title>
+
+    <!-- Seu CSS existente -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='styleForm.css') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo/icone.png') }}">
+</head>
+
+<body>
+
+    <div class="barraFixada">
+
+        <header class="header">
+            <div class="header-left">
+                <img src="{{ url_for('static', filename='logo/logopretoebranco.png') }}" alt="Logo" class="logo">
+            </div>
+
+            <div class="header-right">
+                <div class="profile-btn">
+                    <div class="profile-name">
+                        {% if session.get('user_name') %}
+                        {{ session['user_name'] }}
+                        <span class="text-xs font-bold uppercase text-gray-500">
+                            ({{ session['user_role'] }})
+                        </span>
+                        {% else %}
+                        Convidado
+                        {% endif %}
+                    </div>
+                    <div class="profile-company">Enfil SA Controle Ambiental</div>
+                </div>
+
+                <div class="actions">
+                    <a href="{{ url_for('auth.logout') }}" class="logout-btn" title="Sair">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <nav class="navegacao">
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="{{ url_for('auth.home') }}" class="{% if request.endpoint == 'home' %}active{% endif %}">
+                        <img src="{{ url_for('static', filename='icons/home.png') }}" alt="Home" class="home-icon">
+                    </a>
+                </li>
+
+                <li class="nav-item dropdown" name="lista">
+                    <a href="#" class="nav-link">RDO</a>
+                    <ul class="dropdown-menu">
+                        <a href="{{ url_for('auth.lista_rdo') }}">Lista</a>
+                        <a href="{{ url_for('auth.adicionar_rdo') }}">Gerar</a>
+                    </ul>
+                </li>
+
+                <li class="nav-item dropdown" name="lista">
+                    <a href="#" class="nav-link">Cadastro</a>
+                    <ul class="dropdown-menu">
+                        <a href="{{ url_for('auth.lista_obras') }}">Obras</a>
+                        <a href="{{ url_for('auth.lista_usuarios') }}">Usuários</a>
+                        <a href="{{ url_for('auth.lista_climas') }}">Clima</a>
+                    </ul>
+                </li>
+            </ul>
+        </nav>
+    </div>
+
+    <!-- FULL-WIDTH LIBERADO -->
+    <main class="w-full px-4 lg:px-6 pt-5 pb-10">
+        {% block content %}{% endblock %}
+    </main>
+
+</body>
+
+<footer class="rodape">
+    <p>© 2025 Enfil SA Controle Ambiental | Desenvolvido por Edson Rodrigues | Versão 27.11.2025</p>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/js/all.min.js"></script>
+
+</html>

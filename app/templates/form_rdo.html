@@ -1,0 +1,712 @@
+{% extends "base.html" %}
+
+{% block title %}Gerar Relatório Diário de Obra{% endblock %}
+
+{% block content %}
+<style>
+    /* --- ESTILOS PARA LIGHTBOX/MODAL --- */
+    .lightbox {
+        display: none;
+        position: fixed;
+        z-index: 9999;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0, 0, 0, 0.9);
+        justify-content: center;
+        align-items: center;
+    }
+
+    .lightbox-content {
+        display: block;
+        max-width: 90%;
+        max-height: 90vh;
+        width: auto;
+        height: auto;
+        animation-name: zoom;
+        animation-duration: 0.3s;
+        transform-origin: 0 0;
+        transition: transform 0.05s ease-out;
+        cursor: zoom-in;
+        user-select: none;
+    }
+
+    .lightbox-content.zoomed {
+        cursor: grab;
+    }
+
+    .lightbox-content.zoomed:active {
+        cursor: grabbing;
+    }
+
+    @keyframes zoom {
+        from {
+            transform: scale(0.8)
+        }
+
+        to {
+            transform: scale(1)
+        }
+    }
+
+    .close-lightbox {
+        position: absolute;
+        top: 15px;
+        right: 35px;
+        color: #f1f1f1;
+        font-size: 40px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    .close-lightbox:hover,
+    .close-lightbox:focus {
+        color: #bbb;
+    }
+
+    .miniaturas-gallery {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 10px;
+    }
+
+    .miniatura {
+        position: relative;
+        width: 80px;
+        height: 80px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .miniatura img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        cursor: zoom-in;
+    }
+
+    .remover-miniatura {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        background-color: var(--primary);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        line-height: 20px;
+        font-size: 14px;
+        cursor: pointer;
+        padding: 0;
+        box-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+    }
+
+    .remover-miniatura:hover {
+        background-color: red;
+    }
+
+    /* --- Modal de Sucesso --- */
+    .success-modal {
+        display: none;
+        position: fixed;
+        z-index: 10000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        justify-content: center;
+        align-items: center;
+    }
+
+    .success-modal-content {
+        background-color: #fff;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        text-align: center;
+        max-width: 450px;
+        width: 90%;
+        animation-name: dropin;
+        animation-duration: 0.3s;
+    }
+
+    @keyframes dropin {
+        from {
+            transform: translateY(-50px);
+            opacity: 0
+        }
+
+        to {
+            transform: translateY(0);
+            opacity: 1
+        }
+    }
+
+    .success-modal-content h2 {
+        color: var(--success);
+        margin-bottom: 10px;
+        font-size: 1.8rem;
+    }
+
+    .success-modal-content p {
+        font-size: 1.1em;
+        margin-bottom: 25px;
+        font-weight: 500;
+        color: var(--text-color);
+    }
+
+    .success-options {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .td-flex {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        padding: 0.5rem 0;
+    }
+
+    /* --- NOVOS ESTILOS PARA O BOTÃO DE APROVAÇÃO --- */
+    .top-actions-container {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 1rem;
+        /* Alinha o botão à direita */
+        margin-top: 15px;
+        margin-bottom: 20px;
+    }
+
+    .dropdown-action-container {
+        position: relative;
+        display: inline-block;
+    }
+
+    .dropdown-toggle-button {
+        /* Baseado no estilo button-base e button-success (verde para aprovação) */
+        border: none;
+        border-radius: 0.4rem;
+        cursor: pointer;
+        font-family: "Exo Soft", sans-serif;
+        font-weight: 600;
+        text-align: center;
+        transition: all 0.3s ease;
+        box-shadow: 0 0.25rem 0.375rem rgba(0, 0, 0, 0.1);
+        padding: 0.625rem 1.25rem;
+        font-size: 1rem;
+        text-decoration: none;
+        align-items: center;
+        display: inline-flex;
+        justify-content: center;
+        gap: 0.5rem;
+
+        background-color: var(--success);
+        /* Cor de Sucesso */
+        color: white;
+        z-index: 100;
+    }
+
+    .dropdown-toggle-button:hover {
+        background-color: #218838;
+        /* Success dark */
+        transform: translateY(-0.125rem);
+        box-shadow: 0 0.375rem 0.625rem rgba(0, 0, 0, 0.15);
+    }
+
+    .action-dropdown-menu {
+        display: none;
+        position: absolute;
+        top: 100%;
+        right: 0;
+        min-width: 200px;
+        background-color: #fff;
+        /* Fundo branco para opções */
+        border: 1px solid #ddd;
+        border-radius: 0.4rem;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        z-index: 99;
+        overflow: hidden;
+    }
+
+    .action-dropdown-menu.visible {
+        display: block;
+    }
+
+    .action-dropdown-menu form {
+        margin: 0;
+    }
+
+    .action-dropdown-menu .dropdown-item {
+        width: 100%;
+        padding: 0.625rem 1.25rem;
+        border: none;
+        background: none;
+        text-align: left;
+        cursor: pointer;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: background-color 0.2s;
+    }
+
+    /* Estilo para a opção APROVAR */
+    .action-dropdown-menu .dropdown-item.approve {
+        color: var(--success);
+    }
+
+    .action-dropdown-menu .dropdown-item.approve:hover {
+        background-color: var(--success);
+        color: white;
+    }
+
+    /* Estilo para a opção RECUSAR */
+    .action-dropdown-menu .dropdown-item.reject {
+        color: var(--error);
+    }
+
+    .action-dropdown-menu .dropdown-item.reject:hover {
+        background-color: var(--error);
+        color: white;
+    }
+
+    /* --- BADGES DE STATUS --- */
+    .status-badge {
+        padding: 0.4rem 0.8rem;
+        border-radius: 999px;
+        font-weight: 700;
+        display: inline-block;
+        font-size: 0.95rem;
+        color: white;
+    }
+
+    .status-approved {
+        background: var(--success);
+    }
+
+    /* verde */
+    .status-pending {
+        background: #ff9f1c;
+    }
+
+    /* amarelo/alaranjado */
+    .status-rejected {
+        background: var(--error);
+    }
+
+    /* vermelho */
+
+    /* --- FIM DOS NOVOS ESTILOS --- */
+</style>
+
+<h1 class="page-title">
+    {% if item %}
+    {% if view_mode %}
+    Visualizar RDO Nº {{ item.numero_sequencial }} - Revisão {{ item.revisao }}
+    {% else %}
+    Editar RDO Nº {{ item.numero_sequencial }} - Revisão {{ item.revisao }}
+    {% endif %}
+    {% else %}
+    Gerar Novo Relatório Diário de Obra
+    {% endif %}
+</h1>
+
+<!-- ✅ NOVO BOTÃO DE APROVAÇÃO CONDICIONAL E BADGE DE STATUS -->
+<div class="top-actions-container">
+    {% if view_mode and item %}
+    <!-- Badge de status -->
+    <div>
+        {% if item.status == 'Aprovado.png' %}
+        <span class="status-badge status-approved">{{ item.status_text or 'Aprovado' }}</span>
+        {% elif item.status == 'Rejeitado.png' %}
+        <span class="status-badge status-rejected">{{ item.status_text or 'Recusado' }}</span>
+        {% else %}
+        <span class="status-badge status-pending">{{ item.status_text or 'Aguardando Aprovação' }}</span>
+        {% endif %}
+    </div>
+
+    <!-- Botão visível apenas para gestor/admin e somente se estiver aguardando aprovação -->
+    {% if item.status == 'Aguardando Aprovação.png' and (is_gestor() or is_admin()) %}
+    <div class="dropdown-action-container">
+        <button id="toggleApprovalDropdown" type="button" class="dropdown-toggle-button">
+            <i class="fas fa-check-circle"></i> Aprovar / Recusar
+        </button>
+
+        <div id="approvalDropdownMenu" class="action-dropdown-menu" aria-hidden="true">
+            <!-- Aprovar -->
+            <form method="post" action="{{ url_for('alterar_status_rdo', rdo_id=item.id) }}">
+                <input type="hidden" name="status" value="Aprovado.png">
+                <button type="submit" class="dropdown-item approve">
+                    <i class="fas fa-thumbs-up"></i> Aprovar
+                </button>
+            </form>
+
+            <!-- Recusar -->
+            <form method="post" action="{{ url_for('alterar_status_rdo', rdo_id=item.id) }}"
+                onsubmit="return confirm('Tem certeza que deseja recusar este RDO?');">
+                <input type="hidden" name="status" value="Rejeitado.png">
+                <button type="submit" class="dropdown-item reject">
+                    <i class="fas fa-times-circle"></i> Recusar
+                </button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+    {% endif %}
+</div>
+<!-- FIM DO NOVO BOTÃO -->
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+{% set rdo_success_message = messages | selectattr(0, '==', 'success_rdo') | list %}
+{% if rdo_success_message %}
+{% set rdo_data = rdo_success_message[0][1] %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        try {
+            const rdoData = JSON.parse('{{ rdo_data | safe }}');
+            const modal = document.getElementById('successModal');
+            const message = document.getElementById('successMessage');
+            message.innerHTML = `O Relatório Diário de Obra Nº ${rdoData.rdo_num} foi gerado com sucesso.`;
+            modal.style.display = 'flex';
+        } catch (e) { console.error(e); }
+    });
+</script>
+{% else %}
+{% for category, message in messages %}
+{% endfor %}
+{% endif %}
+{% endif %}
+{% endwith %}
+
+<div class="form-container form-card">
+    <form id="rdoForm" class="rdo-form"
+        action="{% if item and not view_mode %}{{ url_for('editar_item', categoria='rdo', id=item.id) }}{% else %}{{ url_for('auth.gerar') }}{% endif %}"
+        method="POST" enctype="multipart/form-data">
+
+        {% if item and not view_mode %}
+        <input type="hidden" name="rdo_id" value="{{ item.id if item else '' }}">
+        {% endif %}
+
+        <input type="hidden" id="fotosExistentesParaManter" name="fotos_existentes_manter"
+            value='{% if item and item.fotos_json %}{{ item.fotos_json | safe }}{% else %}[]{% endif %}'>
+        <input type="hidden" name="rdo_id" value="{{ item.id }}">
+        <div class="form-row">
+            <div class="form-group">
+                <label for="obra">Obra:</label>
+                <select id="obra" name="obra_id" class="form-control" required {% if item %}disabled{% endif %}>
+                    <option value="">-- Selecione --</option>
+                    {% for obra in obras %}
+                    <option value="{{ obra.id }}" {% if item and item.obra_id==obra.id %}selected{% endif %}>
+                        {{ obra.nome }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="usuario">Responsável:</label>
+                <select id="usuario" name="usuario_id" class="form-control" required {% if view_mode %}disabled{% endif
+                    %}>
+                    <option value="">-- Selecione --</option>
+                    {% for resp in usuarios %}
+                    <option value="{{ resp.id }}" {% if item and item.usuario_id==resp.id %}selected{% endif %}>{{
+                        resp.nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="clima_manha">Clima (Manhã):</label>
+                <select id="clima_manha" name="climas_manha" class="form-control" required {% if view_mode %}disabled{%
+                    endif %}>
+                    <option value="">-- Selecione --</option>
+                    {% for c in clima %}
+                    <option value="{{ c.id }}" {% if item and item.climas_manha==c.id %}selected{% endif %}>{{ c.nome
+                        }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="clima_tarde">Clima (Tarde):</label>
+                <select id="clima_tarde" name="climas_tarde" class="form-control" required {% if view_mode %}disabled{%
+                    endif %}>
+                    <option value="">-- Selecione --</option>
+                    {% for c in clima %}
+                    <option value="{{ c.id }}" {% if item and item.climas_tarde==c.id %}selected{% endif %}>{{ c.nome
+                        }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <datalist id="funcoes-list">
+            <option value="Pedreiro"></option>
+            <option value="Carpinteiro"></option>
+            <option value="Ajudante"></option>
+            <option value="Eletricista"></option>
+            <option value="Mestre de Obras"></option>
+        </datalist>
+        <datalist id="frentes-list">
+            <option value="Fundações"></option>
+            <option value="Estrutura Metálica"></option>
+            <option value="Alvenaria"></option>
+            <option value="Instalações Elétricas"></option>
+            <option value="Revestimento"></option>
+            <option value="Acabamento"></option>
+        </datalist>
+
+        <!-- TABELA DE MÃO DE OBRA -->
+        <div class="form-group">
+            <div class="label-actions-container">
+                <label>Mão de Obra:</label>
+                {% if not view_mode %}
+                <div class="table-actions">
+                    <button type="button" id="adicionarMaoObra" class="button-base button-info button-compact">
+                        <i class="fas fa-plus"></i> Adicionar Linha
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+            <div class="editable-table-container">
+                <table id="maoObraTabela" class="editable-table">
+                    <thead>
+                        <tr>
+                            <th>Função</th>
+                            <th style="width:15%;">Quantidade</th>
+                            <th>Frente de Trabalho</th>
+                            <th style="width:15%;">Tempo em Horas</th>
+                            {% if not view_mode %}<th style="width:10%;">Ações</th>{% endif %}
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="atividades">Atividades do Dia:</label>
+            <textarea id="atividades" name="atividades" class="form-control" rows="6" required {% if view_mode
+                %}disabled{% endif %}
+                placeholder="Descreva aqui as atividades realizadas durante o dia.">{{ item.atividades if item }}</textarea>
+        </div>
+
+        <!-- FOTOS DA OBRA -->
+        <div class="form-group">
+            <label>Fotos da Obra (Opcional):</label>
+            {% if not view_mode %}
+            <div class="upload-actions-container">
+                <input type="file" id="fotos_input_file" name="fotos[]" class="form-control file-input" accept="image/*"
+                    multiple>
+                <button type="button" id="removerTodasFotos" class="button-base button-danger button-compact"
+                    style="{% if item.fotos_json and item.fotos_json|length > 0 %}display:inline-block{% else %}display:none{% endif %}">
+                    <i class="fas fa-trash"></i> Remover Todas
+                </button>
+            </div>
+            <small class="form-text-muted">Selecione fotos da galeria ou use a câmera (mobile).</small>
+            {% endif %}
+            <div id="miniaturasContainer" class="miniaturas-gallery">
+                {% if item and item.fotos_json %}
+                {% set fotos = item.fotos_json | safe %}
+                {% for foto in fotos %}
+                <div class="miniatura" data-foto="{{ foto }}">
+                    <img src="{{ url_for('static', filename='uploads/' ~ item.id ~ '/' ~ foto) }}"
+                        alt="Foto {{ loop.index }}"
+                        onclick="openLightbox('{{ url_for('static', filename='uploads/' ~ item.id ~ '/' ~ foto) }}')">
+                    {% if not view_mode %}
+                    <button type="button" class="remover-miniatura"
+                        onclick="removerMiniatura(this, '{{ foto }}')">&times;</button>
+                    {% endif %}
+                </div>
+                {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- BOTÕES -->
+        <div class="form-actions">
+            {% if view_mode %}
+            <a href="{{ url_for('download_rdo_pdf', rdo_id=item.id) }}" class="button-base button-success">
+                <i class="fas fa-file-pdf"></i> Baixar PDF
+            </a>
+            <a href="{{ url_for('lista_rdo') }}" class="button-base button-secondary">
+                <i class="fas fa-arrow-left"></i> Voltar para a Lista
+            </a>
+            {% else %}
+            {% if item %}
+            <button type="submit" class="button-base button-success"><i class="fas fa-save"></i> Salvar Edições</button>
+            <a href="{{ url_for('lista_rdo') }}" class="button-base button-cancel"><i class="fas fa-times"></i>
+                Cancelar</a>
+            {% else %}
+            <button type="submit" class="button-base button-success"><i class="fas fa-file-pdf"></i> Gerar PDF</button>
+            {% endif %}
+            {% endif %}
+            <small id="zoomTip"
+                style="color:#fff; background:#333; padding:5px 10px; border-radius:4px; position:fixed; bottom:10px; right:10px; display:none; z-index:10000;">Use
+                a roda do mouse para Zoom e clique/arraste para mover.</small>
+        </div>
+
+    </form>
+</div>
+
+<!-- LIGHTBOX -->
+<div id="imageLightbox" class="lightbox">
+    <span class="close-lightbox" id="closeLightboxBtn">&times;</span>
+    <img class="lightbox-content" id="lightboxImage">
+</div>
+
+<!-- MODAL DE SUCESSO -->
+<div id="successModal" class="success-modal">
+    <div class="success-modal-content">
+        <h2><i class="fas fa-check-circle"></i> RDO Gerado!</h2>
+        <p id="successMessage">O Relatório Diário de Obra foi gerado com sucesso.</p>
+        <div class="success-options">
+            <button type="button" class="button-base button-secondary" onclick="resetFormAndRedirect()">
+                <i class="fas fa-plus"></i> Iniciar Novo RDO
+            </button>
+            <a href="{{ url_for('lista_rdo') }}" class="button-base button-success">
+                <i class="fas fa-arrow-left"></i> Voltar para Lista
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+    // LIGHTBOX
+    function openLightbox(src) {
+        const lightbox = document.getElementById('imageLightbox');
+        const img = document.getElementById('lightboxImage');
+        lightbox.style.display = 'flex';
+        img.src = src;
+        img.classList.remove('zoomed');
+    }
+    document.getElementById('closeLightboxBtn').onclick = function () { document.getElementById('imageLightbox').style.display = 'none'; }
+
+    let scale = 1, originX = 0, originY = 0;
+    const lightboxImg = document.getElementById('lightboxImage');
+    lightboxImg.addEventListener('wheel', e => {
+        e.preventDefault();
+        scale += e.deltaY * -0.001;
+        scale = Math.min(Math.max(.5, scale), 5);
+        lightboxImg.style.transform = `scale(${scale}) translate(${originX}px, ${originY}px)`;
+        lightboxImg.classList.add('zoomed');
+    });
+    let isDragging = false, startX = 0, startY = 0;
+    lightboxImg.addEventListener('mousedown', e => { if (!lightboxImg.classList.contains('zoomed')) return; isDragging = true; startX = e.clientX - originX; startY = e.clientY - originY; });
+    window.addEventListener('mouseup', e => { isDragging = false; });
+    window.addEventListener('mousemove', e => { if (!isDragging) return; originX = e.clientX - startX; originY = e.clientY - startY; lightboxImg.style.transform = `scale(${scale}) translate(${originX}px, ${originY}px)`; });
+
+    // RESET FORM MODAL
+    function resetFormAndRedirect() { window.location.href = "{{ url_for('auth.gerar') }}"; }
+
+    // REMOVER MINIATURAS EXISTENTES
+    function removerMiniatura(button, nomeFoto) {
+        button.closest('.miniatura').remove();
+        let inputFotos = document.getElementById('fotosExistentesParaManter');
+        let fotosExistentes = [];
+        try { fotosExistentes = JSON.parse(inputFotos.value || '[]'); } catch (e) { fotosExistentes = []; }
+        fotosExistentes = fotosExistentes.filter(f => f !== nomeFoto);
+        inputFotos.value = JSON.stringify(fotosExistentes);
+    }
+
+    // TABELA DE MÃO DE OBRA
+    document.addEventListener('DOMContentLoaded', function () {
+        const maoObraTabelaBody = document.getElementById('maoObraTabela').getElementsByTagName('tbody')[0];
+        const adicionarBtn = document.getElementById('adicionarMaoObra');
+        const viewMode = {{ view_mode | tojson | safe
+    }};
+    const itemData = {{ item | tojson | safe }} || {};
+    let maoDeObra = [];
+
+    if (itemData.mao_obra) {
+        try {
+            maoDeObra = Array.isArray(itemData.mao_obra) ? itemData.mao_obra : JSON.parse(itemData.mao_obra || "[]");
+        } catch (e) { maoDeObra = []; }
+    }
+
+    function adicionarLinha(funcao = '', quantidade = '', frente_trabalho = '', tempo_frente = '') {
+        const newRow = maoObraTabelaBody.insertRow();
+        newRow.innerHTML = `
+                <td><input type="text" name="funcao[]" list="funcoes-list" class="form-control" value="${funcao}" ${viewMode ? 'disabled' : 'required'} placeholder="Ex: Pedreiro"></td>
+                <td><input type="number" name="quantidade[]" class="form-control" min="1" value="${quantidade}" ${viewMode ? 'disabled' : ''} placeholder="Ex: 5"></td>
+                <td><input type="text" name="frente_trabalho[]" list="frentes-list" class="form-control" value="${frente_trabalho}" ${viewMode ? 'disabled' : 'required'} placeholder="Ex: Estrutura"></td>
+                <td><input type="text" name="tempo_frente[]" class="form-control" value="${tempo_frente}" ${viewMode ? 'disabled' : 'required'} placeholder="Ex: 8h"></td>
+                ${!viewMode ? `<td class="td-flex"><button type="button" class="button-base button-danger button-compact" onclick="removerLinha(this)"><i class="fas fa-trash-alt"></i> Remover</button></td>` : ''}
+            `;
+    }
+    window.removerLinha = function (button) { button.closest('tr').remove(); };
+    if (maoDeObra.length > 0) { maoDeObra.forEach(mo => adicionarLinha(mo.funcao || '', mo.quantidade || '', mo.frente_trabalho || '', mo.tempo_frente || '')); }
+    if (!itemData.id) adicionarLinha();
+    if (adicionarBtn && !viewMode) adicionarBtn.addEventListener('click', () => adicionarLinha());
+    });
+
+    // MINIATURAS DE NOVOS ARQUIVOS
+    const fotosInput = document.getElementById('fotos_input_file');
+    const removerTodasBtn = document.getElementById('removerTodasFotos');
+    const miniaturasContainer = document.getElementById('miniaturasContainer');
+
+    fotosInput?.addEventListener('change', function () {
+        miniaturasContainer.querySelectorAll('.miniatura.temp').forEach(m => m.remove());
+        const arquivos = Array.from(this.files);
+        arquivos.forEach(file => {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const div = document.createElement('div');
+                div.classList.add('miniatura', 'temp');
+                div.innerHTML = `<img src="${e.target.result}" alt="${file.name}" onclick="openLightbox('${e.target.result}')">
+                                     <button type="button" class="remover-miniatura" onclick="removerMiniaturaTemp(this,'${file.name}')">&times;</button>`;
+                miniaturasContainer.appendChild(div);
+            };
+            reader.readAsDataURL(file);
+        });
+        removerTodasBtn.style.display = (arquivos.length > 0 || miniaturasContainer.querySelectorAll('.miniatura:not(.temp)').length > 0) ? 'inline-block' : 'none';
+    });
+
+    function removerMiniaturaTemp(button, nomeArquivo) {
+        button.closest('.miniatura').remove();
+        const dt = new DataTransfer();
+        Array.from(fotosInput.files).forEach(f => { if (f.name !== nomeArquivo) dt.items.add(f); });
+        fotosInput.files = dt.files;
+        if (fotosInput.files.length === 0 && miniaturasContainer.querySelectorAll('.miniatura.temp').length === 0 && miniaturasContainer.querySelectorAll('.miniatura:not(.temp)').length === 0) removerTodasBtn.style.display = 'none';
+    }
+
+    removerTodasBtn?.addEventListener('click', () => {
+        miniaturasContainer.innerHTML = '';
+        fotosInput.value = '';
+        document.getElementById('fotosExistentesParaManter').value = '[]';
+        removerTodasBtn.style.display = 'none';
+    });
+
+    // ✅ JS PARA O NOVO BOTÃO DE APROVAÇÃO
+    document.addEventListener('DOMContentLoaded', () => {
+        const toggleButton = document.getElementById('toggleApprovalDropdown');
+        const dropdownMenu = document.getElementById('approvalDropdownMenu');
+
+        if (toggleButton && dropdownMenu) {
+            toggleButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                dropdownMenu.classList.toggle('visible');
+                toggleButton.classList.toggle('active');
+            });
+
+            // Fecha o dropdown se clicar fora
+            document.addEventListener('click', (e) => {
+                if (!dropdownMenu.contains(e.target) && !toggleButton.contains(e.target)) {
+                    dropdownMenu.classList.remove('visible');
+                    toggleButton.classList.remove('active');
+                }
+            });
+        }
+    });
+
+</script>
+{% endblock %}

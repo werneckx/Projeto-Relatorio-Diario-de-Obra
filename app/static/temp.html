@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Relatório Diário de Obra — RDO</title>
+
+
+  <style>/* Document sized for A4 print */
+    @page {
+      size: A4;
+    }
+
+    /* Fontes */
+    @font-face {
+      font-family: "Exo Soft";
+      src: url("/static/Fonte_ExoSoft/Exo Soft W05 Light.otf") format("opentype");
+      font-weight: 300;
+    }
+    @font-face {
+      font-family: "Exo Soft";
+      src: url("/static/Fonte_ExoSoft/Exo Soft W05 Regular.otf") format("opentype");
+      font-weight: 400;
+    }
+
+    /* Variáveis */
+    :root {
+      --primary: #E0202D;
+      --primary-dark: #ae1822;
+      --text-color: #333;
+      --background: #f2f4f8;
+      --border-color: #dcdcdc;
+    }
+
+    /* Base */
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      font-family: "Exo Soft", sans-serif;
+      color: var(--text-color);
+      background: var(--background);
+    }
+
+    /* Container da página */
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 20px auto;
+      background: #fff;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+      border-radius: 8px;
+      padding: 10mm;
+      display: flex;
+      flex-direction: column;
+      position: relative; /* necessário para o QR */
+    }
+
+    /* QR code */
+    .qr {
+      position: absolute;
+      right: 10mm;   /* agora fica colado à direita */
+      bottom: 10mm;  /* distância do rodapé */
+      width: 30mm;
+      height: 30mm;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .qr img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    /* Header */
+    .rdo-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      border-bottom: 2px solid var(--border-color);
+    }
+    .logo {
+      height: 48px;
+      width: auto;
+    }
+    .rdo-header .right { text-align: right; }
+    .rdo-header h1 {
+      margin: 0;
+      font-size: 30px;
+      letter-spacing: 0.8px;
+    }
+    .doc-number {
+      margin-top: 4px;
+      font-size: 22px;
+      font-weight: bold;
+    }
+    .project { font-weight: 700; margin-top: 4px; }
+
+    /* Body */
+    .rdo-body { flex: 1; padding-top: 10px; }
+    .section, .informacoesObra { margin-bottom: 20px; }
+    .section h2, .section h3 {
+      margin: 0 0 10px 0;
+      font-weight: 600;
+    }
+    .section h2 {
+      font-size: 16px;
+      border-left: 5px solid var(--primary);
+      padding-left: 10px;
+      background: linear-gradient(90deg, rgba(224,32,45,0.08), transparent);
+    }
+    .section h3 {
+      font-size: 14px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 4px;
+    }
+
+    /* Activities */
+    .activities {
+      min-height: 100px;
+      border: 1px dashed #bbb;
+      border-radius: 6px;
+      padding: 12px;
+      background: #fafafa;
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+
+    /* Layout em duas colunas */
+    .two-cols { display: flex; gap: 20px; }
+    .two-cols .col {
+      flex: 1;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 12px;
+      min-height: 100px;
+      background: #fdfdfd;
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.03);
+    }
+
+    /* Fotos / anexos */
+    .attachments { display: flex; gap: 12px; }
+    .thumb {
+      flex: 1;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      overflow: hidden;
+      background: #fafafa;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #555;
+      font-size: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .thumb img { max-width: 100%; object-fit: cover; }
+    .thumb:hover {
+      transform: scale(1.02);
+      box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+    }
+
+    /* Footer */
+    .rdo-footer {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      margin-top: 30px;
+      padding-top: 12px;
+    }
+
+    /* Print tweaks */
+    @media print {
+      body { background: white; }
+      .page { box-shadow: none; margin: 0; border-radius: 0; }
+      .thumb:hover { transform: none; box-shadow: none; }
+      .qr { width: 28mm; height: 28mm; left: 12mm; bottom: 12mm; }
+    }
+</style>
+
+
+</head>
+<body>
+  <div class="page">
+    <header class="rdo-header">
+      <div class="left">
+        
+      </div>
+
+      <div class="right">
+        <h1>Relatório Diário de Obra</h1>
+        <div class="doc-number">RDO #000</div>
+      </div>
+    </header>
+
+    <main class="rdo-body">
+      <section class="informacoesObra">
+        <div class="project">Obra: ETE ABC</div>
+        <div class="author">Responsável: Edson Rodrigues</div>
+        <div class="date">Data: 19/09/2025</div>
+        <div class="weather">Clima: Nublado</div>
+      </section>
+      
+      <section class="section">
+        <h2>Atividades do Dia</h2>
+        <p class="activities">aaaaaaaaaa</p>
+      </section>
+
+      <section class="section two-cols">
+        <div class="col">
+          <h3>Equipe</h3>
+        </div>
+        <div class="col">
+          <h3>Observações</h3>
+        </div>
+      </section>
+
+      <section class="section">
+        <h3>Fotos / Anexos</h3>
+        <div class="attachments">
+          <div class="thumb">Foto 1</div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="rdo-footer">
+      <div class="footer-right">Emitido por: Sistema RDO — documento gerado</div>
+    </footer>
+
+    <!-- QR code -->
+    <div class="qr" aria-label="QR code de validação">
+      <img src="file:///c:/Users/edson.rodrigues/Downloads/Progama - RDO/RDO/static/qrcode.png" alt="QR code de validação">
+    </div>
+  </div>
+</body>
+</html>

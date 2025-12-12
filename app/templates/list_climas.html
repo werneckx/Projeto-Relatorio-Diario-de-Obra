@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Lista de Climas{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-slate-800">Lista de Climas</h1>
+</div>
+
+<div class="top-actions-container">
+    <a class="button-base button-success">
+        <i class="fas fa-plus"></i> Adicionar Clima
+    </a>
+</div>
+
+<div class="table-container">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Descrição do Clima</th>
+                <th class="actions-column">Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for clima in opcoes %}
+            <tr id="row-{{ clima.id }}">
+                <td>{{ clima.id }}</td>
+                <td>{{ clima.nome }}</td>
+                <td class="actions-column">
+                    <div class="action-buttons">
+                        <button onclick="excluirItem('{{ clima.id }}', 'clima')" class="button-acoes button-danger">
+                            <img src="{{ url_for('static', filename='icons/delete.png') }}" class="action-icon">
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

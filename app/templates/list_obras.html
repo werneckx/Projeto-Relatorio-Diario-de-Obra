@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Lista de Obras{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-slate-800">Lista de Obras</h1>
+</div>
+
+<div class="top-actions-container">
+    <a class="button-base button-success">
+        <i class="fas fa-plus"></i> Registar Nova Obra
+    </a>
+</div>
+
+<div class="table-container">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nome da Obra</th>
+                <th>CNPJ</th>
+                <th>Cidade/Estado</th>
+                <th>Status</th>
+                <th class="actions-column">Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for obra in opcoes %}
+            <tr id="row-{{ obra.id }}">
+                <td>{{ obra.id }}</td>
+                <td><strong>{{ obra.nome }}</strong></td>
+                <td>{{ obra.cnpj }}</td>
+                <td>{{ obra.cidade }}/{{ obra.estado }}</td>
+                <td>{{ obra.status }}</td>
+                <td class="actions-column">
+                    <div class="action-buttons">
+                        <button onclick="excluirItem('{{ obra.id }}', 'obra')" class="button-acoes button-danger">
+                            <img src="{{ url_for('static', filename='icons/delete.png') }}" class="action-icon">
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

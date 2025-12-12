@@ -1,0 +1,1254 @@
+/* =========================
+  Fontes Exo Soft
+  ========================= */
+@font-face {
+  font-family: "Exo Soft";
+  src: url("/static/Fonte_ExoSoft/Exo Soft W05 Light.otf") format("opentype");
+  font-weight: 300;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Exo Soft";
+  src: url("/static/Fonte_ExoSoft/Exo Soft W05 Regular.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Exo Soft";
+  src: url("/static/Fonte_ExoSoft/Exo Soft W05 Bold.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Exo Soft";
+  src: url("/static/Fonte_ExoSoft/Exo Soft Italic.otf") format("opentype");
+  font-weight: 400;
+  font-style: italic;
+}
+
+/* =========================
+  Reset e fonte padrão
+  ========================= */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+}
+
+body {
+  background: var(--background);
+  color: var(--text-color);
+  font-family: "Exo Soft", sans-serif;
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: 0.5px;
+  padding-top: 6.25rem;
+  /* Espaço para o header fixo */
+}
+
+/* =========================
+  Variáveis globais (Revisadas)
+  ========================= */
+:root {
+  /* Cores Principais */
+  --primary: #e0202d;
+  /* Vermelho Enfil */
+  --primary-dark: #ae1822;
+  --secondary: #007bff;
+  /* Azul Padrão (Manter para contraste) */
+  --secondary-dark: #0056b3;
+
+  /* Cores de Ação Adicionais (Novas) */
+  --info: #007bff;
+  --info-dark: #0056b3;
+  --warning: #007bff;
+  --warning-dark: #0056b3;
+
+  /* Cores de Status */
+  --success: #28a745;
+  --success-dark: #218838;
+  --error: #e0202d;
+  --error-dark: #ae1822;
+
+  /* Cores de Fundo e Texto */
+  --dark-grey: rgb(51, 51, 51);
+  --medium-grey: rgb(78, 78, 78);
+  --text-color: rgb(51, 51, 51);
+  --background: #f3f3f3;
+  --light-grey: #e0e0e0;
+  /* Mais claro para bordas e fundos */
+  --hover-grey: #f0f0f0;
+
+  /* Sombras e Profundidade (Sutíl) */
+  --shadow-sutil: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.05);
+  --shadow-medio: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.08);
+
+  /* Variáveis de Tabela */
+  /* Adicionado para clareza na tabela */
+  --table-header-bg: rgb(78, 78, 78);
+  /* Levemente mais escuro */
+  --table-header-text: #fff;
+}
+
+
+
+/* =========================
+  Header completo
+========================= */
+.barraFixada {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1000;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.625rem 1.875rem;
+  /* Aumentado padding horizontal */
+  background-color: var(--dark-grey);
+  color: var(--background);
+  height: 3.75rem;
+  flex-wrap: nowrap;
+  gap: 0.625rem;
+  overflow: hidden;
+  box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.15);
+  /* Sombra mais visível no header */
+}
+
+.header-left {
+  flex: 0 0 auto;
+}
+
+.header-left img.logo {
+  height: 2.5rem;
+  display: block;
+}
+
+.header-center {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+}
+
+.search-box {
+  position: relative;
+  width: 100%;
+  max-width: 25rem;
+  min-width: 0;
+}
+
+/* Melhora a visibilidade do input de busca */
+.search-box input {
+  width: 100%;
+  padding: 0.5rem 2.5rem 0.5rem 0.625rem;
+  border-radius: 0.375rem;
+  border: 1px solid var(--light-grey);
+  transition: all 0.3s;
+  background-color: #fff;
+  color: var(--text-color);
+  font-size: 0.9rem;
+}
+
+.search-box input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0.5rem rgba(224, 32, 45, 0.4);
+}
+
+.search-box svg {
+  position: absolute;
+  right: 0.625rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1.25rem;
+  height: 1.25rem;
+  fill: #555;
+  pointer-events: none;
+}
+
+.header-right {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-width: 0;
+}
+
+.profile-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-name {
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.profile-company {
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+
+/* =========================
+  Navegação
+========================= */
+.navegacao {
+  display: flex;
+  align-items: center;
+  background-color: var(--medium-grey);
+  color: var(--background);
+  border-bottom: 1px solid #ddd;
+  padding: 0 1.875rem;
+  /* Aumentado padding horizontal */
+  height: 2.8rem;
+  /* Levemente mais alta */
+}
+
+.nav-menu {
+  list-style: none;
+  display: flex;
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+.nav-item {
+  height: 100%;
+}
+
+.nav-link,
+.nav-item a {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  text-decoration: none;
+  color: var(--background);
+  font-weight: 600;
+  padding: 0 0.75rem;
+  transition: background 0.3s, color 0.3s;
+}
+
+.home-icon {
+  height: 100%;
+  max-height: 100%;
+  width: auto;
+  display: block;
+  padding: 10%;
+  margin: 0 auto;
+  transition: background 0.3s;
+}
+
+.nav-link:hover,
+.nav-item a:hover {
+  background-color: var(--primary);
+  /* Hover com a cor primária */
+  color: white;
+}
+
+.nav-link.active,
+.nav-menu a.active,
+.nav-menu a.active img.home-icon {
+  background-color: var(--primary-dark);
+  /* Item ativo */
+  color: white;
+}
+
+/* Dropdown menu */
+.nav-item.dropdown {
+  position: relative;
+}
+
+.dropdown-menu {
+  opacity: 0;
+  visibility: hidden;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background-color: var(--medium-grey);
+  z-index: 100;
+  padding: 0;
+  margin: 0;
+  min-width: 9.375rem;
+  list-style: none;
+  transition: all 0.3s ease;
+  border-radius: 0 0 0.5rem 0.5rem;
+  overflow: hidden;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.2);
+}
+
+.dropdown-menu a {
+  display: block;
+  padding: 0.625rem 0.9375rem;
+  text-decoration: none;
+  color: #fff;
+}
+
+.dropdown-menu a:hover {
+  background-color: var(--primary-dark);
+}
+
+.nav-item.dropdown:hover .dropdown-menu {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* =========================
+  Container principal e Título
+  ========================= */
+.container {
+  padding: 1.5rem 2.5rem;
+  /* Aumentado o padding geral */
+}
+
+.page-title {
+  color: var(--text-color);
+  font-size: 2rem;
+  /* Levemente menor e mais equilibrado */
+  font-weight: 700;
+  border-bottom: 2px solid var(--light-grey);
+  padding-bottom: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+/* =========================
+  Formulário (REVISADO PARA CARD)
+  ========================= */
+
+/* Novo: Card para envolver Formulários e Listagens */
+.form-container,
+.form-card,
+.table-container {
+  background: #fff;
+  padding: 1.5rem;
+  border-radius: 0.75rem;
+  box-shadow: var(--shadow-medio);
+  /* Sombra mais visível e elegante */
+  margin-bottom: 2rem;
+}
+
+/* Título de Seção dentro do Form */
+.section-heading {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--dark-grey);
+  margin-top: 0.5rem;
+  margin-bottom: 0.75rem;
+  padding-left: 0.25rem;
+  border-left: 4px solid var(--dark-grey);
+}
+
+.rdo-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  /* Espaçamento mais compacto para formulários */
+}
+
+.rdo-form label {
+  display: block;
+  margin-bottom: 0.375rem;
+  font-weight: 600;
+  color: var(--medium-grey);
+}
+
+/* Input/Select/Textarea styling (Aprimorado) */
+.rdo-form input:not([type="checkbox"]):not([type="radio"]),
+.rdo-form select,
+.rdo-form textarea,
+input:not([type="checkbox"]):not([type="radio"]):not(.search-box input) {
+  width: 100%;
+  padding: 0.6rem;
+  border: 1px solid var(--light-grey);
+  border-radius: 0.4rem;
+  font-size: 0.9rem;
+  transition: all 0.3s;
+  font-family: "Exo Soft", sans-serif;
+  font-weight: 400;
+}
+
+.rdo-form select {
+  cursor: pointer;
+}
+
+.rdo-form input:focus,
+.rdo-form select:focus,
+.rdo-form textarea:focus,
+input:focus:not(.search-box input) {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0.5rem rgba(224, 32, 45, 0.4);
+}
+
+textarea {
+  max-width: 100%;
+  resize: vertical;
+  max-height: 31.25rem;
+}
+
+/* Linha de colunas */
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  /* Espaçamento mais compacto entre colunas */
+}
+
+/* Checkbox */
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  gap: 0.3125rem;
+  margin-top: 0.3125rem;
+}
+
+.checkbox-container input {
+  height: 0.9375rem;
+  width: 0.9375rem;
+  margin: 0;
+  cursor: pointer;
+  border-radius: 0.1875rem;
+}
+
+.checkbox-container label {
+  font-size: 0.875rem;
+  color: #555;
+  cursor: pointer;
+}
+
+/* Contêiner para alinhar label e ações */
+.label-actions-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.375rem;
+}
+
+/* Tabela editável (formulário) */
+.editable-table-container {
+  overflow-x: auto;
+}
+
+.editable-table {
+  /* Estilo base para a tabela editável (RDO) */
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 0.9375rem;
+  background-color: #fff;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  white-space: nowrap;
+  border: 1px solid var(--table-border-color);
+}
+
+/* Centraliza o conteúdo da célula */
+.td-flex {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  padding: 0;
+}
+
+/* Estilo específico para inputs DENTRO da tabela editável */
+.editable-table input {
+  border: 1px solid transparent;
+  padding: 0.4rem;
+  /* Ajustado */
+  transition: all 0.3s;
+  background: transparent;
+  width: 100%;
+  border-radius: 0.3rem;
+}
+
+.editable-table input:focus {
+  border: 1px solid var(--light-grey);
+  background-color: #fff;
+  box-shadow: 0 0 0.3125rem rgba(0, 123, 255, 0.25);
+  padding: 0.3rem;
+  /* Ajuste no padding para compensar a borda */
+}
+
+/* Ações no topo da página de listagem */
+.top-actions-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  gap: 1rem;
+}
+
+.search-form {
+  display: flex;
+  gap: 0.5rem;
+  width: 40%;
+  max-width: 30rem;
+}
+
+.search-form input.form-control {
+  padding: 0.6rem;
+  border-radius: 0.4rem;
+  flex-grow: 1;
+}
+
+/* Ações do Formulário (Ex: Salvar, Cancelar) */
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  /* Alinha os botões à direita */
+  gap: 1rem;
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--light-grey);
+}
+
+/* =========================
+  Botões - Sistema Unificado (MANTIDO E EXPANDIDO)
+  ========================= */
+
+/* Classe base: Define a aparência padrão para todos os botões */
+.button-base {
+  border: none;
+  border-radius: 0.4rem;
+  /* Ajustado */
+  cursor: pointer;
+  font-family: "Exo Soft", sans-serif;
+  font-weight: 600;
+  text-align: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 0.25rem 0.375rem rgba(0, 0, 0, 0.1);
+  padding: 0.625rem 1.25rem;
+  /* Ajustado */
+  font-size: 1rem;
+  text-decoration: none;
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.button-acoes {
+  border: none;
+  border-radius: 0.4rem;
+  /* Ajustado */
+  cursor: pointer;
+  font-family: "Exo Soft", sans-serif;
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-align: center;
+  height: 30px;
+  box-shadow: none;
+  transition: all 0.3s ease;
+  box-shadow: 0 0.25rem 0.375rem rgba(0, 0, 0, 0.1);
+  padding: 0.4rem 0.50rem;
+  /* Ajustado */
+  text-decoration: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Efeito de hover e clique para todos os botões */
+.button-base:hover {
+  transform: translateY(-0.125rem);
+  box-shadow: 0 0.375rem 0.625rem rgba(0, 0, 0, 0.15);
+}
+
+.button-base:active {
+  transform: scale(0.97);
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.1);
+}
+
+/* Modificadores de cor: Adicione uma destas classes à classe base */
+.button-success {
+  background-color: var(--success);
+  color: white;
+}
+
+.button-success:hover {
+  background-color: var(--success-dark);
+}
+
+.button-danger {
+  background-color: var(--error);
+  color: white;
+}
+
+.button-danger:hover {
+  background-color: var(--error-dark);
+}
+
+.button-secondary {
+  background-color: var(--secondary);
+  color: white;
+}
+
+.button-secondary:hover {
+  background-color: var(--secondary-dark);
+}
+
+/* Novo Modificador: Info (Azul Claro) */
+.button-info {
+  background-color: var(--info);
+  color: white;
+}
+
+.button-info:hover {
+  background-color: var(--info-dark);
+}
+
+/* Novo Modificador: Warning (Amarelo) */
+.button-warning {
+  background-color: var(--warning);
+  color: white;
+  /* Texto escuro para contraste */
+}
+
+.button-warning:hover {
+  background-color: var(--warning-dark);
+}
+
+.button-cancel {
+  background-color: var(--light-grey);
+  color: var(--dark-grey);
+  box-shadow: none;
+}
+
+.button-cancel:hover {
+  background-color: #b0b0b0;
+  transform: translateY(0);
+}
+
+
+.button-compact:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.button-compact:active {
+  transform: scale(0.98);
+  box-shadow: none;
+}
+
+/* Agrupadores de botões */
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9375rem;
+  margin-top: 0.625rem;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 0.3125rem;
+  align-items: center;
+  height: 100%;
+}
+
+/* =========================
+  Estilos para tabelas de listagem (UNIFICADOS)
+  ========================= */
+.table-container {
+  padding: 0;
+  background: #fff;
+  border-radius: 0.75rem;
+  /* Mais arredondado */
+  box-shadow: var(--shadow-sutil);
+  /* Sombra mais leve nas listagens */
+  margin-top: 1.25rem;
+  overflow: auto;
+  /* IMPORTANTE: Habilita a rolagem lateral e vertical para a tabela */
+  border: none;
+  /* A sombra e o background dão o efeito de container */
+  margin-bottom: 2rem;
+  /* Se a tabela for muito grande, defina uma altura máxima aqui, ex: max-height: 400px; */
+}
+
+/* Aplica o mesmo estilo de célula/borda para TODAS as tabelas */
+.table-container table,
+.editable-table {
+  border-collapse: collapse;
+  width: 100%;
+  white-space: nowrap;
+  margin-bottom: 0;
+}
+
+/* Remove a borda externa da tabela dentro do container */
+.table-container table {
+  border: none;
+  border-radius: 0;
+  overflow: visible;
+}
+
+/* Estilo padronizado de célula para listagem e edição */
+.table-container th,
+.table-container td,
+.editable-table th,
+.editable-table td {
+  border: 1px solid var(--table-border-color);
+  padding: 0.5rem 0.8rem;
+  /* Padding ajustado */
+  text-align: left;
+  /* Centraliza o conteúdo da célula */
+  font-size: 0.9rem;
+}
+
+.table-container td:first-child,
+.editable-table td:first-child {
+  text-align: left;
+  /* Mantém o alinhamento esquerdo para o primeiro item (se for texto principal) */
+}
+
+/* Estilo padronizado do cabeçalho */
+.table-container thead th,
+.editable-table thead th {
+  background-color: var(--table-header-bg);
+  font-weight: 700;
+  color: var(--table-header-text);
+  text-transform: uppercase;
+  height: 2.5rem;
+  border-top: none;
+  text-align: center;
+  /* Centraliza o cabeçalho */
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+
+  /* FIXAÇÃO VERTICAL DO CABEÇALHO */
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* =========================
+  FIXAÇÃO LATERAL DA COLUNA DE AÇÕES (CORRIGIDO)
+  ========================= */
+
+.actions-column {
+  width: 1%;
+  /* Reduz a largura da coluna de ações */
+  white-space: nowrap;
+  text-align: center !important;
+}
+
+/* Fixa a célula de cabeçalho na coluna de ações (para rolagem lateral) */
+.table-container th.actions-column,
+.editable-table th.actions-column {
+  position: sticky;
+  right: 0;
+  /* Fixa à direita do container */
+  z-index: 15;
+  /* Z-index mais alto para garantir que fique visível sobre tudo, inclusive o resto do cabeçalho */
+}
+
+/* Fixa todas as células de dados (td) na coluna de ações (para rolagem lateral) */
+.table-container td.actions-column,
+.editable-table td.actions-column {
+  position: sticky;
+  right: 0;
+  /* Fixa à direita do container */
+  z-index: 5;
+  /* Menor que o cabeçalho, mas maior que células vizinhas */
+  background-color: #fff;
+  /* Fundo padrão da linha ímpar */
+}
+
+/* Estilos de fundo para as células fixas para cobrir o conteúdo ao rolar */
+.table-container tbody tr:nth-child(even) td.actions-column,
+.editable-table tbody tr:nth-child(even) td.actions-column {
+  background-color: #fafafa;
+  /* Cor de fundo da linha zebra */
+}
+
+.table-container tbody tr:hover td.actions-column,
+.editable-table tbody tr:hover td.actions-column {
+  background-color: var(--hover-grey);
+  /* Cor de fundo do hover */
+}
+
+/* Estilo padronizado para hover e zebra (Listras sutis) */
+.table-container tbody tr:hover,
+.editable-table tbody tr:hover {
+  background-color: var(--hover-grey);
+}
+
+.table-container tbody tr:nth-child(even) {
+  background-color: #fafafa;
+  /* Listras sutis para facilitar a leitura */
+}
+
+/* Remove borda inferior desnecessária em tabelas de listagem */
+.table-container tbody tr td {
+  border-bottom: 1px solid var(--table-border-color);
+}
+
+
+.empty-state {
+  text-align: center;
+  padding: 2rem;
+  color: var(--medium-grey);
+  font-size: 1.1rem;
+}
+
+/* =========================
+  Media Queries
+  ========================= */
+@media (max-width: 64rem) {
+  .form-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 37.5rem) {
+  .header {
+    padding: 0.625rem 1.25rem;
+  }
+
+  .header-left img.logo {
+    height: 1.875rem;
+  }
+
+  .search-box {
+    max-width: 100%;
+  }
+
+  .profile-btn {
+    max-width: auto;
+  }
+
+  .profile-company {
+    display: none;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .top-actions-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-form {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+/* =========================
+  Estilos da Página Inicial (Card)
+  ========================= */
+.welcome-container {
+  text-align: left;
+}
+
+.welcome-title {
+  font-size: 2.5rem;
+  color: var(--text-color);
+  margin-bottom: 0.5rem;
+}
+
+.welcome-subtitle {
+  font-size: 1.2rem;
+  color: #6c757d;
+  margin-bottom: 2rem;
+}
+
+.card-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 3rem;
+}
+
+.card-link {
+  text-decoration: none;
+  color: inherit;
+}
+
+.card {
+  background: #fff;
+  border-radius: 1rem;
+  box-shadow: var(--shadow-medio);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  text-align: left;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  /* Sombra mais forte no hover */
+}
+
+.card-icon {
+  font-size: 2.5rem;
+  color: var(--primary);
+  min-width: 3.5rem;
+  text-align: center;
+}
+
+.card-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+  color: var(--dark-grey);
+}
+
+.card-description {
+  font-size: 0.9rem;
+  color: #555;
+  line-height: 1.4;
+}
+
+.manage-section {
+  margin-top: 3rem;
+  text-align: center;
+}
+
+.manage-section h3 {
+  font-size: 1.8rem;
+  color: var(--dark-grey);
+  margin-bottom: 0.5rem;
+}
+
+.manage-section p {
+  color: #6c757d;
+  margin-bottom: 1.5rem;
+}
+
+.manage-section .button-row {
+  justify-content: center;
+}
+
+/* Adicione esta regra ao seu arquivo CSS */
+.action-icon {
+  /* Define o tamanho dos ícones dentro dos botões de ação */
+  width: 16px;
+  height: 16px;
+  /* Remove qualquer margem que possa aparecer na imagem */
+  vertical-align: middle;
+}
+
+/* Opcional: Ajuste o padding para botões que agora só têm ícone */
+.button-compact.button-acoes {
+  padding: 5px;
+  /* Ajuste o padding conforme o seu design */
+  line-height: 1;
+  /* Garante que a altura seja controlada pelo padding */
+}
+
+/* Garante que os botões fiquem alinhados lado a lado, se não estiverem já */
+.action-buttons {
+  display: flex;
+  gap: 4px;
+  /* Espaço entre os botões */
+  align-items: center;
+}
+
+/* Adicione este CSS ao seu arquivo style.css ou dentro do bloco <style> do template */
+.upload-actions-container {
+  display: flex;
+  gap: 10px;
+}
+
+.upload-actions-container .file-input {
+  flex-grow: 1;
+}
+
+.miniaturas-gallery {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.miniatura {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.miniatura img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.remover-miniatura {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  padding: 0 4px;
+  font-size: 10px;
+  cursor: pointer;
+  line-height: 1;
+  height: 16px;
+  width: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Estilos básicos para o Modal */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.7);
+}
+
+.modal-content {
+  background-color: #fefefe;
+  margin: 5% auto;
+  padding: 20px;
+  border: 1px solid #888;
+  width: 80%;
+  max-width: 600px;
+  border-radius: 8px;
+}
+
+.close-button {
+  color: #aaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.close-button:hover,
+.close-button:focus {
+  color: #000;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 15px;
+}
+
+/* =========================
+   Custom File Input Estilizado
+========================= */
+.file-input {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+  padding: 0.6rem 1rem;
+  font-family: "Exo Soft", sans-serif;
+  font-weight: 400;
+  font-size: 0.95rem;
+  color: var(--dark-grey);
+  background-color: #fff;
+  border: 1px solid var(--light-grey);
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-sutil);
+}
+
+/* Hover e foco */
+.file-input:hover {
+  border-color: var(--primary);
+  box-shadow: 0 0 0.5rem rgba(224, 32, 45, 0.15);
+}
+
+.file-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0.5rem rgba(224, 32, 45, 0.25);
+}
+
+/* Esconde o botão padrão do input */
+.file-input::-webkit-file-upload-button {
+  visibility: hidden;
+}
+
+/* Adiciona um botão customizado interno */
+.file-input::before {
+  content: 'Selecionar fotos';
+  display: inline-block;
+  background: var(--primary);
+  color: white;
+  border-radius: 0.4rem;
+  padding: 0.4rem 0.8rem;
+  outline: none;
+  white-space: nowrap;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-right: 10px;
+  transition: background 0.3s;
+}
+
+.file-input:hover::before {
+  background: var(--primary-dark);
+}
+
+/* Mostra o nome dos arquivos selecionados */
+.file-input::after {
+  content: attr(data-files);
+  display: inline-block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: calc(100% - 120px);
+  vertical-align: middle;
+  color: var(--medium-grey);
+  font-size: 0.9rem;
+}
+
+.rodape {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  padding: 5px;
+  font-size: 0.70rem;
+  color: #676767;
+}
+
+/* Miniaturas já existentes */
+.miniaturas-gallery {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.miniatura {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sutil);
+}
+
+.miniatura img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.remover-miniatura {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  padding: 0 4px;
+  font-size: 10px;
+  cursor: pointer;
+  line-height: 1;
+  height: 16px;
+  width: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.remover-miniatura:hover {
+  background-color: var(--primary-dark);
+  transform: scale(1.1);
+}
+
+/* ✅ NOVO CSS PARA STATUS */
+.status-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  min-width: 80px;
+  /* Garante que todos tenham a mesma largura mínima */
+}
+
+/* Cores de exemplo, ajuste conforme seu tema */
+.status-rascunho {
+  background-color: #ffebcc;
+  /* Laranja Claro */
+  color: #cc8400;
+  /* Laranja Escuro */
+  border: 1px solid #ffcc80;
+}
+
+.status-pendente {
+  background-color: #cceeff;
+  /* Azul Claro */
+  color: #007bff;
+  /* Azul Padrão */
+  border: 1px solid #80c9ff;
+}
+
+.status-aprovado {
+  background-color: #d4edda;
+  /* Verde Claro */
+  color: #155724;
+  /* Verde Escuro */
+  border: 1px solid #c3e6cb;
+}
+
+/* Adicione mais classes conforme seus possíveis status (ex: reprovado, revisao) */
+
+.logout-btn {
+  display: inline-block;
+  margin-left: .5rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 6px;
+  background: transparent;
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.logout-btn:hover {
+  background: var(--primary);
+}
+
+/* se quiser alinhar melhor quando a tela for pequena */
+.header-right .actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}

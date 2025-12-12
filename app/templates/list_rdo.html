@@ -1,0 +1,338 @@
+{% extends "base.html" %}
+
+{% block title %}Lista de RDOs{% endblock %}
+
+{% block content %}
+
+<!-- Tailwind + Font Awesome (necessário para o estilo dos badges de status) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-slate-800">Lista Relatórios Diários de Obra (RDO)</h1>
+    <p class="text-sm text-slate-500">Gerencie seu RDO's</p>
+</div>
+
+<style>
+    .dataTables_info,
+    .dataTables_paginate,
+    .paging_simple_numbers,
+    .dataTables_length {
+        font-size: 12px;
+        padding: 10px;
+        color: rgb(0, 0, 0);
+        font-weight: 100;
+    }
+
+    .dataTables_length select {
+        cursor: pointer;
+    }
+
+    .filters input:focus {
+        outline: none;
+        border-color: #e0202d;
+        box-shadow: 0 0 3px rgba(224, 32, 45, 0.3);
+    }
+
+    .filters input {
+        width: 100%;
+        border: none;
+        border-radius: 6px;
+        color: rgb(0, 0, 0);
+        padding: 2px;
+        font-size: 12px;
+        background: #ffffff;
+        transition: 0.2s;
+    }
+
+    .dataTables_info,
+    .dataTables_paginate,
+    .dataTables_length {
+        font-size: 13px !important;
+        padding: 8px 12px !important;
+        color: #444 !important;
+        font-weight: 400 !important;
+    }
+
+    .dataTables_length select {
+        border-radius: 6px !important;
+        padding: 4px 8px !important;
+        border: 1px solid #ccc !important;
+        background: #f8f8f8;
+        cursor: pointer;
+    }
+
+    .dataTables_paginate a {
+        border-radius: 6px !important;
+        padding: 4px 8px !important;
+        margin: 2px;
+        text-decoration: none;
+        border: 1px solid #ddd !important;
+        background: #fff !important;
+        transition: 0.2s;
+    }
+
+    .dataTables_paginate a:hover {
+        background: #e0202d !important;
+        color: #fff !important;
+        border-color: #e0202d !important;
+    }
+
+    .dataTables_paginate .current {
+        background: #e0202d !important;
+        color: #fff !important;
+        border-color: #e0202d !important;
+    }
+
+    .action-icon {
+        width: 16px;
+        height: 16px;
+    }
+
+    /* Estilos exclusivos para a coluna STATUS */
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 10px;
+        border-radius: 9999px;
+        /* full rounded */
+        font-size: 11px;
+        font-weight: 600;
+        gap: 6px;
+        border: none;
+    }
+
+    /* Cores semelhantes ao Tailwind */
+    .status-aprovado {
+        color: #166534;
+        background: #dcfce7;
+    }
+
+    .status-pendente {
+        color: #a16207;
+        background: #fef9c3;
+    }
+
+    .status-rejeitado {
+        color: #b91c1c;
+        background: #fee2e2;
+    }
+
+    .status-rascunho {
+        color: #374151;
+        background: #e5e7eb;
+    }
+
+    /* ícones */
+    .status-badge i {
+        font-size: 12px;
+        margin-right: 4px;
+    }
+</style>
+
+<div class="top-actions-container">
+    <div class="search-form">
+        <input type="text" id="searchInputRDO" placeholder="Buscar RDOs (Obra, Responsável, Clima...)"
+            class="form-control">
+        <button onclick="$('#dataTableRDO').DataTable().search($('#searchInputRDO').val()).draw();"
+            class="button-base button-secondary button-compact" title="Pesquisar">
+            Pesquisar <i class="fas fa-search"></i>
+        </button>
+    </div>
+    <a href="{{ url_for('auth.adicionar_rdo') }}" class="button-base button-success">
+        <i class="fas fa-plus"></i> Criar Novo RDO
+    </a>
+</div>
+
+<div class="table-container">
+    {% if rdos %}
+    <table id="dataTableRDO" class="display nowrap" style="width:100%">
+        <thead>
+            <tr>
+                <th>Status</th>
+                <th>Nº</th>
+                <th>Rev.</th>
+                <th>Data</th>
+                <th>Obra</th>
+                <th>Responsável</th>
+                <th>Clima Manhã</th>
+                <th>Clima Tarde</th>
+                <th>MDO Total</th>
+                <th>Criador</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+
+            {% for rdo in rdos %}
+
+            {# ===========================
+            NOVO SISTEMA DE CORES/STATUS
+            IGUAL AO CÓDIGO DO SEGUNDO MODELO
+            ============================ #}
+
+            {% set current_status = rdo.status | lower | trim %}
+
+            {% if current_status == 'aprovado' %}
+            {% set status_color = 'text-green-700 bg-green-100' %}
+            {% set status_icon = 'fas fa-check-circle' %}
+            {% set status_text = 'Aprovado' %}
+            {% elif current_status == 'pendente' %}
+            {% set status_color = 'text-yellow-700 bg-yellow-100' %}
+            {% set status_icon = 'fas fa-hourglass-half' %}
+            {% set status_text = 'Pendente' %}
+            {% elif current_status == 'rejeitado' %}
+            {% set status_color = 'text-red-700 bg-red-100' %}
+            {% set status_icon = 'fas fa-times-circle' %}
+            {% set status_text = 'Rejeitado' %}
+            {% else %}
+            {% set status_color = 'text-gray-700 bg-gray-200' %}
+            {% set status_icon = 'fas fa-info-circle' %}
+            {% set status_text = 'Rascunho' %}
+            {% endif %}
+
+            <tr id="row-{{ rdo.id }}" class="hover:bg-red-50/50 transition">
+                <td class="whitespace-nowrap">
+                    {% set status_class =
+                    'status-aprovado' if current_status == 'aprovado' else
+                    'status-pendente' if current_status == 'pendente' else
+                    'status-rejeitado' if current_status == 'rejeitado' else
+                    'status-rascunho'
+                    %}
+
+                    <span class="status-badge {{ status_class }}">
+                        <i class="{{ status_icon }}"></i>
+                        {{ status_text }}
+                    </span>
+                </td>
+
+
+                <td>{{ '%03d' % (rdo.numero_sequencial | int) }}</td>
+                <td>{{ '%03d' % (rdo.revisao | int) }}</td>
+                <td>{{ rdo.data.strftime('%d/%m/%Y') if rdo.data else 'N/A' }}</td>
+
+                <td>
+                    {% if rdo.obra %}
+                    {{ rdo.obra.nome[:15] + '...' if rdo.obra.nome|length > 15 else rdo.obra.nome }}
+                    {% else %}
+                    N/A
+                    {% endif %}
+                </td>
+
+                <td>
+                    {% if rdo.usuario and rdo.usuario.nome %}
+                    {% set partes = rdo.usuario.nome.split() %}
+                    {% if partes|length > 1 %}
+                    {{ partes[0] }} {{ partes[1][0] }}.
+                    {% else %}
+                    {{ partes[0] }}
+                    {% endif %}
+                    {% else %}
+                    N/A
+                    {% endif %}
+                </td>
+
+
+                <td>{{ rdo.clima_manha_obj.nome if rdo.clima_manha_obj else 'N/A' }}</td>
+                <td>{{ rdo.clima_tarde_obj.nome if rdo.clima_tarde_obj else 'N/A' }}</td>
+                <td>{{ rdo.total_mo if rdo.total_mo else '0' }}</td>
+
+                <td>
+                    {% if rdo.criador %}
+                    {% set partes = rdo.criador.split() %}
+                    {% if partes|length > 1 %}
+                    {{ partes[0] }} {{ partes[1][0] }}.
+                    {% else %}
+                    {{ partes[0] }}
+                    {% endif %}
+                    {% else %}
+                    N/A
+                    {% endif %}
+                </td>
+
+
+                <td>
+                    <div class="action-buttons">
+                        <a href="{{ url_for('auth.download_rdo_pdf', rdo_id=rdo.id) }}"
+                            class="button-compact button-info button-acoes" title="Baixar PDF">
+                            <img src="{{ url_for('static', filename='icons/download.png') }}" alt="Download"
+                                class="action-icon">
+                        </a>
+                        <a href="{{ url_for('auth.editar_rdo', rdo_id=rdo.id) }}"
+                            class="button-compact button-info button-acoes" title="Editar RDO">
+                            <img src="{{ url_for('static', filename='icons/edit.png') }}" alt="Editar"
+                                class="action-icon">
+                        </a>
+                        <a href="{{ url_for('auth.visualizar_rdo', rdo_id=rdo.id) }}"
+                            class="button-compact button-secondary button-acoes" title="Visualizar RDO">
+                            <img src="{{ url_for('static', filename='icons/view.png') }}" alt="Visualizar"
+                                class="action-icon">
+                        </a>
+                        <button onclick="excluirItem('{{ rdo.id }}', 'rdo')"
+                            class="button-compact button-danger button-acoes" title="Excluir RDO">
+                            <img src="{{ url_for('static', filename='icons/delete.png') }}" alt="Excluir"
+                                class="action-icon">
+                        </button>
+                    </div>
+                </td>
+            </tr>
+
+            {% endfor %}
+
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <p>Nenhum RDO encontrado. <a href="{{ url_for('auth.adicionar_rdo') }}">Adicione o primeiro agora!</a></p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- SCRIPTS DATATABLES -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/colreorder/1.6.2/css/colReorder.dataTables.min.css">
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/colreorder/1.6.2/js/dataTables.colReorder.min.js"></script>
+
+<script>
+    $(document).ready(function () {
+        $('#dataTableRDO').DataTable({
+            colReorder: true,
+            scrollX: true,
+            responsive: true,
+            paging: true,
+            searching: true,
+            pageLength: 10,
+            lengthMenu: [[10, 50, 100, -1], [10, 50, 100, "Todos"]],
+            order: [[3, 'asc']],
+            language: {
+                url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json"
+            },
+            dom: 'lrtip'
+        });
+    });
+
+    function excluirItem(rdoId, tipo) {
+        if (!confirm("Tem certeza que deseja excluir este RDO?")) return;
+
+        fetch(`/delete/${tipo}/${rdoId}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+        })
+            .then(response => {
+                if (response.ok) {
+                    const row = document.getElementById(`row-${rdoId}`);
+                    if (row) row.remove();
+                    alert("RDO excluído com sucesso!");
+                } else {
+                    response.json().then(data => alert(data.message || "Erro ao excluir o RDO."));
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert("Erro na comunicação com o servidor.");
+            });
+    }
+</script>
+
+{% endblock %}
