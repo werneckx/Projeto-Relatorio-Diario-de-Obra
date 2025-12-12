@@ -16,7 +16,7 @@ class Obra(db.Model):
     cep = db.Column(db.String(8), nullable=False)
     inicio = db.Column(db.Date, nullable=False)
     termino = db.Column(db.Date, nullable=False)
-    status = db.Column(db.String(20), nullable=False, default='Ativa') 
+    status = db.Column(db.Integer)
     
     def __repr__(self):
         return f'<Obra {self.id}: {self.nome}>'

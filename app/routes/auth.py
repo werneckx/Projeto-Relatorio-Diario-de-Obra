@@ -4,25 +4,17 @@ from app import db # Importar 'db' para uso no filtro (db.or_)
 from app import db, login_manager
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
-# Remover imports de Modelos do topo! Eles só devem ser importados
-# quando estritamente necessários (como em user_loader) ou DENTRO da rota onde são usados.
-# from app.models.rdo import RDO # Removido
-# from app.models.usuario import Usuario # Removido
-# from app.models.obra import Obra # Removido
-# from app.models.clima import Clima # REMOVIDO: Este import era o provável causador do erro!
-
 from app.models import usuario
+from app.models.obra import Obra
 from app.utils.rdo_pdf import regenerar_pdf_rdo
 from sqlalchemy import func
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from functools import wraps # Mover a importação para o topo para melhor prática
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
 
-# -----------------------
 # Decorator: login_required
-# -----------------------
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -35,17 +27,13 @@ def login_required(f):
     return decorated
 
 
-# -----------------------
 # Tela de Login (GET)
-# -----------------------
 @auth_bp.get("/login")
 def login():
     return render_template("login.html")
 
 
-# -----------------------
 # Tela de Login (POST)
-# -----------------------
 @auth_bp.post("/login")
 def login_post():
     email = request.form.get("email")
@@ -77,18 +65,14 @@ def login_post():
 
     return redirect(url_for("auth.home"))
 
-# -----------------------
 # Página Home
-# -----------------------
 @auth_bp.get("/home")
 @login_required
 def home():
     return render_template("inicio.html")
 
 
-# -----------------------
 # Logout
-# -----------------------
 @auth_bp.get("/logout")
 def logout():
     session.clear()
@@ -96,9 +80,7 @@ def logout():
     return redirect(url_for("auth.login"))
 
 
-# -----------------------
 # Página Inicial do Blueprint (Redirecionamento)
-# -----------------------
 @auth_bp.get("/")
 def index():
     if "user_id" in session:
@@ -106,9 +88,7 @@ def index():
     return redirect(url_for("auth.login"))
 
 
-# -----------------------
 # Lista RDO (placeholder)
-# -----------------------
 # No arquivo auth.py
 @auth_bp.get("/lista-rdo")
 @login_required
@@ -133,9 +113,7 @@ def lista_rdo():
 
     return render_template("list_rdo.html", rdos=rdos)
 
-# -----------------------
 # Faz o download do PDF
-# -----------------------
 @auth_bp.get("/rdo/<int:rdo_id>/download")
 @login_required
 def download_rdo_pdf(rdo_id):
@@ -143,18 +121,14 @@ def download_rdo_pdf(rdo_id):
     pdf_path, pdf_filename = regenerar_pdf_rdo(rdo_id)
     return send_file(pdf_path, as_attachment=True, download_name=pdf_filename)
 
-# -----------------------
 # Faz o Editar do RDO
-# -----------------------
 @auth_bp.get("/rdo/<int:rdo_id>/editar")
 @login_required
 def editar_rdo(rdo_id):
     # Sugestão de Melhoria: Esta rota deve buscar os dados do RDO
     # rdo = RDO.query.get_or_404(rdo_id)
     return render_template("form_rdo.html", rdo_id=rdo_id)
-# -----------------------
 # Faz o Visualizar do RDO
-# -----------------------
 @auth_bp.get("/rdo/<int:rdo_id>")
 @login_required
 def visualizar_rdo(rdo_id):
@@ -162,18 +136,14 @@ def visualizar_rdo(rdo_id):
     # rdo = RDO.query.get_or_404(rdo_id)
     return render_template("form_rdo.html", rdo_id=rdo_id)
 
-# -----------------------
 # Criar RDO (redireciona)
-# -----------------------
 @auth_bp.get("/novo-rdo")
 @login_required
 def adicionar_rdo():
     return render_template("form_rdo.html")
 
 
-# -----------------------
 # LISTA GENÉRICA /cadastro/<categoria>
-# -----------------------
 @auth_bp.route("/cadastro/<categoria>")
 @login_required
 def cadastro_list(categoria):
@@ -237,9 +207,7 @@ from flask import make_response
 
 # ... (Mantenha seus imports e decoradores existentes)
 
-# -----------------------
 # Rota Gerar RDO (POST) - Processa Criação e Edição
-# -----------------------
 @auth_bp.post("/gerar")
 @login_required
 def gerar():
@@ -320,9 +288,7 @@ def gerar():
 
     return redirect(url_for('auth.visualizar_rdo', rdo_id=rdo_id))
 
-# -----------------------
 # Rota de Sucesso (Callback)
-# -----------------------
 @auth_bp.get("/rdo_success")
 @login_required
 def rdo_success():
@@ -485,4 +451,180 @@ def lista_obras():
     obras = Obra.query.order_by(Obra.id.asc()).all()
     return render_template("list_obras.html", opcoes=obras, categoria="obra")
 
+# Rota pra criar obra
+
+@auth_bp.get("/criar-obra")
+@login_required
+def criar_obra():
+    
+    # Passamos categoria='usuario' para o template saber qual seção renderizar
+    return render_template("form_obra.html", categoria="usuario")
+
+
+@auth_bp.post("/mudar-status-obras/<int:obraid>")
+@login_required
+def toggle_user_obras(obraid):
+    from app.models.usuario import Obra
+    
+    # Busca o usuário no banco
+    obra = Obra.query.get_or_404(obraid)
+    
+    # Inverte o status booleano (Se era True vira False, se era 1 vira 0)
+    obra.status = not obra.status 
+    
+    try:
+        db.session.commit()
+        return {"message": "Status atualizado com sucesso"}, 200
+    except Exception as e:
+        db.session.rollback()
+        return {"message": f"Erro ao atualizar: {str(e)}"}, 500
+    
+    
+# Rota para gerar obra 
+# Rota para Criar/Editar Obra (POST)
+@auth_bp.post("/gerar-obra")
+@login_required
+def gerar_obra(): 
+    form_data = request.form
+    obra_id = form_data.get("id")
+
+    # Cria um dicionário com os dados do formulário (strings) para retorno em caso de erro
+    item_form = {
+        'id': obra_id,
+        'nome': form_data.get("nome", "").strip(),
+        # CNPJ e CEP limpos, mas salvos como string (o modelo aceita)
+        'cnpj': form_data.get("cnpj", "").replace('.', '').replace('-', '').replace('/', '').strip(),
+        'cep': form_data.get("cep", "").replace('-', '').strip(),
+        # Datas são mantidas como strings (YYYY-MM-DD) para preencher o input type="date"
+        'inicio': form_data.get("inicio"), 
+        'termino': form_data.get("termino"), 
+        'endereco': form_data.get("endereco", "").strip(),
+        'numero': form_data.get("numero", "").strip(),
+        'complemento': form_data.get("complemento", "").strip(),
+        'bairro': form_data.get("bairro", "").strip(),
+        'cidade': form_data.get("cidade", "").strip(),
+        'estado': form_data.get("estado", "").strip().upper(),
+        # O status é lido do formulário
+        'status': 'Ativa' if 'status' in form_data else 'Inativa',
+    }
+
+    # 1. Limpeza e Conversão de dados
+    try:
+        nome = item_form['nome']
+        cnpj = item_form['cnpj']
+        cep = item_form['cep']
+        
+        # Converte strings para objetos date para o SQLAlchemy
+        inicio = date.fromisoformat(item_form["inicio"])
+        termino = date.fromisoformat(item_form["termino"])
+        
+        endereco = item_form["endereco"]
+        numero = item_form["numero"]
+        complemento = item_form["complemento"]
+        bairro = item_form["bairro"]
+        cidade = item_form["cidade"]
+        estado = item_form["estado"]
+        status = item_form["status"]
+
+    except Exception as e:
+        # Se falhar na conversão (ex: data ou campo obrigatório faltando)
+        flash("Erro na submissão de dados. Verifique o formato das datas e campos obrigatórios.", "danger")
+        # Retorna o template com os dados inválidos para correção
+        return render_template("form_obra.html", item=item_form, view_mode=False)
+
+    # 2. Criação ou Edição
+    if obra_id:
+        # Edição
+        obra = Obra.query.get(obra_id)
+        if not obra:
+            flash("Obra não encontrada para edição.", "danger")
+            return redirect(url_for('auth.lista_obras'))
+        
+        acao = "editada"
+        
+        # Validação de CNPJ único (apenas se o CNPJ foi alterado)
+        if obra.cnpj != cnpj:
+            if Obra.query.filter_by(cnpj=cnpj).first():
+                flash(f"CNPJ '{cnpj}' já cadastrado em outra obra.", "danger")
+                # Retorna para o template de edição com o item_form preenchido
+                return render_template("form_obra.html", item=item_form, view_mode=False)
+        
+        # Atualiza os dados (usa as variáveis convertidas do try block)
+        obra.nome = nome
+        obra.cnpj = cnpj
+        obra.endereco = endereco
+        obra.numero = numero
+        obra.complemento = complemento
+        obra.bairro = bairro
+        obra.cidade = cidade
+        obra.estado = estado
+        obra.cep = cep
+        obra.inicio = inicio
+        obra.termino = termino
+        obra.status = status
+        
+    else:
+        # Criação
+        acao = "criada"
+        
+        # Validação de CNPJ único
+        if Obra.query.filter_by(cnpj=cnpj).first():
+            flash(f"CNPJ '{cnpj}' já cadastrado.", "danger")
+            # Retorna para o template de cadastro com o item_form preenchido
+            return render_template("form_obra.html", item=item_form, view_mode=False)
+            
+        # Cria nova obra
+        obra = Obra(
+            nome=nome,
+            cnpj=cnpj,
+            endereco=endereco,
+            numero=numero,
+            complemento=complemento,
+            bairro=bairro,
+            cidade=cidade,
+            estado=estado,
+            cep=cep,
+            inicio=inicio,
+            termino=termino,
+            status=status
+        )
+        db.session.add(obra)
+
+    # 3. Commit ao Banco de Dados
+    try:
+        db.session.commit()
+        flash(f"Obra '{nome}' {acao} com sucesso!", "success")
+        return render_template("form_obra.html", item=item_form, view_mode=True)
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erro ao salvar/editar obra: {e}")
+        flash("Ocorreu um erro ao salvar a obra. Tente novamente.", "danger")
+        # Em caso de erro de DB, retorna ao template com os dados do formulário
+        return render_template("form_obra.html", item=item_form, view_mode=False)
+
+# Rota pra editar obra
+
+@auth_bp.get("/editar-obra/<int:id>")
+@login_required
+def editar_obra(id):
+    from app.models.obra import Obra
+    
+    item = Obra.query.get_or_404(id)
+    
+    return render_template("form_obra.html", item=item, categoria="obra")
+
+# Rota para visualizar obra
+@auth_bp.get("/visualizar-obra/<int:id>")
+@login_required
+def visualizar_obra(id):
+    from app.models.obra import Obra
+    
+    # Busca o item de Obra
+    item = Obra.query.get_or_404(id) 
+
+    # Define view_mode como True para bloquear os campos no template
+    view_mode = True
+
+    # Renderiza o template passando o item e o view_mode
+    return render_template("form_obra.html", item=item, view_mode=view_mode, categoria="obra")
 

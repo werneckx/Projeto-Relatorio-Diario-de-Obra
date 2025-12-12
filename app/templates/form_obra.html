@@ -1,0 +1,542 @@
+{% extends "base.html" %}
+
+{% block title %}
+{% if view_mode %}Visualizar{% elif item and item.id %}Editar{% else %}Cadastrar{% endif %} Obra
+{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+<div>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div
+        class="mb-6 p-4 rounded-lg flex items-center gap-3 border shadow-sm transition-all 
+         {{ 'bg-red-100 text-red-700 border-red-200' if category == 'danger' else 'bg-green-100 text-green-700 border-green-200' }}">
+        <i class="fas {{ 'fa-exclamation-circle' if category == 'danger' else 'fa-check-circle' }}"></i>
+        <span class="text-sm font-bold">{{ message }}</span>
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-slate-800">
+            {% if view_mode %}Visualizar{% elif item and item.id %}Editar{% else %}Nova{% endif %} Obra
+        </h1>
+        <p class="text-sm text-slate-500">Gestão do portfólio operacional de obras.</p>
+    </div>
+
+    <!-- Rota corrigida: auth.gerar_obra -->
+    <form action="{{ url_for('auth.gerar_obra') }}" method="POST" id="mainForm" class="space-y-6 rdo-form">
+        <input type="hidden" name="id" value="{{ item.id if item and item.id }}">
+        <input type="hidden" name="categoria" value="obra">
+
+        <!-- ========================== SEÇÃO 1 — Informações da Obra ========================== -->
+        <section class="bg-white rounded-lg p-6 border shadow-sm space-y-6">
+
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                        <i class="fas fa-building"></i>
+                    </div>
+                    <h3
+                        class="font-semibold text-slate-800 border-l-2 border-blue-600 pl-3 uppercase text-sm tracking-wide">
+                        Informações da Obra
+                    </h3>
+                </div>
+
+                <div class="flex items-center h-10 px-4 bg-slate-50 border rounded-lg shadow-inner">
+                    <label class="relative inline-flex items-center 
+                                   {{ 'cursor-not-allowed opacity-60' if view_mode else 'cursor-pointer' }}">
+                        <input type="checkbox" name="status" class="sr-only peer" {{ 'checked' if (item and
+                            item.status=='Ativa' ) or not item }} {{ 'disabled' if view_mode }}>
+                        <div class="w-11 h-6 bg-slate-300 rounded-full peer peer-checked:bg-blue-600
+                                    peer-focus:outline-none 
+                                    after:content-[''] after:absolute after:top-[2px] after:left-[2px]
+                                    after:bg-white after:h-5 after:w-5 after:rounded-full 
+                                    after:transition-all peer-checked:after:translate-x-full">
+                        </div>
+
+                        <span id="statusLabel"
+                            class="ml-3 text-[10px] font-bold transition-colors
+                              {{ 'text-blue-600' if (item and item.status=='Ativa') or not item else 'text-slate-400' }}">
+                            {{ 'Ativa' if (item and item.status=='Ativa') or not item else 'Inativa' }}
+                        </span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div class="md:col-span-2 space-y-1">
+                    <label class="text-xs font-bold text-slate-500 uppercase">Nome da Obra <span
+                            class="text-red-500">*</span></label>
+                    <input type="text" name="nome" value="{{ item.nome if item }}"
+                        placeholder="Ex: Construção Edifício Apolo" class="w-full border rounded-lg px-3 py-2 h-10 input-field 
+                                  {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}" {{ 'readonly' if
+                        view_mode }} required>
+                </div>
+
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase">CNPJ <span
+                            class="text-red-500">*</span></label>
+                    <input type="text" name="cnpj" id="cnpj" maxlength="14" value="{{ item.cnpj if item }}"
+                        placeholder="Apenas números" class="w-full border rounded-lg px-3 py-2 h-10 input-field
+                                  {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}" {{ 'readonly' if
+                        view_mode }} required>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ========================== SEÇÃO 2 — Datas ========================== -->
+        <section class="bg-white rounded-lg p-6 border shadow-sm space-y-6">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-10 h-10 rounded bg-green-100 text-green-600 flex items-center justify-center">
+                    <i class="fas fa-calendar-alt"></i>
+                </div>
+                <h3
+                    class="font-semibold text-slate-800 border-l-2 border-green-600 pl-3 uppercase text-sm tracking-wide">
+                    Datas de Execução
+                </h3>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase">Início <span
+                            class="text-red-500">*</span></label>
+                    <!-- CORREÇÃO APLICADA: Usa o filtro | string -->
+                    <input type="date" name="inicio" value="{{ item.inicio | string if item and item.inicio }}" class="w-full border rounded-lg px-3 py-2 h-10 input-field
+                              {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode else 'cursor-pointer' }}"
+                        {{ 'readonly' if view_mode }} onclick="this.showPicker()" required>
+                </div>
+
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase">Término (Prevista/Real) <span
+                            class="text-red-500">*</span></label>
+                    <!-- CORREÇÃO APLICADA: Usa o filtro | string -->
+                    <input type="date" name="termino" value="{{ item.termino | string if item and item.termino }}"
+                        class="w-full border rounded-lg px-3 py-2 h-10 input-field
+                              {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode else 'cursor-pointer' }}"
+                        {{ 'readonly' if view_mode }} onclick="this.showPicker()" required>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ========================== SEÇÃO 3 — Endereço + CEP UX Pro ========================== -->
+        <section class="bg-white rounded-lg p-6 border shadow-sm space-y-6">
+
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-10 h-10 rounded bg-orange-100 text-orange-600 flex items-center justify-center">
+                    <i class="fas fa-map-marker-alt"></i>
+                </div>
+                <h3
+                    class="font-semibold text-slate-800 border-l-2 border-orange-600 pl-3 uppercase text-sm tracking-wide">
+                    Localização Completa
+                </h3>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
+
+                <!-- CEP -->
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase">CEP <span
+                            class="text-red-500">*</span></label>
+
+                    <div class="relative">
+                        <input type="text" name="cep" id="cep" maxlength="8" value="{{ item.cep if item }}"
+                            placeholder="Apenas números" class="w-full border rounded-lg px-3 py-2 h-10 input-field 
+                                      {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}" {{ 'readonly' if
+                            view_mode }} required>
+                    </div>
+                    <!-- CRÍTICO: Feedback do CEP -->
+                    <p id="cep-message" class="text-xs pt-1"></p>
+                </div>
+
+                <!-- Endereço -->
+                <div class="md:col-span-3">
+                    <label class="text-xs font-bold text-slate-500 uppercase">Endereço <span
+                            class="text-red-500">*</span></label>
+                    <input type="text" name="endereco" id="endereco" value="{{ item.endereco if item }}"
+                        placeholder="Rua / Avenida" class="w-full border rounded-lg px-3 py-2 h-10 input-field 
+                                  {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}" required
+                        {{ 'readonly' if view_mode }} disabled>
+                </div>
+
+                <!-- Número -->
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase">Número <span
+                            class="text-red-500">*</span></label>
+                    <input type="text" name="numero" id="numero" value="{{ item.numero if item }}" class="w-full border rounded-lg px-3 py-2 h-10 input-field 
+                                  {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}" required
+                        {{ 'readonly' if view_mode }} disabled>
+                </div>
+
+                <!-- Complemento -->
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase">Complemento</label>
+                    <input type="text" name="complemento" id="complemento" value="{{ item.complemento if item }}" class="w-full border rounded-lg px-3 py-2 h-10 input-field 
+                                  {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}" {{ 'readonly' if
+                        view_mode }} disabled>
+                </div>
+
+                <!-- Bairro -->
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase">Bairro <span
+                            class="text-red-500">*</span></label>
+                    <input type="text" name="bairro" id="bairro" value="{{ item.bairro if item }}" class="w-full border rounded-lg px-3 py-2 h-10 input-field 
+                                  {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}" required
+                        {{ 'readonly' if view_mode }} disabled>
+                </div>
+
+                <!-- Cidade -->
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase">Cidade <span
+                            class="text-red-500">*</span></label>
+                    <input type="text" name="cidade" id="cidade" value="{{ item.cidade if item }}" class="w-full border rounded-lg px-3 py-2 h-10 input-field
+                                  {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}" required
+                        {{ 'readonly' if view_mode }} disabled>
+                </div>
+
+                <!-- Estado -->
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase">UF <span
+                            class="text-red-500">*</span></label>
+                    <input type="text" name="estado" id="estado" maxlength="2" value="{{ item.estado if item }}"
+                        placeholder="SP" class="w-full border rounded-lg px-3 py-2 h-10 uppercase input-field
+                                  {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}" required
+                        {{ 'readonly' if view_mode }} disabled>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ========================== FOOTER ========================== -->
+        <div class="flex flex-col sm:flex-row gap-3 pt-4 border-t">
+            {% if view_mode %}
+            <a href="{{ url_for('auth.editar_obra', id=item.id) }}"
+                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2">
+                Editar Obra
+            </a>
+
+            <a href="{{ url_for('auth.lista_obras') }}"
+                class="flex-1 bg-white border border-slate-300 text-slate-500 font-bold py-3 rounded-lg hover:bg-slate-50 flex items-center justify-center">
+                Voltar para Lista
+            </a>
+
+            {% else %}
+
+            <button type="submit" href="{{ url_for('auth.lista_obras') }}"
+                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-sm flex items-center justify-center gap-2">
+                <span id="btnText">Salvar Cadastro</span>
+                <i class="fas fa-spinner fa-spin hidden" id="spinner"></i>
+            </button>
+
+            <a href="{{ url_for('auth.lista_obras') }}"
+                class="flex-1 bg-white border border-slate-300 text-slate-500 py-3 rounded-lg hover:bg-slate-50 flex items-center justify-center">
+                Cancelar
+            </a>
+
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+
+<style>
+    .input-field:focus {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 1px #2563eb;
+    }
+
+    /* Estilo para campos desabilitados que não são no modo view_mode */
+    .input-field[disabled]:not([readonly]) {
+        background-color: #f3f4f6;
+        /* bg-gray-100 */
+        cursor: not-allowed;
+    }
+</style>
+
+<script>
+    /* Array de IDs dos campos de endereço a serem controlados */
+    const ADDRESS_FIELDS = ["endereco", "numero", "complemento", "bairro", "cidade", "estado"];
+
+    /* =======================================================
+       UTIL — Apenas Números
+    ======================================================= */
+    function applyNumberMask(id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+
+        el.addEventListener('input', e => {
+            // Garante que o input só tenha números
+            e.target.value = e.target.value.replace(/\D/g, '');
+        });
+    }
+
+    /* =======================================================
+       Habilita/Desabilita campos de endereço
+    ======================================================= */
+    function toggleAddressFields(enable) {
+        const viewMode = document.getElementById("cep").readOnly;
+        if (viewMode) return; // Não altera se estiver em modo de visualização
+
+        ADDRESS_FIELDS.forEach(id => {
+            const field = document.getElementById(id);
+            if (field) {
+                field.disabled = !enable;
+                // Ajuste a classe para refletir o estado de desabilitação
+                field.classList.toggle('bg-slate-50', !enable);
+                field.classList.toggle('opacity-70', !enable);
+                field.classList.toggle('cursor-not-allowed', !enable);
+            }
+        });
+    }
+
+    /* =======================================================
+       Feedback Visual do CEP
+    ======================================================= */
+    function setCepMessage(message, type) {
+        const msgEl = document.getElementById("cep-message");
+        if (!msgEl) return;
+
+        // Limpa classes anteriores
+        msgEl.className = 'text-xs pt-1';
+
+        if (type === 'success') {
+            msgEl.classList.add('text-green-600', 'font-semibold');
+        } else if (type === 'error') {
+            msgEl.classList.add('text-red-600', 'font-semibold');
+        } else {
+            msgEl.classList.add('text-slate-500');
+        }
+
+        msgEl.innerText = message;
+    }
+
+    /* =======================================================
+       CEP — UX Enterprise-Grade
+    ======================================================= */
+
+    let cepDebounce = null;
+    const CEP_TIMEOUT = 8000; // failsafe corporativo
+
+    function searchCep(cep) {
+        const el = id => document.getElementById(id);
+        const cepInput = el("cep");
+
+        if (cepInput.readOnly) return;
+
+        // CRÍTICO: Só continua se o CEP tiver 8 dígitos
+        if (cep.length !== 8) {
+            clearTimeout(cepDebounce);
+            toggleAddressFields(false); // Desabilita campos se incompleto
+            // A mensagem será definida no input listener
+            // setCepMessage("CEP inválido. 8 dígitos necessários.", 'error'); 
+            return;
+        }
+
+        clearTimeout(cepDebounce);
+
+        cepDebounce = setTimeout(() => {
+            // Informa que a busca está em andamento (substituindo o spinner)
+            setCepMessage("Buscando endereço...", 'info');
+
+            toggleAddressFields(false); // Desabilita durante a busca
+
+            // Reset dos valores antes da busca
+            ADDRESS_FIELDS.forEach(id => {
+                const field = el(id);
+                // Não reseta se já estiver preenchido com dados válidos, exceto endereço, bairro, cidade, estado
+                // Isso é complexo no frontend. Melhor resetar e confiar no ViaCEP.
+                if (field && ['endereco', 'bairro', 'cidade', 'estado'].includes(id)) {
+                    field.value = "";
+                }
+            });
+
+            const controller = new AbortController();
+            const timeout = setTimeout(() => {
+                controller.abort();
+                setCepMessage("Tempo esgotado (Timeout). Verifique o CEP e tente novamente.", 'error');
+                toggleAddressFields(true); // Permite preenchimento manual após timeout
+            }, CEP_TIMEOUT);
+
+            fetch(`https://viacep.com.br/ws/${cep}/json/`, { signal: controller.signal })
+                .then(r => r.json())
+                .then(data => {
+                    clearTimeout(timeout);
+                    if (data.erro) {
+                        setCepMessage("CEP não encontrado. Preencha o endereço manualmente.", 'error');
+                        toggleAddressFields(true); // Habilita para preenchimento manual
+                        return;
+                    }
+
+                    // CEP encontrado - Preenche e Habilita
+                    if (el("endereco")) el("endereco").value = data.logradouro || "";
+                    if (el("bairro")) el("bairro").value = data.bairro || "";
+                    if (el("cidade")) el("cidade").value = data.localidade || "";
+                    if (el("estado")) el("estado").value = data.uf || "";
+                    if (el("complemento")) {
+                        // Só preenche complemento se o campo estava vazio antes, 
+                        // pois o usuário pode ter inserido manualmente
+                        if (!el("complemento").value) {
+                            el("complemento").value = data.complemento || "";
+                        }
+                    }
+
+                    toggleAddressFields(true); // Habilita campos
+                    setCepMessage("Endereço encontrado com sucesso!", 'success');
+
+                    if (el("numero")) el("numero").focus(); // Fluxo operacional enxuto
+                })
+                .catch(error => {
+                    clearTimeout(timeout);
+                    if (error.name !== 'AbortError') {
+                        console.error("Falha na consulta ViaCEP:", error);
+                        setCepMessage("Falha ao consultar CEP (Erro de rede).", 'error');
+                    }
+                    toggleAddressFields(true); // Permite preenchimento manual após erro
+                })
+                .finally(() => {
+                    // O fim da busca é controlado pelo feedback visual (setCepMessage)
+                });
+
+        }, 350);
+    }
+
+
+    /* =======================================================
+       Status Toggle (Ativa/Inativa)
+    ======================================================= */
+    function toggleObraStatus(id) {
+        // NOTE: O Flask irá redirecionar para 'auth.visualizar_obra' após o sucesso
+        // Usando modal customizado em vez de confirm()
+        showCustomConfirm("Deseja alterar o status desta obra?", () => {
+            fetch(`/auth/obra/toggle-status/${id}`, { method: "POST" })
+                .then(r => {
+                    if (r.ok) {
+                        // Recarrega a página (que será a mesma ou a de visualização)
+                        location.reload();
+                    } else {
+                        // Caso a rota retorne erro HTTP, tentar recarregar para ver a flash message
+                        location.reload();
+                    }
+                })
+                .catch(error => console.error("Erro de rede ao alterar status:", error));
+        });
+    }
+
+    // Função de Confirmação Customizada (substitui alert/confirm)
+    function showCustomConfirm(message, onConfirm) {
+        // Simulação de um modal simples
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
+        modal.innerHTML = `
+            <div class="bg-white rounded-lg p-6 shadow-2xl max-w-sm w-full space-y-4">
+                <p class="text-lg font-semibold text-slate-800">${message}</p>
+                <div class="flex justify-end gap-3">
+                    <button id="cancelBtn" class="px-4 py-2 text-sm font-medium rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50">Cancelar</button>
+                    <button id="confirmBtn" class="px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700">Confirmar</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        document.getElementById('cancelBtn').onclick = () => document.body.removeChild(modal);
+        document.getElementById('confirmBtn').onclick = () => {
+            document.body.removeChild(modal);
+            onConfirm();
+        };
+    }
+
+
+    /* =======================================================
+       Bootstrapping
+    ======================================================= */
+    document.addEventListener("DOMContentLoaded", () => {
+        applyNumberMask("cnpj");
+        applyNumberMask("cep");
+
+        const cep = document.getElementById("cep");
+
+        // 1. Desabilita campos de endereço se não estiver em modo de visualização
+        const isViewMode = document.getElementById("cep").readOnly;
+
+        if (!isViewMode) {
+            // Em modo de edição/cadastro:
+            // Se o campo CEP JÁ ESTIVER PREENCHIDO (i.e., vindo de edição ou erro de submissão), 
+            // tenta a busca inicial para habilitar os campos.
+            if (cep.value && cep.value.length === 8) {
+                // Se já tem CEP válido (8 dígitos), tenta preencher e habilitar
+                searchCep(cep.value);
+            } else {
+                // Caso contrário, desabilita os campos e mostra a mensagem
+                toggleAddressFields(false);
+                setCepMessage("Preencha o CEP para liberar os campos de endereço.", 'info');
+            }
+        } else {
+            // Em modo de visualização:
+            // Apenas garante que os campos estão "habilitados" para exibição (embora readonly)
+            // e que o JS não interfere no estado.
+            toggleAddressFields(true);
+        }
+
+
+        if (cep) {
+            // Dispara a busca ao sair do campo (blur)
+            cep.addEventListener("blur", () => {
+                // Só busca se o campo não for readonly (não estiver em view_mode)
+                if (!isViewMode) {
+                    searchCep(cep.value.replace(/\D/g, ''));
+                }
+            });
+
+            // Dispara a busca ao pressionar Enter
+            cep.addEventListener("keydown", e => {
+                if (e.key === "Enter" && !isViewMode) {
+                    e.preventDefault();
+                    searchCep(cep.value.replace(/\D/g, ''));
+                }
+            });
+
+            // Limpa o feedback e desabilita ao digitar se o CEP ficar incompleto
+            cep.addEventListener("input", () => {
+                if (!isViewMode) {
+                    if (cep.value.length < 8) {
+                        toggleAddressFields(false);
+                        setCepMessage("Faltam dígitos no CEP.", 'info');
+                    }
+                }
+            });
+        }
+
+        const statusToggle = document.querySelector('input[name="status"]');
+        const statusLabel = document.getElementById("statusLabel");
+
+        if (statusToggle) {
+            statusToggle.addEventListener("change", () => {
+                const on = statusToggle.checked;
+                statusLabel.innerText = on ? "Ativa" : "Inativa";
+                statusLabel.classList.toggle("text-blue-600", on);
+                statusLabel.classList.toggle("text-slate-400", !on);
+            });
+        }
+        
+
+        const form = document.getElementById("mainForm");
+        const btn = document.getElementById("submitBtn");
+
+        if (form && btn) {
+            form.addEventListener("submit", () => {
+                // Animação de envio
+                btn.querySelector("#btnText").classList.add("hidden");
+                btn.querySelector("#spinner").classList.remove("hidden");
+                btn.disabled = true;
+            });
+        }
+    });
+</script>
+
+{% endblock %}
