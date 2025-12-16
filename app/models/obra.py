@@ -5,6 +5,7 @@ class Obra(db.Model):
     __tablename__ = "obra"
 
     id = db.Column(db.Integer, primary_key=True)
+    id_matriz = db.Column(db.Integer, db.ForeignKey('obra.id'), nullable=True)
     nome = db.Column(db.String(120), nullable=False)
     cnpj = db.Column(db.String(14), unique=True, nullable=False)
     endereco = db.Column(db.String(255), nullable=False)
@@ -20,3 +21,5 @@ class Obra(db.Model):
     
     def __repr__(self):
         return f'<Obra {self.id}: {self.nome}>'
+    
+    

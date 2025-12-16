@@ -101,6 +101,12 @@
         font-weight: bold;
         text-transform: uppercase;
     }
+
+    /* Novo estilo para destacar Matrizes */
+    .is-matriz {
+        background-color: #fffbeb !important;
+        /* Cor de fundo amarelada clara */
+    }
 </style>
 
 <div class="top-actions-container">
@@ -123,6 +129,7 @@
                 <th>ID</th>
                 <th>Nome da Obra</th>
                 <th>CNPJ</th>
+                <th>Tipo / Matriz</th>
                 <th>Endereço Completo</th>
                 <th>Status</th>
                 <th class="text-right">Ações</th>
@@ -130,14 +137,38 @@
         </thead>
         <tbody class="divide-y divide-slate-100">
             {% for obra in opcoes %}
+
+            {% set is_matriz = obra.id_matriz == None or obra.id_matriz == 0 %}
+
             <tr id="row-{{ obra.id }}"
-                class="hover:bg-red-50/30 transition {{ 'opacity-50 grayscale' if obra.status == 'Inativa' }}">
+                class="hover:bg-red-50/30 transition {{ 'opacity-50 grayscale' if obra.status == 'Inativa' }} {% if is_matriz %} is-matriz {% endif %}">
+
                 <td class="text-sm font-mono text-slate-500">{{ obra.id }}</td>
                 <td>
-                    <div class="font-bold text-slate-800">{{ obra.nome }}</div>
+                    <div class="font-bold text-slate-800">
+                        {% if is_matriz %}
+                        <i class="fas fa-sitemap text-red-600 mr-1" title="Matriz Principal"></i>
+                        {% else %}
+                        <i class="fas fa-building text-slate-400 mr-1" title="Filial/Subsidiária"></i>
+                        {% endif %}
+                        {{ obra.nome }}
+                    </div>
                     <div class="text-[10px] text-slate-500">{{ obra.cidade }}/{{ obra.estado }}</div>
                 </td>
                 <td class="text-sm text-slate-600">{{ obra.cnpj }}</td>
+
+                <td class="text-sm text-slate-600">
+                    {% if is_matriz %}
+                    <span class="status-badge-ui bg-red-100 text-red-700 border border-red-200">
+                        Matriz
+                    </span>
+                    {% else %}
+                    <span class="status-badge-ui bg-blue-100 text-blue-700 border border-blue-200">Filial</span>
+                    <div class="text-[10px] text-slate-500 mt-1">
+                        Matriz: {{ obra.nome_matriz | default('N/A') }}
+                    </div>
+                    {% endif %}
+                </td>
                 <td class="text-sm text-slate-500">
                     {{ obra.endereco }}, {{ obra.numero }}, {% if obra.complemento %} {{ obra.complemento }}{% endif
                     %} - {{ obra.bairro }} / {{ obra.cep }}
@@ -201,26 +232,79 @@
     });
 
     // Função para alterar o status da Obra (Simulação de toggleStatus do usuário)
-    function toggleObraStatus(obraId) {
-        if (!confirm("Deseja alterar o status desta Obra?")) return;
+    function parseJsonSafe(res) {
+        return res.text().then(text => {
+            if (!text) return { status: res.status, ok: res.ok, data: null };
+            try {
+                return { status: res.status, ok: res.ok, data: JSON.parse(text) };
+            } catch (e) {
+                console.warn('Resposta não é JSON:', e, text);
+                return { status: res.status, ok: res.ok, data: null, text };
+            }
+        });
+    }
 
-        // URL precisa ser definida no auth.py para 'toggle_obra_status'
+    function toggleObraStatus(obraId) {
         fetch(`/auth/obra/toggle-status/${obraId}`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            }
+            headers: { 'Content-Type': 'application/json' }
         })
-            .then(res => {
-                if (res.ok) {
-                    location.reload();
-                } else {
-                    alert("Erro ao processar a alteração de status.");
+            .then(res => parseJsonSafe(res))
+            .then(({ status, ok, data }) => {
+                if (!ok || status !== 200) {
+                    alert('Erro: ' + (data.message || 'Erro desconhecido'));
+                    return;
                 }
+
+                // Encontra o botão com onclick correspondente
+                const button = document.querySelector(`button[onclick="toggleObraStatus('${obraId}')"]`);
+                if (!button) {
+                    console.error('Botão não encontrado para obraId:', obraId);
+                    return;
+                }
+
+                const row = button.closest('tr');
+                if (!row) {
+                    console.error('Linha não encontrada para obraId:', obraId);
+                    return;
+                }
+
+                // Coluna de status é a 6ª
+                const statusCell = row.querySelector('td:nth-child(6)');
+                if (!statusCell) {
+                    console.error('Célula de status não encontrada');
+                    return;
+                }
+
+                const badge = statusCell.querySelector('span');
+                const isActive = badge && badge.classList.contains('bg-green-100');
+
+                if (isActive) {
+                    // Tornar Inativa
+                    if (badge) {
+                        badge.className = 'status-badge-ui bg-red-100 text-red-700 border border-red-200';
+                        badge.innerHTML = '<i class="fas fa-times-circle mr-1"></i> Inativa';
+                    }
+                    button.title = 'Ativar Obra';
+                    const icon = button.querySelector('i');
+                    if (icon) icon.className = 'fas fa-house-circle-check text-sm';
+                    row.classList.add('opacity-50', 'grayscale');
+                } else {
+                    // Tornar Ativa
+                    if (badge) {
+                        badge.className = 'status-badge-ui bg-green-100 text-green-700 border border-green-200';
+                        badge.innerHTML = '<i class="fas fa-check-circle mr-1"></i> Ativa';
+                    }
+                    button.title = 'Inativar Obra';
+                    const icon = button.querySelector('i');
+                    if (icon) icon.className = 'fas fa-house-circle-xmark text-sm';
+                    row.classList.remove('opacity-50', 'grayscale');
+                }
+
             })
             .catch(err => {
-                console.error("Erro na requisição:", err);
-                alert("Ocorreu um erro de comunicação com o servidor.");
+                console.error('Erro na requisição:', err);
+                alert('Erro de comunicação: ' + err.message);
             });
     }
 </script>

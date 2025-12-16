@@ -212,7 +212,6 @@
             method: 'POST',
             headers: { 'Content-Type': 'application/json' }
         })
-            .then(res => res.json().then(data => ({ status: res.status, ok: res.ok, data })))
             .then(({ status, ok, data }) => {
                 console.log('Resposta:', { status, ok, data });
 
