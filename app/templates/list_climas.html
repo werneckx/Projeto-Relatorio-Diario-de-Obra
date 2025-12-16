@@ -1,36 +1,129 @@
 {% extends "base.html" %}
-
-{% block title %}Lista de Climas{% endblock %}
+{% block title %}Cadastro de Climas{% endblock %}
 
 {% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
 <div class="mb-6">
-    <h1 class="text-2xl font-bold text-slate-800">Lista de Climas</h1>
+    <h1 class="text-2xl font-bold text-slate-800">Cadastro de Climas</h1>
+    <p class="text-sm text-slate-500">Gestão centralizada dos tipos de clima utilizados no sistema.</p>
 </div>
 
+<style>
+    .dataTables_info,
+    .dataTables_paginate,
+    .paging_simple_numbers,
+    .dataTables_length {
+        font-size: 12px;
+        padding: 10px;
+        color: rgb(0, 0, 0);
+        font-weight: 100;
+    }
+
+    .dataTables_length select {
+        cursor: pointer;
+    }
+
+    .filters input:focus {
+        outline: none;
+        border-color: #e0202d;
+        box-shadow: 0 0 3px rgba(224, 32, 45, 0.3);
+    }
+
+    .filters input {
+        width: 100%;
+        border: none;
+        border-radius: 6px;
+        color: rgb(0, 0, 0);
+        padding: 2px;
+        font-size: 12px;
+        background: #ffffff;
+        transition: 0.2s;
+    }
+
+    .dataTables_info,
+    .dataTables_paginate,
+    .dataTables_length {
+        font-size: 13px !important;
+        padding: 8px 12px !important;
+        color: #444 !important;
+        font-weight: 400 !important;
+    }
+
+    .dataTables_length select {
+        border-radius: 6px !important;
+        padding: 4px 8px !important;
+        border: 1px solid #ccc !important;
+        background: #f8f8f8;
+        cursor: pointer;
+    }
+
+    .dataTables_paginate a {
+        border-radius: 6px !important;
+        padding: 4px 8px !important;
+        margin: 2px;
+        text-decoration: none;
+        border: 1px solid #ddd !important;
+        background: #fff !important;
+        transition: 0.2s;
+    }
+
+    .dataTables_paginate a:hover {
+        background: #e0202d !important;
+        color: #fff !important;
+        border-color: #e0202d !important;
+    }
+
+    .dataTables_paginate .current {
+        color: #fff !important;
+        background: #eeeeee !important;
+    }
+</style>
+
 <div class="top-actions-container">
-    <a class="button-base button-success">
-        <i class="fas fa-plus"></i> Adicionar Clima
+    <div class="search-form">
+        <input type="text" id="climaInputSearch" placeholder="Buscar por nome do clima..." class="form-control">
+        <button onclick="$('#dataTableClimas').DataTable().search($('#climaInputSearch').val()).draw();"
+            class="button-base button-secondary button-compact">
+            Pesquisar <i class="fas fa-search"></i>
+        </button>
+    </div>
+
+    <a href="{{ url_for('auth.criar_clima') }}" class="button-base button-success">
+        <i class="fas fa-plus"></i> Novo Clima
     </a>
 </div>
 
-<div class="table-container">
-    <table class="data-table">
+<div class="table-container bg-white rounded-lg shadow border overflow-hidden p-4">
+    <table id="dataTableClimas" class="display nowrap w-full">
         <thead>
-            <tr>
+            <tr class="bg-slate-50">
                 <th>ID</th>
-                <th>Descrição do Clima</th>
-                <th class="actions-column">Ações</th>
+                <th>Nome do Clima</th>
+                <th class="text-right">Ações</th>
             </tr>
         </thead>
-        <tbody>
+        <tbody class="divide-y divide-slate-100">
             {% for clima in opcoes %}
-            <tr id="row-{{ clima.id }}">
-                <td>{{ clima.id }}</td>
-                <td>{{ clima.nome }}</td>
-                <td class="actions-column">
-                    <div class="action-buttons">
-                        <button onclick="excluirItem('{{ clima.id }}', 'clima')" class="button-acoes button-danger">
-                            <img src="{{ url_for('static', filename='icons/delete.png') }}" class="action-icon">
+            <tr id="clima-row-{{ clima.id }}" class="hover:bg-red-50/30 transition">
+                <td class="text-sm font-mono text-slate-500">{{ clima.id }}</td>
+                <td class="font-semibold text-slate-800">{{ clima.nome }}</td>
+                <td class="text-right">
+                    <div class="flex justify-end gap-1">
+                        <a href="{{ url_for('auth.editar_clima', id=clima.id) }}"
+                            class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 rounded transition"
+                            title="Editar">
+                            <i class="fas fa-edit text-sm"></i>
+                        </a>
+                        <a href="{{ url_for('auth.visualizar_clima', id=clima.id) }}"
+                            class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition"
+                            title="Visualizar">
+                            <i class="fas fa-eye text-sm"></i>
+                        </a>
+                        <button type="button" onclick="confirmDeleteClima({{ clima.id }})"
+                            class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition"
+                            title="Excluir">
+                            <i class="fas fa-trash text-sm"></i>
                         </button>
                     </div>
                 </td>
@@ -39,4 +132,51 @@
         </tbody>
     </table>
 </div>
+
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+
+<script>
+    var dataTableClimas = null;
+    $(document).ready(function () {
+        dataTableClimas = $('#dataTableClimas').DataTable({
+            responsive: true,
+            paging: true,
+            searching: true,
+            pageLength: 10,
+            lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "Todos"]],
+            order: [[0, 'asc']],
+            language: {
+                url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json"
+            },
+            dom: 'lrtip'
+        });
+    });
+
+
+    function confirmDeleteClima(id) {
+        if (!confirm('Deseja excluir este clima? Esta ação não pode ser desfeita.')) return;
+
+        fetch(`/auth/excluir-clima/${id}`, { method: 'POST' })
+            .then(res => {
+                if (!res.ok) throw new Error('Erro ao excluir');
+                // remove a linha do DataTable
+                if (dataTableClimas) {
+                    const row = document.getElementById('clima-row-' + id);
+                    if (row) {
+                        dataTableClimas.row(row).remove().draw(false);
+                    }
+                } else {
+                    const row = document.getElementById('clima-row-' + id);
+                    if (row) row.remove();
+                }
+                alert('Clima excluído com sucesso.');
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Erro ao excluir clima.');
+            });
+    }
+</script>
 {% endblock %}

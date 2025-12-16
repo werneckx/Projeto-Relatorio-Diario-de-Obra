@@ -290,6 +290,7 @@ def gerar():
     return redirect(url_for('auth.visualizar_rdo', rdo_id=rdo_id))
 
 # Rota de Sucesso (Callback)
+
 @auth_bp.get("/rdo_success")
 @login_required
 def rdo_success():
@@ -301,9 +302,10 @@ def rdo_success():
         return response
     return redirect(url_for('auth.lista_rdo'))
 
-# No seu ficheiro auth.py
+####################################################################################################### USUARIOS
 
 # Rota para a lista de usuários
+
 @auth_bp.get("/lista-usuarios")
 @login_required
 def lista_usuarios():
@@ -341,9 +343,7 @@ def lista_usuarios():
     return render_template("list_usuarios.html", opcoes=usuarios, categoria="usuario")
 
 # Abrir Formulário de Cadastro de Usuario
-# app/routes/auth.py
 
-# Abrir Formulário de Cadastro de Usuario
 @auth_bp.get("/criar-usuario")
 @login_required
 def criar_usuario():
@@ -364,9 +364,8 @@ def criar_usuario():
         obra_hierarchy=obra_hierarchy,
         default_supervisor=default_supervisor
     )
-# app/routes/auth.py
 
-# app/routes/auth.py
+# Salvar/Gerar Usuario (POST)
 
 @auth_bp.post("/gerar-usuario")
 @login_required
@@ -468,6 +467,8 @@ def gerar_usuario():
             # 5. CORRIGIDO: Passa obra_hierarchy em caso de erro de DB
             return render_template("form_usuario.html", item=item_form, todas_obras=todas_obras, obra_hierarchy=obra_hierarchy)
 
+# Mudar Status do Usuário (POST)
+
 @auth_bp.post("/mudar-status-usuario/<int:userId>")
 @login_required
 def toggle_user_status(userId):
@@ -487,7 +488,9 @@ def toggle_user_status(userId):
         db.session.rollback()
         return jsonify({"message": f"Erro ao atualizar: {str(e)}"}), 500
     
+    
 # Rota de Reset de Senha corrigida
+
 @auth_bp.post("/usuario-reset/<int:id>")
 @login_required
 def reset_senha_usuario(id):
@@ -496,6 +499,8 @@ def reset_senha_usuario(id):
     user.set_senha("EnfilSA@") # Senha padrão solicitada
     db.session.commit()
     return {"message": "Sucesso"}, 200
+
+# Editar Usuário
         
 @auth_bp.route("/editar-usuario/<int:id>", methods=['GET', 'POST'])
 @login_required
@@ -521,6 +526,8 @@ def editar_usuario(id):
         obra_hierarchy=obra_hierarchy # Agora passa a estrutura correta
     )
     
+# Visualizar Usuário
+
 @auth_bp.get("/visualizar-usuario/<int:id>")
 def visualizar_usuario(id):
     from app.models.usuario import Usuario
@@ -563,16 +570,99 @@ def visualizar_usuario(id):
 
     return render_template("form_usuario.html", item=user, categoria="usuario", todas_obras=todas_obras, view_mode=view_mode, obra_hierarchy=obra_hierarchy, supervisor_chain=supervisor_chain, default_supervisor=default_supervisor)
 
-# Rota para a lista de climas
+# Endpoint que retorna lista de usuários para selecionar como supervisor
+
+@auth_bp.get('/supervisores')
+@login_required
+def lista_supervisores():
+    from app.models.usuario import Usuario
+    # Retorna todos os usuários (id + nome) ordenados por nome
+    users = Usuario.query.order_by(Usuario.nome.asc()).all()
+    result = [{'id': u.id, 'nome': u.nome, 'papel': u.papel} for u in users]
+    from flask import jsonify
+    return jsonify(result)
+
+####################################################################################################### CLIMAS
+
 @auth_bp.get("/lista-climas")
 @login_required
 def lista_climas():
     from app.models.clima import Clima
     # Busca todos os climas
-    climas = Clima.query.order_by(Clima.id.asc()).all()
+    climas = Clima.query.order_by(Clima.nome.asc()).all()
     return render_template("list_climas.html", opcoes=climas, categoria="clima")
 
+
+@auth_bp.get('/criar-clima')
+@login_required
+def criar_clima():
+    # Mostra formulário para criação
+    return render_template('form_clima.html', item=None, view_mode=False)
+
+
+@auth_bp.post('/gerar-clima')
+@login_required
+def gerar_clima():
+    from app.models.clima import Clima
+    clima_id = request.form.get('id')
+    nome = request.form.get('nome', '').strip()
+    if not nome:
+        flash('Nome do clima é obrigatório.', 'danger')
+        if clima_id:
+            return redirect(url_for('auth.editar_clima', id=clima_id))
+        return redirect(url_for('auth.criar_clima'))
+
+    if clima_id:
+        clima = Clima.query.get(clima_id)
+        if not clima:
+            flash('Clima não encontrado.', 'danger')
+            return redirect(url_for('auth.lista_climas'))
+        clima.nome = nome
+        db.session.add(clima)
+        db.session.commit()
+        flash('Clima atualizado com sucesso.', 'success')
+        return redirect(url_for('auth.lista_climas'))
+
+    novo = Clima(nome=nome)
+    db.session.add(novo)
+    db.session.commit()
+    flash('Clima criado com sucesso.', 'success')
+    return redirect(url_for('auth.lista_climas'))
+
+
+@auth_bp.get('/visualizar-clima/<int:id>')
+@login_required
+def visualizar_clima(id):
+    from app.models.clima import Clima
+    clima = Clima.query.get_or_404(id)
+    return render_template('form_clima.html', item=clima, view_mode=True)
+
+
+@auth_bp.get('/editar-clima/<int:id>')
+@login_required
+def editar_clima(id):
+    from app.models.clima import Clima
+    clima = Clima.query.get_or_404(id)
+    return render_template('form_clima.html', item=clima, view_mode=False)
+
+
+@auth_bp.post('/excluir-clima/<int:id>')
+@login_required
+def excluir_clima(id):
+    from app.models.clima import Clima
+    clima = Clima.query.get(id)
+    if not clima:
+        flash('Clima não encontrado.', 'danger')
+        return redirect(url_for('auth.lista_climas'))
+    # TODO: verificar dependências (RDOs) antes de excluir
+    db.session.delete(clima)
+    db.session.commit()
+    return redirect(url_for('auth.lista_climas'))
+
+####################################################################################################### OBRAS
+
 # Rota para a lista de obras
+
 @auth_bp.get("/lista-obras")
 @login_required
 def lista_obras():
@@ -622,7 +712,6 @@ def lista_obras():
     
     # ... o restante da função fica igual
     return render_template("list_obras.html", opcoes=obras_formatadas, categoria="obra")
-
 def get_matrix_options():
     """Busca todas as Obras que são Matrizes (id_matriz é NULL ou 0)"""
     # Adiciona a importação, caso Obra ainda não esteja no escopo
@@ -630,8 +719,76 @@ def get_matrix_options():
     
     # Filtra por id_matriz NULL ou 0 para ser robusto com a lógica do HTML
     return Obra.query.filter(or_(Obra.id_matriz.is_(None), Obra.id_matriz == 0)).all()
+def fetch_single_obra_with_matriz_name(obra_id):
+    """Busca uma única Obra por ID e injeta o nome da Matriz (se for filial)"""
+    from app.models.obra import Obra # Adiciona a importação
+    
+    Matriz = aliased(Obra)
+    query = Obra.query.outerjoin(Matriz, Obra.id_matriz == Matriz.id)
+    
+    # Busca a Obra e o nome da Matriz associada
+    result = query.with_entities(Obra, Matriz.nome.label('nome_matriz')).filter(Obra.id == obra_id).first()
+    
+    if result:
+        # Se for encontrado, 'result' é uma tupla onde o primeiro elemento é o objeto Obra
+        item = result[0]
+        # Injeta o atributo 'nome_matriz' no objeto Obra para acesso no template
+        setattr(item, 'nome_matriz', result.nome_matriz)
+        return item
+    
+    return None
+def get_obra_hierarchy_for_user_form():
+    """Busca todas as obras e agrupa filiais sob suas matrizes."""
+    from app.models.obra import Obra
+    
+    # Busca todas as obras ativas
+    todas_obras = Obra.query.filter(Obra.status == 1).all()
+    
+    hierarchy = {}
+    
+    # 1. Popula as Matrizes (id_matriz = None ou 0)
+    for obra in todas_obras:
+        if obra.id_matriz is None or obra.id_matriz == 0:
+            hierarchy[obra.id] = {
+                'matriz': obra,
+                'filiais': []
+            }
+
+    # 2. Popula as Filiais
+    for obra in todas_obras:
+        if obra.id_matriz and obra.id_matriz in hierarchy:
+            hierarchy[obra.id_matriz]['filiais'].append(obra)
+        elif obra.id_matriz and obra.id_matriz not in hierarchy:
+            # Caso raro: Filial sem Matriz ativa. Pode ser ignorado ou logado.
+            pass
+
+    return hierarchy
+def get_supervisor_chain_for_user(user):
+    """Retorna lista de supervisores ascendentes a partir do usuário.
+    Exemplo: [ {id, nome}, {id, nome}, ... ] onde o primeiro é o supervisor imediato.
+    """
+    from app.models.usuario import Usuario
+    chain = []
+    visited = set()
+    current = user
+    while current and getattr(current, 'id_supervisor', None):
+        try:
+            sup_id = int(getattr(current, 'id_supervisor'))
+        except Exception:
+            break
+        if sup_id in visited:
+            break
+        sup = Usuario.query.get(sup_id)
+        if not sup:
+            break
+        chain.append({'id': sup.id, 'nome': sup.nome})
+        visited.add(sup.id)
+        current = sup
+
+    return chain
 
 # Rota para criar nova obra
+
 @auth_bp.get("/criar-obra")
 @login_required
 def criar_obra():
@@ -642,6 +799,8 @@ def criar_obra():
     
     # Passa opcoes_matriz para o template
     return render_template("form_obra.html", item=None, opcoes_matriz=opcoes_matriz)
+
+# Rota para mudar status da obra (POST)
 
 @auth_bp.post("/mudar-status-obras/<int:obraid>")
 @login_required
@@ -661,8 +820,8 @@ def toggle_user_obras(obraid):
         db.session.rollback()
         return {"message": f"Erro ao atualizar: {str(e)}"}, 500
     
-    
-# Rota para salvar/editar obra
+# Rota para salvar obra
+
 @auth_bp.post("/gerar-obra")
 @login_required
 def gerar_obra():
@@ -768,25 +927,6 @@ def gerar_obra():
     
 # Rota pra editar obra
 
-def fetch_single_obra_with_matriz_name(obra_id):
-    """Busca uma única Obra por ID e injeta o nome da Matriz (se for filial)"""
-    from app.models.obra import Obra # Adiciona a importação
-    
-    Matriz = aliased(Obra)
-    query = Obra.query.outerjoin(Matriz, Obra.id_matriz == Matriz.id)
-    
-    # Busca a Obra e o nome da Matriz associada
-    result = query.with_entities(Obra, Matriz.nome.label('nome_matriz')).filter(Obra.id == obra_id).first()
-    
-    if result:
-        # Se for encontrado, 'result' é uma tupla onde o primeiro elemento é o objeto Obra
-        item = result[0]
-        # Injeta o atributo 'nome_matriz' no objeto Obra para acesso no template
-        setattr(item, 'nome_matriz', result.nome_matriz)
-        return item
-    
-    return None
-
 @auth_bp.get("/editar-obra/<int:id>")
 @login_required
 def editar_obra(id):
@@ -829,6 +969,7 @@ def visualizar_obra(id):
     )
 
 # Rota para toggle de status da obra (usado em list_obras.html)
+
 @auth_bp.post("/obra/toggle-status/<int:id>")
 @login_required
 def toggle_obra_status(id):
@@ -849,69 +990,3 @@ def toggle_obra_status(id):
         db.session.rollback()
         print(f"Erro ao alternar status da obra: {e}")
         return '', 500 # Retorna erro 500
-
-# auth.py (ou app.utils.helpers, se aplicável)
-
-def get_obra_hierarchy_for_user_form():
-    """Busca todas as obras e agrupa filiais sob suas matrizes."""
-    from app.models.obra import Obra
-    
-    # Busca todas as obras ativas
-    todas_obras = Obra.query.filter(Obra.status == 1).all()
-    
-    hierarchy = {}
-    
-    # 1. Popula as Matrizes (id_matriz = None ou 0)
-    for obra in todas_obras:
-        if obra.id_matriz is None or obra.id_matriz == 0:
-            hierarchy[obra.id] = {
-                'matriz': obra,
-                'filiais': []
-            }
-
-    # 2. Popula as Filiais
-    for obra in todas_obras:
-        if obra.id_matriz and obra.id_matriz in hierarchy:
-            hierarchy[obra.id_matriz]['filiais'].append(obra)
-        elif obra.id_matriz and obra.id_matriz not in hierarchy:
-            # Caso raro: Filial sem Matriz ativa. Pode ser ignorado ou logado.
-            pass
-
-    return hierarchy
-
-
-def get_supervisor_chain_for_user(user):
-    """Retorna lista de supervisores ascendentes a partir do usuário.
-    Exemplo: [ {id, nome}, {id, nome}, ... ] onde o primeiro é o supervisor imediato.
-    """
-    from app.models.usuario import Usuario
-    chain = []
-    visited = set()
-    current = user
-    while current and getattr(current, 'id_supervisor', None):
-        try:
-            sup_id = int(getattr(current, 'id_supervisor'))
-        except Exception:
-            break
-        if sup_id in visited:
-            break
-        sup = Usuario.query.get(sup_id)
-        if not sup:
-            break
-        chain.append({'id': sup.id, 'nome': sup.nome})
-        visited.add(sup.id)
-        current = sup
-
-    return chain
-
-
-# Endpoint que retorna lista de usuários para selecionar como supervisor
-@auth_bp.get('/supervisores')
-@login_required
-def lista_supervisores():
-    from app.models.usuario import Usuario
-    # Retorna todos os usuários (id + nome) ordenados por nome
-    users = Usuario.query.order_by(Usuario.nome.asc()).all()
-    result = [{'id': u.id, 'nome': u.nome, 'papel': u.papel} for u in users]
-    from flask import jsonify
-    return jsonify(result)

@@ -13,6 +13,37 @@
     /* Estilos exatos da tabela RDO para manter a consistência visual */
     .dataTables_info,
     .dataTables_paginate,
+    .paging_simple_numbers,
+    .dataTables_length {
+        font-size: 12px;
+        padding: 10px;
+        color: rgb(0, 0, 0);
+        font-weight: 100;
+    }
+
+    .dataTables_length select {
+        cursor: pointer;
+    }
+
+    .filters input:focus {
+        outline: none;
+        border-color: #e0202d;
+        box-shadow: 0 0 3px rgba(224, 32, 45, 0.3);
+    }
+
+    .filters input {
+        width: 100%;
+        border: none;
+        border-radius: 6px;
+        color: rgb(0, 0, 0);
+        padding: 2px;
+        font-size: 12px;
+        background: #ffffff;
+        transition: 0.2s;
+    }
+
+    .dataTables_info,
+    .dataTables_paginate,
     .dataTables_length {
         font-size: 13px !important;
         padding: 8px 12px !important;
@@ -45,9 +76,8 @@
     }
 
     .dataTables_paginate .current {
-        background: #e0202d !important;
         color: #fff !important;
-        border-color: #e0202d !important;
+        background: #eeeeee !important;
     }
 
     /* Filtro customizado */
@@ -65,33 +95,6 @@
         outline: none;
         border-color: #e0202d;
         box-shadow: 0 0 3px rgba(224, 32, 45, 0.3);
-    }
-
-    /* Estilos exatos da tabela RDO para manter a consistência visual (Repetido para consistência) */
-    .dataTables_info,
-    .dataTables_paginate,
-    .dataTables_length {
-        font-size: 13px !important;
-        padding: 8px 12px !important;
-        color: #444 !important;
-        font-weight: 400 !important;
-    }
-
-    .dataTables_paginate a {
-        border-radius: 6px !important;
-        padding: 4px 8px !important;
-        margin: 2px;
-        text-decoration: none;
-        border: 1px solid #ddd !important;
-        background: #fff !important;
-        transition: 0.2s;
-    }
-
-    .dataTables_paginate a:hover,
-    .dataTables_paginate .current {
-        background: #e0202d !important;
-        color: #fff !important;
-        border-color: #e0202d !important;
     }
 
     .status-badge-ui {
@@ -223,7 +226,7 @@
             searching: true,
             pageLength: 10,
             lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "Todos"]],
-            order: [[0, 'asc']],
+            order: [[0, 'desc']],
             language: {
                 url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json"
             },

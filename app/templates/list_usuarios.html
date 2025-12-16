@@ -10,7 +10,38 @@
 </div>
 
 <style>
-    /* Estilos exatos da tabela RDO para manter a consistência visual */
+    /* Estilos DataTables (mantidos) */
+    .dataTables_info,
+    .dataTables_paginate,
+    .paging_simple_numbers,
+    .dataTables_length {
+        font-size: 12px;
+        padding: 10px;
+        color: rgb(0, 0, 0);
+        font-weight: 100;
+    }
+
+    .dataTables_length select {
+        cursor: pointer;
+    }
+
+    .filters input:focus {
+        outline: none;
+        border-color: #e0202d;
+        box-shadow: 0 0 3px rgba(224, 32, 45, 0.3);
+    }
+
+    .filters input {
+        width: 100%;
+        border: none;
+        border-radius: 6px;
+        color: rgb(0, 0, 0);
+        padding: 2px;
+        font-size: 12px;
+        background: #ffffff;
+        transition: 0.2s;
+    }
+
     .dataTables_info,
     .dataTables_paginate,
     .dataTables_length {
@@ -45,53 +76,8 @@
     }
 
     .dataTables_paginate .current {
-        background: #e0202d !important;
         color: #fff !important;
-        border-color: #e0202d !important;
-    }
-
-    /* Filtro customizado */
-    .filters input {
-        width: 100%;
-        border: none;
-        border-radius: 6px;
-        padding: 2px;
-        font-size: 12px;
-        background: #ffffff;
-        transition: 0.2s;
-    }
-
-    .filters input:focus {
-        outline: none;
-        border-color: #e0202d;
-        box-shadow: 0 0 3px rgba(224, 32, 45, 0.3);
-    }
-
-    /* Estilos exatos da tabela RDO para manter a consistência visual */
-    .dataTables_info,
-    .dataTables_paginate,
-    .dataTables_length {
-        font-size: 13px !important;
-        padding: 8px 12px !important;
-        color: #444 !important;
-        font-weight: 400 !important;
-    }
-
-    .dataTables_paginate a {
-        border-radius: 6px !important;
-        padding: 4px 8px !important;
-        margin: 2px;
-        text-decoration: none;
-        border: 1px solid #ddd !important;
-        background: #fff !important;
-        transition: 0.2s;
-    }
-
-    .dataTables_paginate a:hover,
-    .dataTables_paginate .current {
-        background: #e0202d !important;
-        color: #fff !important;
-        border-color: #e0202d !important;
+        background: #eeeeee !important;
     }
 
     .status-badge-ui {
@@ -132,8 +118,8 @@
         </thead>
         <tbody class="divide-y divide-slate-100">
             {% for user in opcoes %}
-            <tr id="row-{{ user.id }}"
-                class="hover:bg-red-50/30 transition {{ 'opacity-50 grayscale' if user.status == 'Inativo' }}">
+            <tr id="row-{{ user.id }}" class="hover:bg-red-50/30 transition">
+                <!-- REMOVIDO: {{ 'opacity-50 grayscale' if user.status == False else '' }} -->
                 <td class="text-sm font-mono text-slate-500">{{ user.id }}</td>
                 <td>
                     <div class="font-bold text-slate-800">{{ user.nome }}</div>
@@ -179,11 +165,12 @@
                             title="Editar">
                             <i class="fas fa-edit text-sm"></i>
                         </a>
+                        <!-- Botão de Ação -->
                         <button onclick="toggleStatus('{{ user.id }}')" data-user-id="{{ user.id }}"
                             class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-orange-600 hover:bg-orange-50 rounded transition"
-                            title="{{ 'Ativar' if user.status == 'Inativo' else 'Desativar' }}">
+                            title="{{ 'Ativar' if user.status == False else 'Desativar' }}">
                             <i
-                                class="fas {{ 'fa-user-check' if user.status == 'Inativo' else 'fa-user-alt-slash' }} text-sm"></i>
+                                class="fas {{ 'fa-user-check' if user.status == False else 'fa-user-alt-slash' }} text-sm"></i>
                         </button>
                     </div>
                 </td>
@@ -198,6 +185,19 @@
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 
 <script>
+    // Função utilitária para análise segura de JSON
+    function parseJsonSafe(res) {
+        return res.text().then(text => {
+            if (!text) return { status: res.status, ok: res.ok, data: null };
+            try {
+                return { status: res.status, ok: res.ok, data: JSON.parse(text) };
+            } catch (e) {
+                console.warn('Resposta não é JSON:', e, text);
+                return { status: res.status, ok: res.ok, data: null, text };
+            }
+        });
+    }
+
     $(document).ready(function () {
         $('#dataTableUsers').DataTable({
             responsive: true,
@@ -220,40 +220,49 @@
             method: 'POST',
             headers: { 'Content-Type': 'application/json' }
         })
+            .then(res => parseJsonSafe(res))
             .then(({ status, ok, data }) => {
-                console.log('Resposta:', { status, ok, data });
-
                 if (!ok || status !== 200) {
-                    alert("Erro: " + (data.message || "Erro desconhecido"));
+                    console.error("Erro na requisição ou backend:", data?.message || "Erro desconhecido", status);
                     return;
                 }
 
-                // Encontra o botão usando o atributo data-user-id
+                // O novo status retornado pela API
+                const newStatus = data.status;
+
                 const button = document.querySelector(`button[data-user-id="${userId}"]`);
                 if (!button) {
                     console.error('Botão não encontrado para userId:', userId);
                     return;
                 }
 
-                // Encontra a linha (tr) mais próxima do botão
                 const row = button.closest('tr');
                 if (!row) {
                     console.error('Linha não encontrada');
                     return;
                 }
 
-                // Encontra o span de status (6ª coluna)
-                const statusCell = row.querySelector('td:nth-child(6) span');
+                // Coluna de Status é a 7ª (td:nth-child(7))
+                const statusCell = row.querySelector('td:nth-child(7) span');
                 if (!statusCell) {
-                    console.error('Célula de status não encontrada');
+                    console.error('Célula de status não encontrada (esperado td:nth-child(7) span)');
                     return;
                 }
 
-                // Verifica se está ativo (verde) ou inativo (vermelho)
-                const isCurrentlyActive = statusCell.classList.contains('bg-green-100');
-                console.log('Status atual (verde/ativo)?:', isCurrentlyActive);
+                if (newStatus) {
+                    // Mudar PARA Ativo (cor normal)
+                    statusCell.className = 'status-badge-ui bg-green-100 text-green-700 border border-green-200';
+                    statusCell.innerHTML = '<i class="fas fa-check-circle mr-1"></i> Ativo';
+                    button.title = 'Desativar';
 
-                if (isCurrentlyActive) {
+                    // Muda o ícone do botão
+                    const icon = button.querySelector('i');
+                    if (icon) {
+                        icon.className = 'fas fa-user-alt-slash text-sm';
+                    }
+
+                    // REMOVIDO: row.classList.remove('opacity-50', 'grayscale');
+                } else {
                     // Mudar PARA Inativo (vermelho)
                     statusCell.className = 'status-badge-ui bg-red-100 text-red-700 border border-red-200';
                     statusCell.innerHTML = '<i class="fas fa-times-circle mr-1"></i> Inativo';
@@ -265,29 +274,13 @@
                         icon.className = 'fas fa-user-check text-sm';
                     }
 
-                    // Adiciona efeito de desativado na linha
-                    row.classList.add('opacity-50', 'grayscale');
-                } else {
-                    // Mudar PARA Ativo (verde)
-                    statusCell.className = 'status-badge-ui bg-green-100 text-green-700 border border-green-200';
-                    statusCell.innerHTML = '<i class="fas fa-check-circle mr-1"></i> Ativo';
-                    button.title = 'Desativar';
-
-                    // Muda o ícone do botão
-                    const icon = button.querySelector('i');
-                    if (icon) {
-                        icon.className = 'fas fa-user-alt-slash text-sm';
-                    }
-
-                    // Remove efeito de desativado
-                    row.classList.remove('opacity-50', 'grayscale');
+                    // REMOVIDO: row.classList.add('opacity-50', 'grayscale');
                 }
 
-                console.log('Status atualizado com sucesso!');
+                console.log(`Status do usuário ${userId} atualizado com sucesso para ${newStatus ? 'Ativo' : 'Inativo'}!`);
             })
             .catch(err => {
-                console.error("Erro na requisição:", err);
-                alert("Erro de comunicação: " + err.message);
+                console.error("Erro de comunicação:", err);
             });
     }
 </script>
