@@ -22,6 +22,7 @@ class Usuario(db.Model, UserMixin):
     papel = db.Column(db.String(50), nullable=False, default='Leitor')
     data_cadastro = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     status = db.Column(db.Integer)
+    id_supervisor = db.Column(db.String(120), nullable=True, default=1)
 
     # RELACIONAMENTO: Lista de obras/matrizes que este usuário pode acessar
     # Para matrizes: armazena a matriz (id_matriz = None)

@@ -114,12 +114,54 @@
                     </div>
                 </div>
 
+                <!-- Supervisor moved after E-mail (inserido dinamicamente abaixo) -->
+
                 <div class="md:col-span-2 space-y-1">
                     <label class="text-xs font-bold text-slate-500 uppercase">E-mail Corporativo
                         <span class="text-red-500">*</span></label>
                     <input type="email" name="email" value="{{ item.email if item }}"
                         class="w-full border rounded-lg px-3 py-2 h-10 transition {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}"
                         {{ 'readonly' if view_mode }} required>
+                </div>
+
+                <!-- Supervisor: exibido APÓS o e-mail -->
+                <div class="md:col-span-2 space-y-1">
+                    <label class="text-xs font-bold text-slate-500 uppercase">Supervisor</label>
+
+                    {% if view_mode %}
+                    <div
+                        class="w-full border rounded-lg px-3 py-2 h-auto flex items-start text-sm text-slate-700 flex-col">
+                        {% if supervisor_chain and supervisor_chain|length > 0 %}
+                        <div class="font-semibold">Supervisor imediato: {{ supervisor_chain[0].nome }} (ID: {{
+                            supervisor_chain[0].id }})</div>
+                        {% if supervisor_chain|length > 1 %}
+                        <div class="text-xs text-slate-500 mt-2">Cadeia de aprovação:</div>
+                        <ol class="ml-4 mt-1 text-sm text-slate-700">
+                            {% for s in supervisor_chain %}
+                            <li>{{ s.nome }} (ID: {{ s.id }})</li>
+                            {% endfor %}
+                        </ol>
+                        {% else %}
+                        <div>{{ default_supervisor.nome if default_supervisor else '-' }} <span
+                                class="text-xs text-slate-400">(Admin padrão)</span></div>
+                        {% endif %}
+                        {% else %}
+                        <div>{{ default_supervisor.nome if default_supervisor else '-' }} <span
+                                class="text-xs text-slate-400">(Admin padrão)</span></div>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div class="relative">
+                        <input type="hidden" name="id_supervisor" id="id_supervisor_input"
+                            value="{{ item.id_supervisor if item and item.id_supervisor }}">
+                        <input type="text" id="supervisor_search" placeholder="Pesquisar supervisor por nome ou id..."
+                            class="w-full border rounded-lg px-3 py-2 h-10 transition" autocomplete="off">
+                        <ul id="supervisor_results"
+                            class="absolute z-40 left-0 right-0 mt-1 bg-white border rounded max-h-48 overflow-auto hidden">
+                        </ul>
+                        <p class="text-xs text-slate-500 mt-1">Selecione o supervisor (padrão: Admin caso vazio).</p>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </section>
@@ -506,6 +548,88 @@
             if (submitBtn) submitBtn.disabled = true;
         });
     }
+
+    // ===== SUPERVISOR SEARCH (AJAX + FILTRO) =====
+    (function initSupervisorSearch() {
+        const searchInput = document.getElementById('supervisor_search');
+        const resultsList = document.getElementById('supervisor_results');
+        const hiddenInput = document.getElementById('id_supervisor_input');
+
+        if (!searchInput || !resultsList || !hiddenInput) return;
+
+        let supervisors = [];
+
+        function renderResults(items) {
+            resultsList.innerHTML = '';
+            if (!items.length) {
+                resultsList.classList.add('hidden');
+                return;
+            }
+            items.forEach(s => {
+                const li = document.createElement('li');
+                li.className = 'p-2 hover:bg-slate-100 cursor-pointer text-sm';
+                li.textContent = `${s.nome} (ID:${s.id})`;
+                li.dataset.id = s.id;
+                li.dataset.nome = s.nome;
+                li.addEventListener('click', () => {
+                    hiddenInput.value = s.id;
+                    searchInput.value = `${s.nome} (ID:${s.id})`;
+                    resultsList.classList.add('hidden');
+                });
+                resultsList.appendChild(li);
+            });
+            resultsList.classList.remove('hidden');
+        }
+
+        // Busca lista de supervisores do backend
+        fetch('/auth/supervisores')
+            .then(r => r.json())
+            .then(data => {
+                supervisors = Array.isArray(data) ? data : [];
+
+                // Define admin padrão se existir
+                const admin = supervisors.find(s => s.papel === 'Admin');
+
+                // Se já houver um supervisor selecionado no form (edição), preenche o campo
+                const existing = hiddenInput.value;
+                if (existing) {
+                    const found = supervisors.find(s => String(s.id) === String(existing));
+                    if (found) searchInput.value = `${found.nome} (ID:${found.id})`;
+                } else if (admin) {
+                    // Preenche com Admin padrão visualmente, mas mantém o campo selecionável
+                    hiddenInput.value = admin.id;
+                    searchInput.value = `${admin.nome} (ID:${admin.id})`;
+                }
+            })
+            .catch(err => console.warn('Não foi possível carregar supervisores', err));
+
+        let debounce = null;
+        searchInput.addEventListener('input', () => {
+            clearTimeout(debounce);
+            const q = searchInput.value.trim().toLowerCase();
+            debounce = setTimeout(() => {
+                if (!q) { renderResults([]); return; }
+                const filtered = supervisors.filter(s =>
+                    s.nome.toLowerCase().includes(q) || String(s.id).includes(q)
+                ).slice(0, 50);
+                renderResults(filtered);
+            }, 150);
+        });
+
+        // Ao focar no input, mostra algumas opções imediatamente
+        searchInput.addEventListener('focus', () => {
+            const q = searchInput.value.trim();
+            if (!q) {
+                const sample = supervisors.slice(0, 10);
+                renderResults(sample);
+            }
+        });
+
+        // Fecha ao clicar fora
+        document.addEventListener('click', (e) => {
+            if (!resultsList.contains(e.target) && e.target !== searchInput) resultsList.classList.add('hidden');
+        });
+    })();
     });
 </script>
 {% endblock %}

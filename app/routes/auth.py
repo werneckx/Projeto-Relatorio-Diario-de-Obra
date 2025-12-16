@@ -308,8 +308,35 @@ def rdo_success():
 @login_required
 def lista_usuarios():
     from app.models.usuario import Usuario
-    # Busca todos os usuários ordenados por ID
+    # Busca todos os usuários ordenados por ID crescente
     usuarios = Usuario.query.order_by(Usuario.id.asc()).all()
+
+    # Coleta ids de supervisor (campo `id_supervisor` pode ser string vazio)
+    sup_ids = set()
+    for u in usuarios:
+        try:
+            if u.id_supervisor is not None and str(u.id_supervisor).strip() != '':
+                sup_ids.add(int(str(u.id_supervisor).strip()))
+        except Exception:
+            continue
+
+    # Busca os usuários que são supervisores em um único query
+    sup_map = {}
+    if sup_ids:
+        supervisors = Usuario.query.filter(Usuario.id.in_(list(sup_ids))).all()
+        sup_map = {s.id: s.nome for s in supervisors}
+
+    # Injeta atributo dinâmico 'nome_supervisor' em cada usuário (None se admin/sem supervisor)
+    for u in usuarios:
+        nome_sup = None
+        try:
+            if u.id_supervisor is not None and str(u.id_supervisor).strip() != '':
+                sup_id = int(str(u.id_supervisor).strip())
+                nome_sup = sup_map.get(sup_id)
+        except Exception:
+            nome_sup = None
+        setattr(u, 'nome_supervisor', nome_sup)
+
     # Passamos explicitamente 'opcoes' e 'categoria' para o template
     return render_template("list_usuarios.html", opcoes=usuarios, categoria="usuario")
 
@@ -325,12 +352,17 @@ def criar_usuario():
     # ADICIONADO: Obter a hierarquia das obras
     obra_hierarchy = get_obra_hierarchy_for_user_form()
     
+    # Determina o Admin padrão para uso no template
+    from app.models.usuario import Usuario
+    admin = Usuario.query.filter_by(papel='Admin').first()
+    default_supervisor = {'id': admin.id, 'nome': admin.nome} if admin else None
+
     # Passamos categoria='usuario' para o template saber qual seção renderizar
     return render_template(
         "form_usuario.html", 
         categoria="usuario", 
-        # O 'todas_obras' pode ser mantido como [] se o template não o usar explicitamente fora da hierarquia
-        obra_hierarchy=obra_hierarchy 
+        obra_hierarchy=obra_hierarchy,
+        default_supervisor=default_supervisor
     )
 # app/routes/auth.py
 
@@ -359,6 +391,8 @@ def gerar_usuario():
         # Captura o status do checkbox (True se marcado, False caso contrário)
         status = True if request.form.get("status") == "on" else False
         obras_ids = request.form.getlist("obras_permitidas")
+        # Supervisor (pode ser vazio) - se vazio, será definido como Admin padrão
+        id_supervisor_raw = request.form.get('id_supervisor')
 
         item_form = {'id': user_id, 'nome': nome, 'email': email, 'papel': papel, 'cpf': cpf}
 
@@ -371,6 +405,11 @@ def gerar_usuario():
                 return render_template("form_usuario.html", item=item_form, todas_obras=todas_obras, obra_hierarchy=obra_hierarchy)
             
             user.nome, user.email, user.papel, user.cpf, user.status = nome, email, papel, cpf, status
+            # Atualiza id_supervisor se fornecido
+            try:
+                user.id_supervisor = int(id_supervisor_raw) if id_supervisor_raw else None
+            except Exception:
+                user.id_supervisor = None
         else:
             if Usuario.query.filter_by(cpf=cpf).first():
                 flash("CPF já cadastrado.", "danger")
@@ -378,6 +417,10 @@ def gerar_usuario():
                 return render_template("form_usuario.html", item=item_form, todas_obras=todas_obras, obra_hierarchy=obra_hierarchy)
 
             user = Usuario(nome=nome, email=email, papel=papel, cpf=cpf, status=status)
+            try:
+                user.id_supervisor = int(id_supervisor_raw) if id_supervisor_raw else None
+            except Exception:
+                user.id_supervisor = None
             user.set_senha(senha if senha else "EnfilSA@")
             db.session.add(user)
 
@@ -404,6 +447,15 @@ def gerar_usuario():
             
             # Vincula apenas as matrizes (filiais serão acessadas dinamicamente)
             user.obras_permitidas = matrizes_selecionadas
+
+        # Se id_supervisor está vazio/None, define primeiro Admin como supervisor padrão
+        if not getattr(user, 'id_supervisor', None):
+            try:
+                admin = Usuario.query.filter_by(papel='Admin').first()
+                if admin:
+                    user.id_supervisor = admin.id
+            except Exception:
+                pass
 
         try:
             db.session.commit()
@@ -485,7 +537,31 @@ def visualizar_usuario(id):
     # mas se o relacionamento não estiver carregado, você pode forçar aqui:
     # item.obras_permitidas # Garante que o relacionamento Many-to-Many está carregado
 
-    return render_template("form_usuario.html", item=user, categoria="usuario", todas_obras=todas_obras, view_mode=view_mode, obra_hierarchy=obra_hierarchy)
+    # Monta a cadeia de supervisores para exibição
+    supervisor_chain = get_supervisor_chain_for_user(user)
+
+    # Se o usuário tiver id_supervisor e ainda não tiver nome_supervisor injetado,
+    # tenta popular nome do supervisor imediato
+    nome_supervisor = None
+    if getattr(user, 'id_supervisor', None):
+        try:
+            sup = Usuario.query.get(int(user.id_supervisor))
+            nome_supervisor = sup.nome if sup else None
+        except Exception:
+            nome_supervisor = None
+
+    setattr(user, 'nome_supervisor', nome_supervisor)
+
+    # Default supervisor (Admin) caso não exista
+    default_supervisor = None
+    try:
+        admin = Usuario.query.filter_by(papel='Admin').first()
+        if admin:
+            default_supervisor = {'id': admin.id, 'nome': admin.nome}
+    except Exception:
+        default_supervisor = None
+
+    return render_template("form_usuario.html", item=user, categoria="usuario", todas_obras=todas_obras, view_mode=view_mode, obra_hierarchy=obra_hierarchy, supervisor_chain=supervisor_chain, default_supervisor=default_supervisor)
 
 # Rota para a lista de climas
 @auth_bp.get("/lista-climas")
@@ -802,3 +878,40 @@ def get_obra_hierarchy_for_user_form():
             pass
 
     return hierarchy
+
+
+def get_supervisor_chain_for_user(user):
+    """Retorna lista de supervisores ascendentes a partir do usuário.
+    Exemplo: [ {id, nome}, {id, nome}, ... ] onde o primeiro é o supervisor imediato.
+    """
+    from app.models.usuario import Usuario
+    chain = []
+    visited = set()
+    current = user
+    while current and getattr(current, 'id_supervisor', None):
+        try:
+            sup_id = int(getattr(current, 'id_supervisor'))
+        except Exception:
+            break
+        if sup_id in visited:
+            break
+        sup = Usuario.query.get(sup_id)
+        if not sup:
+            break
+        chain.append({'id': sup.id, 'nome': sup.nome})
+        visited.add(sup.id)
+        current = sup
+
+    return chain
+
+
+# Endpoint que retorna lista de usuários para selecionar como supervisor
+@auth_bp.get('/supervisores')
+@login_required
+def lista_supervisores():
+    from app.models.usuario import Usuario
+    # Retorna todos os usuários (id + nome) ordenados por nome
+    users = Usuario.query.order_by(Usuario.nome.asc()).all()
+    result = [{'id': u.id, 'nome': u.nome, 'papel': u.papel} for u in users]
+    from flask import jsonify
+    return jsonify(result)
