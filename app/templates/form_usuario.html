@@ -12,7 +12,7 @@
     {% for category, message in messages %}
     <div
         class="mb-6 p-4 rounded-lg flex items-center gap-3 border shadow-sm transition-all
-   {{ 'bg-red-100 text-red-700 border-red-200' if category == 'danger' else 'bg-green-100 text-green-700 border-green-200' }}">
+{{ 'bg-red-100 text-red-700 border-red-200' if category == 'danger' else 'bg-green-100 text-green-700 border-green-200' }}">
         <i class="fas {{ 'fa-exclamation-circle' if category == 'danger' else 'fa-check-circle' }}"></i>
         <span class="text-sm font-bold">{{ message }}</span>
     </div>
@@ -43,19 +43,21 @@
                 </div>
 
                 <div class="flex items-center h-10 px-4 bg-slate-50 border rounded-lg shadow-inner">
-                    <label
-                        class="relative inline-flex items-center group {{ 'cursor-not-allowed opacity-60' if view_mode else 'cursor-pointer' }}">
+                    <label id="statusSwitchLabel" data-user-id="{{ item.id if item and item.id }}"
+                        class="relative inline-flex items-center group {{ 'pointer-events-none cursor-not-allowed opacity-70' if view_mode else 'cursor-pointer' }}"
+                        {% if not view_mode %}tabindex="0" role="switch"
+                        aria-checked="{{ 'true' if (item and item.status) or not item else 'false' }}" {% endif %}>
                         <input type="checkbox" name="status" class="sr-only peer" {{ 'checked' if (item and item.status)
-                            or not item }} {{ 'disabled' if view_mode }}>
+                            or not item }}>
                         <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer 
-         peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] 
-         after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full 
-         after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+  peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] 
+  after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full 
+  after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                         <span
                             class="ml-3 text-[10px] font-bold transition-colors {{ 'text-blue-600' if (item and item.status) or not item else 'text-slate-400' }}"
                             id="statusLabel">
-                            {{ 'Acesso Liberado' if (item and item.status) or not item else
-                            'Acesso Bloqueado' }}
+                            {{ 'Ativo' if (item and item.status) or not item else
+                            'Inativo' }}
                         </span>
                     </label>
                 </div>
@@ -102,8 +104,7 @@
                                     class="flex items-center p-2 rounded hover:bg-slate-50 cursor-pointer transition">
                                     <input type="radio" name="papel" value="{{ val }}"
                                         class="role-radio w-4 h-4 text-blue-600" {{ 'checked' if item and
-                                        item.papel==val }} {{ 'disabled' if view_mode }} {# <--- CORREÇÃO APLICADA AQUI
-                                        #} required>
+                                        item.papel==val }} {{ 'disabled' if view_mode }} required>
                                     <span class="ml-3 text-sm text-slate-700">{{
                                         label }}</span>
                                 </label>
@@ -123,43 +124,112 @@
             </div>
         </section>
 
-        <section class="bg-white rounded-lg p-6 border shadow-sm">
+        <section class="bg-white rounded-lg p-6 border shadow-sm mt-6">
             <div class="flex items-center gap-3 mb-6">
-                <div
-                    class="w-10 h-10 rounded bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
-                    <i class="fas fa-building"></i>
+                <div class="w-10 h-10 rounded bg-orange-100 text-orange-600 flex items-center justify-center shrink-0">
+                    <i class="fas fa-network-wired"></i>
                 </div>
                 <h3
-                    class="font-semibold text-slate-800 border-l-2 border-emerald-600 pl-3 uppercase text-sm tracking-wide">
-                    Acesso a Obras <span class="text-red-500">*</span></h3>
+                    class="font-semibold text-slate-800 border-l-2 border-orange-600 pl-3 uppercase text-sm tracking-wide">
+                    Permissões de Acesso (Obras)
+                </h3>
             </div>
 
-            <div class="relative w-full max-w-lg">
-                <button type="button" id="obraDropdownBtn" {{ 'disabled' if view_mode }}
-                    class="w-full flex items-center justify-between border rounded-lg px-4 py-2 bg-slate-50 hover:bg-slate-100 focus:ring-2 focus:ring-emerald-500 outline-none h-10 {{ 'cursor-not-allowed' if view_mode }}">
-                    <span id="selectedCountText">Selecione as obras...</span>
-                    <i class="fas fa-chevron-down text-xs"></i>
-                </button>
-                <div id="obraDropdownContent"
-                    class="hidden absolute z-20 w-full mt-1 bg-white border rounded shadow-xl overflow-hidden">
-                    <div class="max-h-56 overflow-y-auto p-2">
-                        <label
-                            class="flex items-center p-2 mb-2 border-b bg-slate-50 font-bold text-emerald-700 cursor-pointer rounded transition">
-                            <input type="checkbox" id="selectAllObras" class="mr-2" {{ 'disabled' if view_mode }}>
-                            Selecionar Todas
-                        </label>
-                        {% for obra in todas_obras %}
-                        <label class="flex items-center p-2 rounded hover:bg-slate-50 cursor-pointer transition">
-                            <input type="checkbox" name="obras_permitidas" value="{{ obra.id }}"
-                                class="obra-checkbox w-4 h-4 text-emerald-600 rounded" {{ 'checked' if item and obra in
-                                item.obras_permitidas }} {{ 'disabled' if view_mode }}>
-                            <span class="ml-3 text-sm text-slate-700">{{ obra.nome }}</span>
-                        </label>
-                        {% endfor %}
+            {% if item and item.papel == 'Admin' %}
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <p class="text-sm text-blue-700 font-semibold">
+                    <i class="fas fa-info-circle mr-2"></i>Usuários com papel Admin têm acesso automático a TODAS as
+                    obras, incluindo as criadas no futuro.
+                </p>
+            </div>
+            {% endif %}
+
+            <div class="space-y-4 {{ 'opacity-50 pointer-events-none' if item and item.papel == 'Admin' else '' }}">
+                {% for matriz_id, data in obra_hierarchy.items() %}
+                {% set matriz = data.matriz %}
+                {% set filiais = data.filiais %}
+
+                {# Verifica se o usuário já tem a Matriz selecionada #}
+                {% set matriz_checked = item and matriz in item.obras_permitidas %}
+                {# Para Admin, todas as matrizes devem aparecer selecionadas #}
+                {% set matriz_checked = matriz_checked or (item and item.papel == 'Admin') %}
+
+                {# ID único para o cabeçalho e corpo do acordeão #}
+                {% set accordion_id = 'obra-group-' + matriz_id|string %}
+
+                <div class="border rounded-lg shadow-sm">
+                    <button type="button" class="matriz-header w-full flex items-center justify-between p-4 font-bold transition-colors 
+       {% if matriz_checked %}bg-red-50 hover:bg-red-100{% else %}bg-slate-50 hover:bg-slate-100{% endif %}"
+                        data-target="#{{ accordion_id }}" aria-expanded="false" aria-controls="{{ accordion_id }}"
+                        {{ 'disabled' if item and item.papel=='Admin' }}>
+
+                        <div class="flex items-center gap-3 w-full">
+                            <input type="checkbox" name="obras_permitidas" value="{{ matriz.id }}"
+                                id="matriz-{{ matriz.id }}"
+                                class="matriz-checkbox w-4 h-4 text-red-600 border-red-300 rounded focus:ring-red-500"
+                                data-filiais-selector=".filial-{{ matriz.id }}" {{ 'checked' if matriz_checked }}
+                                {{ 'disabled' if view_mode or (item and item.papel=='Admin' ) }}>
+
+                            <span class="cursor-pointer flex-grow text-left">
+                                {{ matriz.nome }}
+                                <span
+                                    class="ml-2 px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 border border-red-200 uppercase tracking-wide">
+                                    Matriz
+                                </span>
+                            </span>
+                        </div>
+
+                        <i class="fas fa-chevron-down text-xs transition-transform duration-300"></i>
+                    </button>
+
+                    <div id="{{ accordion_id }}" class="accordion-body hidden border-t bg-white">
+                        <div class="p-4 space-y-3 pl-12">
+                            <h4 class="text-sm font-semibold text-slate-600 mb-2">Filiais
+                                Vinculadas ({{ filiais|length
+                                }})</h4>
+
+                            {% if filiais %}
+                            {% for filial in filiais %}
+                            {% set filial_checked = item and filial in item.obras_permitidas %}
+                            {# Se a matriz está em obras_permitidas, a filial também está automaticamente #}
+                            {% set filial_checked = filial_checked or (item and matriz in item.obras_permitidas) %}
+                            {# Para Admin, todas as filiais devem aparecer selecionadas #}
+                            {% set filial_checked = filial_checked or (item and item.papel == 'Admin') %}
+
+                            <label class="flex items-start p-2 rounded hover:bg-blue-50 cursor-pointer transition">
+                                <input type="checkbox" name="obras_permitidas" value="{{ filial.id }}"
+                                    id="filial-{{ filial.id }}" data-matriz-id="matriz-{{ matriz.id }}"
+                                    class="filial-checkbox filial-{{ matriz.id }} w-4 h-4 text-blue-600 border-blue-300 rounded focus:ring-blue-500"
+                                    {{ 'checked' if filial_checked }} {{ 'disabled' if view_mode or (item and
+                                    item.papel=='Admin' ) }}>
+
+                                <span class="ml-3 text-sm text-slate-700 flex-grow">
+                                    {{ filial.nome }}
+                                    <span
+                                        class="ml-2 px-2 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700 uppercase tracking-wide">
+                                        Filial
+                                    </span>
+                                </span>
+                            </label>
+                            {% endfor %}
+                            {% else %}
+                            <p class="text-xs text-slate-500 italic">Esta matriz não possui
+                                filiais ativas vinculadas.
+                            </p>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
+                {% endfor %}
+
+                {% if not obra_hierarchy %}
+                <div class="text-center py-4 text-slate-500 text-sm">
+                    Nenhuma Obra Matriz ativa cadastrada no sistema.
+                </div>
+                {% endif %}
             </div>
         </section>
+
 
         {# INÍCIO DA MODIFICAÇÃO: Oculta a seção de segurança no modo de visualização #}
         {% if not view_mode %}
@@ -173,6 +243,7 @@
                         class="font-semibold text-slate-800 border-l-2 border-red-600 pl-3 uppercase text-sm tracking-wide">
                         Segurança</h3>
                 </div>
+                {# Só mostra o botão se NÃO estiver editando um item existente (ou seja, novo usuário) #}
                 {% if not (item and item.id) %}
                 <button type="button" onclick="togglePasswords()"
                     class="text-blue-600 text-xs font-bold hover:underline flex items-center gap-1">
@@ -212,7 +283,7 @@
             {# MOSTRA: Botão "Editar" e "Voltar" no modo de visualização #}
             <a href="{{ url_for('auth.editar_usuario', id=item.id) }}"
                 class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-sm text-center transition flex items-center justify-center gap-2">
-                <i class="fas fa-edit"></i> Editar Usuário
+                Editar Usuário
             </a>
             <a href="{{ url_for('auth.lista_usuarios') }}"
                 class="flex-1 bg-white border border-slate-300 text-slate-500 font-bold py-3 rounded-lg text-center transition hover:bg-slate-50">Voltar
@@ -232,88 +303,209 @@
 </div>
 
 <script>
+    /* ======= UTILITÁRIOS GLOBAIS ======= */
+
+    // Toggle de visibilidade das senhas — robusto e idempotente
     function togglePasswords() {
         const p1 = document.getElementById('senha');
         const p2 = document.getElementById('senha_confirm');
         const icon = document.getElementById('eyeIcon');
-        const isPass = p1.type === 'password';
-        p1.type = isPass ? 'text' : 'password';
-        if (p2) p2.type = isPass ? 'text' : 'password';
-        icon.classList.replace(isPass ? 'fa-eye' : 'fa-eye-slash', isPass ? 'fa-eye-slash' : 'fa-eye');
+        const textSpan = document.getElementById('eyeText');
+
+        if (!p1 || !icon || !textSpan) return;
+
+        const willShow = p1.type === 'password';
+
+        p1.type = willShow ? 'text' : 'password';
+        if (p2) p2.type = willShow ? 'text' : 'password';
+
+        // Alterna classes de ícone de forma determinística
+        icon.classList.toggle('fa-eye', !willShow);
+        icon.classList.toggle('fa-eye-slash', willShow);
+
+        textSpan.innerText = willShow ? 'Ocultar Senhas' : 'Visualizar Senhas';
     }
 
-    document.addEventListener('DOMContentLoaded', function () {
-        // Lógica do Switch Status dinâmico
-        const statusToggle = document.querySelector('input[name="status"]');
-        const statusLabel = document.getElementById('statusLabel');
-        if (statusToggle && statusLabel) {
-            statusToggle.addEventListener('change', function () {
-                statusLabel.innerText = this.checked ? "Acesso Liberado" : "Acesso Bloqueado";
-                statusLabel.classList.toggle('text-blue-600', this.checked);
-                statusLabel.classList.toggle('text-slate-400', !this.checked);
-            });
+    // Reset de senha via fetch
+    function confirmReset(id) {
+        if (!confirm("Resetar senha deste usuário para 'EnfilSA@'?")) return;
+        fetch(`/auth/usuario/reset/${id}`, { method: 'POST' })
+            .then(res => {
+                if (res.ok) alert("Senha resetada com sucesso!");
+                else alert("Erro ao resetar senha.");
+            })
+            .catch(() => alert("Erro ao resetar senha."));
+    }
+
+    /* ======= LÓGICA DO FORMULÁRIO E ACORDEÕES ======= */
+    document.addEventListener("DOMContentLoaded", function () {
+
+        // Flag de modo de visualização — Jinja renderiza boolean JS válido
+        const viewMode = {% if view_mode %}true{% else %}false{% endif %};
+
+    // ===== INICIALIZA ACORDEÕES =====
+    const matrizHeaders = document.querySelectorAll('.matriz-header');
+
+    matrizHeaders.forEach(header => {
+        const targetSelector = header.dataset.target;
+        const body = document.querySelector(targetSelector);
+        const chevron = header.querySelector('.fa-chevron-down');
+        const matrizCheckbox = header.querySelector('.matriz-checkbox');
+
+        const hasCheckedFilial = body
+            ? Array.from(body.querySelectorAll('.filial-checkbox')).some(f => f.checked)
+            : false;
+
+        // Auto-open se já está selecionado
+        if ((matrizCheckbox && matrizCheckbox.checked) || hasCheckedFilial) {
+            body?.classList.remove('hidden');
+            header.setAttribute('aria-expanded', 'true');
+            chevron?.classList.add('rotate-180');
+        } else {
+            header.setAttribute('aria-expanded', 'false');
         }
 
-        // CPF: Números apenas
-        document.getElementById('cpf')?.addEventListener('input', (e) => e.target.value = e.target.value.replace(/\D/g, ""));
+        // Click handler para expandir/colapsar
+        header.addEventListener('click', function (e) {
+            // Clique em checkbox ou label NÃO expande acordeão
+            if (e.target.closest('input[type="checkbox"]') || e.target.closest('label')) return;
 
-        // Dropdowns Logic
-        const trigger = (btn, content) => btn?.addEventListener('click', (e) => {
-            if (btn.disabled) return;
-            content.classList.toggle('hidden'); e.stopPropagation();
-        });
-        trigger(document.getElementById('roleDropdownBtn'), document.getElementById('roleDropdownContent'));
-        trigger(document.getElementById('obraDropdownBtn'), document.getElementById('obraDropdownContent'));
-
-        // Automação Admin
-        document.querySelectorAll('.role-radio').forEach(radio => {
-            radio.addEventListener('change', () => {
-                document.getElementById('selectedRoleText').innerText = radio.parentElement.innerText.trim();
-                if (radio.value === 'Admin') {
-                    document.querySelectorAll('.obra-checkbox').forEach(c => c.checked = true);
-                    updateCount();
-                }
-            });
-        });
-
-        const selectAll = document.getElementById('selectAllObras');
-        const checkboxes = document.querySelectorAll('.obra-checkbox');
-
-        selectAll?.addEventListener('change', () => {
-            checkboxes.forEach(b => b.checked = selectAll.checked);
-            updateCount();
-        });
-
-        function updateCount() {
-            const count = document.querySelectorAll('.obra-checkbox:checked').length;
-            document.getElementById('selectedCountText').innerText = count === 0 ? "Selecione as obras..." : (count === checkboxes.length ? "Todas selecionadas" : `${count} obra(s) selecionada(s)`);
-        }
-        checkboxes.forEach(b => b.addEventListener('change', updateCount));
-        updateCount();
-
-        // Animação Salvar
-        document.getElementById('mainForm').addEventListener('submit', function (e) {
-            if (!this.checkValidity()) return;
-            const s1 = document.getElementById('senha')?.value;
-            const s2 = document.getElementById('senha_confirm')?.value;
-            if (s1 && s1 !== s2) { e.preventDefault(); alert("Senhas não conferem!"); return; }
-
-            document.getElementById('btnText').innerText = "Salvando...";
-            document.getElementById('spinner').classList.remove('hidden');
-            document.getElementById('submitBtn').disabled = true;
-        });
-
-        document.addEventListener('click', () => {
-            document.getElementById('roleDropdownContent')?.classList.add('hidden');
-            document.getElementById('obraDropdownContent')?.classList.add('hidden');
+            const expanded = header.getAttribute('aria-expanded') === 'true';
+            body?.classList.toggle('hidden');
+            header.setAttribute('aria-expanded', String(!expanded));
+            chevron?.classList.toggle('rotate-180', !expanded);
         });
     });
 
-    function confirmReset(id) {
-        if (confirm("Resetar senha deste usuário para 'EnfilSA@'?")) {
-            fetch(`/auth/usuario/reset/${id}`, { method: 'POST' })
-                .then(res => res.ok ? alert("Senha resetada com sucesso!") : alert("Erro ao resetar."));
-        }
+    // ===== SE MODO VISUALIZAÇÃO, SAIR AQUI =====
+    if (viewMode) return;
+
+    // ===== CASCATA MATRIZ / FILIAL =====
+    document.querySelectorAll('.matriz-checkbox').forEach(matriz => {
+        const filiais = document.querySelectorAll(matriz.dataset.filiaisSelector);
+
+        matriz.addEventListener('change', () => {
+            filiais.forEach(f => f.checked = matriz.checked);
+        });
+
+        filiais.forEach(filial => {
+            filial.addEventListener('change', () => {
+                const all = [...filiais].every(f => f.checked);
+                const any = [...filiais].some(f => f.checked);
+
+                if (all) matriz.checked = true;
+                else if (!any) matriz.checked = false;
+            });
+        });
+    });
+
+    // ===== SWITCH DE STATUS =====
+    const statusToggle = document.querySelector('input[name="status"]');
+    const statusLabel = document.getElementById('statusLabel');
+    if (statusToggle && statusLabel) {
+        statusToggle.addEventListener('change', function () {
+            statusLabel.innerText = this.checked ? "Ativo" : "Inativo";
+            statusLabel.classList.toggle('text-blue-600', this.checked);
+            statusLabel.classList.toggle('text-slate-400', !this.checked);
+
+            // Salvar automaticamente se for edição (item existente)
+            const itemId = document.querySelector('input[name="id"]')?.value;
+            if (itemId) {
+                fetch(`/auth/mudar-status-usuario/${itemId}`, { method: 'POST' })
+                    .then(res => {
+                        if (res.ok) {
+                            // Status salvo com sucesso - mostrar feedback visual rápido
+                            const label = document.getElementById('statusLabel');
+                            if (label) {
+                                label.style.opacity = '0.5';
+                                setTimeout(() => label.style.opacity = '1', 300);
+                            }
+                        } else {
+                            alert('Erro ao salvar status');
+                            // Reverter o toggle em caso de erro
+                            statusToggle.checked = !statusToggle.checked;
+                        }
+                    })
+                    .catch(() => {
+                        alert('Erro ao salvar status');
+                        // Reverter o toggle em caso de erro
+                        statusToggle.checked = !statusToggle.checked;
+                    });
+            }
+        });
     }
+
+    // ===== CPF: APENAS NÚMEROS =====
+    const cpfInput = document.getElementById('cpf');
+    if (cpfInput) {
+        cpfInput.addEventListener('input', (e) => e.target.value = e.target.value.replace(/\D/g, ""));
+    }
+
+    // ===== DROPDOWN PAPEL / ROLE =====
+    const roleBtn = document.getElementById('roleDropdownBtn');
+    const roleContent = document.getElementById('roleDropdownContent');
+    const selectedRoleText = document.getElementById('selectedRoleText');
+
+    if (roleBtn && roleContent) {
+        roleBtn.addEventListener('click', (e) => {
+            if (roleBtn.disabled) return;
+            roleContent.classList.toggle('hidden');
+            e.stopPropagation();
+        });
+    }
+
+    // ===== ROLE CHANGE: ADMIN MARCA TUDO =====
+    document.querySelectorAll('.role-radio').forEach(radio => {
+        radio.addEventListener('change', () => {
+            if (selectedRoleText) {
+                selectedRoleText.innerText = radio.parentElement.innerText.trim();
+            }
+
+            if (radio.value === 'Admin') {
+                // Marca todas as matrizes
+                document.querySelectorAll('.matriz-checkbox').forEach(c => {
+                    c.checked = true;
+                    c.dispatchEvent(new Event('change'));
+                });
+
+                // Marca todas as filiais
+                document.querySelectorAll('.filial-checkbox').forEach(c => {
+                    c.checked = true;
+                    c.dispatchEvent(new Event('change'));
+                });
+            }
+        });
+    });
+
+    // ===== FECHA DROPDOWNS AO CLICAR FORA =====
+    document.addEventListener('click', () => {
+        if (roleContent) roleContent.classList.add('hidden');
+    });
+
+    // ===== SUBMIT: UX DE LOADING E VALIDAÇÃO =====
+    const mainForm = document.getElementById('mainForm');
+    if (mainForm) {
+        mainForm.addEventListener('submit', function (e) {
+            if (!this.checkValidity()) return;
+
+            const s1 = document.getElementById('senha');
+            const s2 = document.getElementById('senha_confirm');
+
+            if (s1 && s2 && s1.value && s1.value !== s2.value) {
+                e.preventDefault();
+                alert("Senhas não conferem!");
+                return;
+            }
+
+            const btnText = document.getElementById('btnText');
+            const spinner = document.getElementById('spinner');
+            const submitBtn = document.getElementById('submitBtn');
+
+            if (btnText) btnText.innerText = "Salvando...";
+            if (spinner) spinner.classList.remove('hidden');
+            if (submitBtn) submitBtn.disabled = true;
+        });
+    }
+    });
 </script>
 {% endblock %}

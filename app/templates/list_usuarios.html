@@ -171,7 +171,7 @@
                             title="Editar">
                             <i class="fas fa-edit text-sm"></i>
                         </a>
-                        <button onclick="toggleStatus('{{ user.id }}')"
+                        <button onclick="toggleStatus('{{ user.id }}')" data-user-id="{{ user.id }}"
                             class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-orange-600 hover:bg-orange-50 rounded transition"
                             title="{{ 'Ativar' if user.status == 'Inativo' else 'Desativar' }}">
                             <i
@@ -206,26 +206,81 @@
     });
 
     function toggleStatus(userId) {
-        if (!confirm("Deseja alterar o status de acesso deste usuário?")) return;
+        console.log('Iniciando toggle para usuário:', userId);
 
-        // O backend recebe o ID e inverte o valor atual (status = not status)
-        fetch(`/auth/usuario/toggle-status/${userId}`, {
+        fetch(`/auth/mudar-status-usuario/${userId}`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            }
+            headers: { 'Content-Type': 'application/json' }
         })
-            .then(res => {
-                if (res.ok) {
-                    // Recarrega a página para refletir a mudança visual (badge e ícone)
-                    location.reload();
-                } else {
-                    alert("Erro ao processar a alteração de status.");
+            .then(res => res.json().then(data => ({ status: res.status, ok: res.ok, data })))
+            .then(({ status, ok, data }) => {
+                console.log('Resposta:', { status, ok, data });
+
+                if (!ok || status !== 200) {
+                    alert("Erro: " + (data.message || "Erro desconhecido"));
+                    return;
                 }
+
+                // Encontra o botão usando o atributo data-user-id
+                const button = document.querySelector(`button[data-user-id="${userId}"]`);
+                if (!button) {
+                    console.error('Botão não encontrado para userId:', userId);
+                    return;
+                }
+
+                // Encontra a linha (tr) mais próxima do botão
+                const row = button.closest('tr');
+                if (!row) {
+                    console.error('Linha não encontrada');
+                    return;
+                }
+
+                // Encontra o span de status (6ª coluna)
+                const statusCell = row.querySelector('td:nth-child(6) span');
+                if (!statusCell) {
+                    console.error('Célula de status não encontrada');
+                    return;
+                }
+
+                // Verifica se está ativo (verde) ou inativo (vermelho)
+                const isCurrentlyActive = statusCell.classList.contains('bg-green-100');
+                console.log('Status atual (verde/ativo)?:', isCurrentlyActive);
+
+                if (isCurrentlyActive) {
+                    // Mudar PARA Inativo (vermelho)
+                    statusCell.className = 'status-badge-ui bg-red-100 text-red-700 border border-red-200';
+                    statusCell.innerHTML = '<i class="fas fa-times-circle mr-1"></i> Inativo';
+                    button.title = 'Ativar';
+
+                    // Muda o ícone do botão
+                    const icon = button.querySelector('i');
+                    if (icon) {
+                        icon.className = 'fas fa-user-check text-sm';
+                    }
+
+                    // Adiciona efeito de desativado na linha
+                    row.classList.add('opacity-50', 'grayscale');
+                } else {
+                    // Mudar PARA Ativo (verde)
+                    statusCell.className = 'status-badge-ui bg-green-100 text-green-700 border border-green-200';
+                    statusCell.innerHTML = '<i class="fas fa-check-circle mr-1"></i> Ativo';
+                    button.title = 'Desativar';
+
+                    // Muda o ícone do botão
+                    const icon = button.querySelector('i');
+                    if (icon) {
+                        icon.className = 'fas fa-user-alt-slash text-sm';
+                    }
+
+                    // Remove efeito de desativado
+                    row.classList.remove('opacity-50', 'grayscale');
+                }
+
+                console.log('Status atualizado com sucesso!');
             })
             .catch(err => {
                 console.error("Erro na requisição:", err);
-                alert("Ocorreu um erro de comunicação com o servidor.");
+                alert("Erro de comunicação: " + err.message);
             });
     }
 </script>

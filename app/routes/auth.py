@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, send_file
+from flask import Blueprint, abort, render_template, request, redirect, url_for, flash, session, send_file
 from werkzeug.security import check_password_hash
 from app import db # Importar 'db' para uso no filtro (db.or_)
 from app import db, login_manager
@@ -7,9 +7,10 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from app.models import usuario
 from app.models.obra import Obra
 from app.utils.rdo_pdf import regenerar_pdf_rdo
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from datetime import date, datetime, timedelta
 from functools import wraps # Mover a importação para o topo para melhor prática
+from sqlalchemy.orm import aliased
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
@@ -313,15 +314,25 @@ def lista_usuarios():
     return render_template("list_usuarios.html", opcoes=usuarios, categoria="usuario")
 
 # Abrir Formulário de Cadastro de Usuario
+# app/routes/auth.py
+
+# Abrir Formulário de Cadastro de Usuario
 @auth_bp.get("/criar-usuario")
 @login_required
 def criar_usuario():
-    from app.models.obra import Obra
-    # Busca todas as obras cadastradas para exibir nas permissões do formulário
-    todas_obras = Obra.query.all()
+    # from app.models.obra import Obra # Não é necessário
+    
+    # ADICIONADO: Obter a hierarquia das obras
+    obra_hierarchy = get_obra_hierarchy_for_user_form()
     
     # Passamos categoria='usuario' para o template saber qual seção renderizar
-    return render_template("form_usuario.html", categoria="usuario", todas_obras=todas_obras)
+    return render_template(
+        "form_usuario.html", 
+        categoria="usuario", 
+        # O 'todas_obras' pode ser mantido como [] se o template não o usar explicitamente fora da hierarquia
+        obra_hierarchy=obra_hierarchy 
+    )
+# app/routes/auth.py
 
 # app/routes/auth.py
 
@@ -333,7 +344,11 @@ def gerar_usuario():
     
     categoria = request.form.get("categoria")
     user_id = request.form.get("id")
+    # Todas as obras é opcional, mas vamos manter o padrão do seu código
     todas_obras = Obra.query.all()
+    
+    # 1. ADICIONAR: Busca a hierarquia das obras no início da função
+    obra_hierarchy = get_obra_hierarchy_for_user_form()
 
     if categoria == "usuario":
         nome = request.form.get("nome")
@@ -352,35 +367,60 @@ def gerar_usuario():
             # Validação CPF duplicado (exceto o próprio)
             if Usuario.query.filter(Usuario.cpf == cpf, Usuario.id != user_id).first():
                 flash("Este CPF já está cadastrado.", "danger")
-                return render_template("form_usuario.html", item=item_form, todas_obras=todas_obras)
+                # 2. CORRIGIDO: Passa obra_hierarchy em caso de erro
+                return render_template("form_usuario.html", item=item_form, todas_obras=todas_obras, obra_hierarchy=obra_hierarchy)
             
             user.nome, user.email, user.papel, user.cpf, user.status = nome, email, papel, cpf, status
         else:
             if Usuario.query.filter_by(cpf=cpf).first():
                 flash("CPF já cadastrado.", "danger")
-                return render_template("form_usuario.html", item=item_form, todas_obras=todas_obras)
+                # 3. CORRIGIDO: Passa obra_hierarchy em caso de erro
+                return render_template("form_usuario.html", item=item_form, todas_obras=todas_obras, obra_hierarchy=obra_hierarchy)
 
             user = Usuario(nome=nome, email=email, papel=papel, cpf=cpf, status=status)
             user.set_senha(senha if senha else "EnfilSA@")
             db.session.add(user)
 
-        user.obras_permitidas = [Obra.query.get(int(oid)) for oid in obras_ids if Obra.query.get(int(oid))]
+        # MODIFICADO: Diferencia entre Admin e outros papéis
+        if papel == 'Admin':
+            # Admin: vincula a todas as matrizes ativas
+            todas_matrizes = Obra.query.filter(Obra.id_matriz.is_(None), Obra.status == 1).all()
+            user.obras_permitidas = todas_matrizes
+        else:
+            # Outros papéis: vincula apenas as matrizes selecionadas (não filiais específicas)
+            # Extrai apenas as matrizes das IDs selecionadas
+            matrizes_selecionadas = []
+            for oid in obras_ids:
+                obra = Obra.query.get(int(oid))
+                if obra:
+                    # Se for uma matriz (id_matriz é None ou 0), adiciona
+                    if obra.id_matriz is None or obra.id_matriz == 0:
+                        matrizes_selecionadas.append(obra)
+                    # Se for uma filial, adiciona sua matriz (se não estiver duplicada)
+                    elif obra.id_matriz and obra.id_matriz > 0:
+                        matriz = Obra.query.get(obra.id_matriz)
+                        if matriz and matriz not in matrizes_selecionadas:
+                            matrizes_selecionadas.append(matriz)
+            
+            # Vincula apenas as matrizes (filiais serão acessadas dinamicamente)
+            user.obras_permitidas = matrizes_selecionadas
 
         try:
             db.session.commit()
             flash("Usuário salvo com sucesso!", "success")
-            return render_template("form_usuario.html", item=user, todas_obras=todas_obras, view_mode=True)
+            # 4. CORRIGIDO: Passa obra_hierarchy em caso de sucesso
+            return render_template("form_usuario.html", item=user, todas_obras=todas_obras, view_mode=True, obra_hierarchy=obra_hierarchy)
         except Exception as e:
             db.session.rollback()
             flash(f"Erro: {str(e)}", "danger")
-            return render_template("form_usuario.html", item=item_form, todas_obras=todas_obras)
-
-# No seu arquivo auth.py
+            # 5. CORRIGIDO: Passa obra_hierarchy em caso de erro de DB
+            return render_template("form_usuario.html", item=item_form, todas_obras=todas_obras, obra_hierarchy=obra_hierarchy)
 
 @auth_bp.post("/mudar-status-usuario/<int:userId>")
 @login_required
 def toggle_user_status(userId):
     from app.models.usuario import Usuario
+    from flask import jsonify
     
     # Busca o usuário no banco
     user = Usuario.query.get_or_404(userId)
@@ -390,10 +430,10 @@ def toggle_user_status(userId):
     
     try:
         db.session.commit()
-        return {"message": "Status atualizado com sucesso"}, 200
+        return jsonify({"message": "Status atualizado com sucesso", "status": user.status}), 200
     except Exception as e:
         db.session.rollback()
-        return {"message": f"Erro ao atualizar: {str(e)}"}, 500
+        return jsonify({"message": f"Erro ao atualizar: {str(e)}"}), 500
     
 # Rota de Reset de Senha corrigida
 @auth_bp.post("/usuario-reset/<int:id>")
@@ -405,17 +445,30 @@ def reset_senha_usuario(id):
     db.session.commit()
     return {"message": "Sucesso"}, 200
         
-@auth_bp.get("/editar-usuario/<int:id>")
+@auth_bp.route("/editar-usuario/<int:id>", methods=['GET', 'POST'])
 @login_required
 def editar_usuario(id):
-    from app.models.usuario import Usuario
+    # CORREÇÃO 1: Importar a CLASSE Usuario diretamente (se necessário no escopo)
+    from app.models.usuario import Usuario 
     from app.models.obra import Obra
     
+    # CORREÇÃO 2: Acessar a classe Usuario e não o módulo 'usuario'
+    # user = usuario.Usuario.query.get_or_404(id) # <-- Linha anterior, que causava problemas
     user = Usuario.query.get_or_404(id)
-    todas_obras = Obra.query.all()
+    # todas_obras = Obra.query.all() # Não é mais necessário buscar todas as obras aqui
     
-    return render_template("form_usuario.html", item=user, categoria="usuario", todas_obras=todas_obras)
+    # CORREÇÃO 3: REMOVER A LÓGICA DE HIERARQUIA MANUAL E CHAMAR O HELPER CORRETO
+    # Todo o bloco de código que criava 'obra_hierarchy' manualmente deve ser removido.
+    obra_hierarchy = get_obra_hierarchy_for_user_form() # <-- CHAMA A FUNÇÃO CORRETA
 
+    return render_template(
+        "form_usuario.html", 
+        item=user, 
+        categoria="usuario", 
+        # todas_obras=todas_obras, # Não é mais estritamente necessário, mas pode ser mantido
+        obra_hierarchy=obra_hierarchy # Agora passa a estrutura correta
+    )
+    
 @auth_bp.get("/visualizar-usuario/<int:id>")
 def visualizar_usuario(id):
     from app.models.usuario import Usuario
@@ -424,6 +477,7 @@ def visualizar_usuario(id):
     user = Usuario.query.get_or_404(id)
     todas_obras = Obra.query.all()
     
+    obra_hierarchy = get_obra_hierarchy_for_user_form()
     # Se a rota é '/usuario/visualizar/<id>', view_mode é True.
     # Verifica a rota da requisição para determinar o modo.
     view_mode = True
@@ -431,7 +485,7 @@ def visualizar_usuario(id):
     # mas se o relacionamento não estiver carregado, você pode forçar aqui:
     # item.obras_permitidas # Garante que o relacionamento Many-to-Many está carregado
 
-    return render_template("form_usuario.html", item=user, categoria="usuario", todas_obras=todas_obras, view_mode=view_mode)
+    return render_template("form_usuario.html", item=user, categoria="usuario", todas_obras=todas_obras, view_mode=view_mode, obra_hierarchy=obra_hierarchy)
 
 # Rota para a lista de climas
 @auth_bp.get("/lista-climas")
@@ -447,19 +501,71 @@ def lista_climas():
 @login_required
 def lista_obras():
     from app.models.obra import Obra
-    # Busca todas as obras
-    obras = Obra.query.order_by(Obra.id.asc()).all()
-    return render_template("list_obras.html", opcoes=obras, categoria="obra")
+    
+    # 1. Cria um alias (t2) para a tabela Obra. Este alias representará a Matriz/Pai.
+    Matriz = aliased(Obra)
+    
+    # 2. Constrói a consulta com o Self-Join (LEFT OUTER JOIN)
+    # Selecionamos a Obra (t1) e o nome da Matriz (t2) com o alias 'nome_matriz'
+    # db.session.query é o método padrão para consultas complexas no SQLAlchemy
+    consulta = db.session.query(
+        Obra,
+        # Seleciona o nome da Matriz, atribuindo o nome de coluna 'nome_matriz'
+        Matriz.nome.label('nome_matriz')
+    ).outerjoin(
+        # Condição de Junção: Obra.id_matriz (da Obra Filha) = Matriz.id (da Obra Pai)
+        Matriz,
+        Obra.id_matriz == Matriz.id
+    ).order_by(Obra.id.asc())
+    
+    resultados = consulta.all()
+    
+    # 3. Formata os resultados para o Template Jinja
+    obras_formatadas = []
+    for obra_obj, nome_matriz in resultados:
+        # Cria um dicionário com os atributos necessários para o template
+        # Isso é mais seguro do que usar obra_obj.__dict__.copy()
+        obra_dict = {
+            'id': obra_obj.id,
+            'nome': obra_obj.nome,
+            'cnpj': obra_obj.cnpj,
+            'id_matriz': obra_obj.id_matriz,
+            'cidade': obra_obj.cidade,
+            'estado': obra_obj.estado,
+            'endereco': obra_obj.endereco,
+            'numero': obra_obj.numero,
+            'complemento': obra_obj.complemento, # Importante: Certifique-se que este campo existe no modelo Obra
+            'bairro': obra_obj.bairro,
+            'cep': obra_obj.cep,
+            'status': obra_obj.status,
+            # 'nome_matriz' é o resultado do JOIN, adicionado ao dicionário
+            'nome_matriz': nome_matriz,
+        }
+        
+        obras_formatadas.append(obra_dict)
+    
+    # ... o restante da função fica igual
+    return render_template("list_obras.html", opcoes=obras_formatadas, categoria="obra")
 
-# Rota pra criar obra
+def get_matrix_options():
+    """Busca todas as Obras que são Matrizes (id_matriz é NULL ou 0)"""
+    # Adiciona a importação, caso Obra ainda não esteja no escopo
+    from app.models.obra import Obra
+    
+    # Filtra por id_matriz NULL ou 0 para ser robusto com a lógica do HTML
+    return Obra.query.filter(or_(Obra.id_matriz.is_(None), Obra.id_matriz == 0)).all()
 
+# Rota para criar nova obra
 @auth_bp.get("/criar-obra")
 @login_required
 def criar_obra():
+    from app.models.obra import Obra
     
-    # Passamos categoria='usuario' para o template saber qual seção renderizar
-    return render_template("form_obra.html", categoria="usuario")
-
+    # Busca apenas as obras que são Matrizes para o dropdown
+    opcoes_matriz = get_matrix_options()
+    
+    # Passa opcoes_matriz para o template
+    return render_template("form_obra.html", item=None, opcoes_matriz=opcoes_matriz)
 
 @auth_bp.post("/mudar-status-obras/<int:obraid>")
 @login_required
@@ -480,103 +586,80 @@ def toggle_user_obras(obraid):
         return {"message": f"Erro ao atualizar: {str(e)}"}, 500
     
     
-# Rota para gerar obra 
-# Rota para Criar/Editar Obra (POST)
+# Rota para salvar/editar obra
 @auth_bp.post("/gerar-obra")
 @login_required
-def gerar_obra(): 
-    form_data = request.form
-    obra_id = form_data.get("id")
-
-    # Cria um dicionário com os dados do formulário (strings) para retorno em caso de erro
-    item_form = {
-        'id': obra_id,
-        'nome': form_data.get("nome", "").strip(),
-        # CNPJ e CEP limpos, mas salvos como string (o modelo aceita)
-        'cnpj': form_data.get("cnpj", "").replace('.', '').replace('-', '').replace('/', '').strip(),
-        'cep': form_data.get("cep", "").replace('-', '').strip(),
-        # Datas são mantidas como strings (YYYY-MM-DD) para preencher o input type="date"
-        'inicio': form_data.get("inicio"), 
-        'termino': form_data.get("termino"), 
-        'endereco': form_data.get("endereco", "").strip(),
-        'numero': form_data.get("numero", "").strip(),
-        'complemento': form_data.get("complemento", "").strip(),
-        'bairro': form_data.get("bairro", "").strip(),
-        'cidade': form_data.get("cidade", "").strip(),
-        'estado': form_data.get("estado", "").strip().upper(),
-        # O status é lido do formulário
-        'status': 'Ativa' if 'status' in form_data else 'Inativa',
-    }
-
-    # 1. Limpeza e Conversão de dados
+def gerar_obra():
+    from app.models.obra import Obra
+    
+    # 1. Obter Dados do Formulário
+    obra_id = request.form.get("id", type=int)
+    nome = request.form.get("nome")
+    cnpj = request.form.get("cnpj")
+    endereco = request.form.get("endereco")
+    numero = request.form.get("numero")
+    complemento = request.form.get("complemento")
+    bairro = request.form.get("bairro")
+    cidade = request.form.get("cidade")
+    estado = request.form.get("estado")
+    cep = request.form.get("cep")
+    inicio_str = request.form.get("inicio")
+    termino_str = request.form.get("termino")
+    
+    # Processa id_matriz: Se for 0 ou None, deve ser None no DB (Matriz Principal)
+    id_matriz_raw = request.form.get("id_matriz", type=int)
+    id_matriz = id_matriz_raw if id_matriz_raw and id_matriz_raw > 0 else None
+    
+    # Converte datas
     try:
-        nome = item_form['nome']
-        cnpj = item_form['cnpj']
-        cep = item_form['cep']
-        
-        # Converte strings para objetos date para o SQLAlchemy
-        inicio = date.fromisoformat(item_form["inicio"])
-        termino = date.fromisoformat(item_form["termino"])
-        
-        endereco = item_form["endereco"]
-        numero = item_form["numero"]
-        complemento = item_form["complemento"]
-        bairro = item_form["bairro"]
-        cidade = item_form["cidade"]
-        estado = item_form["estado"]
-        status = item_form["status"]
-
-    except Exception as e:
-        # Se falhar na conversão (ex: data ou campo obrigatório faltando)
-        flash("Erro na submissão de dados. Verifique o formato das datas e campos obrigatórios.", "danger")
-        # Retorna o template com os dados inválidos para correção
+        inicio = datetime.strptime(inicio_str, '%Y-%m-%d').date() if inicio_str else None
+        termino = datetime.strptime(termino_str, '%Y-%m-%d').date() if termino_str else None
+    except ValueError:
+        flash("Formato de data inválido.", "danger")
+        # Prepara o item_form para retornar ao template em caso de erro
+        item_form = Obra(
+            id=obra_id, nome=nome, cnpj=cnpj, id_matriz=id_matriz, endereco=endereco, 
+            numero=numero, complemento=complemento, bairro=bairro, cidade=cidade, 
+            estado=estado, cep=cep, inicio=inicio_str, termino=termino_str # Mantém strings para re-exibir
+        )
         return render_template("form_obra.html", item=item_form, view_mode=False)
 
-    # 2. Criação ou Edição
+
+    # Converte o status do checkbox ('on' se ativo)
+    status_raw = request.form.get("status")
+    status = "Ativa" if status_raw == 'on' else "Inativa"
+
+    # Prepara o item_form (para re-renderizar em caso de erro de DB)
+    item_form = Obra(
+        id=obra_id, nome=nome, cnpj=cnpj, id_matriz=id_matriz, endereco=endereco, 
+        numero=numero, complemento=complemento, bairro=bairro, cidade=cidade, 
+        estado=estado, cep=cep, inicio=inicio, termino=termino, status=status
+    )
+    
+    # 2. Criar ou Atualizar
     if obra_id:
         # Edição
-        obra = Obra.query.get(obra_id)
-        if not obra:
-            flash("Obra não encontrada para edição.", "danger")
-            return redirect(url_for('auth.lista_obras'))
-        
-        acao = "editada"
-        
-        # Validação de CNPJ único (apenas se o CNPJ foi alterado)
-        if obra.cnpj != cnpj:
-            if Obra.query.filter_by(cnpj=cnpj).first():
-                flash(f"CNPJ '{cnpj}' já cadastrado em outra obra.", "danger")
-                # Retorna para o template de edição com o item_form preenchido
-                return render_template("form_obra.html", item=item_form, view_mode=False)
-        
-        # Atualiza os dados (usa as variáveis convertidas do try block)
-        obra.nome = nome
-        obra.cnpj = cnpj
-        obra.endereco = endereco
-        obra.numero = numero
-        obra.complemento = complemento
-        obra.bairro = bairro
-        obra.cidade = cidade
-        obra.estado = estado
-        obra.cep = cep
-        obra.inicio = inicio
-        obra.termino = termino
-        obra.status = status
-        
+        item = Obra.query.get_or_404(obra_id)
+        item.nome = nome
+        item.cnpj = cnpj
+        item.id_matriz = id_matriz # Novo campo
+        item.endereco = endereco
+        item.numero = numero
+        item.complemento = complemento
+        item.bairro = bairro
+        item.cidade = cidade
+        item.estado = estado
+        item.cep = cep
+        item.inicio = inicio
+        item.termino = termino
+        item.status = status
+        acao = "atualizada"
     else:
         # Criação
-        acao = "criada"
-        
-        # Validação de CNPJ único
-        if Obra.query.filter_by(cnpj=cnpj).first():
-            flash(f"CNPJ '{cnpj}' já cadastrado.", "danger")
-            # Retorna para o template de cadastro com o item_form preenchido
-            return render_template("form_obra.html", item=item_form, view_mode=False)
-            
-        # Cria nova obra
         obra = Obra(
             nome=nome,
             cnpj=cnpj,
+            id_matriz=id_matriz, # Novo campo
             endereco=endereco,
             numero=numero,
             complemento=complemento,
@@ -589,29 +672,59 @@ def gerar_obra():
             status=status
         )
         db.session.add(obra)
+        item_form = obra # Atualiza o item_form com a nova obra para o redirecionamento
+        acao = "cadastrada"
 
     # 3. Commit ao Banco de Dados
     try:
         db.session.commit()
         flash(f"Obra '{nome}' {acao} com sucesso!", "success")
-        return render_template("form_obra.html", item=item_form, view_mode=True)
+        # No sucesso, usa a rota de visualização para mostrar os dados salvos
+        return redirect(url_for('auth.visualizar_obra', id=item_form.id)) 
     except Exception as e:
         db.session.rollback()
         print(f"Erro ao salvar/editar obra: {e}")
         flash("Ocorreu um erro ao salvar a obra. Tente novamente.", "danger")
         # Em caso de erro de DB, retorna ao template com os dados do formulário
-        return render_template("form_obra.html", item=item_form, view_mode=False)
-
+        # Precisa buscar opções_matriz novamente
+        opcoes_matriz = get_matrix_options()
+        return render_template("form_obra.html", item=item_form, view_mode=False, opcoes_matriz=opcoes_matriz)
+    
 # Rota pra editar obra
+
+def fetch_single_obra_with_matriz_name(obra_id):
+    """Busca uma única Obra por ID e injeta o nome da Matriz (se for filial)"""
+    from app.models.obra import Obra # Adiciona a importação
+    
+    Matriz = aliased(Obra)
+    query = Obra.query.outerjoin(Matriz, Obra.id_matriz == Matriz.id)
+    
+    # Busca a Obra e o nome da Matriz associada
+    result = query.with_entities(Obra, Matriz.nome.label('nome_matriz')).filter(Obra.id == obra_id).first()
+    
+    if result:
+        # Se for encontrado, 'result' é uma tupla onde o primeiro elemento é o objeto Obra
+        item = result[0]
+        # Injeta o atributo 'nome_matriz' no objeto Obra para acesso no template
+        setattr(item, 'nome_matriz', result.nome_matriz)
+        return item
+    
+    return None
 
 @auth_bp.get("/editar-obra/<int:id>")
 @login_required
 def editar_obra(id):
-    from app.models.obra import Obra
+    # Usa o helper para buscar a Obra com o nome da Matriz
+    item = fetch_single_obra_with_matriz_name(id)
     
-    item = Obra.query.get_or_404(id)
+    if not item:
+        abort(404) # Not Found
     
-    return render_template("form_obra.html", item=item, categoria="obra")
+    # Busca as opções de Matriz
+    opcoes_matriz = get_matrix_options()
+    
+    # Passa as opções de matrizes e o item com nome_matriz para o template
+    return render_template("form_obra.html", item=item, opcoes_matriz=opcoes_matriz)
 
 # Rota para visualizar obra
 @auth_bp.get("/visualizar-obra/<int:id>")
@@ -621,10 +734,71 @@ def visualizar_obra(id):
     
     # Busca o item de Obra
     item = Obra.query.get_or_404(id) 
+    item = fetch_single_obra_with_matriz_name(id)
 
     # Define view_mode como True para bloquear os campos no template
     view_mode = True
+    if not item:
+        abort(404)
+        
+    opcoes_matriz = get_matrix_options()
 
     # Renderiza o template passando o item e o view_mode
-    return render_template("form_obra.html", item=item, view_mode=view_mode, categoria="obra")
+    return render_template(
+        "form_obra.html", 
+        item=item, 
+        view_mode=view_mode, 
+        categoria="obra",
+        opcoes_matriz=opcoes_matriz # Importante passar isso para o <select> funcionar
+    )
 
+# Rota para toggle de status da obra (usado em list_obras.html)
+@auth_bp.post("/obra/toggle-status/<int:id>")
+@login_required
+def toggle_obra_status(id):
+    from app.models.obra import Obra
+    
+    obra = Obra.query.get_or_404(id)
+    
+    # Alterna o status (Ativa <-> Inativa)
+    if obra.status == 1:
+        obra.status = 0
+    else:
+        obra.status = 1
+        
+    try:
+        db.session.commit()
+        return '', 200 # Retorna 200 OK para o JavaScript
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erro ao alternar status da obra: {e}")
+        return '', 500 # Retorna erro 500
+
+# auth.py (ou app.utils.helpers, se aplicável)
+
+def get_obra_hierarchy_for_user_form():
+    """Busca todas as obras e agrupa filiais sob suas matrizes."""
+    from app.models.obra import Obra
+    
+    # Busca todas as obras ativas
+    todas_obras = Obra.query.filter(Obra.status == 1).all()
+    
+    hierarchy = {}
+    
+    # 1. Popula as Matrizes (id_matriz = None ou 0)
+    for obra in todas_obras:
+        if obra.id_matriz is None or obra.id_matriz == 0:
+            hierarchy[obra.id] = {
+                'matriz': obra,
+                'filiais': []
+            }
+
+    # 2. Popula as Filiais
+    for obra in todas_obras:
+        if obra.id_matriz and obra.id_matriz in hierarchy:
+            hierarchy[obra.id_matriz]['filiais'].append(obra)
+        elif obra.id_matriz and obra.id_matriz not in hierarchy:
+            # Caso raro: Filial sem Matriz ativa. Pode ser ignorado ou logado.
+            pass
+
+    return hierarchy
