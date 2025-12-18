@@ -28,13 +28,9 @@
         <p class="text-sm text-slate-500">Gestão do portfólio operacional de obras.</p>
     </div>
 
-    {# INÍCIO DO NOVO BLOCO: INFORMAÇÕES DE HIERARQUIA NO TOPO #}
+    {# INFORMAÇÕES DE HIERARQUIA #}
     {% if item and item.id %}
-    {# Define se é Matriz (id_matriz é None ou 0). Deve ser injetado do backend. #}
     {% set is_matriz = item.id_matriz == None or item.id_matriz == 0 %}
-    {# item.nome_matriz deve ser injetado pela rota Python (obtido via self-join) #}
-    {% set matriz_nome = item.nome_matriz | default('') %}
-
     {% set status_icon = 'fa-sitemap' if is_matriz else 'fa-code-branch' %}
     {% set status_text = 'MATRIZ PRINCIPAL' if is_matriz else 'FILIAL / SUBSIDIÁRIA' %}
     {% set border_class = 'border-red-600' if is_matriz else 'border-blue-600' %}
@@ -59,14 +55,12 @@
         {% endif %}
     </div>
     {% endif %}
-    {# FIM DO NOVO BLOCO #}
 
     <form action="{{ url_for('auth.gerar_obra') }}" method="POST" id="mainForm" class="space-y-6 rdo-form">
         <input type="hidden" name="id" value="{{ item.id if item and item.id }}">
         <input type="hidden" name="categoria" value="obra">
 
         <section class="bg-white rounded-lg p-6 border shadow-sm space-y-6">
-
             <div class="flex items-center justify-between mb-6">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 rounded bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
@@ -79,19 +73,15 @@
                 </div>
 
                 <div class="flex items-center h-10 px-4 bg-slate-50 border rounded-lg shadow-inner">
-                    <label class="relative inline-flex items-center 
-                                         {{ 'cursor-not-allowed opacity-60' if view_mode else 'cursor-pointer' }}">
+                    <label
+                        class="relative inline-flex items-center {{ 'cursor-not-allowed opacity-60' if view_mode else 'cursor-pointer' }}">
                         <input type="checkbox" name="status" class="sr-only peer" {{ 'checked' if (item and
                             item.status==1 ) or not item }} {{ 'disabled' if view_mode }}>
-                        <div class="w-11 h-6 bg-slate-300 rounded-full peer peer-checked:bg-blue-600
-                                         peer-focus:outline-none 
-                                         after:content-[''] after:absolute after:top-[2px] after:left-[2px]
-                                         after:bg-white after:h-5 after:w-5 after:rounded-full 
-                                         after:transition-all peer-checked:after:translate-x-full">
+                        <div
+                            class="w-11 h-6 bg-slate-300 rounded-full peer peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:h-5 after:w-5 after:rounded-full after:transition-all peer-checked:after:translate-x-full">
                         </div>
-
-                        <span id="statusLabel" class="ml-3 text-[10px] font-bold transition-colors
-                            {{ 'text-blue-600' if (item and item.status==1) or not item else 'text-slate-400' }}">
+                        <span id="statusLabel"
+                            class="ml-3 text-[10px] font-bold transition-colors {{ 'text-blue-600' if (item and item.status==1) or not item else 'text-slate-400' }}">
                             {{ 'Obra Ativa' if (item and item.status==1) or not item else 'Obra Inativa' }}
                         </span>
                     </label>
@@ -103,54 +93,41 @@
                     <label class="text-xs font-bold text-slate-500 uppercase">Nome da Obra <span
                             class="text-red-500">*</span></label>
                     <input type="text" name="nome" value="{{ item.nome if item }}"
-                        placeholder="Ex: Construção Edifício Apolo" class="w-full border rounded-lg px-3 py-2 h-10 input-field 
-                                     {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}" {{ 'readonly' if
-                        view_mode }} required>
+                        placeholder="Ex: Construção Edifício Apolo"
+                        class="w-full border rounded-lg px-3 py-2 h-10 input-field {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}"
+                        {{ 'readonly' if view_mode }} required>
                 </div>
 
                 <div>
                     <label class="text-xs font-bold text-slate-500 uppercase">CNPJ <span
                             class="text-red-500">*</span></label>
                     <input type="text" name="cnpj" id="cnpj" maxlength="14" value="{{ item.cnpj if item }}"
-                        placeholder="Apenas números" class="w-full border rounded-lg px-3 py-2 h-10 input-field
-                                     {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}" {{ 'readonly' if
-                        view_mode }} required>
+                        placeholder="Apenas números"
+                        class="w-full border rounded-lg px-3 py-2 h-10 input-field {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}"
+                        {{ 'readonly' if view_mode }} required>
                 </div>
 
                 {# NOVO CAMPO: Seleção de Matriz #}
                 <div class="md:col-span-2 space-y-1">
                     <label class="text-xs font-bold text-slate-500 uppercase">Vincular à Matriz (Se for Filial)</label>
-                    <div class="relative h-10">
-                        <select name="id_matriz" id="id_matriz"
-                            class="w-full border rounded-lg px-3 py-2 h-10 transition {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}"
-                            {{ 'disabled' if view_mode }}>
-                            <option value="0" {% if (item and (item.id_matriz==0 or item.id_matriz==None)) or not item
-                                %}selected{% endif %}>
-                                -- Nenhuma (Marcar como Matriz Principal) --
-                            </option>
-                            {# A variável 'opcoes_matriz' deve ser uma lista de objetos Obra (ou dicts) passada pelo seu
-                            backend Flask. #}
-                            {% for matriz in opcoes_matriz %}
-                            {% if item.id != matriz.id %} {# Não permite vincular a si mesma #}
-                            <option value="{{ matriz.id }}" {% if item and item.id_matriz==matriz.id %}selected{% endif
-                                %}>
-                                {{ matriz.nome }} (ID: {{ matriz.id }})
-                            </option>
-                            {% endif %}
-                            {% endfor %}
-                        </select>
-                        {% if item and (item.id_matriz == 0 or item.id_matriz == None) and view_mode %}
-                        <p class="text-xs text-red-500 pt-1 font-semibold">
-                            Esta obra está registrada como Matriz Principal e não pode ter seu vínculo alterado neste
-                            modo.
-                        </p>
+                    <select name="id_matriz" id="id_matriz"
+                        class="w-full border rounded-lg px-3 py-2 h-10 transition {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}"
+                        {{ 'disabled' if view_mode }}>
+                        <option value="0" {% if (item and (item.id_matriz==0 or item.id_matriz==None)) or not item
+                            %}selected{% endif %}>
+                            Nenhuma (Marcar como Matriz Principal)
+                        </option>
+                        {% for matriz in opcoes_matriz %}
+                        {% if not item or item.id != matriz.id %}
+                        <option value="{{ matriz.id }}" {% if item and item.id_matriz==matriz.id %}selected{% endif %}>
+                            {{ matriz.nome }} (ID: {{ matriz.id }})
+                        </option>
                         {% endif %}
-                    </div>
+                        {% endfor %}
+                    </select>
                 </div>
-
             </div>
         </section>
-
 
         <section class="bg-white rounded-lg p-6 border shadow-sm space-y-6">
             <div class="flex items-center gap-3 mb-4">
@@ -168,24 +145,21 @@
                     <label class="text-xs font-bold text-slate-500 uppercase">Início <span
                             class="text-red-500">*</span></label>
                     <input type="date" name="inicio" value="{{ item.inicio | string if item and item.inicio }}"
-                        class="w-full border rounded-lg px-3 py-2 h-10 input-field
-                                     {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode else 'cursor-pointer' }}" {{ 'readonly' if view_mode }} onclick="this.showPicker()" required>
+                        class="w-full border rounded-lg px-3 py-2 h-10 input-field {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode else 'cursor-pointer' }}"
+                        {{ 'readonly' if view_mode }} onclick="this.showPicker()" required>
                 </div>
 
                 <div>
                     <label class="text-xs font-bold text-slate-500 uppercase">Término (Prevista/Real) <span
                             class="text-red-500">*</span></label>
                     <input type="date" name="termino" value="{{ item.termino | string if item and item.termino }}"
-                        class="w-full border rounded-lg px-3 py-2 h-10 input-field
-                                     {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode else 'cursor-pointer' }}"
+                        class="w-full border rounded-lg px-3 py-2 h-10 input-field {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode else 'cursor-pointer' }}"
                         {{ 'readonly' if view_mode }} onclick="this.showPicker()" required>
                 </div>
             </div>
         </section>
 
-
         <section class="bg-white rounded-lg p-6 border shadow-sm space-y-6">
-
             <div class="flex items-center gap-3 mb-4">
                 <div class="w-10 h-10 rounded bg-orange-100 text-orange-600 flex items-center justify-center">
                     <i class="fas fa-map-marker-alt"></i>
@@ -197,17 +171,13 @@
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
-
                 <div>
                     <label class="text-xs font-bold text-slate-500 uppercase">CEP <span
                             class="text-red-500">*</span></label>
-
-                    <div class="relative">
-                        <input type="text" name="cep" id="cep" maxlength="8" value="{{ item.cep if item }}"
-                            placeholder="Apenas números" class="w-full border rounded-lg px-3 py-2 h-10 input-field 
-                                         {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}" {{ 'readonly'
-                            if view_mode }} required>
-                    </div>
+                    <input type="text" name="cep" id="cep" maxlength="8" value="{{ item.cep if item }}"
+                        placeholder="Apenas números"
+                        class="w-full border rounded-lg px-3 py-2 h-10 input-field {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}"
+                        {{ 'readonly' if view_mode }} required>
                     <p id="cep-message" class="text-xs pt-1"></p>
                 </div>
 
@@ -215,53 +185,133 @@
                     <label class="text-xs font-bold text-slate-500 uppercase">Endereço <span
                             class="text-red-500">*</span></label>
                     <input type="text" name="endereco" id="endereco" value="{{ item.endereco if item }}"
-                        placeholder="Rua / Avenida" class="w-full border rounded-lg px-3 py-2 h-10 input-field 
-                                         {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}" required
-                        {{ 'readonly' if view_mode }} disabled>
+                        class="w-full border rounded-lg px-3 py-2 h-10 input-field {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}"
+                        required {{ 'readonly' if view_mode }}>
                 </div>
 
                 <div>
                     <label class="text-xs font-bold text-slate-500 uppercase">Número <span
                             class="text-red-500">*</span></label>
-                    <input type="text" name="numero" id="numero" value="{{ item.numero if item }}" class="w-full border rounded-lg px-3 py-2 h-10 input-field 
-                                         {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}" required
-                        {{ 'readonly' if view_mode }} disabled>
+                    <input type="text" name="numero" id="numero" value="{{ item.numero if item }}"
+                        class="w-full border rounded-lg px-3 py-2 h-10 input-field {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}"
+                        required {{ 'readonly' if view_mode }}>
                 </div>
 
                 <div>
                     <label class="text-xs font-bold text-slate-500 uppercase">Complemento</label>
-                    <input type="text" name="complemento" id="complemento" value="{{ item.complemento if item }}" class="w-full border rounded-lg px-3 py-2 h-10 input-field 
-                                         {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}" {{ 'readonly'
-                        if view_mode }} disabled>
+                    <input type="text" name="complemento" id="complemento" value="{{ item.complemento if item }}"
+                        class="w-full border rounded-lg px-3 py-2 h-10 input-field {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}"
+                        {{ 'readonly' if view_mode }}>
                 </div>
 
                 <div>
                     <label class="text-xs font-bold text-slate-500 uppercase">Bairro <span
                             class="text-red-500">*</span></label>
-                    <input type="text" name="bairro" id="bairro" value="{{ item.bairro if item }}" class="w-full border rounded-lg px-3 py-2 h-10 input-field 
-                                         {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}" required
-                        {{ 'readonly' if view_mode }} disabled>
+                    <input type="text" name="bairro" id="bairro" value="{{ item.bairro if item }}"
+                        class="w-full border rounded-lg px-3 py-2 h-10 input-field {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}"
+                        required {{ 'readonly' if view_mode }}>
                 </div>
 
                 <div>
                     <label class="text-xs font-bold text-slate-500 uppercase">Cidade <span
                             class="text-red-500">*</span></label>
-                    <input type="text" name="cidade" id="cidade" value="{{ item.cidade if item }}" class="w-full border rounded-lg px-3 py-2 h-10 input-field
-                                         {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}" required
-                        {{ 'readonly' if view_mode }} disabled>
+                    <input type="text" name="cidade" id="cidade" value="{{ item.cidade if item }}"
+                        class="w-full border rounded-lg px-3 py-2 h-10 input-field {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}"
+                        required {{ 'readonly' if view_mode }}>
                 </div>
 
                 <div>
                     <label class="text-xs font-bold text-slate-500 uppercase">UF <span
                             class="text-red-500">*</span></label>
                     <input type="text" name="estado" id="estado" maxlength="2" value="{{ item.estado if item }}"
-                        placeholder="SP" class="w-full border rounded-lg px-3 py-2 h-10 uppercase input-field
-                                         {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}" required
-                        {{ 'readonly' if view_mode }} disabled>
+                        placeholder="SP"
+                        class="w-full border rounded-lg px-3 py-2 h-10 uppercase input-field {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}"
+                        required {{ 'readonly' if view_mode }}>
                 </div>
             </div>
         </section>
 
+        {# SEÇÃO DE FRENTES - Agora sempre visível #}
+        <section class="bg-white rounded-lg p-6 border shadow-sm space-y-6 mt-6">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-10 h-10 rounded bg-purple-100 text-purple-600 flex items-center justify-center">
+                    <i class="fas fa-hard-hat"></i>
+                </div>
+                <div class="flex-1">
+                    <h3
+                        class="font-semibold text-slate-800 border-l-2 border-purple-600 pl-3 uppercase text-sm tracking-wide">
+                        Frentes de Trabalho
+                    </h3>
+                    <p class="text-[10px] text-slate-500 pl-3">Divisões operacionais para geração de RDO.</p>
+                </div>
+            </div>
+
+            {% if not view_mode %}
+            {% if item and item.id %}
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-2">
+                <input type="text" id="nome_frente_nova" placeholder="Nome da Frente (ex: Alvenaria)"
+                    class="md:col-span-5 border rounded-lg px-3 py-2 h-10 text-sm focus:ring-1 focus:ring-purple-500 outline-none">
+                <select id="id_responsavel_novo"
+                    class="md:col-span-5 border rounded-lg px-3 py-2 h-10 text-sm focus:ring-1 focus:ring-purple-500 outline-none">
+                    <option value="">Responsável Técnico</option>
+                    {% for u in usuarios %}
+                    <option value="{{ u.id }}">{{ u.nome }} (ID: {{ u.id }})</option>
+                    {% endfor %}
+                </select>
+                <button type="button" onclick="adicionarFrente({{ item.id }})"
+                    class="md:col-span-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition flex items-center justify-center gap-2">
+                    <i class="fas fa-plus"></i> Adicionar
+                </button>
+            </div>
+            {% else %}
+            <div
+                class="p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-700 text-sm flex items-center gap-2">
+                <i class="fas fa-info-circle"></i>
+                <span>Salve o cadastro da obra primeiro para habilitar a adição de frentes de trabalho.</span>
+            </div>
+            {% endif %}
+            {% endif %}
+
+            <div class="overflow-x-auto border rounded-lg">
+                <table class="w-full text-left text-sm">
+                    <thead class="bg-slate-50 border-b">
+                        <tr>
+                            <th class="px-4 py-3 font-bold text-slate-600 uppercase text-[10px]">Nome da Frente</th>
+                            <th class="px-4 py-3 font-bold text-slate-600 uppercase text-[10px] text-right">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lista-frentes">
+                        {% for frente in frentes %}
+                        <tr class="border-b last:border-0 hover:bg-slate-50 transition"
+                            id="frente-{{ frente.id_frente_trabalho }}">
+                            <td class="px-4 py-3">
+                                <p class="font-medium text-slate-800">{{ frente.nome_frente }}</p>
+                                <p class="text-xs text-slate-500">
+                                    Resp: {{ frente.responsavel.nome if frente.responsavel else 'Não definido'}}
+                                </p>
+                            </td>
+                            <td class="px-4 py-3 text-right">
+                                {% if not view_mode %}
+                                <button type="button" onclick="removerFrente({{ frente.id_frente_trabalho }})"
+                                    class="text-red-400 hover:text-red-600 transition">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                                {% else %}
+                                <span class="text-slate-300 italic text-xs">Leitura</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr id="sem-frentes">
+                            <td colspan="2" class="px-4 py-8 text-center text-slate-400 italic">
+                                Nenhuma frente cadastrada.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
 
         <div class="flex flex-col sm:flex-row gap-3 pt-4 border-t">
             {% if view_mode %}
@@ -269,30 +319,24 @@
                 class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2">
                 Editar Obra
             </a>
-
             <a href="{{ url_for('auth.lista_obras') }}"
                 class="flex-1 bg-white border border-slate-300 text-slate-500 font-bold py-3 rounded-lg hover:bg-slate-50 flex items-center justify-center">
                 Voltar para Lista
             </a>
-
             {% else %}
-
             <button type="submit" id="submitBtn"
                 class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-sm flex items-center justify-center gap-2">
-                <span id="btnText">Salvar Cadastro</span>
+                <span id="btnText">{{ 'Atualizar Obra' if item and item.id else 'Salvar Cadastro' }}</span>
                 <i class="fas fa-spinner fa-spin hidden" id="spinner"></i>
             </button>
-
             <a href="{{ url_for('auth.lista_obras') }}"
                 class="flex-1 bg-white border border-slate-300 text-slate-500 py-3 rounded-lg hover:bg-slate-50 flex items-center justify-center">
                 Cancelar
             </a>
-
             {% endif %}
         </div>
     </form>
 </div>
-
 
 <style>
     .input-field:focus {
@@ -300,11 +344,17 @@
         box-shadow: 0 0 0 1px #2563eb;
     }
 
-    /* Estilo para campos desabilitados que não são no modo view_mode */
-    .input-field[disabled]:not([readonly]) {
-        background-color: #f3f4f6;
-        /* bg-gray-100 */
-        cursor: not-allowed;
+    input[readonly] {
+        background-color: #f8fafc;
+        border-color: #e2e8f0;
+        cursor: default;
+    }
+
+    select[disabled] {
+        background-color: #f8fafc;
+        opacity: 1;
+        color: #475569;
+        -webkit-appearance: none;
     }
 </style>
 
@@ -317,29 +367,22 @@
     ======================================================= */
     function applyNumberMask(id) {
         const el = document.getElementById(id);
-        if (!el) return;
-
-        el.addEventListener('input', e => {
-            // Garante que o input só tenha números
-            e.target.value = e.target.value.replace(/\D/g, '');
-        });
+        if (el) el.addEventListener('input', e => e.target.value = e.target.value.replace(/\D/g, ''));
     }
 
     /* =======================================================
         Habilita/Desabilita campos de endereço
     ======================================================= */
     function toggleAddressFields(enable) {
-        const viewMode = document.getElementById("cep").readOnly;
-        if (viewMode) return; // Não altera se estiver em modo de visualização
+        const isView = document.getElementById("cep").readOnly;
+        if (isView) return;
 
         ADDRESS_FIELDS.forEach(id => {
             const field = document.getElementById(id);
             if (field) {
-                field.disabled = !enable;
-                // Ajuste a classe para refletir o estado de desabilitação
+                field.readOnly = !enable;
                 field.classList.toggle('bg-slate-50', !enable);
                 field.classList.toggle('opacity-70', !enable);
-                field.classList.toggle('cursor-not-allowed', !enable);
             }
         });
     }
@@ -350,18 +393,7 @@
     function setCepMessage(message, type) {
         const msgEl = document.getElementById("cep-message");
         if (!msgEl) return;
-
-        // Limpa classes anteriores
-        msgEl.className = 'text-xs pt-1';
-
-        if (type === 'success') {
-            msgEl.classList.add('text-green-600', 'font-semibold');
-        } else if (type === 'error') {
-            msgEl.classList.add('text-red-600', 'font-semibold');
-        } else {
-            msgEl.classList.add('text-slate-500');
-        }
-
+        msgEl.className = 'text-xs pt-1 ' + (type === 'success' ? 'text-green-600' : type === 'error' ? 'text-red-600' : 'text-slate-500');
         msgEl.innerText = message;
     }
 
@@ -374,33 +406,29 @@
     let isManualSearch = false; // Flag para saber se foi busca manual (blur/Enter) ou carregamento inicial
 
     function searchCep(cep, isManual = false) {
-        const el = id => document.getElementById(id);
-        const cepInput = el("cep");
+        const cepInput = document.getElementById("cep");
+        if (cepInput.readOnly || cep.length !== 8) return;
 
-        if (cepInput.readOnly) return;
-
-        // CRÍTICO: Só continua se o CEP tiver 8 dígitos
-        if (cep.length !== 8) {
-            clearTimeout(cepDebounce);
-            toggleAddressFields(false); // Desabilita campos se incompleto
-            return;
-        }
-
-        clearTimeout(cepDebounce);
-        isManualSearch = isManual; // Registra se foi uma busca manual
-
-        cepDebounce = setTimeout(() => {
-            // Informa que a busca está em andamento (substituindo o spinner)
-            setCepMessage("Buscando endereço...", 'info');
-
-            toggleAddressFields(false); // Desabilita durante a busca
-
-            // Reset dos valores antes da busca
-            ADDRESS_FIELDS.forEach(id => {
-                const field = el(id);
-                if (field && ['endereco', 'bairro', 'cidade', 'estado'].includes(id)) {
-                    field.value = "";
+        setCepMessage("Buscando...", 'info');
+        fetch(`https://viacep.com.br/ws/${cep}/json/`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.erro) {
+                    setCepMessage("CEP não encontrado.", 'error');
+                    toggleAddressFields(true);
+                    return;
                 }
+                document.getElementById("endereco").value = data.logradouro || "";
+                document.getElementById("bairro").value = data.bairro || "";
+                document.getElementById("cidade").value = data.localidade || "";
+                document.getElementById("estado").value = data.uf || "";
+                toggleAddressFields(true);
+                setCepMessage("CEP Validado.", 'success');
+                if (isManual) document.getElementById("numero").focus();
+            })
+            .catch(() => {
+                setCepMessage("Erro na rede.", 'error');
+                toggleAddressFields(true);
             });
 
             const controller = new AbortController();
@@ -463,8 +491,6 @@
         applyNumberMask("cnpj");
         applyNumberMask("cep");
 
-        const cep = document.getElementById("cep");
-        const isViewMode = document.getElementById("cep").readOnly;
 
         if (!isViewMode) {
             // Se o campo CEP JÁ ESTIVER PREENCHIDO, tenta a busca inicial para habilitar os campos.
@@ -494,6 +520,8 @@
                     searchCep(cep.value.replace(/\D/g, ''), true); // true = busca manual
                 }
             });
+        const cepField = document.getElementById("cep");
+        const isView = cepField.readOnly;
 
             // Limpa o feedback e desabilita ao digitar se o CEP ficar incompleto
             cep.addEventListener("input", () => {
@@ -504,6 +532,9 @@
                     }
                 }
             });
+        if (!isView) {
+            if (cepField.value.length === 8) searchCep(cepField.value);
+            cepField.addEventListener("blur", () => searchCep(cepField.value, true));
         }
 
         const statusToggle = document.querySelector('input[name="status"]');
@@ -521,16 +552,34 @@
 
         const form = document.getElementById("mainForm");
         const btn = document.getElementById("submitBtn");
-
         if (form && btn) {
             form.addEventListener("submit", () => {
                 // Animação de envio
+                const selects = form.querySelectorAll('select[disabled]');
+                selects.forEach(s => s.disabled = false);
                 btn.querySelector("#btnText").classList.add("hidden");
                 btn.querySelector("#spinner").classList.remove("hidden");
                 btn.disabled = true;
             });
         }
     });
-</script>
 
+    function adicionarFrente(obraId) {
+        const nome = document.getElementById('nome_frente_nova').value.trim();
+        const resp = document.getElementById('id_responsavel_novo').value;
+        if (!nome) return alert("Nome obrigatório");
+
+        fetch("{{ url_for('auth.criar_frente') }}", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id_obra: obraId, nome_frente: nome, id_responsavel: resp || null })
+        }).then(r => r.json()).then(data => data.success ? location.reload() : alert(data.message));
+    }
+
+    function removerFrente(frenteId) {
+        if (!confirm("Excluir frente?")) return;
+        fetch(`/auth/remover-frente/${frenteId}`, { method: 'DELETE' })
+            .then(r => r.json()).then(data => data.success ? document.getElementById(`frente-${frenteId}`).remove() : alert("Erro"));
+    }
+</script>
 {% endblock %}
