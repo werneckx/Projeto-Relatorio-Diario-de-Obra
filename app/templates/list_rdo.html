@@ -137,7 +137,7 @@
             Pesquisar <i class="fas fa-search"></i>
         </button>
     </div>
-    <a href="{{ url_for('auth.adicionar_rdo') }}" class="button-base button-success">
+    <a href="{{ url_for('auth.criar_rdo') }}" class="button-base button-success">
         <i class="fas fa-plus"></i> Criar Novo RDO
     </a>
 </div>
@@ -281,7 +281,7 @@
     </table>
     {% else %}
     <div class="empty-state">
-        <p>Nenhum RDO encontrado. <a href="{{ url_for('auth.adicionar_rdo') }}">Adicione o primeiro agora!</a></p>
+        <p>Nenhum RDO encontrado. <a href="{{ url_for('auth.criar_rdo') }}">Adicione o primeiro agora!</a></p>
     </div>
     {% endif %}
 </div>
