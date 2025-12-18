@@ -49,7 +49,8 @@
         <nav class="navegacao">
             <ul class="nav-menu">
                 <li class="nav-item">
-                    <a href="{{ url_for('auth.home') }}" class="{% if request.endpoint == 'home' %}active{% endif %}">
+                    <a href="{{ url_for('auth.inicio') }}"
+                        class="{% if request.endpoint == 'inicio' %}active{% endif %}">
                         <img src="{{ url_for('static', filename='icons/home.png') }}" alt="Home" class="home-icon">
                     </a>
                 </li>
@@ -58,7 +59,7 @@
                     <a href="#" class="nav-link">RDO</a>
                     <ul class="dropdown-menu">
                         <a href="{{ url_for('auth.lista_rdo') }}">Lista</a>
-                        <a href="{{ url_for('auth.adicionar_rdo') }}">Gerar</a>
+                        <a href="{{ url_for('auth.criar_rdo') }}">Gerar</a>
                     </ul>
                 </li>
 
@@ -67,7 +68,7 @@
                     <ul class="dropdown-menu">
                         <a href="{{ url_for('auth.lista_obras') }}">Obras</a>
                         <a href="{{ url_for('auth.lista_usuarios') }}">Usuários</a>
-                        <a href="{{ url_for('auth.lista_climas') }}">Clima</a>
+                        <a href="{{ url_for('auth.lista_climas') }}">Climas</a>
                     </ul>
                 </li>
             </ul>
