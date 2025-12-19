@@ -205,8 +205,8 @@
                 </td>
 
 
-                <td>{{ '%03d' % (rdo.numero_sequencial | int) }}</td>
-                <td>{{ '%03d' % (rdo.revisao | int) }}</td>
+                <td>{{ '%03d' % (rdo.id_sequencial | int) }}</td>
+                <td>{{ '%03d' % (rdo.id_revisao | int) }}</td>
                 <td>{{ rdo.data.strftime('%d/%m/%Y') if rdo.data else 'N/A' }}</td>
 
                 <td>
@@ -218,16 +218,8 @@
                 </td>
 
                 <td>
-                    {% if rdo.usuario and rdo.usuario.nome %}
-                    {% set partes = rdo.usuario.nome.split() %}
-                    {% if partes|length > 1 %}
-                    {{ partes[0] }} {{ partes[1][0] }}.
-                    {% else %}
-                    {{ partes[0] }}
-                    {% endif %}
-                    {% else %}
-                    N/A
-                    {% endif %}
+                    {{ rdo.responsavel.nome[:15] + '...' if rdo.responsavel and rdo.responsavel.nome|length > 15 else
+                    (rdo.responsavel.nome if rdo.responsavel else 'N/A') }}
                 </td>
 
 
@@ -236,16 +228,8 @@
                 <td>{{ rdo.total_mo if rdo.total_mo else '0' }}</td>
 
                 <td>
-                    {% if rdo.criador %}
-                    {% set partes = rdo.criador.split() %}
-                    {% if partes|length > 1 %}
-                    {{ partes[0] }} {{ partes[1][0] }}.
-                    {% else %}
-                    {{ partes[0] }}
-                    {% endif %}
-                    {% else %}
-                    N/A
-                    {% endif %}
+                    {{ rdo.usuario.nome[:15] + '...' if rdo.usuario and rdo.usuario.nome|length > 15 else
+                    (rdo.usuario.nome if rdo.usuario else 'N/A') }}
                 </td>
 
 
