@@ -1,3 +1,4 @@
+import os
 from flask import Blueprint, abort, render_template, request, redirect, url_for, flash, session, send_file
 from werkzeug.security import check_password_hash
 from app import db # Importar 'db' para uso no filtro (db.or_)
@@ -5,15 +6,29 @@ from app import db, login_manager
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from app.models import usuario
-from app.models.obra import Obra
+from app.models.obra import Frente_Trabalho, Obra
+from app.models.rdo import RDO
 from app.utils.rdo_pdf import regenerar_pdf_rdo
 from sqlalchemy import func, or_
 from datetime import date, datetime, timedelta
 from functools import wraps # Mover a importação para o topo para melhor prática
 from sqlalchemy.orm import aliased
+from flask import request, jsonify
+from app import db
+from app.models.obra import Frente_Trabalho
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
+# Página Inicial do Blueprint (Redirecionamento)
+@auth_bp.get("/")
+def index():
+    if "user_id" in session:
+        return redirect(url_for("auth.inicio"))
+    return redirect(url_for("auth.login"))
+
+#######################################################################################################
+####################################################################################################### Login e Logout
+#######################################################################################################
 
 # Decorator: login_required
 def login_required(f):
@@ -64,14 +79,7 @@ def login_post():
     session["user_email"] = user.email
     session["user_role"] = user.papel
 
-    return redirect(url_for("auth.home"))
-
-# Página Home
-@auth_bp.get("/home")
-@login_required
-def home():
-    return render_template("inicio.html")
-
+    return redirect(url_for("auth.inicio"))
 
 # Logout
 @auth_bp.get("/logout")
@@ -80,39 +88,15 @@ def logout():
     flash("Você foi desconectado com sucesso.", "info")
     return redirect(url_for("auth.login"))
 
+#######################################################################################################
+####################################################################################################### Inicio
+#######################################################################################################
 
-# Página Inicial do Blueprint (Redirecionamento)
-@auth_bp.get("/")
-def index():
-    if "user_id" in session:
-        return redirect(url_for("auth.home"))
-    return redirect(url_for("auth.login"))
-
-
-# Lista RDO (placeholder)
-# No arquivo auth.py
-@auth_bp.get("/lista-rdo")
+# Página inicio
+@auth_bp.get("/inicio")
 @login_required
-def lista_rdo():
-    from app.models.rdo import RDO
-    from app.models.usuario import Usuario  # Importar o modelo para acessar as permissões
-
-    current_user_id = session.get("user_id")
-    
-    # 1. Buscar o objeto do usuário completo para ter acesso ao relacionamento obras_permitidas
-    user = Usuario.query.get(current_user_id)
-
-    if user:
-        # 2. Extrair os IDs de todas as obras que o usuário tem permissão
-        # 'obras_permitidas' foi definido no seu modelo Usuario
-        ids_obras_permitidas = [obra.id for obra in user.obras_permitidas]
-
-        # 3. Filtrar os RDOs: onde a obra_id do RDO está dentro da lista de permitidas
-        rdos = RDO.query.filter(RDO.obra_id.in_(ids_obras_permitidas)).order_by(RDO.data.desc()).all()
-    else:
-        rdos = []
-
-    return render_template("list_rdo.html", rdos=rdos)
+def inicio():
+    return render_template("inicio.html")
 
 # Faz o download do PDF
 @auth_bp.get("/rdo/<int:rdo_id>/download")
@@ -122,86 +106,6 @@ def download_rdo_pdf(rdo_id):
     pdf_path, pdf_filename = regenerar_pdf_rdo(rdo_id)
     return send_file(pdf_path, as_attachment=True, download_name=pdf_filename)
 
-# Faz o Editar do RDO
-@auth_bp.get("/rdo/<int:rdo_id>/editar")
-@login_required
-def editar_rdo(rdo_id):
-    # Sugestão de Melhoria: Esta rota deve buscar os dados do RDO
-    # rdo = RDO.query.get_or_404(rdo_id)
-    return render_template("form_rdo.html", rdo_id=rdo_id)
-# Faz o Visualizar do RDO
-@auth_bp.get("/rdo/<int:rdo_id>")
-@login_required
-def visualizar_rdo(rdo_id):
-    # Sugestão de Melhoria: Esta rota deve buscar os dados do RDO
-    # rdo = RDO.query.get_or_404(rdo_id)
-    return render_template("form_rdo.html", rdo_id=rdo_id)
-
-# Criar RDO (redireciona)
-@auth_bp.get("/novo-rdo")
-@login_required
-def adicionar_rdo():
-    return render_template("form_rdo.html")
-
-
-# LISTA GENÉRICA /cadastro/<categoria>
-@auth_bp.route("/cadastro/<categoria>")
-@login_required
-def cadastro_list(categoria):
-
-    # CORREÇÃO: Importar Modelos SOMENTE AQUI, onde eles são usados.
-    # Isso evita que a importação do 'Clima' (e a possível query no seu modelo)
-    # ocorra quando o Blueprint é registrado no create_app.
-    from app.models.usuario import Usuario
-    from app.models.obra import Obra
-    from app.models.clima import Clima 
-
-    search = request.args.get("search", "").strip()
-
-    # Mapeia nome de categoria -> classe/model
-    model_map = {
-        "obra": Obra,
-        "usuario": Usuario,
-        "clima": Clima,
-    }
-
-    Model = model_map.get(categoria)
-
-    if Model is None:
-        flash("Categoria inválida.", "danger")
-        return redirect(url_for("auth.home"))
-
-    # Query base
-    q = Model.query
-
-    # Filtro de busca
-    if search:
-        if categoria == "usuario":
-            q = q.filter(
-                db.or_(
-                    Usuario.nome.ilike(f"%{search}%"),
-                    Usuario.email.ilike(f"%{search}%"),
-                    Usuario.role.ilike(f"%{search}%"),
-                )
-            )
-        else:
-            # Para obras e clima assume que possuem campo nome
-            # Nota: É crucial que a classe Clima tenha um atributo 'nome'
-            # Se 'Clima' usa 'descricao' ou outro campo, isso quebrará aqui.
-            try:
-                q = q.filter(Model.nome.ilike(f"%{search}%"))
-            except AttributeError:
-                flash(f"Modelo {Model.__name__} não possui atributo 'nome' para busca.", "error")
-                return redirect(url_for("auth.home"))
-
-
-    # Ordenação por ID crescente
-    opcoes = q.order_by(Model.id.asc()).all()
-
-    # Sugestão de Melhoria: Você precisa passar 'opcoes', 'categoria' e 'search'
-    # para o template list_obras.html para que ele possa renderizar a lista.
-    # return render_template("list_obras.html", itens=opcoes, categoria=categoria, search=search)
-    return render_template("list_obras.html")
 
 import json
 from flask import make_response
@@ -209,9 +113,9 @@ from flask import make_response
 # ... (Mantenha seus imports e decoradores existentes)
 
 # Rota Gerar RDO (POST) - Processa Criação e Edição
-@auth_bp.post("/gerar")
+@auth_bp.post("/gerar-rdo")
 @login_required
-def gerar():
+def gerar_rdo():
     from app.models.rdo import RDO
     from app.models.obra import Obra
     
@@ -234,14 +138,14 @@ def gerar():
             return redirect(url_for('auth.visualizar_rdo', rdo_id=rdo_id))
     else:
         # LÓGICA DE CRIAÇÃO
-        obra_id = _safe_get_int(request.form.get("obra_id"))
-        obra_obj = Obra.query.get(obra_id)
+        id_obra = _safe_get_int(request.form.get("id_obra"))
+        obra_obj = Obra.query.get(id_obra)
         
         if not obra_obj:
             flash('Obra inválida selecionada.', 'danger')
             return redirect(url_for('auth.lista_rdo'))
 
-        num_rdos_existentes = RDO.query.filter_by(obra_id=obra_id).count()
+        num_rdos_existentes = RDO.query.filter_by(id_obra=id_obra).count()
 
         # Monta a lista de mão de obra a partir do formulário
         funcoes = request.form.getlist("funcao[]")
@@ -262,14 +166,14 @@ def gerar():
                 })
 
         novo_rdo = RDO(
-            obra_id=obra_id,
-            usuario_id=session.get("user_id"), # Usando session conforme seu padrão
+            id_obra=id_obra,
+            id_usuario=session.get("user_id"), # Usando session conforme seu padrão
             climas_manha=_safe_get_int(request.form.get("climas_manha")),
             climas_tarde=_safe_get_int(request.form.get("climas_tarde")),
             mao_obra=json.dumps(mao_de_obra_data),
             atividades=request.form.get("atividades"),
             data=datetime.now(),
-            numero_sequencial=num_rdos_existentes + 1,
+            id_sequencial=num_rdos_existentes + 1,
             status="Pendente", # Ajustado para string simples
             fotos_json='[]',
             pdf_filename=None,
@@ -289,20 +193,98 @@ def gerar():
 
     return redirect(url_for('auth.visualizar_rdo', rdo_id=rdo_id))
 
-# Rota de Sucesso (Callback)
 
-@auth_bp.get("/rdo_success")
+#######################################################################################################
+####################################################################################################### RDO
+#######################################################################################################
+
+# Criar RDO (redireciona)
+
+@auth_bp.get("/criar-rdo")
 @login_required
-def rdo_success():
-    rdo_data_json = request.cookies.get('rdo_success_data')
-    if rdo_data_json:
-        response = make_response(redirect(url_for('auth.lista_rdo')))
-        response.set_cookie('rdo_success_data', '', expires=0)
-        flash(rdo_data_json, 'success')
-        return response
-    return redirect(url_for('auth.lista_rdo'))
+def criar_rdo():
+    from app.models.obra import Obra 
+    from app.models.clima import Clima 
+    from app.models.usuario import Usuario
+    
+    item = None
+    obra = Obra.query.all()
+    usuario = Usuario.query.all()
+    clima = Clima.query.all()
+    view_mode = False
+    
+    return render_template("form_rdo.html", item=item, clima=clima, obras=obra, usuarios=usuario, view_mode=view_mode)
 
+# Visualizar RDO (redireciona)
+
+@auth_bp.get("/visualizar-rdo/<int:rdo_id>")
+@login_required
+def visualizar_rdo(rdo_id):
+    from app.models.rdo import RDO
+    from app.models.obra import Obra
+    from app.models.clima import Clima
+    from app.models.usuario import Usuario
+
+    item = RDO.query.get_or_404(rdo_id)
+
+    return render_template(
+        "form_rdo.html",
+        item=item,
+        view_mode=True,
+        obras=Obra.query.all(),
+        clima=Clima.query.all(),
+        usuarios=Usuario.query.all()
+    )
+
+# Editar RDO
+
+@auth_bp.get("/editar-rdo/<int:rdo_id>")
+@login_required
+def editar_rdo(rdo_id):
+    from app.models.rdo import RDO
+    from app.models.obra import Obra
+    from app.models.clima import Clima
+    from app.models.usuario import Usuario
+
+    item = RDO.query.get_or_404(rdo_id)
+
+    return render_template(
+        "form_rdo.html",
+        item=item,
+        view_mode=False,
+        obras=Obra.query.all(),
+        clima=Clima.query.all(),
+        usuarios=Usuario.query.all()
+    )
+
+# Lista RDO (placeholder)
+
+@auth_bp.get("/lista-rdo")
+@login_required
+def lista_rdo():
+    from app.models.rdo import RDO
+    from app.models.usuario import Usuario  # Importar o modelo para acessar as permissões
+
+    current_user_id = session.get("user_id")
+    
+    # 1. Buscar o objeto do usuário completo para ter acesso ao relacionamento obras_permitidas
+    user = Usuario.query.get(current_user_id)
+
+    if user:
+        # 2. Extrair os IDs de todas as obras que o usuário tem permissão
+        # 'obras_permitidas' foi definido no seu modelo Usuario
+        ids_obras_permitidas = [obra.id for obra in user.obras_permitidas]
+
+        # 3. Filtrar os RDOs: onde a id_obra do RDO está dentro da lista de permitidas
+        rdos = RDO.query.filter(RDO.id_obra.in_(ids_obras_permitidas)).order_by(RDO.data.desc()).all()
+    else:
+        rdos = []
+
+    return render_template("list_rdo.html", rdos=rdos)
+
+#######################################################################################################
 ####################################################################################################### USUARIOS
+#######################################################################################################
 
 # Rota para a lista de usuários
 
@@ -582,7 +564,9 @@ def lista_supervisores():
     from flask import jsonify
     return jsonify(result)
 
+#######################################################################################################
 ####################################################################################################### CLIMAS
+#######################################################################################################
 
 @auth_bp.get("/lista-climas")
 @login_required
@@ -659,7 +643,9 @@ def excluir_clima(id):
     db.session.commit()
     return redirect(url_for('auth.lista_climas'))
 
+#######################################################################################################
 ####################################################################################################### OBRAS
+#######################################################################################################
 
 # Rota para a lista de obras
 
@@ -719,7 +705,7 @@ def get_matrix_options():
     
     # Filtra por id_matriz NULL ou 0 para ser robusto com a lógica do HTML
     return Obra.query.filter(or_(Obra.id_matriz.is_(None), Obra.id_matriz == 0)).all()
-def fetch_single_obra_with_matriz_name(obra_id):
+def fetch_single_obra_with_matriz_name(id_obra):
     """Busca uma única Obra por ID e injeta o nome da Matriz (se for filial)"""
     from app.models.obra import Obra # Adiciona a importação
     
@@ -727,7 +713,7 @@ def fetch_single_obra_with_matriz_name(obra_id):
     query = Obra.query.outerjoin(Matriz, Obra.id_matriz == Matriz.id)
     
     # Busca a Obra e o nome da Matriz associada
-    result = query.with_entities(Obra, Matriz.nome.label('nome_matriz')).filter(Obra.id == obra_id).first()
+    result = query.with_entities(Obra, Matriz.nome.label('nome_matriz')).filter(Obra.id == id_obra).first()
     
     if result:
         # Se for encontrado, 'result' é uma tupla onde o primeiro elemento é o objeto Obra
@@ -828,7 +814,7 @@ def gerar_obra():
     from app.models.obra import Obra
     
     # 1. Obter Dados do Formulário
-    obra_id = request.form.get("id", type=int)
+    id_obra = request.form.get("id", type=int)
     nome = request.form.get("nome")
     cnpj = request.form.get("cnpj")
     endereco = request.form.get("endereco")
@@ -853,7 +839,7 @@ def gerar_obra():
         flash("Formato de data inválido.", "danger")
         # Prepara o item_form para retornar ao template em caso de erro
         item_form = Obra(
-            id=obra_id, nome=nome, cnpj=cnpj, id_matriz=id_matriz, endereco=endereco, 
+            id=id_obra, nome=nome, cnpj=cnpj, id_matriz=id_matriz, endereco=endereco, 
             numero=numero, complemento=complemento, bairro=bairro, cidade=cidade, 
             estado=estado, cep=cep, inicio=inicio_str, termino=termino_str # Mantém strings para re-exibir
         )
@@ -866,15 +852,15 @@ def gerar_obra():
 
     # Prepara o item_form (para re-renderizar em caso de erro de DB)
     item_form = Obra(
-        id=obra_id, nome=nome, cnpj=cnpj, id_matriz=id_matriz, endereco=endereco, 
+        id=id_obra, nome=nome, cnpj=cnpj, id_matriz=id_matriz, endereco=endereco, 
         numero=numero, complemento=complemento, bairro=bairro, cidade=cidade, 
         estado=estado, cep=cep, inicio=inicio, termino=termino, status=status
     )
     
     # 2. Criar ou Atualizar
-    if obra_id:
+    if id_obra:
         # Edição
-        item = Obra.query.get_or_404(obra_id)
+        item = Obra.query.get_or_404(id_obra)
         item.nome = nome
         item.cnpj = cnpj
         item.id_matriz = id_matriz # Novo campo
@@ -930,8 +916,18 @@ def gerar_obra():
 @auth_bp.get("/editar-obra/<int:id>")
 @login_required
 def editar_obra(id):
+    from app.models.usuario import Usuario
     # Usa o helper para buscar a Obra com o nome da Matriz
     item = fetch_single_obra_with_matriz_name(id)
+    
+    obra = Obra.query.get_or_404(id)
+    # Busca todas as frentes vinculadas a essa obra
+    frentes = Frente_Trabalho.query.filter_by(id_obra=id).all()
+    
+    usuarios = Usuario.query.order_by(Usuario.nome).all()
+    
+    # Busca outras obras para o select de Matriz
+    opcoes_matriz = Obra.query.all()
     
     if not item:
         abort(404) # Not Found
@@ -940,13 +936,14 @@ def editar_obra(id):
     opcoes_matriz = get_matrix_options()
     
     # Passa as opções de matrizes e o item com nome_matriz para o template
-    return render_template("form_obra.html", item=item, opcoes_matriz=opcoes_matriz)
+    return render_template("form_obra.html", item=item, opcoes_matriz=opcoes_matriz, frentes=frentes, usuarios=usuarios)
 
 # Rota para visualizar obra
 @auth_bp.get("/visualizar-obra/<int:id>")
 @login_required
 def visualizar_obra(id):
     from app.models.obra import Obra
+    from app.models.usuario import Usuario
     
     # Busca o item de Obra
     item = Obra.query.get_or_404(id) 
@@ -958,14 +955,20 @@ def visualizar_obra(id):
         abort(404)
         
     opcoes_matriz = get_matrix_options()
+    
+    frentes = Frente_Trabalho.query.filter_by(id_obra=id).all()
 
+    usuario = Usuario.query.order_by(Usuario.nome).all()
+    
     # Renderiza o template passando o item e o view_mode
     return render_template(
         "form_obra.html", 
         item=item, 
         view_mode=view_mode, 
         categoria="obra",
-        opcoes_matriz=opcoes_matriz # Importante passar isso para o <select> funcionar
+        opcoes_matriz=opcoes_matriz, # Importante passar isso para o <select> funcionar
+        frentes=frentes,
+        usuario=usuario
     )
 
 # Rota para toggle de status da obra (usado em list_obras.html)
@@ -990,3 +993,60 @@ def toggle_obra_status(id):
         db.session.rollback()
         print(f"Erro ao alternar status da obra: {e}")
         return '', 500 # Retorna erro 500
+
+# Rota para criar nova frente de trabalho
+
+@auth_bp.route('/criar-frente', methods=['POST'])
+@login_required
+def criar_frente():
+    from app.models.usuario import Usuario
+
+    data = request.get_json()
+
+    id_obra = data.get('id_obra')
+    nome_frente = data.get('nome_frente')
+    id_responsavel = data.get('id_responsavel')
+
+    if not id_obra or not nome_frente:
+        return jsonify({'success': False, 'message': 'Dados incompletos'}), 400
+
+    try:
+        usuario = None
+        nome_responsavel = 'Não definido'
+
+        if id_responsavel:
+            usuario = Usuario.query.filter_by(id=id_responsavel).first()
+            if usuario:
+                nome_responsavel = usuario.nome
+
+        nova_frente = Frente_Trabalho(
+            id_obra=id_obra,
+            nome_frente=nome_frente,
+            id_responsavel=id_responsavel if usuario else None
+        )
+
+        db.session.add(nova_frente)
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'id_frente_trabalho': nova_frente.id_frente_trabalho,
+            'nome_frente': nova_frente.nome_frente,
+            'responsavel': nome_responsavel
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# Rota para remover frente de trabalho
+@auth_bp.route('/remover-frente/<int:id>', methods=['DELETE'])
+def remover_frente(id):
+    try:
+        frente = Frente_Trabalho.query.get_or_404(id)
+        db.session.delete(frente)
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
