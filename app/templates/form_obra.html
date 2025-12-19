@@ -359,26 +359,24 @@
 </style>
 
 <script>
-    /* Array de IDs dos campos de endereço a serem controlados */
+    /* Helper para encurtar document.getElementById */
+    const el = (id) => document.getElementById(id);
     const ADDRESS_FIELDS = ["endereco", "numero", "complemento", "bairro", "cidade", "estado"];
 
-    /* =======================================================
-        UTIL — Apenas Números
-    ======================================================= */
+    // Define se estamos apenas visualizando (pega do contexto do Jinja)
+    const isViewMode = {{ 'true' if view_mode else 'false' }};
+
     function applyNumberMask(id) {
-        const el = document.getElementById(id);
-        if (el) el.addEventListener('input', e => e.target.value = e.target.value.replace(/\D/g, ''));
+        const element = el(id);
+        if (element) {
+            element.addEventListener('input', e => e.target.value = e.target.value.replace(/\D/g, ''));
+        }
     }
 
-    /* =======================================================
-        Habilita/Desabilita campos de endereço
-    ======================================================= */
     function toggleAddressFields(enable) {
-        const isView = document.getElementById("cep").readOnly;
-        if (isView) return;
-
+        if (isViewMode) return;
         ADDRESS_FIELDS.forEach(id => {
-            const field = document.getElementById(id);
+            const field = el(id);
             if (field) {
                 field.readOnly = !enable;
                 field.classList.toggle('bg-slate-50', !enable);
@@ -387,187 +385,114 @@
         });
     }
 
-    /* =======================================================
-        Feedback Visual do CEP
-    ======================================================= */
     function setCepMessage(message, type) {
-        const msgEl = document.getElementById("cep-message");
+        const msgEl = el("cep-message");
         if (!msgEl) return;
         msgEl.className = 'text-xs pt-1 ' + (type === 'success' ? 'text-green-600' : type === 'error' ? 'text-red-600' : 'text-slate-500');
         msgEl.innerText = message;
     }
 
-    /* =======================================================
-        CEP — UX Enterprise-Grade
-    ======================================================= */
-
-    let cepDebounce = null;
-    const CEP_TIMEOUT = 8000; // failsafe corporativo
-    let isManualSearch = false; // Flag para saber se foi busca manual (blur/Enter) ou carregamento inicial
-
-    function searchCep(cep, isManual = false) {
-        const cepInput = document.getElementById("cep");
-        if (cepInput.readOnly || cep.length !== 8) return;
+    function searchCep(cepValue, isManualSearch = false) {
+        const cleanCep = cepValue.replace(/\D/g, '');
+        if (cleanCep.length !== 8) return;
 
         setCepMessage("Buscando...", 'info');
-        fetch(`https://viacep.com.br/ws/${cep}/json/`)
+
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8000);
+
+        fetch(`https://viacep.com.br/ws/${cleanCep}/json/`, { signal: controller.signal })
             .then(r => r.json())
             .then(data => {
+                clearTimeout(timeout);
                 if (data.erro) {
-                    setCepMessage("CEP não encontrado.", 'error');
+                    setCepMessage("CEP não encontrado. Preencha manualmente.", 'error');
                     toggleAddressFields(true);
                     return;
                 }
-                document.getElementById("endereco").value = data.logradouro || "";
-                document.getElementById("bairro").value = data.bairro || "";
-                document.getElementById("cidade").value = data.localidade || "";
-                document.getElementById("estado").value = data.uf || "";
+
+                if (el("endereco")) el("endereco").value = data.logradouro || "";
+                if (el("bairro")) el("bairro").value = data.bairro || "";
+                if (el("cidade")) el("cidade").value = data.localidade || "";
+                if (el("estado")) el("estado").value = data.uf || "";
+
                 toggleAddressFields(true);
-                setCepMessage("CEP Validado.", 'success');
-                if (isManual) document.getElementById("numero").focus();
+                setCepMessage("Endereço encontrado!", 'success');
+
+                if (isManualSearch && el("numero")) {
+                    el("numero").focus();
+                }
             })
-            .catch(() => {
-                setCepMessage("Erro na rede.", 'error');
+            .catch(err => {
+                clearTimeout(timeout);
+                setCepMessage("Erro ao buscar CEP. Tente preencher manualmente.", 'error');
                 toggleAddressFields(true);
             });
-
-            const controller = new AbortController();
-            const timeout = setTimeout(() => {
-                controller.abort();
-                setCepMessage("Tempo esgotado (Timeout). Verifique o CEP e tente novamente.", 'error');
-                toggleAddressFields(true); // Permite preenchimento manual após timeout
-            }, CEP_TIMEOUT);
-
-            fetch(`https://viacep.com.br/ws/${cep}/json/`, { signal: controller.signal })
-                .then(r => r.json())
-                .then(data => {
-                    clearTimeout(timeout);
-                    if (data.erro) {
-                        setCepMessage("CEP não encontrado. Preencha o endereço manualmente.", 'error');
-                        toggleAddressFields(true); // Habilita para preenchimento manual
-                        return;
-                    }
-
-                    // CEP encontrado - Preenche e Habilita
-                    if (el("endereco")) el("endereco").value = data.logradouro || "";
-                    if (el("bairro")) el("bairro").value = data.bairro || "";
-                    if (el("cidade")) el("cidade").value = data.localidade || "";
-                    if (el("estado")) el("estado").value = data.uf || "";
-                    if (el("complemento")) {
-                        // Só preenche complemento se o campo estava vazio antes
-                        if (!el("complemento").value) {
-                            el("complemento").value = data.complemento || "";
-                        }
-                    }
-
-                    toggleAddressFields(true); // Habilita campos
-                    setCepMessage("Endereço encontrado com sucesso!", 'success');
-
-                    // Só faz focus no número se foi uma busca manual (não no carregamento inicial)
-                    if (isManualSearch && el("numero")) {
-                        el("numero").focus();
-                    }
-                })
-                .catch(error => {
-                    clearTimeout(timeout);
-                    if (error.name !== 'AbortError') {
-                        console.error("Falha na consulta ViaCEP:", error);
-                        setCepMessage("Falha ao consultar CEP (Erro de rede).", 'error');
-                    }
-                    toggleAddressFields(true); // Permite preenchimento manual após erro
-                })
-                .finally(() => {
-                    // O fim da busca é controlado pelo feedback visual (setCepMessage)
-                });
-
-        }, 350);
     }
 
-
-    /* =======================================================
-        Bootstrapping
-    ======================================================= */
     document.addEventListener("DOMContentLoaded", () => {
         applyNumberMask("cnpj");
         applyNumberMask("cep");
 
+        const cepField = el("cep");
+        const statusToggle = document.querySelector('input[name="status"]');
+        const statusLabel = el("statusLabel");
+        const form = el("mainForm");
 
-        if (!isViewMode) {
-            // Se o campo CEP JÁ ESTIVER PREENCHIDO, tenta a busca inicial para habilitar os campos.
-            if (cep.value && cep.value.length === 8) {
-                searchCep(cep.value);
+        // Lógica Inicial do CEP
+        if (cepField && !isViewMode) {
+            if (cepField.value.length === 8) {
+                searchCep(cepField.value);
             } else {
                 toggleAddressFields(false);
-                setCepMessage("Preencha o CEP para liberar os campos de endereço.", 'info');
+                setCepMessage("Preencha o CEP para liberar o endereço.", 'info');
             }
-        } else {
-            toggleAddressFields(true); // Em view_mode, apenas garante que não estão desabilitados
-        }
 
-
-        if (cep) {
-            // Dispara a busca ao sair do campo (blur) — BUSCA MANUAL
-            cep.addEventListener("blur", () => {
-                if (!isViewMode) {
-                    searchCep(cep.value.replace(/\D/g, ''), true); // true = busca manual
-                }
-            });
-
-            // Dispara a busca ao pressionar Enter — BUSCA MANUAL
-            cep.addEventListener("keydown", e => {
-                if (e.key === "Enter" && !isViewMode) {
-                    e.preventDefault();
-                    searchCep(cep.value.replace(/\D/g, ''), true); // true = busca manual
-                }
-            });
-        const cepField = document.getElementById("cep");
-        const isView = cepField.readOnly;
-
-            // Limpa o feedback e desabilita ao digitar se o CEP ficar incompleto
-            cep.addEventListener("input", () => {
-                if (!isViewMode) {
-                    if (cep.value.length < 8) {
-                        toggleAddressFields(false);
-                        setCepMessage("Faltam dígitos no CEP.", 'info');
-                    }
-                }
-            });
-        if (!isView) {
-            if (cepField.value.length === 8) searchCep(cepField.value);
             cepField.addEventListener("blur", () => searchCep(cepField.value, true));
-        }
-
-        const statusToggle = document.querySelector('input[name="status"]');
-        const statusLabel = document.getElementById("statusLabel");
-
-        if (statusToggle) {
-            statusToggle.addEventListener("change", () => {
-                const on = statusToggle.checked;
-                statusLabel.innerText = on ? "Obra Ativa" : "Obra Inativa";
-                statusLabel.classList.toggle("text-blue-600", on);
-                statusLabel.classList.toggle("text-slate-400", !on);
+            cepField.addEventListener("keydown", e => {
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    searchCep(cepField.value, true);
+                }
+            });
+            cepField.addEventListener("input", () => {
+                if (cepField.value.length < 8) {
+                    toggleAddressFields(false);
+                    setCepMessage("Faltam dígitos no CEP.", 'info');
+                }
             });
         }
 
+        // Toggle de Status
+        if (statusToggle && statusLabel) {
+            statusToggle.addEventListener("change", () => {
+                const isChecked = statusToggle.checked;
+                statusLabel.innerText = isChecked ? "Obra Ativa" : "Obra Inativa";
+                statusLabel.classList.toggle("text-blue-600", isChecked);
+                statusLabel.classList.toggle("text-slate-400", !isChecked);
+            });
+        }
 
-        const form = document.getElementById("mainForm");
-        const btn = document.getElementById("submitBtn");
-        if (form && btn) {
-            form.addEventListener("submit", () => {
-                // Animação de envio
+        // Submit do Formulário
+        if (form && !isViewMode) {
+            form.addEventListener("submit", (e) => {
+                const btn = el("submitBtn");
                 const selects = form.querySelectorAll('select[disabled]');
-                selects.forEach(s => s.disabled = false);
-                btn.querySelector("#btnText").classList.add("hidden");
-                btn.querySelector("#spinner").classList.remove("hidden");
-                btn.disabled = true;
+                selects.forEach(s => s.disabled = false); // Habilita para enviar o dado
+
+                if (btn) {
+                    btn.querySelector("#btnText").classList.add("hidden");
+                    btn.querySelector("#spinner").classList.remove("hidden");
+                    btn.disabled = true;
+                }
             });
         }
     });
 
     function adicionarFrente(obraId) {
-        const nome = document.getElementById('nome_frente_nova').value.trim();
-        const resp = document.getElementById('id_responsavel_novo').value;
-        if (!nome) return alert("Nome obrigatório");
+        const nome = el('nome_frente_nova').value.trim();
+        const resp = el('id_responsavel_novo').value;
+        if (!nome) return alert("Nome da frente é obrigatório");
 
         fetch("{{ url_for('auth.criar_frente') }}", {
             method: 'POST',
@@ -577,9 +502,10 @@
     }
 
     function removerFrente(frenteId) {
-        if (!confirm("Excluir frente?")) return;
+        if (!confirm("Deseja realmente excluir esta frente de trabalho?")) return;
         fetch(`/auth/remover-frente/${frenteId}`, { method: 'DELETE' })
-            .then(r => r.json()).then(data => data.success ? document.getElementById(`frente-${frenteId}`).remove() : alert("Erro"));
+            .then(r => r.json())
+            .then(data => data.success ? el(`frente-${frenteId}`).remove() : alert("Erro ao remover"));
     }
 </script>
 {% endblock %}
