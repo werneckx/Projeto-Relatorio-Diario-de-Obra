@@ -93,7 +93,7 @@ def logout():
 #######################################################################################################
 
 # Página inicio
-@auth_bp.get("/inicio")
+@auth_bp.get("/inicio") 
 @login_required
 def inicio():
     return render_template("inicio.html")
@@ -106,115 +106,125 @@ def download_rdo_pdf(rdo_id):
     pdf_path, pdf_filename = regenerar_pdf_rdo(rdo_id)
     return send_file(pdf_path, as_attachment=True, download_name=pdf_filename)
 
-
-import json
-from flask import make_response
-
-# ... (Mantenha seus imports e decoradores existentes)
-
-# Rota Gerar RDO (POST) - Processa Criação e Edição
-@auth_bp.post("/gerar-rdo")
-@login_required
-def gerar_rdo():
-    from app.models.rdo import RDO
-    from app.models.obra import Obra
-    
-    # Função auxiliar interna para segurança de tipos
-    def _safe_get_int(val):
-        try: return int(val)
-        except: return None
-
-    rdo_id = request.form.get("id")
-
-    if rdo_id:
-        # LÓGICA DE EDIÇÃO
-        # Nota: Certifique-se de que a função editar_item esteja acessível ou implementada
-        # Para este escopo, chamamos a regeneração após salvar os dados via form
-        try:
-            regenerar_pdf_rdo(_safe_get_int(rdo_id))
-            flash('RDO editado e PDF atualizado com sucesso!', 'success')
-        except Exception as e:
-            flash(f'Erro ao regenerar o PDF: {e}', 'danger')
-            return redirect(url_for('auth.visualizar_rdo', rdo_id=rdo_id))
-    else:
-        # LÓGICA DE CRIAÇÃO
-        id_obra = _safe_get_int(request.form.get("id_obra"))
-        obra_obj = Obra.query.get(id_obra)
-        
-        if not obra_obj:
-            flash('Obra inválida selecionada.', 'danger')
-            return redirect(url_for('auth.lista_rdo'))
-
-        num_rdos_existentes = RDO.query.filter_by(id_obra=id_obra).count()
-
-        # Monta a lista de mão de obra a partir do formulário
-        funcoes = request.form.getlist("funcao[]")
-        quantidades = request.form.getlist("quantidade[]")
-        frentes = request.form.getlist("frente_trabalho[]")
-        tempos = request.form.getlist("tempo_frente[]")
-        mao_de_obra_data = []
-        
-        for i in range(max(1, len(funcoes))):
-            f = funcoes[i] if i < len(funcoes) else ''
-            q = quantidades[i] if i < len(quantidades) else ''
-            fr = frentes[i] if i < len(frentes) else ''
-            t = tempos[i] if i < len(tempos) else ''
-            if f and (q or fr or t):
-                mao_de_obra_data.append({
-                    "funcao": f, "quantidade": q,
-                    "frente_trabalho": fr, "tempo_frente": t
-                })
-
-        novo_rdo = RDO(
-            id_obra=id_obra,
-            id_usuario=session.get("user_id"), # Usando session conforme seu padrão
-            climas_manha=_safe_get_int(request.form.get("climas_manha")),
-            climas_tarde=_safe_get_int(request.form.get("climas_tarde")),
-            mao_obra=json.dumps(mao_de_obra_data),
-            atividades=request.form.get("atividades"),
-            data=datetime.now(),
-            id_sequencial=num_rdos_existentes + 1,
-            status="Pendente", # Ajustado para string simples
-            fotos_json='[]',
-            pdf_filename=None,
-            criador = session.get("user_name") # Usando session conforme seu padrão
-        )
-        
-        db.session.add(novo_rdo)
-        db.session.commit()
-        rdo_id = novo_rdo.id
-
-        # Regenera o PDF
-        try:
-            regenerar_pdf_rdo(rdo_id)
-            flash('Novo RDO criado e PDF gerado com sucesso!', 'success')
-        except Exception as e:
-            flash(f'RDO criado, mas houve erro no PDF: {e}', 'danger')
-
-    return redirect(url_for('auth.visualizar_rdo', rdo_id=rdo_id))
-
-
 #######################################################################################################
 ####################################################################################################### RDO
 #######################################################################################################
 
-# Criar RDO (redireciona)
-
 @auth_bp.get("/criar-rdo")
 @login_required
 def criar_rdo():
-    from app.models.obra import Obra 
+    from app.models.obra import Obra, Frente_Trabalho # Importe Frente_Trabalho também
     from app.models.clima import Clima 
     from app.models.usuario import Usuario
-    
-    item = None
-    obra = Obra.query.all()
-    usuario = Usuario.query.all()
-    clima = Clima.query.all()
-    view_mode = False
-    
-    return render_template("form_rdo.html", item=item, clima=clima, obras=obra, usuarios=usuario, view_mode=view_mode)
 
+    # Filtra apenas obras ATIVAS (assumindo 1 para ativo)
+    obras = Obra.query.filter_by(status=1).all()
+
+    clima = Clima.query.all()
+    # Enviamos todas as frentes; o JavaScript no seu HTML já filtra por obra
+    frente_trabalho = Frente_Trabalho.query.all() 
+
+    return render_template(
+        "form_rdo.html", 
+        item=None, 
+        obras=obras, 
+        clima=clima, 
+        frente_trabalho=frente_trabalho, 
+        view_mode=False
+    )
+    
+# Gerar RDO (POST)
+ 
+@auth_bp.post("/gerar-rdo")
+@login_required
+def gerar_rdo():
+    from app.models.rdo import RDO, MaoObra
+    from app.models.obra import Obra
+    from app import db
+    
+    def _safe_get_int(val):
+        try: return int(val)
+        except: return None
+
+    # rdo_id indica que estamos vindo de uma tela de edição
+    rdo_id_original = _safe_get_int(request.form.get("rdo_id"))
+
+    try:
+        if rdo_id_original:
+            # --- LÓGICA DE REVISÃO (HISTÓRICO) ---
+            # Buscamos o RDO anterior para copiar os dados fixos (como obra e sequencial)
+            rdo_antigo = RDO.query.get_or_404(rdo_id_original)
+            
+            # Criamos uma NOVA instância (novo objeto no banco)
+            item_rdo = RDO(
+                id_obra=rdo_antigo.id_obra,
+                id_sequencial=rdo_antigo.id_sequencial,
+                id_revisao=rdo_antigo.id_revisao + 1,  # Incrementa a revisão
+                id_frente_trabalho=_safe_get_int(request.form.get("frente_trabalho_id")),
+                id_usuario=_safe_get_int(request.form.get("usuario_id")),
+                id_climas_manha=_safe_get_int(request.form.get("climas_manha")),
+                id_climas_tarde=_safe_get_int(request.form.get("climas_tarde")),
+                atividades=request.form.get("atividades"),
+                data=rdo_antigo.data, # Mantém a data original da criação
+                status="Revisado"
+            )
+            msg_sucesso = f'Revisão {item_rdo.id_revisao} do RDO Nº {item_rdo.id_sequencial} criada!'
+        
+        else:
+            # --- LÓGICA DE CRIAÇÃO NOVA (REVISÃO 0) ---
+            id_obra = _safe_get_int(request.form.get("obra_id"))
+            
+            # Cálculo do sequencial para a obra específica
+            num_rdos_existentes = RDO.query.filter_by(id_obra=id_obra, id_revisao=0).count()
+
+            item_rdo = RDO(
+                id_obra=id_obra,
+                id_sequencial=num_rdos_existentes + 1,
+                id_revisao=0,
+                id_frente_trabalho=_safe_get_int(request.form.get("frente_trabalho_id")),
+                id_usuario=_safe_get_int(request.form.get("usuario_id")),
+                id_climas_manha=_safe_get_int(request.form.get("climas_manha")),
+                id_climas_tarde=_safe_get_int(request.form.get("climas_tarde")),
+                atividades=request.form.get("atividades"),
+                data=date.today(),
+                status="Pendente"
+            )
+            msg_sucesso = 'Novo RDO criado com sucesso!'
+
+        db.session.add(item_rdo)
+        db.session.flush() # Gera o ID do novo RDO para associar a mão de obra
+
+        # --- PROCESSA MÃO DE OBRA (Sempre insere novas linhas para a nova revisão) ---
+        funcoes = request.form.getlist("funcao[]")
+        quantidades = request.form.getlist("quantidade[]")
+        tempos = request.form.getlist("tempo[]")
+
+        for i in range(len(funcoes)):
+            if funcoes[i] and quantidades[i]:
+                try:
+                    tempo_obj = datetime.strptime(tempos[i], '%H:%M').time()
+                except:
+                    tempo_obj = None
+
+                nova_mo = MaoObra(
+                    id_rdo=item_rdo.id, # Vincula ao ID da NOVA revisão
+                    nome_funcao=funcoes[i],
+                    quantidade=int(quantidades[i]),
+                    tempo=tempo_obj
+                )
+                db.session.add(nova_mo)
+
+        db.session.commit()
+        regenerar_pdf_rdo(item_rdo.id)
+        flash(msg_sucesso, 'success')
+        
+        return redirect(url_for('auth.visualizar_rdo', rdo_id=item_rdo.id))
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erro ao processar RDO: {e}', 'danger')
+        return redirect(request.referrer) # Volta para a página anterior
+    
 # Visualizar RDO (redireciona)
 
 @auth_bp.get("/visualizar-rdo/<int:rdo_id>")
