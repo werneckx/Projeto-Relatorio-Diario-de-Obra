@@ -1,99 +1,112 @@
 from datetime import datetime
 from app import db 
 
-# Se você usar 'db.relationship' sem aspas, você deve importar as classes:
-# from app.models.usuario import Usuario 
-# from app.models.obra import Obra 
-# from app.models.clima import Clima 
-
-
 class RDO(db.Model):
-    __tablename__ = 'rdo'
-    
+    __tablename__ = "rdo"
+
     id = db.Column(db.Integer, primary_key=True)
+    id_sequencial = db.Column(db.Integer)
+    id_revisao = db.Column(db.Integer, default=0)
     
-    # -------------------------------------------------------------
-    # Coluna que referencia o usuário. Chave estrangeira para 'usuarios.id'
-    usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=False)
-    obra_id = db.Column(db.Integer, db.ForeignKey('obra.id'))
+    id_obra = db.Column(db.Integer, db.ForeignKey("obra.id"), nullable=False)
+    id_frente_trabalho = db.Column(db.Integer, db.ForeignKey("frente_trabalho.id_frente_trabalho"), nullable=True)
+    id_usuario = db.Column(db.Integer, db.ForeignKey("usuarios.id"), nullable=True)
     
-    # Relacionamentos com Clima
-    climas_manha = db.Column(db.Integer, db.ForeignKey('clima.id'), nullable=True) 
-    climas_tarde = db.Column(db.Integer, db.ForeignKey('clima.id'), nullable=True)
-
-    data = db.Column(db.DateTime, default=datetime.now) 
+    id_climas_manha = db.Column(db.Integer, db.ForeignKey('clima.id'), nullable=True) 
+    id_climas_tarde = db.Column(db.Integer, db.ForeignKey('clima.id'), nullable=True)
     
-    numero_sequencial = db.Column(db.Integer)
+    data = db.Column(db.Date, nullable=False)
     atividades = db.Column(db.Text)
-    mao_obra = db.Column(db.Text) 
-    fotos_json = db.Column(db.Text)
-    pdf_filename = db.Column(db.String(255), nullable=True)
-    total_mo = db.Column(db.Integer)
-    revisao = db.Column(db.Integer, default=0)
     status = db.Column(db.String(100))
-    criador = db.Column(db.String(100))
 
-    # -------------------------------------------------------------
     # Relacionamentos
-    # -------------------------------------------------------------
-
-    # Relacionamentos usam o NOME DA CLASSE ('Obra', 'Usuario', 'Clima')
-    obra = db.relationship('Obra', backref=db.backref('rdos', lazy=True))
+    obra = db.relationship("Obra")
     
-    # CORREÇÃO CRÍTICA: Explicitando a chave estrangeira (foreign_keys=[usuario_id])
-    # para forçar o SQLAlchemy a encontrar a condição de junção correta,
-    # resolvendo o InvalidRequestError.
-    usuario = db.relationship('Usuario', 
-        foreign_keys=[usuario_id], 
-        backref=db.backref('rdos_criados', lazy=True)
+    usuario = db.relationship(
+        "Usuario", 
+        primaryjoin="RDO.id_usuario == Usuario.id",
+        foreign_keys=[id_usuario],
+        backref=db.backref('rdos_criados', lazy='dynamic')
     )
     
-    clima_manha_obj = db.relationship('Clima', 
-        foreign_keys=[climas_manha], 
-        backref=db.backref('rdos_manha', lazy='dynamic')
+    clima_manha_obj = db.relationship(
+        'Clima', 
+        primaryjoin="RDO.id_climas_manha == Clima.id",
+        foreign_keys=[id_climas_manha]
     )
     
-    clima_tarde_obj = db.relationship('Clima', 
-        foreign_keys=[climas_tarde],
-        backref=db.backref('rdos_tarde', lazy='dynamic')
+    clima_tarde_obj = db.relationship(
+        'Clima', 
+        primaryjoin="RDO.id_climas_tarde == Clima.id",
+        foreign_keys=[id_climas_tarde]
     )
 
-    # -------------------------------------------------------------
-    # Métodos e Propriedades
-    # -------------------------------------------------------------
-
-    @property
-    def status_text(self):
-        """Traduz o nome do arquivo PNG para um status legível."""
-        mapping = {
-            "Aguardando Aprovação.png": "Aguardando Aprovação",
-            "Aprovado.png": "Aprovado",
-            "Rejeitado.png": "Rejeitado"
-        }
-        return mapping.get(self.status, self.status)
-
-    def to_dict(self):
-        """Serializa o RDO para um dicionário Python."""
-        return {
-            'id': self.id,
-            'obra_id': self.obra_id,
-            'usuario_id': self.usuario_id, 
-            'data': self.data.isoformat() if self.data else None,
-            'numero_sequencial': self.numero_sequencial,
-            # Incluindo a descrição do clima no dicionário (melhor usabilidade)
-            'clima_manha_nome': self.clima_manha_obj.nome if self.clima_manha_obj else None,
-            'clima_tarde_nome': self.clima_tarde_obj.nome if self.clima_tarde_obj else None,
-            'atividades': self.atividades,
-            'mao_obra': self.mao_obra,
-            'fotos_json': self.fotos_json,
-            'pdf_filename': self.pdf_filename,
-            'status': self.status_text, 
-            'revisao': self.revisao,
-            'total_mo': self.total_mo,
-            'criador': self.criador,
-        }
-    
     def __repr__(self):
-        return f'<RDO {self.id} | Obra: {self.obra_id} | Data: {self.data.strftime("%Y-%m-%d") if self.data else "N/A"}>'
+        return f"<RDO {self.id_sequencial} (Obra ID: {self.id_obra})>"
     
+    @property
+    def total_mao_obra(self):
+        # Como o backref é 'dynamic', usamos .all() para transformar em lista antes de somar
+        # Ou usamos uma query de soma do banco (mais rápido para muitos dados)
+        return sum(mob.quantidade for mob in self.maos_obra.all())
     
+    @property
+    def numero_sequencial(self):
+        return self.id_sequencial
+    
+    @numero_sequencial.setter
+    def numero_sequencial(self, value):
+        self.id_sequencial = value
+    
+    @property
+    def revisao(self):
+        return self.id_revisao
+    
+    @revisao.setter
+    def revisao(self, value):
+        self.id_revisao = value
+        
+    # Dentro da classe RDO em rdo.py
+    @property
+    def obra_id(self):
+        return self.id_obra
+
+    @obra_id.setter
+    def obra_id(self, value):
+        self.id_obra = value
+    
+    @property
+    def usuario_id(self):
+        return self.id_usuario
+
+    @usuario_id.setter
+    def usuario_id(self, value):
+        self.id_usuario = value
+        
+    @property
+    def climas_manha(self):
+        return self.id_climas_manha
+
+    @climas_manha.setter
+    def climas_manha(self, value):
+        self.id_climas_manha = value
+    
+    @property
+    def climas_tarde(self):
+        return self.id_climas_tarde
+
+    @climas_tarde.setter
+    def climas_tarde(self, value):
+        self.id_climas_tarde = value
+
+class MaoObra(db.Model):
+    __tablename__ = "mao_obra"
+    
+    id_mao_obra = db.Column(db.Integer, primary_key=True)
+    id_rdo = db.Column(db.Integer, db.ForeignKey("rdo.id"), nullable=False)
+    nome_funcao = db.Column(db.String(150), nullable=False)
+    quantidade = db.Column(db.Integer, nullable=False)
+    tempo = db.Column(db.Time, nullable=False) 
+    
+    # Relacionamento correto
+    rdo = db.relationship("RDO", backref=db.backref('maos_obra', lazy='dynamic'))
