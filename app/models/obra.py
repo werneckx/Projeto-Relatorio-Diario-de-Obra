@@ -7,6 +7,9 @@ class Obra(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     id_matriz = db.Column(db.Integer, db.ForeignKey('obra.id'), nullable=True)
     nome = db.Column(db.String(120), nullable=False)
+    contratante = db.Column(db.String(255), nullable=False)
+    contrato = db.Column(db.String(50), unique=True, nullable=False)
+    id_responsavel = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=True)
     cnpj = db.Column(db.String(14), unique=True, nullable=False)
     endereco = db.Column(db.String(255), nullable=False)
     numero = db.Column(db.String(10), nullable=False)
@@ -18,6 +21,9 @@ class Obra(db.Model):
     inicio = db.Column(db.Date, nullable=False)
     termino = db.Column(db.Date, nullable=False)
     status = db.Column(db.Integer)
+    
+    # Relacionamento para facilitar a exibição do nome do responsável
+    responsavel = db.relationship('Usuario', foreign_keys=[id_responsavel])
     
     def __repr__(self):
         return f'<Obra {self.id}: {self.nome}>'
