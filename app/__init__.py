@@ -2,6 +2,7 @@ from flask import Flask, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_migrate import Migrate
+import json
 # Importações de módulos de terceiros
 # from . import db # Se você tivesse o db em outro arquivo
 
@@ -32,6 +33,7 @@ def create_app():
     
     # Boas Práticas: Sempre registrar Blueprints APÓS os Models e Configs
     app.register_blueprint(auth_bp, url_prefix="/auth")
+    app.jinja_env.filters['from_json'] = json.loads
     
     # ---------------------------
     # Redirecionamento da raiz
