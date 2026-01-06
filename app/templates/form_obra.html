@@ -59,6 +59,9 @@
     <form action="{{ url_for('auth.gerar_obra') }}" method="POST" id="mainForm" class="space-y-6 rdo-form">
         <input type="hidden" name="id" value="{{ item.id if item and item.id }}">
         <input type="hidden" name="categoria" value="obra">
+        <!-- Campo oculto que levará o JSON com as mudanças nas frentes -->
+        <input type="hidden" name="frentes_json" id="frentes_json">
+
 
         <section class="bg-white rounded-lg p-6 border shadow-sm space-y-6">
             <div class="flex items-center justify-between mb-6">
@@ -107,13 +110,45 @@
                         {{ 'readonly' if view_mode }} required>
                 </div>
 
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-slate-500 uppercase">Contratante (Cliente) <span
+                            class="text-red-500">*</span></label>
+                    <input type="text" name="contratante" value="{{ item.contratante if item }}"
+                        placeholder="Ex: Petrobras"
+                        class="w-full border rounded-lg px-3 py-2 h-10 input-field {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}"
+                        {{ 'readonly' if view_mode }} required>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-slate-500 uppercase">Nº do Contrato <span
+                            class="text-red-500">*</span></label>
+                    <input type="text" name="contrato" value="{{ item.contrato if item }}" placeholder="Ex: 4600012345"
+                        class="w-full border rounded-lg px-3 py-2 h-10 input-field {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}"
+                        {{ 'readonly' if view_mode }} required>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-slate-500 uppercase">Responsável pela Obra</label>
+                    <select name="id_responsavel"
+                        class="w-full border rounded-lg px-3 py-2 h-10 transition {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}"
+                        {{ 'disabled' if view_mode }}>
+                        <option value="">Selecione um responsável...</option>
+                        {% for usuario in usuarios %}
+                        <option value="{{ usuario.id }}" {% if item and item.id_responsavel==usuario.id %}selected{%
+                            endif %}>
+                            {{ usuario.nome }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
                 {# NOVO CAMPO: Seleção de Matriz #}
                 <div class="md:col-span-2 space-y-1">
                     <label class="text-xs font-bold text-slate-500 uppercase">Vincular à Matriz (Se for Filial)</label>
                     <select name="id_matriz" id="id_matriz"
                         class="w-full border rounded-lg px-3 py-2 h-10 transition {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}"
                         {{ 'disabled' if view_mode }}>
-                        <option value="0" {% if (item and (item.id_matriz==0 or item.id_matriz==None)) or not item
+                        <option value="" {% if (item and (item.id_matriz==0 or item.id_matriz==None)) or not item
                             %}selected{% endif %}>
                             Nenhuma (Marcar como Matriz Principal)
                         </option>
@@ -129,35 +164,110 @@
             </div>
         </section>
 
-        <section class="bg-white rounded-lg p-6 border shadow-sm space-y-6">
-            <div class="flex items-center gap-3 mb-4">
-                <div class="w-10 h-10 rounded bg-green-100 text-green-600 flex items-center justify-center">
-                    <i class="fas fa-calendar-alt"></i>
+        <section class="bg-white rounded-xl p-6 border shadow-sm space-y-6">
+            <div class="flex items-center gap-3 mb-2">
+                <div
+                    class="w-10 h-10 rounded-lg bg-green-100 text-green-600 flex items-center justify-center shadow-sm">
+                    <i class="fas fa-calendar-alt text-lg"></i>
                 </div>
-                <h3
-                    class="font-semibold text-slate-800 border-l-2 border-green-600 pl-3 uppercase text-sm tracking-wide">
-                    Datas de Execução
-                </h3>
+                <div>
+                    <h3
+                        class="font-bold text-slate-800 border-l-2 border-green-600 pl-3 uppercase text-xs tracking-widest">
+                        Datas de Execução
+                    </h3>
+                    <p class="text-[10px] text-slate-400 pl-3 uppercase font-medium">Cronograma de Atividades</p>
+                </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                    <label class="text-xs font-bold text-slate-500 uppercase">Início <span
-                            class="text-red-500">*</span></label>
-                    <input type="date" name="inicio" value="{{ item.inicio | string if item and item.inicio }}"
-                        class="w-full border rounded-lg px-3 py-2 h-10 input-field {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode else 'cursor-pointer' }}"
-                        {{ 'readonly' if view_mode }} onclick="this.showPicker()" required>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="flex flex-col gap-1.5">
+                    <div class="flex justify-between items-center">
+                        <label class="text-[11px] font-bold text-slate-500 uppercase tracking-tight">Início <span
+                                class="text-red-500">*</span></label>
+                        <button type="button" onclick="fillToday('data_inicio')"
+                            class="text-[10px] font-bold text-green-600 hover:bg-green-50 px-2 py-1 rounded transition-all cursor-pointer">
+                            <i class="fas fa-magic mr-1"></i>HOJE
+                        </button>
+                    </div>
+                    <input type="date" id="data_inicio" name="inicio"
+                        value="{{ item.inicio | string if item and item.inicio }}" oninput="checkDateLogic()"
+                        class="w-full border-slate-200 rounded-lg px-3 py-2.5 h-11 text-sm transition-all outline-none cursor-text focus:ring-4 focus:ring-green-50 focus:border-green-500 shadow-sm">
                 </div>
 
-                <div>
-                    <label class="text-xs font-bold text-slate-500 uppercase">Término (Prevista/Real) <span
-                            class="text-red-500">*</span></label>
-                    <input type="date" name="termino" value="{{ item.termino | string if item and item.termino }}"
-                        class="w-full border rounded-lg px-3 py-2 h-10 input-field {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode else 'cursor-pointer' }}"
-                        {{ 'readonly' if view_mode }} onclick="this.showPicker()" required>
+                <div class="flex flex-col gap-1.5">
+                    <div class="flex justify-between items-center">
+                        <label class="text-[11px] font-bold text-slate-500 uppercase tracking-tight">Término <span
+                                class="text-red-500">*</span></label>
+                        <button type="button" onclick="fillToday('data_termino')"
+                            class="text-[10px] font-bold text-green-600 hover:bg-green-50 px-2 py-1 rounded transition-all cursor-pointer">
+                            <i class="fas fa-magic mr-1"></i>HOJE
+                        </button>
+                    </div>
+                    <input type="date" id="data_termino" name="termino"
+                        value="{{ item.termino | string if item and item.termino }}" oninput="checkDateLogic()"
+                        class="w-full border-slate-200 rounded-lg px-3 py-2.5 h-11 text-sm transition-all outline-none cursor-text focus:ring-4 focus:ring-green-50 focus:border-green-500 shadow-sm">
+
+                    <div id="erro_data" class="hidden items-center gap-1.5 text-red-500 mt-1">
+                        <i class="fas fa-times-circle text-[10px]"></i>
+                        <span class="text-[10px] font-bold uppercase tracking-tighter">Erro: O término deve ser após o
+                            início</span>
+                    </div>
                 </div>
             </div>
         </section>
+
+        <script>
+            // Função para apenas checar a lógica e avisar o usuário visualmente
+            function checkDateLogic() {
+                const inicio = document.getElementById('data_inicio');
+                const termino = document.getElementById('data_termino');
+                const erroMsg = document.getElementById('erro_data');
+
+                if (inicio.value && termino.value) {
+                    if (new Date(inicio.value) > new Date(termino.value)) {
+                        termino.classList.add('border-red-400', 'bg-red-50');
+                        erroMsg.classList.replace('hidden', 'flex');
+                        return false;
+                    }
+                }
+
+                // Se estiver tudo OK ou campos vazios, remove o alerta
+                termino.classList.remove('border-red-400', 'bg-red-50');
+                erroMsg.classList.replace('flex', 'hidden');
+                return true;
+            }
+
+            // Atalho para data de hoje
+            function fillToday(id) {
+                document.getElementById(id).value = new Date().toISOString().split('T')[0];
+                checkDateLogic();
+            }
+
+            /**
+             * INTEGRAÇÃO COM O SEU FORMULÁRIO:
+             * No seu <form onsubmit="return validarAntesDeSalvar()">
+             */
+            function validarAntesDeSalvar() {
+                const isValido = checkDateLogic();
+                if (!isValido) {
+                    alert("Corrija as datas antes de salvar. O término não pode ser anterior ao início.");
+                    return false; // Impede o envio do formulário
+                }
+                return true; // Permite o envio
+            }
+        </script>
+
+        <style>
+            /* Muda o cursor para pointer apenas no ícone do calendário para indicar ação */
+            input[type="date"]::-webkit-calendar-picker-indicator {
+                cursor: pointer;
+            }
+
+            /* Cursor de texto no input para parecer natural */
+            input[type="date"] {
+                cursor: text;
+            }
+        </style>
 
         <section class="bg-white rounded-lg p-6 border shadow-sm space-y-6">
             <div class="flex items-center gap-3 mb-4">
@@ -237,42 +347,31 @@
                 <div class="w-10 h-10 rounded bg-purple-100 text-purple-600 flex items-center justify-center">
                     <i class="fas fa-hard-hat"></i>
                 </div>
-                <div class="flex-1">
-                    <h3
-                        class="font-semibold text-slate-800 border-l-2 border-purple-600 pl-3 uppercase text-sm tracking-wide">
-                        Frentes de Trabalho
-                    </h3>
-                    <p class="text-[10px] text-slate-500 pl-3">Divisões operacionais para geração de RDO.</p>
+                <div>
+                    <h3 class="font-semibold text-slate-800 uppercase text-sm tracking-wide">Frentes de Trabalho</h3>
+                    <p class="text-[10px] text-slate-500">Defina as divisões operacionais desta obra.</p>
                 </div>
             </div>
 
             {% if not view_mode %}
-            {% if item and item.id %}
-            <div class="grid grid-cols-1 md:grid-cols-12 gap-2">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-2 bg-white p-4 rounded-lg border border-slate-200">
                 <input type="text" id="nome_frente_nova" placeholder="Nome da Frente (ex: Alvenaria)"
                     class="md:col-span-5 border rounded-lg px-3 py-2 h-10 text-sm focus:ring-1 focus:ring-purple-500 outline-none">
                 <select id="id_responsavel_novo"
                     class="md:col-span-5 border rounded-lg px-3 py-2 h-10 text-sm focus:ring-1 focus:ring-purple-500 outline-none">
                     <option value="">Responsável Técnico</option>
                     {% for u in usuarios %}
-                    <option value="{{ u.id }}">{{ u.nome }} (ID: {{ u.id }})</option>
+                    <option value="{{ u.id }}" data-nome="{{ u.nome }}">{{ u.nome }}</option>
                     {% endfor %}
                 </select>
-                <button type="button" onclick="adicionarFrente({{ item.id }})"
-                    class="md:col-span-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition flex items-center justify-center gap-2">
-                    <i class="fas fa-plus"></i> Adicionar
+                <button type="button" onclick="interagirFrente()"
+                    class="md:col-span-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition flex items-center justify-center">
+                    <i class="fas fa-plus"></i>
                 </button>
             </div>
-            {% else %}
-            <div
-                class="p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-700 text-sm flex items-center gap-2">
-                <i class="fas fa-info-circle"></i>
-                <span>Salve o cadastro da obra primeiro para habilitar a adição de frentes de trabalho.</span>
-            </div>
-            {% endif %}
             {% endif %}
 
-            <div class="overflow-x-auto border rounded-lg">
+            <div class="overflow-x-auto border bg-white rounded-lg">
                 <table class="w-full text-left text-sm">
                     <thead class="bg-slate-50 border-b">
                         <tr>
@@ -281,37 +380,33 @@
                         </tr>
                     </thead>
                     <tbody id="lista-frentes">
-                        {% for frente in frentes %}
-                        <tr class="border-b last:border-0 hover:bg-slate-50 transition"
-                            id="frente-{{ frente.id_frente_trabalho }}">
+                        {% if frentes %}
+                        {% for f in frentes %}
+                        <tr class="border-b last:border-0" id="frente-real-{{ f.id_frente_trabalho }}">
                             <td class="px-4 py-3">
-                                <p class="font-medium text-slate-800">{{ frente.nome_frente }}</p>
-                                <p class="text-xs text-slate-500">
-                                    Resp: {{ frente.responsavel.nome if frente.responsavel else 'Não definido'}}
-                                </p>
+                                <p class="font-medium text-slate-800">{{ f.nome_frente }}</p>
+                                <p class="text-xs text-slate-500">Resp: {{ f.responsavel.nome if f.responsavel else 'Não
+                                    definido' }}</p>
                             </td>
                             <td class="px-4 py-3 text-right">
                                 {% if not view_mode %}
-                                <button type="button" onclick="removerFrente({{ frente.id_frente_trabalho }})"
-                                    class="text-red-400 hover:text-red-600 transition">
-                                    <i class="fas fa-trash-alt"></i>
-                                </button>
-                                {% else %}
-                                <span class="text-slate-300 italic text-xs">Leitura</span>
+                                <button type="button" onclick="removerFrenteExistente({{ f.id_frente_trabalho }})"
+                                    class="text-red-400 hover:text-red-600"><i class="fas fa-trash-alt"></i></button>
                                 {% endif %}
                             </td>
                         </tr>
+                        {% endfor %}
                         {% else %}
                         <tr id="sem-frentes">
-                            <td colspan="2" class="px-4 py-8 text-center text-slate-400 italic">
-                                Nenhuma frente cadastrada.
-                            </td>
+                            <td colspan="2" class="px-4 py-8 text-center text-slate-400 italic">Nenhuma frente
+                                adicionada.</td>
                         </tr>
-                        {% endfor %}
+                        {% endif %}
                     </tbody>
                 </table>
             </div>
         </section>
+
 
         <div class="flex flex-col sm:flex-row gap-3 pt-4 border-t">
             {% if view_mode %}
@@ -480,6 +575,13 @@
                 const selects = form.querySelectorAll('select[disabled]');
                 selects.forEach(s => s.disabled = false); // Habilita para enviar o dado
 
+                // Validação de datas antes de enviar
+                if (!checkDateLogic()) {
+                    e.preventDefault();
+                    alert("Por favor, corrija as datas de início e término antes de salvar.");
+                    return;
+                }
+
                 if (btn) {
                     btn.querySelector("#btnText").classList.add("hidden");
                     btn.querySelector("#spinner").classList.remove("hidden");
@@ -489,23 +591,109 @@
         }
     });
 
-    function adicionarFrente(obraId) {
-        const nome = el('nome_frente_nova').value.trim();
-        const resp = el('id_responsavel_novo').value;
-        if (!nome) return alert("Nome da frente é obrigatório");
+    // --- GERENCIAMENTO DE FRENTES (Correção Aplicada) ---
 
-        fetch("{{ url_for('auth.criar_frente') }}", {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id_obra: obraId, nome_frente: nome, id_responsavel: resp || null })
-        }).then(r => r.json()).then(data => data.success ? location.reload() : alert(data.message));
+    // Armazena novos itens e IDs de itens removidos
+    let frentesNovas = [];
+    let frentesRemovidas = [];
+
+    function atualizarInputJson() {
+        const dados = {
+            novas: frentesNovas,
+            removidas: frentesRemovidas
+        };
+        document.getElementById('frentes_json').value = JSON.stringify(dados);
     }
 
-    function removerFrente(frenteId) {
-        if (!confirm("Deseja realmente excluir esta frente de trabalho?")) return;
-        fetch(`/auth/remover-frente/${frenteId}`, { method: 'DELETE' })
-            .then(r => r.json())
-            .then(data => data.success ? el(`frente-${frenteId}`).remove() : alert("Erro ao remover"));
+    function interagirFrente() {
+        const nome = document.getElementById('nome_frente_nova').value.trim();
+        const selectResp = document.getElementById('id_responsavel_novo');
+        const idResp = selectResp.value;
+        const nomeResp = selectResp.options[selectResp.selectedIndex].getAttribute('data-nome') || 'Não definido';
+
+        if (!nome) return alert("Digite o nome da frente");
+
+        // Adiciona à lista local de novas frentes
+        const novaFrente = {
+            id_temp: Date.now(), // ID temporário apenas para manipulação DOM
+            nome_frente: nome,
+            id_responsavel: idResp || null,
+            nome_responsavel: nomeResp
+        };
+
+        frentesNovas.push(novaFrente);
+        renderizarFrenteNova(novaFrente);
+        atualizarInputJson();
+
+        // Limpa campos
+        document.getElementById('nome_frente_nova').value = '';
+        document.getElementById('id_responsavel_novo').value = '';
+        document.getElementById('nome_frente_nova').focus();
+    }
+
+    function renderizarFrenteNova(f) {
+        const tbody = document.getElementById('lista-frentes');
+        const semFrentes = document.getElementById('sem-frentes');
+
+        // Se o placeholder "Nenhuma frente" existir, remove
+        if (semFrentes) semFrentes.style.display = 'none';
+
+        const tr = document.createElement('tr');
+        tr.className = 'border-b last:border-0 linha-nova bg-purple-50/30';
+        tr.id = `frente-temp-${f.id_temp}`;
+        tr.innerHTML = `
+            <td class="px-4 py-3">
+                <p class="font-medium text-slate-800">${f.nome_frente} <span class="text-[9px] bg-purple-100 text-purple-600 px-1 rounded ml-2">Novo</span></p>
+                <p class="text-xs text-slate-500">Resp: ${f.nome_responsavel}</p>
+            </td>
+            <td class="px-4 py-3 text-right">
+                <button type="button" onclick="removerFrenteLocal(${f.id_temp})" class="text-red-400 hover:text-red-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    }
+
+    function removerFrenteLocal(idTemp) {
+        // Remove do array de novas
+        frentesNovas = frentesNovas.filter(f => f.id_temp !== idTemp);
+
+        // Remove do DOM
+        const row = document.getElementById(`frente-temp-${idTemp}`);
+        if (row) row.remove();
+
+        // Se não sobrar nada (nem reais, nem novas), exibe mensagem "sem frentes" se necessário
+        verificarListaVazia();
+
+        atualizarInputJson();
+    }
+
+    function removerFrenteExistente(idFrenteReal) {
+        if (!confirm("Deseja realmente remover esta frente? A exclusão será efetivada ao salvar a obra.")) return;
+
+        // Adiciona ao array de removidas
+        frentesRemovidas.push(idFrenteReal);
+
+        // Esconde a linha na tabela (não remove para manter integridade visual até o reload)
+        const row = document.getElementById(`frente-real-${idFrenteReal}`);
+        if (row) {
+            row.style.display = 'none';
+            row.classList.add('frente-removida'); // Marcador útil
+        }
+
+        verificarListaVazia();
+        atualizarInputJson();
+    }
+
+    function verificarListaVazia() {
+        const linhasVisiveisReais = document.querySelectorAll('tr[id^="frente-real-"]:not([style*="display: none"])').length;
+        const linhasVisiveisNovas = frentesNovas.length;
+        const semFrentes = document.getElementById('sem-frentes');
+
+        if (linhasVisiveisReais + linhasVisiveisNovas === 0) {
+            if (semFrentes) semFrentes.style.display = 'table-row';
+        }
     }
 </script>
 {% endblock %}
