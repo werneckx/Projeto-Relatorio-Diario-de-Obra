@@ -1,11 +1,12 @@
 import os
-from flask import Blueprint, abort, render_template, request, redirect, url_for, flash, session, send_file
+from flask import Blueprint, abort, json, render_template, request, redirect, url_for, flash, session, send_file
 from werkzeug.security import check_password_hash
 from app import db # Importar 'db' para uso no filtro (db.or_)
 from app import db, login_manager
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from app.models import usuario
+from app.models import rdo
 from app.models.obra import Frente_Trabalho, Obra
 from app.models.rdo import RDO
 from app.utils.rdo_pdf import regenerar_pdf_rdo
@@ -93,7 +94,7 @@ def logout():
 #######################################################################################################
 
 # Página inicio
-@auth_bp.get("/inicio") 
+@auth_bp.get("/inicio")
 @login_required
 def inicio():
     return render_template("inicio.html")
@@ -146,35 +147,54 @@ def gerar_rdo():
         try: return int(val)
         except: return None
 
-    # rdo_id indica que estamos vindo de uma tela de edição
+    # Configuração de pasta de Upload (dentro de static para o HTML ler)
+    # Caminho: app/static/uploads/rdo/
+    UPLOAD_FOLDER = os.path.join('app', 'static', 'uploads', 'rdo')
+    if not os.path.exists(UPLOAD_FOLDER):
+        os.makedirs(UPLOAD_FOLDER)
+
     rdo_id_original = _safe_get_int(request.form.get("rdo_id"))
 
     try:
+        # --- PROCESSAMENTO DE NOVAS FOTOS ---
+        novas_fotos_arquivos = request.files.getlist("fotos[]")
+        nomes_novas_fotos = []
+
+        for foto in novas_fotos_arquivos:
+            if foto and foto.filename != '':
+                ext = os.path.splitext(foto.filename)[1]
+                # Nome único para evitar sobrescrever arquivos
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S%f')
+                nome_final = f"{timestamp}{ext}"
+                foto.save(os.path.join(UPLOAD_FOLDER, nome_final))
+                nomes_novas_fotos.append(nome_final)
+
         if rdo_id_original:
             # --- LÓGICA DE REVISÃO (HISTÓRICO) ---
-            # Buscamos o RDO anterior para copiar os dados fixos (como obra e sequencial)
             rdo_antigo = RDO.query.get_or_404(rdo_id_original)
             
-            # Criamos uma NOVA instância (novo objeto no banco)
+            # Recupera fotos da revisão anterior para não perdê-las
+            fotos_acumuladas = json.loads(rdo_antigo.fotos_json) if rdo_antigo.fotos_json else []
+            fotos_acumuladas.extend(nomes_novas_fotos)
+
             item_rdo = RDO(
                 id_obra=rdo_antigo.id_obra,
                 id_sequencial=rdo_antigo.id_sequencial,
-                id_revisao=rdo_antigo.id_revisao + 1,  # Incrementa a revisão
+                id_revisao=rdo_antigo.id_revisao + 1,
                 id_frente_trabalho=_safe_get_int(request.form.get("frente_trabalho_id")),
                 id_usuario=_safe_get_int(request.form.get("usuario_id")),
                 id_climas_manha=_safe_get_int(request.form.get("climas_manha")),
                 id_climas_tarde=_safe_get_int(request.form.get("climas_tarde")),
                 atividades=request.form.get("atividades"),
-                data=rdo_antigo.data, # Mantém a data original da criação
-                status="Revisado"
+                data=rdo_antigo.data,
+                status="Revisado",
+                fotos_json=json.dumps(fotos_acumuladas) # Salva fotos antigas + novas
             )
             msg_sucesso = f'Revisão {item_rdo.id_revisao} do RDO Nº {item_rdo.id_sequencial} criada!'
         
         else:
             # --- LÓGICA DE CRIAÇÃO NOVA (REVISÃO 0) ---
             id_obra = _safe_get_int(request.form.get("obra_id"))
-            
-            # Cálculo do sequencial para a obra específica
             num_rdos_existentes = RDO.query.filter_by(id_obra=id_obra, id_revisao=0).count()
 
             item_rdo = RDO(
@@ -187,14 +207,15 @@ def gerar_rdo():
                 id_climas_tarde=_safe_get_int(request.form.get("climas_tarde")),
                 atividades=request.form.get("atividades"),
                 data=date.today(),
-                status="Pendente"
+                status="Pendente",
+                fotos_json=json.dumps(nomes_novas_fotos) # Salva apenas as novas
             )
             msg_sucesso = 'Novo RDO criado com sucesso!'
 
         db.session.add(item_rdo)
-        db.session.flush() # Gera o ID do novo RDO para associar a mão de obra
+        db.session.flush() 
 
-        # --- PROCESSA MÃO DE OBRA (Sempre insere novas linhas para a nova revisão) ---
+        # --- PROCESSA MÃO DE OBRA ---
         funcoes = request.form.getlist("funcao[]")
         quantidades = request.form.getlist("quantidade[]")
         tempos = request.form.getlist("tempo[]")
@@ -207,7 +228,7 @@ def gerar_rdo():
                     tempo_obj = None
 
                 nova_mo = MaoObra(
-                    id_rdo=item_rdo.id, # Vincula ao ID da NOVA revisão
+                    id_rdo=item_rdo.id,
                     nome_funcao=funcoes[i],
                     quantidade=int(quantidades[i]),
                     tempo=tempo_obj
@@ -215,15 +236,17 @@ def gerar_rdo():
                 db.session.add(nova_mo)
 
         db.session.commit()
-        regenerar_pdf_rdo(item_rdo.id)
-        flash(msg_sucesso, 'success')
         
+        # Opcional: Gerar PDF (Certifique-se que esta função suporte as fotos)
+        # regenerar_pdf_rdo(item_rdo.id) 
+        
+        flash(msg_sucesso, 'success')
         return redirect(url_for('auth.visualizar_rdo', rdo_id=item_rdo.id))
 
     except Exception as e:
         db.session.rollback()
         flash(f'Erro ao processar RDO: {e}', 'danger')
-        return redirect(request.referrer) # Volta para a página anterior
+        return redirect(request.referrer)
     
 # Visualizar RDO (redireciona)
 
@@ -231,9 +254,10 @@ def gerar_rdo():
 @login_required
 def visualizar_rdo(rdo_id):
     from app.models.rdo import RDO
-    from app.models.obra import Obra
+    from app.models.obra import Obra, Frente_Trabalho
     from app.models.clima import Clima
     from app.models.usuario import Usuario
+    from app.models.rdo import MaoObra
 
     item = RDO.query.get_or_404(rdo_id)
 
@@ -243,6 +267,8 @@ def visualizar_rdo(rdo_id):
         view_mode=True,
         obras=Obra.query.all(),
         clima=Clima.query.all(),
+        frente_trabalho=Frente_Trabalho.query.all(),
+        mao_obra=item.maos_obra.all(),
         usuarios=Usuario.query.all()
     )
 
@@ -789,12 +815,14 @@ def get_supervisor_chain_for_user(user):
 @login_required
 def criar_obra():
     from app.models.obra import Obra
+    from app.models.usuario import Usuario
     
     # Busca apenas as obras que são Matrizes para o dropdown
     opcoes_matriz = get_matrix_options()
+    usuarios = Usuario.query.filter_by(status=1).all()
     
     # Passa opcoes_matriz para o template
-    return render_template("form_obra.html", item=None, opcoes_matriz=opcoes_matriz)
+    return render_template("form_obra.html", item=None, opcoes_matriz=opcoes_matriz, usuarios=usuarios)
 
 # Rota para mudar status da obra (POST)
 
@@ -818,108 +846,129 @@ def toggle_user_obras(obraid):
     
 # Rota para salvar obra
 
-@auth_bp.post("/gerar-obra")
+@auth_bp.route('/gerar-obra', methods=['POST'])
 @login_required
 def gerar_obra():
-    from app.models.obra import Obra
+    from app.models.obra import Obra, Frente_Trabalho
     
     # 1. Obter Dados do Formulário
-    id_obra = request.form.get("id", type=int)
-    nome = request.form.get("nome")
-    cnpj = request.form.get("cnpj")
-    endereco = request.form.get("endereco")
-    numero = request.form.get("numero")
-    complemento = request.form.get("complemento")
-    bairro = request.form.get("bairro")
-    cidade = request.form.get("cidade")
-    estado = request.form.get("estado")
-    cep = request.form.get("cep")
-    inicio_str = request.form.get("inicio")
-    termino_str = request.form.get("termino")
-    
-    # Processa id_matriz: Se for 0 ou None, deve ser None no DB (Matriz Principal)
-    id_matriz_raw = request.form.get("id_matriz", type=int)
-    id_matriz = id_matriz_raw if id_matriz_raw and id_matriz_raw > 0 else None
-    
-    # Converte datas
+    id_obra = request.form.get("id")
+    # Se id_obra vier vazio, garante que seja None para facilitar checagens
+    if not id_obra: id_obra = None
+
+    cnpj = request.form.get('cnpj')
+
+    # --- VALIDAÇÃO DE DUPLICIDADE DE CNPJ ---
+    # Verifica se já existe alguma obra com este CNPJ no banco
+    obra_existente = Obra.query.filter_by(cnpj=cnpj).first()
+
+    if obra_existente:
+        # Se estamos criando uma obra nova (id_obra é None) E já achamos um CNPJ igual: ERRO
+        # OU se estamos editando (id_obra existe), mas o ID da obra achada é DIFERENTE do ID que estamos editando: ERRO
+        if not id_obra or str(obra_existente.id) != str(id_obra):
+            flash(f"Erro: O CNPJ {cnpj} já está cadastrado para a obra '{obra_existente.nome}'.", "danger")
+            return redirect(url_for('auth.lista_obras'))
+            # Nota: Idealmente redirecionaríamos de volta para o form com os dados preenchidos,
+            # mas para simplificar e garantir segurança, voltamos para a lista.
+
+    # 2. Coleta dos demais dados
+    nome = request.form.get('nome')
+    contratante = request.form.get('contratante')
+    contrato = request.form.get('contrato')
+    id_responsavel = request.form.get('id_responsavel')
+    id_matriz = request.form.get('id_matriz')
+    inicio_str = request.form.get('inicio')
+    termino_str = request.form.get('termino')
+    cep = request.form.get('cep')
+    endereco = request.form.get('endereco')
+    numero = request.form.get('numero')
+    complemento = request.form.get('complemento')
+    bairro = request.form.get('bairro')
+    cidade = request.form.get('cidade')
+    estado = request.form.get('estado')
+    status = 1 if request.form.get('status') == 'on' else 0
+
+    frentes_payload = request.form.get('frentes_json')
+
     try:
+        # Converte datas
         inicio = datetime.strptime(inicio_str, '%Y-%m-%d').date() if inicio_str else None
         termino = datetime.strptime(termino_str, '%Y-%m-%d').date() if termino_str else None
-    except ValueError:
-        flash("Formato de data inválido.", "danger")
-        # Prepara o item_form para retornar ao template em caso de erro
-        item_form = Obra(
-            id=id_obra, nome=nome, cnpj=cnpj, id_matriz=id_matriz, endereco=endereco, 
-            numero=numero, complemento=complemento, bairro=bairro, cidade=cidade, 
-            estado=estado, cep=cep, inicio=inicio_str, termino=termino_str # Mantém strings para re-exibir
-        )
-        return render_template("form_obra.html", item=item_form, view_mode=False)
 
+        if id_obra:
+            # --- MODO EDIÇÃO ---
+            obra = Obra.query.get(id_obra)
+            if not obra:
+                flash("Obra não encontrada.", "danger")
+                return redirect(url_for('auth.lista_obras'))
+            
+            # Atualiza campos da obra
+            obra.nome = nome
+            obra.cnpj = cnpj
+            obra.contratante = contratante
+            obra.contrato = contrato
+            obra.id_responsavel = id_responsavel if id_responsavel else None
+            obra.id_matriz = int(id_matriz) if id_matriz else None
+            obra.inicio = inicio
+            obra.termino = termino
+            obra.cep = cep
+            obra.endereco = endereco
+            obra.numero = numero
+            obra.complemento = complemento
+            obra.bairro = bairro
+            obra.cidade = cidade
+            obra.estado = estado
+            obra.status = status
+            
+            flash("Obra atualizada com sucesso!", "success")
+        else:
+            # --- MODO CRIAÇÃO ---
+            obra = Obra(
+                nome=nome, cnpj=cnpj, contratante=contratante, contrato=contrato,
+                id_responsavel=id_responsavel if id_responsavel else None,
+                id_matriz=int(id_matriz) if id_matriz else None,
+                inicio=inicio, termino=termino,
+                cep=cep, endereco=endereco, numero=numero, complemento=complemento,
+                bairro=bairro, cidade=cidade, estado=estado, status=status
+            )
+            db.session.add(obra)
+            
+            # CRUCIAL: flush() envia o INSERT para o banco e popula obra.id
+            # sem fechar a transação. Isso permite vincular as frentes logo abaixo.
+            db.session.flush() 
+            
+            flash("Obra cadastrada com sucesso!", "success")
 
-    # Converte o status do checkbox ('on' se ativo)
-    status_raw = request.form.get("status")
-    status = "Ativa" if status_raw == 'on' else "Inativa"
+        # --- PROCESSAMENTO DAS FRENTES (Comum a Criação e Edição) ---
+        if frentes_payload:
+            data = json.loads(frentes_payload)
+            
+            # 1. Remover frentes marcadas para exclusão
+            for f_id in data.get('removidas', []):
+                Frente_Trabalho.query.filter_by(id_frente_trabalho=f_id, id_obra=obra.id).delete()
+            
+            # 2. Adicionar novas frentes
+            for f_nova in data.get('novas', []):
+                nova_frente = Frente_Trabalho(
+                    id_obra=obra.id, # AQUI O ID JÁ EXISTE (graças ao flush ou query.get)
+                    nome_frente=f_nova['nome_frente'],
+                    id_responsavel=f_nova['id_responsavel'] if f_nova['id_responsavel'] else None
+                )
+                db.session.add(nova_frente)
 
-    # Prepara o item_form (para re-renderizar em caso de erro de DB)
-    item_form = Obra(
-        id=id_obra, nome=nome, cnpj=cnpj, id_matriz=id_matriz, endereco=endereco, 
-        numero=numero, complemento=complemento, bairro=bairro, cidade=cidade, 
-        estado=estado, cep=cep, inicio=inicio, termino=termino, status=status
-    )
-    
-    # 2. Criar ou Atualizar
-    if id_obra:
-        # Edição
-        item = Obra.query.get_or_404(id_obra)
-        item.nome = nome
-        item.cnpj = cnpj
-        item.id_matriz = id_matriz # Novo campo
-        item.endereco = endereco
-        item.numero = numero
-        item.complemento = complemento
-        item.bairro = bairro
-        item.cidade = cidade
-        item.estado = estado
-        item.cep = cep
-        item.inicio = inicio
-        item.termino = termino
-        item.status = status
-        acao = "atualizada"
-    else:
-        # Criação
-        obra = Obra(
-            nome=nome,
-            cnpj=cnpj,
-            id_matriz=id_matriz, # Novo campo
-            endereco=endereco,
-            numero=numero,
-            complemento=complemento,
-            bairro=bairro,
-            cidade=cidade,
-            estado=estado,
-            cep=cep,
-            inicio=inicio,
-            termino=termino,
-            status=status
-        )
-        db.session.add(obra)
-        item_form = obra # Atualiza o item_form com a nova obra para o redirecionamento
-        acao = "cadastrada"
-
-    # 3. Commit ao Banco de Dados
-    try:
         db.session.commit()
-        flash(f"Obra '{nome}' {acao} com sucesso!", "success")
-        # No sucesso, usa a rota de visualização para mostrar os dados salvos
-        return redirect(url_for('auth.visualizar_obra', id=item_form.id)) 
+        return redirect(url_for('auth.lista_obras'))
+
     except Exception as e:
         db.session.rollback()
-        print(f"Erro ao salvar/editar obra: {e}")
-        flash("Ocorreu um erro ao salvar a obra. Tente novamente.", "danger")
-        # Em caso de erro de DB, retorna ao template com os dados do formulário
-        # Precisa buscar opções_matriz novamente
-        opcoes_matriz = get_matrix_options()
-        return render_template("form_obra.html", item=item_form, view_mode=False, opcoes_matriz=opcoes_matriz)
+        print(f"Erro ao salvar obra: {e}")
+        # Se for erro de integridade que passou pela nossa validação manual
+        if "Duplicate entry" in str(e):
+             flash(f"Erro: CNPJ já existente no sistema.", "danger")
+        else:
+             flash(f"Erro ao processar a solicitação: {str(e)}", "danger")
+        
+        return redirect(url_for('auth.lista_obras'))
     
 # Rota pra editar obra
 
@@ -934,7 +983,7 @@ def editar_obra(id):
     # Busca todas as frentes vinculadas a essa obra
     frentes = Frente_Trabalho.query.filter_by(id_obra=id).all()
     
-    usuarios = Usuario.query.order_by(Usuario.nome).all()
+    usuarios = Usuario.query.filter_by(status=1).all() # Apenas usuários ativos
     
     # Busca outras obras para o select de Matriz
     opcoes_matriz = Obra.query.all()
@@ -965,6 +1014,7 @@ def visualizar_obra(id):
         abort(404)
         
     opcoes_matriz = get_matrix_options()
+    usuarios = Usuario.query.filter_by(status=1).all() # Apenas usuários ativos
     
     frentes = Frente_Trabalho.query.filter_by(id_obra=id).all()
 
@@ -978,7 +1028,8 @@ def visualizar_obra(id):
         categoria="obra",
         opcoes_matriz=opcoes_matriz, # Importante passar isso para o <select> funcionar
         frentes=frentes,
-        usuario=usuario
+        usuario=usuario,
+        usuarios=usuarios
     )
 
 # Rota para toggle de status da obra (usado em list_obras.html)
@@ -1003,60 +1054,3 @@ def toggle_obra_status(id):
         db.session.rollback()
         print(f"Erro ao alternar status da obra: {e}")
         return '', 500 # Retorna erro 500
-
-# Rota para criar nova frente de trabalho
-
-@auth_bp.route('/criar-frente', methods=['POST'])
-@login_required
-def criar_frente():
-    from app.models.usuario import Usuario
-
-    data = request.get_json()
-
-    id_obra = data.get('id_obra')
-    nome_frente = data.get('nome_frente')
-    id_responsavel = data.get('id_responsavel')
-
-    if not id_obra or not nome_frente:
-        return jsonify({'success': False, 'message': 'Dados incompletos'}), 400
-
-    try:
-        usuario = None
-        nome_responsavel = 'Não definido'
-
-        if id_responsavel:
-            usuario = Usuario.query.filter_by(id=id_responsavel).first()
-            if usuario:
-                nome_responsavel = usuario.nome
-
-        nova_frente = Frente_Trabalho(
-            id_obra=id_obra,
-            nome_frente=nome_frente,
-            id_responsavel=id_responsavel if usuario else None
-        )
-
-        db.session.add(nova_frente)
-        db.session.commit()
-
-        return jsonify({
-            'success': True,
-            'id_frente_trabalho': nova_frente.id_frente_trabalho,
-            'nome_frente': nova_frente.nome_frente,
-            'responsavel': nome_responsavel
-        })
-
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'success': False, 'message': str(e)}), 500
-
-# Rota para remover frente de trabalho
-@auth_bp.route('/remover-frente/<int:id>', methods=['DELETE'])
-def remover_frente(id):
-    try:
-        frente = Frente_Trabalho.query.get_or_404(id)
-        db.session.delete(frente)
-        db.session.commit()
-        return jsonify({'success': True})
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'success': False, 'message': str(e)}), 500
