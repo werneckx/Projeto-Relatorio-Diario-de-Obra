@@ -5,7 +5,7 @@ from flask import current_app
 from app.models.rdo import RDO
 from app.models.obra import Obra
 from app.models.usuario import Usuario
-from app.models.clima import Clima
+from app.models.lista_opcoes import Clima
 from app import db
 
 
