@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}{% if view_mode %}Visualizar{% elif item and item.id %}Editar{% else %}Cadastrar{% endif %}
+Equipamento{%
+endblock %}
+
+{% block content %}
+<div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div
+        class="mb-6 p-4 rounded-lg flex items-center gap-3 border shadow-sm transition-all {{ 'bg-red-100 text-red-700 border-red-200' if category == 'danger' else 'bg-green-100 text-green-700 border-green-200' }}">
+        <i class="fas {{ 'fa-exclamation-circle' if category == 'danger' else 'fa-check-circle' }}"></i>
+        <span class="text-sm font-bold">{{ message }}</span>
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-slate-800">{% if view_mode %}Visualizar{% elif item and item.id %}Editar{%
+            else %}Novo{% endif %} Equipamento</h1>
+        <p class="text-sm text-slate-500">Cadastro de tipos de equipamento usados nos RDOs.</p>
+    </div>
+
+    <form action="{{ url_for('auth.gerar_equipamento') }}" method="POST" id="equipamentoForm"
+        class="space-y-6 rdo-form">
+        <input type="hidden" name="id" value="{{ item.id if item and item.id }}">
+
+        <section class="bg-white rounded-lg p-6 border shadow-sm">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                        <i class="fas fa-cloud-sun"></i>
+                    </div>
+                    <h3
+                        class="font-semibold text-slate-800 border-l-2 border-blue-600 pl-3 uppercase text-sm tracking-wide">
+                        Informações do Equipamento</h3>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase">Nome do Equipamento <span
+                            class="text-red-500">*</span></label>
+                    <input type="text" name="nome" value="{{ item.nome if item }}"
+                        class="w-full border rounded-lg px-3 py-2 transition h-10 {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}"
+                        {{ 'readonly' if view_mode }} required>
+                </div>
+            </div>
+        </section>
+
+        <div class="flex flex-col sm:flex-row gap-3 pt-4 border-t">
+            {% if view_mode %}
+            <a href="{{ url_for('auth.editar_equipamento', id=item.id) }}"
+                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-sm text-center transition flex items-center justify-center gap-2">Editar
+                Equipamento</a>
+            <a href="{{ url_for('auth.lista_equipamentos') }}"
+                class="flex-1 bg-white border border-slate-300 text-slate-500 font-bold py-3 rounded-lg text-center transition hover:bg-slate-50">Voltar
+                para Lista</a>
+            {% else %}
+            <button type="submit" id="submitBtn"
+                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-sm flex items-center justify-center gap-2 transition">Salvar</button>
+            <a href="{{ url_for('auth.lista_equipamentos') }}"
+                class="flex-1 flex items-center justify-center bg-white border border-slate-300 text-slate-500 py-3 rounded-lg font-semibold transition hover:bg-slate-50">Cancelar</a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+{% endblock %}

@@ -7,6 +7,7 @@ from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from app.models import usuario
 from app.models import rdo
+from app.models.lista_opcoes import Clima
 from app.models.obra import Frente_Trabalho, Obra
 from app.models.rdo import RDO
 from app.utils.rdo_pdf import regenerar_pdf_rdo
@@ -115,7 +116,7 @@ def download_rdo_pdf(rdo_id):
 @login_required
 def criar_rdo():
     from app.models.obra import Obra, Frente_Trabalho # Importe Frente_Trabalho também
-    from app.models.clima import Clima 
+    from app.models.lista_opcoes import Clima 
     from app.models.usuario import Usuario
 
     # Filtra apenas obras ATIVAS (assumindo 1 para ativo)
@@ -255,7 +256,7 @@ def gerar_rdo():
 def visualizar_rdo(rdo_id):
     from app.models.rdo import RDO
     from app.models.obra import Obra, Frente_Trabalho
-    from app.models.clima import Clima
+    from app.models.lista_opcoes import Clima
     from app.models.usuario import Usuario
     from app.models.rdo import MaoObra
 
@@ -279,7 +280,7 @@ def visualizar_rdo(rdo_id):
 def editar_rdo(rdo_id):
     from app.models.rdo import RDO
     from app.models.obra import Obra
-    from app.models.clima import Clima
+    from app.models.lista_opcoes import Clima
     from app.models.usuario import Usuario
 
     item = RDO.query.get_or_404(rdo_id)
@@ -679,6 +680,84 @@ def excluir_clima(id):
     db.session.delete(clima)
     db.session.commit()
     return redirect(url_for('auth.lista_climas'))
+
+#######################################################################################################
+####################################################################################################### EQUIPAMENTOS
+#######################################################################################################
+
+@auth_bp.get("/lista-equipamentos")
+@login_required
+def lista_equipamentos():
+    from app.models.lista_opcoes import Equipamento
+    # Busca todos os equipamentos
+    equipamentos = Equipamento.query.order_by(Equipamento.nome.asc()).all()
+    return render_template("list_equipamentos.html", opcoes=equipamentos, categoria="equipamento")
+
+
+@auth_bp.get('/criar-equipamento')
+@login_required
+def criar_equipamento():
+    # Mostra formulário para criação
+    return render_template('form_equipamento.html', item=None, view_mode=False)
+
+
+@auth_bp.post('/gerar-equipamento')
+@login_required
+def gerar_equipamento():
+    from app.models.lista_opcoes import Equipamento
+    equipamento_id = request.form.get('id')
+    tipo_lista = "Equipamentos"
+    nome = request.form.get('nome', '').strip()
+    if not nome:
+        flash('Nome do equipamento é obrigatório.', 'danger')
+        if equipamento_id:
+            return redirect(url_for('auth.editar_equipamento', id=equipamento_id))
+        return redirect(url_for('auth.criar_clima'))
+
+    if equipamento_id:
+        equipamento = Equipamento.query.get(equipamento_id)
+        if not equipamento:
+            flash('Equipamento não encontrado.', 'danger')
+            return redirect(url_for('auth.lista_equipamentos'))
+        equipamento.nome = nome
+        db.session.add(equipamento)
+        db.session.commit()
+        flash('Equipamento atualizado com sucesso.', 'success')
+        return redirect(url_for('auth.lista_equipamentos'))
+
+    novo = Equipamento(nome=nome, tipo_lista=tipo_lista)
+    db.session.add(novo)
+    db.session.commit()
+    flash('Equipamento criado com sucesso.', 'success')
+    return redirect(url_for('auth.lista_equipamentos'))
+
+@auth_bp.get('/visualizar-equipamento/<int:id>')
+@login_required
+def visualizar_equipamento(id):
+    from app.models.lista_opcoes import Equipamento
+    equipamento = Equipamento.query.get_or_404(id)
+    return render_template('form_equipamento.html', item=equipamento, view_mode=True)
+
+@auth_bp.get('/editar-equipamento/<int:id>')
+@login_required
+def editar_equipamento(id):
+    from app.models.lista_opcoes import Equipamento
+    equipamento = Equipamento.query.get_or_404(id)
+    return render_template('form_equipamento.html', item=equipamento, view_mode=False)
+
+@auth_bp.post('/excluir-equipamento/<int:id>')
+@login_required
+def excluir_equipamento(id):
+    from app.models.lista_opcoes import Equipamento
+    equipamento = Equipamento.query.get(id)
+    if not equipamento:
+        flash('Equipamento não encontrado.', 'danger')
+        return redirect(url_for('auth.lista_equipamentos'))
+    # TODO: verificar dependências (RDOs) antes de excluir
+    db.session.delete(equipamento)
+    db.session.commit()
+    return redirect(url_for('auth.lista_equipamentos'))
+
 
 #######################################################################################################
 ####################################################################################################### OBRAS
