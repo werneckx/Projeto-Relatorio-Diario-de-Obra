@@ -2,10 +2,10 @@ from app import db
 from datetime import date
 
 class Obra(db.Model):
-    __tablename__ = "obra"
+    __tablename__ = "obras"
 
     id = db.Column(db.Integer, primary_key=True)
-    id_matriz = db.Column(db.Integer, db.ForeignKey('obra.id'), nullable=True)
+    id_matriz = db.Column(db.Integer, db.ForeignKey('obras.id'), nullable=True)
     nome = db.Column(db.String(120), nullable=False)
     contratante = db.Column(db.String(255), nullable=False)
     contrato = db.Column(db.String(50), unique=True, nullable=False)
@@ -29,13 +29,13 @@ class Obra(db.Model):
         return f'<Obra {self.id}: {self.nome}>'
     
 class Frente_Trabalho(db.Model):
-    __tablename__ = "frente_trabalho"
+    __tablename__ = "obras_frente_trabalho"
     
     id_frente_trabalho = db.Column(db.Integer, primary_key=True)
-    # Garanta que a FK aponte para 'obra.id' (nome da tabela e coluna)
-    id_obra = db.Column(db.Integer, db.ForeignKey('obra.id'), nullable=False)
+    # Garanta que a FK aponte para 'obras.id' (nome da tabela e coluna)
+    id_obra = db.Column(db.Integer, db.ForeignKey('obras.id'), nullable=False)
     # AJUSTE: nullable=True para permitir criar a frente sem atribuir um responsável de imediato
-    # Verifique se o __tablename__ do seu modelo de usuário é realmente 'usuario'
+    # Verifique se o __tablename__ do seu modelo de usuário é realmente 'usuarios'
     id_responsavel = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=True)
     nome_frente = db.Column(db.String(120), nullable=False)
     
