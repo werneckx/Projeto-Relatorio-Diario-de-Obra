@@ -607,7 +607,7 @@ def lista_supervisores():
 @auth_bp.get("/lista-climas")
 @login_required
 def lista_climas():
-    from app.models.clima import Clima
+    from app.models.lista_opcoes import Clima
     # Busca todos os climas
     climas = Clima.query.order_by(Clima.nome.asc()).all()
     return render_template("list_climas.html", opcoes=climas, categoria="clima")
@@ -623,8 +623,9 @@ def criar_clima():
 @auth_bp.post('/gerar-clima')
 @login_required
 def gerar_clima():
-    from app.models.clima import Clima
+    from app.models.lista_opcoes import Clima
     clima_id = request.form.get('id')
+    tipo_lista = "Climas"
     nome = request.form.get('nome', '').strip()
     if not nome:
         flash('Nome do clima é obrigatório.', 'danger')
@@ -643,7 +644,7 @@ def gerar_clima():
         flash('Clima atualizado com sucesso.', 'success')
         return redirect(url_for('auth.lista_climas'))
 
-    novo = Clima(nome=nome)
+    novo = Clima(nome=nome, tipo_lista=tipo_lista)
     db.session.add(novo)
     db.session.commit()
     flash('Clima criado com sucesso.', 'success')
@@ -653,7 +654,7 @@ def gerar_clima():
 @auth_bp.get('/visualizar-clima/<int:id>')
 @login_required
 def visualizar_clima(id):
-    from app.models.clima import Clima
+    from app.models.lista_opcoes import Clima
     clima = Clima.query.get_or_404(id)
     return render_template('form_clima.html', item=clima, view_mode=True)
 
@@ -661,7 +662,7 @@ def visualizar_clima(id):
 @auth_bp.get('/editar-clima/<int:id>')
 @login_required
 def editar_clima(id):
-    from app.models.clima import Clima
+    from app.models.lista_opcoes import Clima
     clima = Clima.query.get_or_404(id)
     return render_template('form_clima.html', item=clima, view_mode=False)
 
@@ -669,7 +670,7 @@ def editar_clima(id):
 @auth_bp.post('/excluir-clima/<int:id>')
 @login_required
 def excluir_clima(id):
-    from app.models.clima import Clima
+    from app.models.lista_opcoes import Clima
     clima = Clima.query.get(id)
     if not clima:
         flash('Clima não encontrado.', 'danger')
