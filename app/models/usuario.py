@@ -6,9 +6,9 @@ from werkzeug.security import generate_password_hash, check_password_hash
 # -----------------------
 # Tabela Associativa (Many-to-Many)
 # -----------------------
-acesso_obras = db.Table('acesso_obras',
+usuarios_acessos_obras = db.Table('usuarios_acessos_obras',
     db.Column('id_usuario', db.Integer, db.ForeignKey('usuarios.id'), primary_key=True),
-    db.Column('id_obra', db.Integer, db.ForeignKey('obra.id'), primary_key=True)
+    db.Column('id_obra', db.Integer, db.ForeignKey('obras.id'), primary_key=True)
 )
 
 class Usuario(db.Model, UserMixin):
@@ -27,7 +27,7 @@ class Usuario(db.Model, UserMixin):
     # RELACIONAMENTO: Lista de obras/matrizes que este usuário pode acessar
     # Para matrizes: armazena a matriz (id_matriz = None)
     # Para outros papéis: pode armazenar filiais específicas se necessário
-    obras_permitidas = db.relationship('Obra', secondary=acesso_obras, backref=db.backref('usuarios_autorizados', lazy='dynamic'))
+    obras_permitidas = db.relationship('Obra', secondary=usuarios_acessos_obras, backref=db.backref('usuarios_autorizados', lazy='dynamic'))
 
     def set_senha(self, senha):
         self.senha = generate_password_hash(senha)
