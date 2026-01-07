@@ -19,3 +19,13 @@ class Equipamento(ListaOpcaoBase):
     __mapper_args__ = {
         'polymorphic_identity': 'Equipamentos',
     }
+    
+class TagOcorrencia(ListaOpcaoBase):
+    __mapper_args__ = {
+        'polymorphic_identity': 'Tags Ocorrencias',
+    }
+    
+class MaoDeObra(ListaOpcaoBase):
+    __mapper_args__ = {
+        'polymorphic_identity': 'Mao de Obra',
+    }
