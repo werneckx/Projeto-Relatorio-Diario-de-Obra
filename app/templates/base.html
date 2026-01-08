@@ -11,7 +11,7 @@
 
     <!-- Seu CSS existente -->
     <link rel="stylesheet" href="{{ url_for('static', filename='styleForm.css') }}">
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo/icone.png') }}">
+    <link rel="icon" type="image/png" src="{{ url_for('static', filename='logo/icone.png') }}">
 </head>
 
 <body>
@@ -19,9 +19,9 @@
     <div class="barraFixada">
 
         <header class="header">
-            <div class="header-left">
-                <img src="{{ url_for('static', filename='logo/logopretoebranco.png') }}" alt="Logo" class="logo">
-            </div>
+            <a class="header-left" href="{{ url_for('auth.inicio') }}">
+                <img src="{{ url_for('static', filename='logo/logo.png') }}" alt="Logo" class="logo">
+            </a>
 
             <div class="header-right">
                 <div class="profile-btn">
@@ -35,7 +35,7 @@
                         Convidado
                         {% endif %}
                     </div>
-                    <div class="profile-company">Enfil SA Controle Ambiental</div>
+                    <a class="profile-company" href="{{ url_for('auth.empresa') }}">{{ nome_empresa_global }}</a>
                 </div>
 
                 <div class="actions">
@@ -56,7 +56,7 @@
                 </li>
 
                 <li class="nav-item dropdown" name="lista">
-                    <a href="#" class="nav-link">RDO</a>
+                    <a href="#" class="nav-link">Relátorio</a>
                     <ul class="dropdown-menu">
                         <a href="{{ url_for('auth.lista_rdo') }}">Lista</a>
                         <a href="{{ url_for('auth.criar_rdo') }}">Gerar</a>

@@ -236,7 +236,7 @@
         <section class="informacoesObra">
             <div class="project">Obra: {{ rdo.obra.nome }}</div>
             <div class="author">Responsável: {{ rdo.usuario.nome }}</div>
-            <div class="date">Data: {{ rdo.data.strftime("%d/%m/%Y %H:%M:%S") }}</div>
+            <div class="date">Data: {{ rdo.data.strftime("%d/%m/%Y") }}</div>
             <div class="clima">Clima de manhã: {{ rdo.clima_manha_obj.nome }}</div>
             <div class="clima">Clima de tarde: {{ rdo.clima_tarde_obj.nome }}</div>
         </section>

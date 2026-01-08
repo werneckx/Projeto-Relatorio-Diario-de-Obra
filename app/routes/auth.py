@@ -1,6 +1,6 @@
 from math import e
 import os
-from flask import Blueprint, abort, json, render_template, request, redirect, url_for, flash, session, send_file
+from flask import Blueprint, Config, abort, json, render_template, request, redirect, url_for, flash, session, send_file
 from werkzeug.security import check_password_hash
 from app import db # Importar 'db' para uso no filtro (db.or_)
 from app import db, login_manager
@@ -8,6 +8,7 @@ from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from app.models import usuario
 from app.models import rdo
+from app.models.empresa import Empresa
 from app.models.lista_opcoes import Clima
 from app.models.obra import Frente_Trabalho, Obra
 from app.models.rdo import RDO, Equipamentos
@@ -20,8 +21,19 @@ from flask import request, jsonify
 from app import db
 from app.models.obra import Frente_Trabalho
 from werkzeug.utils import secure_filename
+from flask import make_response
+from app.utils.pdf_service import render_rdo_pdf
+import os
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
+from werkzeug.utils import secure_filename
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
+
+# Configuração permitida de extensões
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # Página Inicial do Blueprint (Redirecionamento)
 @auth_bp.get("/")
@@ -102,13 +114,104 @@ def logout():
 def inicio():
     return render_template("inicio.html")
 
-# Faz o download do PDF
-@auth_bp.get("/rdo/<int:rdo_id>/download")
+#######################################################################################################
+####################################################################################################### Configurações
+#######################################################################################################
+
+@auth_bp.app_context_processor
+def inject_company_info():
+    from app.models.empresa import Empresa
+    # Aqui simulamos a busca no banco. 
+    # Se não houver nada no banco, define um nome padrão.
+    nome_empresa = Empresa.query.first().nome_empresa if Empresa.query.first() else "Não definido" 
+    # No futuro: nome_empresa = Configuracao.query.first().nome_empresa
+    
+    return dict(nome_empresa_global=nome_empresa)
+
+# Página inicio
+@auth_bp.get("/empresa")
 @login_required
-def download_rdo_pdf(rdo_id):
-    # 'regenerar_pdf_rdo' é uma função de utilidade, mantida fora da rota
-    pdf_path, pdf_filename = regenerar_pdf_rdo(rdo_id)
-    return send_file(pdf_path, as_attachment=True, download_name=pdf_filename)
+def empresa():
+    from app.models.empresa import Empresa
+    config_data = {
+        'nome_empresa': Empresa.query.first().nome_empresa if Empresa.query.first() else '',
+        'logo_path': 'logo/logo.png',
+        'icone_path': 'logo/icone.png'
+    }
+    return render_template('configuracoes.html', config_data=config_data, view_mode=True)
+
+@auth_bp.route('/salvar-empresa', methods=['POST'])
+def salvar_empresa():
+    nome_empresa = request.form.get('nome_empresa')
+    logo_file = request.files.get('logo_empresa')
+    icone_file = request.files.get('icone_empresa')
+
+    try:
+        # 1. Atualizar Nome no Banco de Dados
+        # Ajuste o filtro se houver mais de uma empresa, ou use .first()
+        db.session.query(Empresa).update({'nome_empresa': nome_empresa})
+        
+        upload_folder = os.path.join(current_app.root_path, 'static', 'logo')
+        
+        # Garante que a pasta de destino existe
+        if not os.path.exists(upload_folder):
+            os.makedirs(upload_folder)
+
+        # 2. Processar Logotipo (logo.png)
+        if logo_file and logo_file.filename != '':
+            if allowed_file(logo_file.filename):
+                logo_path = os.path.join(upload_folder, "logo.png")
+                # O save do Flask sobrescreve arquivos existentes por padrão
+                logo_file.save(logo_path)
+            else:
+                flash('Extensão de logotipo não permitida (use PNG, JPG ou GIF).', 'danger')
+                return redirect(url_for('auth.empresa'))
+
+        # 3. Processar Ícone/Favicon (icone.png)
+        if icone_file and icone_file.filename != '':
+            if allowed_file(icone_file.filename):
+                icone_path = os.path.join(upload_folder, "icone.png")
+                icone_file.save(icone_path)
+            else:
+                flash('Extensão de ícone não permitida (use PNG, ICO ou JPG).', 'danger')
+                return redirect(url_for('auth.empresa'))
+
+        # Commit das alterações de texto no banco
+        db.session.commit()
+        flash('Configurações da empresa atualizadas com sucesso!', 'success')
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erro ao salvar configurações: {str(e)}', 'danger')
+
+    return redirect(url_for('auth.empresa'))
+
+#######################################################################################################
+####################################################################################################### PDF
+#######################################################################################################
+
+@auth_bp.get("/gerar-pdf/<int:rdo_id>")
+@login_required
+def gerar_pdf_rdo_view(rdo_id):
+    try:
+        # Gera os bytes do PDF
+        pdf_content = render_rdo_pdf(rdo_id)
+        
+        # Cria a resposta HTTP com os headers corretos
+        response = make_response(pdf_content)
+        response.headers['Content-Type'] = 'application/pdf'
+        
+        # 'inline' abre no navegador. 'attachment' forçaria o download.
+        filename = f"RDO_{rdo_id}.pdf"
+        response.headers['Content-Disposition'] = f'inline; filename={filename}'
+        
+        return response
+        
+    except Exception as e:
+        # Log do erro para debug
+        print(f"Erro ao gerar PDF: {e}")
+        flash("Erro ao gerar o PDF. Verifique se as imagens e dados estão corretos.", "danger")
+        return redirect(url_for('auth.visualizar_rdo', rdo_id=rdo_id))
 
 #######################################################################################################
 ####################################################################################################### RDO

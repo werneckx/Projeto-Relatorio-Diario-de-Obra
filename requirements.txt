@@ -8,3 +8,4 @@ Werkzeug
 flask-login
 qrcode[pil]
 pdfkit
+weasyprint
