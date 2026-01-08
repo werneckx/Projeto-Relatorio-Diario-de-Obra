@@ -758,6 +758,83 @@ def excluir_equipamento(id):
     db.session.commit()
     return redirect(url_for('auth.lista_equipamentos'))
 
+#######################################################################################################
+####################################################################################################### TAGS OCORRENCIAS
+#######################################################################################################
+
+@auth_bp.get("/lista-tags-ocorrencias")
+@login_required
+def lista_tags_ocorrencias():
+    from app.models.lista_opcoes import TagOcorrencia
+    # Busca todos os tagsOcorrencias
+    tagsOcorrencias = TagOcorrencia.query.order_by(TagOcorrencia.nome.asc()).all()
+    return render_template("list_tags_ocorrencias.html", opcoes=tagsOcorrencias, categoria="tagsOcorrencias")
+
+
+@auth_bp.get('/criar-tags-ocorrencias')
+@login_required
+def criar_tags_ocorrencias():
+    # Mostra formulário para criação
+    return render_template('form_tags_ocorrencias.html', item=None, view_mode=False)
+
+
+@auth_bp.post('/gerar-tags-ocorrencias')
+@login_required
+def gerar_tags_ocorrencias():
+    from app.models.lista_opcoes import TagOcorrencia
+    tag_ocorrencia_id = request.form.get('id')
+    tipo_lista = "Tags Ocorrencias"
+    nome = request.form.get('nome', '').strip()
+    if not nome:
+        flash('Nome do tag de ocorrência é obrigatório.', 'danger')
+        if tag_ocorrencia_id:
+            return redirect(url_for('auth.editar_tags_ocorrencias', id=tag_ocorrencia_id))
+        return redirect(url_for('auth.criar_tags_ocorrencias'))
+
+    if tag_ocorrencia_id:
+        tag_ocorrencia = TagOcorrencia.query.get(tag_ocorrencia_id)
+        if not tag_ocorrencia:
+            flash('Tag de ocorrência não encontrada.', 'danger')
+            return redirect(url_for('auth.lista_tags_ocorrencias'))
+        tag_ocorrencia.nome = nome
+        db.session.add(tag_ocorrencia)
+        db.session.commit()
+        flash('Tag de ocorrência atualizado com sucesso.', 'success')
+        return redirect(url_for('auth.lista_tags_ocorrencias'))
+
+    novo = TagOcorrencia(nome=nome, tipo_lista=tipo_lista)
+    db.session.add(novo)
+    db.session.commit()
+    flash('Tag de ocorrência criada com sucesso.', 'success')
+    return redirect(url_for('auth.lista_tags_ocorrencias'))
+
+@auth_bp.get('/visualizar-tags-ocorrencias/<int:id>')
+@login_required
+def visualizar_tags_ocorrencias(id):
+    from app.models.lista_opcoes import TagOcorrencia
+    tag_ocorrencia = TagOcorrencia.query.get_or_404(id)
+    return render_template('form_tags_ocorrencias.html', item=tag_ocorrencia, view_mode=True)
+
+@auth_bp.get('/editar-tags-ocorrencias/<int:id>')
+@login_required
+def editar_tags_ocorrencias(id):
+    from app.models.lista_opcoes import TagOcorrencia
+    tag_ocorrencia = TagOcorrencia.query.get_or_404(id)
+    return render_template('form_tags_ocorrencias.html', item=tag_ocorrencia, view_mode=False)
+
+@auth_bp.post('/excluir-tags-ocorrencias/<int:id>')
+@login_required
+def excluir_tags_ocorrencias(id):
+    from app.models.lista_opcoes import TagOcorrencia
+    tag_ocorrencia = TagOcorrencia.query.get(id)
+    if not tag_ocorrencia:
+        flash('Tag de ocorrência não encontrada.', 'danger')
+        return redirect(url_for('auth.lista_tags_ocorrencias'))
+    # TODO: verificar dependências (RDOs) antes de excluir
+    db.session.delete(tag_ocorrencia)
+    db.session.commit()
+    return redirect(url_for('auth.lista_tags_ocorrencias'))
+
 
 #######################################################################################################
 ####################################################################################################### OBRAS
