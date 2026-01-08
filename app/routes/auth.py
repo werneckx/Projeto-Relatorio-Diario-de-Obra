@@ -1,3 +1,4 @@
+from math import e
 import os
 from flask import Blueprint, abort, json, render_template, request, redirect, url_for, flash, session, send_file
 from werkzeug.security import check_password_hash
@@ -9,7 +10,7 @@ from app.models import usuario
 from app.models import rdo
 from app.models.lista_opcoes import Clima
 from app.models.obra import Frente_Trabalho, Obra
-from app.models.rdo import RDO
+from app.models.rdo import RDO, Equipamentos
 from app.utils.rdo_pdf import regenerar_pdf_rdo
 from sqlalchemy import func, or_
 from datetime import date, datetime, timedelta
@@ -18,6 +19,7 @@ from sqlalchemy.orm import aliased
 from flask import request, jsonify
 from app import db
 from app.models.obra import Frente_Trabalho
+from werkzeug.utils import secure_filename
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
@@ -118,9 +120,15 @@ def criar_rdo():
     from app.models.obra import Obra, Frente_Trabalho # Importe Frente_Trabalho também
     from app.models.lista_opcoes import Clima 
     from app.models.usuario import Usuario
+    from app.models.lista_opcoes import MaoObra, Equipamento, TagOcorrencia, Clima
 
     # Filtra apenas obras ATIVAS (assumindo 1 para ativo)
     obras = Obra.query.filter_by(status=1).all()
+    
+    # Essas são as variáveis que o seu JS está tentando ler com | tojson
+    mao_de_obra_options = [{"id": m.id, "nome": m.nome} for m in MaoObra.query.all()]
+    equipamentos_options = [{"id": e.id, "nome": e.nome} for e in Equipamento.query.all()]
+    tags_options = [{"id": t.id, "nome": t.nome} for t in TagOcorrencia.query.all()]
 
     clima = Clima.query.all()
     # Enviamos todas as frentes; o JavaScript no seu HTML já filtra por obra
@@ -132,121 +140,252 @@ def criar_rdo():
         obras=obras, 
         clima=clima, 
         frente_trabalho=frente_trabalho, 
-        view_mode=False
+        view_mode=False,
+        mao_de_obra_options=mao_de_obra_options, # ENVIA PARA O HTML
+        equipamentos_options=equipamentos_options, # ENVIA PARA O HTML
+        tags_options=tags_options # ENVIA PARA O HTML
     )
     
+# Adicione ao auth_bp
+
+@auth_bp.get("/api/obra/<int:id>")
+@login_required
+def get_obra_api(id):
+    from app.models.obra import Obra, Frente_Trabalho
+    from flask import jsonify # Garanta que jsonify está importado
+    
+    # 1. Busca a obra com segurança (retorna 404 se não existir)
+    obra = Obra.query.get_or_404(id)
+    
+    # 2. Busca as frentes de trabalho vinculadas
+    frentes = Frente_Trabalho.query.filter_by(id_obra=id).all()
+    
+    # 3. Formatação segura de datas (previne erro se data for None)
+    data_inicio_fmt = obra.inicio.strftime('%d/%m/%Y') if obra.inicio else "-"
+    data_inicio_iso = obra.inicio.isoformat() if obra.inicio else ""
+    data_fim_fmt = obra.termino.strftime('%d/%m/%Y') if obra.termino else "-"
+    data_fim_iso = obra.termino.isoformat() if obra.termino else ""
+
+    # 4. Acesso seguro ao relacionamento Responsável
+    # O modelo define: responsavel = db.relationship('Usuario', ...)
+    nome_responsavel = obra.responsavel.nome if obra.responsavel else "Não definido"
+
+    # 5. Montagem da lista de frentes
+    lista_frentes = []
+    for f in frentes:
+        # O modelo Frente_Trabalho também usa 'responsavel'
+        nome_resp_frente = f.responsavel.nome if f.responsavel else "Sem responsável"
+        id_resp_frente = f.id_responsavel if f.id_responsavel else ""
+        
+        lista_frentes.append({
+            "id": f.id_frente_trabalho, 
+            "nome": f.nome_frente,
+            "responsavel_nome": nome_resp_frente,
+            "responsavel_id": id_resp_frente
+        })
+
+    # 6. Retorno do JSON com os nomes de campos corretos
+    return jsonify({
+        "num_contrato": obra.contrato,       # Correção: usa 'contrato' e não 'num_contrato'
+        "cliente": obra.contratante,         # Correção: usa 'contratante'
+        "data_inicio": data_inicio_fmt,
+        "data_inicio_iso": data_inicio_iso,
+        "data_fim": data_fim_fmt,
+        "data_fim_iso": data_fim_iso,
+        "responsavel": nome_responsavel,     # Valor corrigido no passo 4
+        "frentes": lista_frentes
+    })
+    
+@auth_bp.get("/api/frente/<int:id>")
+@login_required
+def get_frente_api(id):
+    from app.models.obra import Frente_Trabalho
+    frente = Frente_Trabalho.query.get_or_404(id)
+    return jsonify({
+        "responsavel": frente.responsavel_tecnico.nome if frente.responsavel_tecnico else None
+    })
+
 # Gerar RDO (POST)
  
 @auth_bp.post("/gerar-rdo")
 @login_required
 def gerar_rdo():
-    from app.models.rdo import RDO, MaoObra
-    from app.models.obra import Obra
-    from app import db
+    from app.models.rdo import RDO, RDOMaoObra, Atividades, Equipamentos, Fotos, TagsOcorrencias
+    from app.models.lista_opcoes import Equipamento
+    # CORRETO
+    from flask import current_app  # O current_app sim vem do flask
+    from app import db             # O db vem da sua aplicação (instância do SQLAlchemy)
     
-    def _safe_get_int(val):
-        try: return int(val)
-        except: return None
-
-    # Configuração de pasta de Upload (dentro de static para o HTML ler)
-    # Caminho: app/static/uploads/rdo/
-    UPLOAD_FOLDER = os.path.join('app', 'static', 'uploads', 'rdo')
-    if not os.path.exists(UPLOAD_FOLDER):
-        os.makedirs(UPLOAD_FOLDER)
-
-    rdo_id_original = _safe_get_int(request.form.get("rdo_id"))
-
     try:
-        # --- PROCESSAMENTO DE NOVAS FOTOS ---
-        novas_fotos_arquivos = request.files.getlist("fotos[]")
-        nomes_novas_fotos = []
-
-        for foto in novas_fotos_arquivos:
-            if foto and foto.filename != '':
-                ext = os.path.splitext(foto.filename)[1]
-                # Nome único para evitar sobrescrever arquivos
-                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S%f')
-                nome_final = f"{timestamp}{ext}"
-                foto.save(os.path.join(UPLOAD_FOLDER, nome_final))
-                nomes_novas_fotos.append(nome_final)
-
-        if rdo_id_original:
-            # --- LÓGICA DE REVISÃO (HISTÓRICO) ---
-            rdo_antigo = RDO.query.get_or_404(rdo_id_original)
+        # Helpers
+        def _get_int(key):
+            v = request.form.get(key)
+            return int(v) if v and v.isdigit() else None
+        
+        def _get_time(key):
+            v = request.form.get(key)
+            if not v: return None
+            try: return datetime.strptime(v, '%H:%M').time()
+            except: return None
             
-            # Recupera fotos da revisão anterior para não perdê-las
-            fotos_acumuladas = json.loads(rdo_antigo.fotos_json) if rdo_antigo.fotos_json else []
-            fotos_acumuladas.extend(nomes_novas_fotos)
+        def _get_float(key):
+            v = request.form.get(key)
+            try: return float(v.replace(',', '.'))
+            except: return None
 
+        # Dados Básicos
+        rdo_id_original = _get_int("rdo_id")
+        id_obra = _get_int("obra_id")
+        data_rdo_str = request.form.get("data_rdo") # YYYY-MM-DD
+        data_rdo = datetime.strptime(data_rdo_str, '%Y-%m-%d').date() if data_rdo_str else date.today()
+        
+        # Criação ou Revisão
+        if rdo_id_original:
+            # Lógica de revisão: clonar ou atualizar status anterior
+            rdo_antigo = RDO.query.get_or_404(rdo_id_original)
+            # Para simplificar, estamos editando o próprio objeto se for edição simples,
+            # ou criando nova revisão se a regra de negócio exigir. 
+            # Assumindo EDIÇÃO do rascunho ou CRIAÇÃO de nova revisão se aprovado.
+            # Aqui vou seguir a lógica de criar NOVO objeto (Revisão +1) para preservar histórico
+            
+            nova_revisao = rdo_antigo.id_revisao + 1
             item_rdo = RDO(
                 id_obra=rdo_antigo.id_obra,
                 id_sequencial=rdo_antigo.id_sequencial,
-                id_revisao=rdo_antigo.id_revisao + 1,
-                id_frente_trabalho=_safe_get_int(request.form.get("frente_trabalho_id")),
-                id_usuario=_safe_get_int(request.form.get("usuario_id")),
-                id_climas_manha=_safe_get_int(request.form.get("climas_manha")),
-                id_climas_tarde=_safe_get_int(request.form.get("climas_tarde")),
-                atividades=request.form.get("atividades"),
-                data=rdo_antigo.data,
-                status="Revisado",
-                fotos_json=json.dumps(fotos_acumuladas) # Salva fotos antigas + novas
+                id_revisao=nova_revisao
             )
-            msg_sucesso = f'Revisão {item_rdo.id_revisao} do RDO Nº {item_rdo.id_sequencial} criada!'
-        
         else:
-            # --- LÓGICA DE CRIAÇÃO NOVA (REVISÃO 0) ---
-            id_obra = _safe_get_int(request.form.get("obra_id"))
-            num_rdos_existentes = RDO.query.filter_by(id_obra=id_obra, id_revisao=0).count()
-
+            # Novo RDO
+            num_existentes = RDO.query.filter_by(id_obra=id_obra, id_revisao=0).count()
             item_rdo = RDO(
                 id_obra=id_obra,
-                id_sequencial=num_rdos_existentes + 1,
-                id_revisao=0,
-                id_frente_trabalho=_safe_get_int(request.form.get("frente_trabalho_id")),
-                id_usuario=_safe_get_int(request.form.get("usuario_id")),
-                id_climas_manha=_safe_get_int(request.form.get("climas_manha")),
-                id_climas_tarde=_safe_get_int(request.form.get("climas_tarde")),
-                atividades=request.form.get("atividades"),
-                data=date.today(),
-                status="Pendente",
-                fotos_json=json.dumps(nomes_novas_fotos) # Salva apenas as novas
+                id_sequencial=num_existentes + 1,
+                id_revisao=0
             )
-            msg_sucesso = 'Novo RDO criado com sucesso!'
 
+        # Popular campos comuns
+        item_rdo.id_frente_trabalho = _get_int("frente_trabalho_id")
+        item_rdo.id_usuario = session.get("user_id")
+        item_rdo.id_climas_manha = _get_int("climas_manha")
+        item_rdo.id_climas_tarde = _get_int("climas_tarde")
+        item_rdo.data = data_rdo
+        item_rdo.status = "Pendente"
+        item_rdo.comentarios_gerais = request.form.get("comentarios_gerais")
+        
+        # Horários
+        item_rdo.hora_entrada = _get_time("hora_entrada")
+        item_rdo.hora_saida = _get_time("hora_saida")
+        item_rdo.intervalo_entrada = _get_time("intervalo_entrada")
+        item_rdo.intervalo_saida = _get_time("intervalo_saida")
+        
         db.session.add(item_rdo)
-        db.session.flush() 
+        db.session.flush() # Para gerar o ID do RDO
 
-        # --- PROCESSA MÃO DE OBRA ---
-        funcoes = request.form.getlist("funcao[]")
-        quantidades = request.form.getlist("quantidade[]")
-        tempos = request.form.getlist("tempo[]")
+        # --- 1. Atividades ---
+        descricoes = request.form.getlist("atividade_descricao[]")
+        status_list = request.form.getlist("atividade_status[]")
+        
+        for i, desc in enumerate(descricoes):
+            if desc and desc.strip():
+                st = status_list[i] if i < len(status_list) else "Não iniciada"
+                nova_atv = Atividades(id_rdo=item_rdo.id, descricao=desc, status=st)
+                db.session.add(nova_atv)
 
-        for i in range(len(funcoes)):
-            if funcoes[i] and quantidades[i]:
-                try:
-                    tempo_obj = datetime.strptime(tempos[i], '%H:%M').time()
-                except:
-                    tempo_obj = None
+        # --- 2. Mão de Obra ---
+        funcoes = request.form.getlist("mo_funcao[]")
+        qtd_prop = request.form.getlist("mo_qtd_propria[]")
+        qtd_terc = request.form.getlist("mo_qtd_terceirizada[]")
+        tempos = request.form.getlist("mo_tempo[]")
 
-                nova_mo = MaoObra(
-                    id_rdo=item_rdo.id,
-                    nome_funcao=funcoes[i],
-                    quantidade=int(quantidades[i]),
-                    tempo=tempo_obj
+        for i, func in enumerate(funcoes):
+            if func and func.strip():
+                qp = int(qtd_prop[i]) if i < len(qtd_prop) and qtd_prop[i] else 0
+                qt = int(qtd_terc[i]) if i < len(qtd_terc) and qtd_terc[i] else 0
+                t = _get_time(f"mo_tempo_dummy") # Hack: pegar do valor direto, pois getlist retorna string
+                # Parse manual do tempo da lista
+                tempo_str = tempos[i] if i < len(tempos) else None
+                tempo_obj = datetime.strptime(tempo_str, '%H:%M').time() if tempo_str else None
+                
+                nova_mo = RDOMaoObra(
+                    id_rdo=item_rdo.id, nome_funcao=func,
+                    quantidade_propria=qp, quantidade_terceirizada=qt, tempo=tempo_obj
                 )
                 db.session.add(nova_mo)
 
+        # --- 3. Equipamentos ---
+        eq_ids = request.form.getlist("eq_id[]")
+        eq_qts = request.form.getlist("eq_qtd[]")
+        
+        for i, eid in enumerate(eq_ids):
+            if eid:
+                qtd = int(eq_qts[i]) if i < len(eq_qts) and eq_qts[i] else 0
+                # Buscar nome para persistência redundante (opcional) ou usar relacionamento
+                eq_obj = Equipamento.query.get(eid)
+                novo_eq = Equipamentos(
+                    id_rdo=item_rdo.id, id_equipamento_lista=eid,
+                    nome_equipamento=eq_obj.nome if eq_obj else "", quantidade=qtd
+                )
+                db.session.add(novo_eq)
+
+        # --- 4. Ocorrências ---
+        oc_tags = request.form.getlist("oc_tag[]")
+        oc_descs = request.form.getlist("oc_desc[]")
+        
+        for i, tid in enumerate(oc_tags):
+            if tid:
+                desc = oc_descs[i] if i < len(oc_descs) else ""
+                nova_oc = TagsOcorrencias(id_rdo=item_rdo.id, id_tag_lista=tid, descricao=desc)
+                db.session.add(nova_oc)
+
+        # --- 5. Fotos (Upload e Comentários) ---
+        UPLOAD_FOLDER = os.path.join(current_app.root_path, 'static', 'uploads', 'rdo')
+        if not os.path.exists(UPLOAD_FOLDER):
+            os.makedirs(UPLOAD_FOLDER)
+            
+        arquivos = request.files.getlist("fotos[]")
+        legendas = request.form.getlist("legenda_foto_nova[]")
+        
+        # Processar fotos antigas (se for revisão, copiar)
+        if rdo_id_original:
+            rdo_antigo = RDO.query.get(rdo_id_original)
+            # Copiar fotos do antigo para o novo
+            for f_antiga in rdo_antigo.fotos:
+                # Aqui você pode decidir se copia o registro ou mantém referência
+                f_nova = Fotos(
+                    id_rdo=item_rdo.id, arquivo=f_antiga.arquivo,
+                    comentario=f_antiga.comentario
+                )
+                db.session.add(f_nova)
+
+        # Processar novas fotos
+        # Nota: O input file multiple não garante ordem com inputs text separados facilmente.
+        # Simplificação: assume que legendas novas vêm na ordem.
+        # Melhoria UX: Upload assíncrono seria ideal, mas no submit form tradicional:
+        
+        idx_file = 0
+        for arquivo in arquivos:
+            if arquivo and arquivo.filename:
+                fname = secure_filename(arquivo.filename)
+                ext = os.path.splitext(fname)[1].lower()
+                if ext in ['.jpg', '.jpeg', '.png', '.webp']:
+                    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S%f')
+                    novo_nome = f"{timestamp}_{idx_file}{ext}"
+                    arquivo.save(os.path.join(UPLOAD_FOLDER, novo_nome))
+                    
+                    comentario = legendas[idx_file] if idx_file < len(legendas) else ""
+                    
+                    nova_foto = Fotos(id_rdo=item_rdo.id, arquivo=novo_nome, comentario=comentario)
+                    db.session.add(nova_foto)
+                    idx_file += 1
+
         db.session.commit()
-        
-        # Opcional: Gerar PDF (Certifique-se que esta função suporte as fotos)
-        # regenerar_pdf_rdo(item_rdo.id) 
-        
-        flash(msg_sucesso, 'success')
+        flash(f"RDO Nº {item_rdo.id_sequencial} (Rev. {item_rdo.id_revisao}) salvo com sucesso!", "success")
         return redirect(url_for('auth.visualizar_rdo', rdo_id=item_rdo.id))
 
     except Exception as e:
         db.session.rollback()
-        flash(f'Erro ao processar RDO: {e}', 'danger')
+        current_app.logger.error(f"Erro ao gerar RDO: {e}")
+        flash(f"Erro ao salvar RDO: {str(e)}", "danger")
         return redirect(request.referrer)
     
 # Visualizar RDO (redireciona)
@@ -258,7 +397,7 @@ def visualizar_rdo(rdo_id):
     from app.models.obra import Obra, Frente_Trabalho
     from app.models.lista_opcoes import Clima
     from app.models.usuario import Usuario
-    from app.models.rdo import MaoObra
+    from app.models.rdo import RDOMaoObra, Equipamentos
 
     item = RDO.query.get_or_404(rdo_id)
 
@@ -269,7 +408,8 @@ def visualizar_rdo(rdo_id):
         obras=Obra.query.all(),
         clima=Clima.query.all(),
         frente_trabalho=Frente_Trabalho.query.all(),
-        mao_obra=item.maos_obra.all(),
+        equipamentos=Equipamentos.query.all(),
+        mao_obra=RDOMaoObra.query.all(),
         usuarios=Usuario.query.all()
     )
 
@@ -278,11 +418,11 @@ def visualizar_rdo(rdo_id):
 @auth_bp.get("/editar-rdo/<int:rdo_id>")
 @login_required
 def editar_rdo(rdo_id):
-    from app.models.rdo import RDO
+    from app.models.rdo import RDO, Atividades, RDOMaoObra
     from app.models.obra import Obra
-    from app.models.lista_opcoes import Clima
+    from app.models.lista_opcoes import Clima, MaoObra, Equipamento, TagOcorrencia
     from app.models.usuario import Usuario
-
+    
     item = RDO.query.get_or_404(rdo_id)
 
     return render_template(
@@ -291,7 +431,9 @@ def editar_rdo(rdo_id):
         view_mode=False,
         obras=Obra.query.all(),
         clima=Clima.query.all(),
-        usuarios=Usuario.query.all()
+        usuarios=Usuario.query.all(),
+        atividades=Atividades.query.all(),
+        mao_obra=RDOMaoObra.query.all()
     )
 
 # Lista RDO (placeholder)
@@ -834,6 +976,117 @@ def excluir_tags_ocorrencias(id):
     db.session.delete(tag_ocorrencia)
     db.session.commit()
     return redirect(url_for('auth.lista_tags_ocorrencias'))
+
+
+#######################################################################################################
+####################################################################################################### MAO DE OBRA
+#######################################################################################################
+
+@auth_bp.get("/lista-mao-obra")
+@login_required
+def lista_mao_obra():
+    from app.models.lista_opcoes import MaoObra
+    # Busca toda a mão de obra
+    mao_obra = MaoObra.query.order_by(MaoObra.nome.asc()).all()
+    return render_template(
+        "list_mao_obra.html",
+        opcoes=mao_obra,
+        categoria="mao_obra"
+    )
+
+
+@auth_bp.get('/criar-mao-obra')
+@login_required
+def criar_mao_obra():
+    # Mostra formulário para criação
+    return render_template(
+        'form_mao_obra.html',
+        item=None,
+        view_mode=False
+    )
+
+
+@auth_bp.post('/gerar-mao-obra')
+@login_required
+def gerar_mao_obra():
+    from app.models.lista_opcoes import MaoObra
+
+    mao_obra_id = request.form.get('id')
+    tipo_lista = "Mao de Obra"
+    nome = request.form.get('nome', '').strip()
+
+    if not nome:
+        flash('Nome da mão de obra é obrigatório.', 'danger')
+        if mao_obra_id:
+            return redirect(url_for('auth.editar_mao_obra', id=mao_obra_id))
+        return redirect(url_for('auth.criar_mao_obra'))
+
+    # Edição
+    if mao_obra_id:
+        mao_obra = MaoObra.query.get(mao_obra_id)
+        if not mao_obra:
+            flash('Mão de obra não encontrada.', 'danger')
+            return redirect(url_for('auth.lista_mao_obra'))
+
+        mao_obra.nome = nome
+        db.session.add(mao_obra)
+        db.session.commit()
+
+        flash('Mão de obra atualizada com sucesso.', 'success')
+        return redirect(url_for('auth.lista_mao_obra'))
+
+    # Criação
+    novo = MaoObra(
+        nome=nome,
+        tipo_lista=tipo_lista
+    )
+    db.session.add(novo)
+    db.session.commit()
+
+    flash('Mão de obra criada com sucesso.', 'success')
+    return redirect(url_for('auth.lista_mao_obra'))
+
+
+@auth_bp.get('/visualizar-mao-obra/<int:id>')
+@login_required
+def visualizar_mao_obra(id):
+    from app.models.lista_opcoes import MaoObra
+    mao_obra = MaoObra.query.get_or_404(id)
+    return render_template(
+        'form_mao_obra.html',
+        item=mao_obra,
+        view_mode=True
+    )
+
+
+@auth_bp.get('/editar-mao-obra/<int:id>')
+@login_required
+def editar_mao_obra(id):
+    from app.models.lista_opcoes import MaoObra
+    mao_obra = MaoObra.query.get_or_404(id)
+    return render_template(
+        'form_mao_obra.html',
+        item=mao_obra,
+        view_mode=False
+    )
+
+
+@auth_bp.post('/excluir-mao-obra/<int:id>')
+@login_required
+def excluir_mao_obra(id):
+    from app.models.lista_opcoes import MaoObra
+
+    mao_obra = MaoObra.query.get(id)
+    if not mao_obra:
+        flash('Mão de obra não encontrada.', 'danger')
+        return redirect(url_for('auth.lista_mao_obra'))
+
+    # TODO: verificar dependências (RDOs) antes de excluir
+    db.session.delete(mao_obra)
+    db.session.commit()
+
+    flash('Mão de obra excluída com sucesso.', 'success')
+    return redirect(url_for('auth.lista_mao_obra'))
 
 
 #######################################################################################################

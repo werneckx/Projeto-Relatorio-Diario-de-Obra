@@ -25,7 +25,7 @@ class TagOcorrencia(ListaOpcaoBase):
         'polymorphic_identity': 'Tags Ocorrencias',
     }
     
-class MaoDeObra(ListaOpcaoBase):
+class MaoObra(ListaOpcaoBase):
     __mapper_args__ = {
         'polymorphic_identity': 'Mao de Obra',
     }

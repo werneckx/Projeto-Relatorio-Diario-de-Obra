@@ -99,14 +99,42 @@ class RDO(db.Model):
     def climas_tarde(self, value):
         self.id_climas_tarde = value
 
-class MaoObra(db.Model):
-    __tablename__ = "mao_obra"
+
+class Equipamentos(db.Model):
+    __tablename__ = 'rdo_equipamentos' # Nome padronizado
+
+    id_equipamento_rdo = db.Column(db.Integer, primary_key=True)
+    id_rdo = db.Column(db.Integer, db.ForeignKey('rdo.id'), nullable=False)
+    # Se persistir o ID do equipamento da lista de opções:
+    id_equipamento_lista = db.Column(db.Integer, db.ForeignKey('lista_opcoes.id'), nullable=True)
+    nome_equipamento = db.Column(db.String(255)) # Fallback ou nome copiado
+    quantidade = db.Column(db.Integer, default=0)
     
-    id_mao_obra = db.Column(db.Integer, primary_key=True)
-    id_rdo = db.Column(db.Integer, db.ForeignKey("rdo.id"), nullable=False)
-    nome_funcao = db.Column(db.String(150), nullable=False)
-    quantidade = db.Column(db.Integer, nullable=False)
-    tempo = db.Column(db.Time, nullable=False) 
+    equipamento_lista = db.relationship('Equipamento')
+
+class Atividades(db.Model):
+    __tablename__ = 'rdo_atividades'
+
+    id_atividade = db.Column(db.Integer, primary_key=True)
+    id_rdo = db.Column(db.Integer, db.ForeignKey('rdo.id'), nullable=False)
+    descricao = db.Column(db.Text) # Text é melhor para descrições longas
+    status = db.Column(db.String(50)) # Iniciada, Concluída, etc.
+
+class Fotos(db.Model):
+    __tablename__ = 'rdo_fotos'
+
+    id_foto = db.Column(db.Integer, primary_key=True)
+    id_rdo = db.Column(db.Integer, db.ForeignKey('rdo.id'), nullable=False)
+    arquivo = db.Column(db.String(255), nullable=False) # Nome do arquivo físico
+    comentario = db.Column(db.String(255), nullable=True)
+    data_upload = db.Column(db.DateTime, default=datetime.utcnow)
+
+class TagsOcorrencias(db.Model):
+    __tablename__ = 'rdo_tags_ocorrencias'
+
+    id_tag_rdo = db.Column(db.Integer, primary_key=True)
+    id_rdo = db.Column(db.Integer, db.ForeignKey('rdo.id'), nullable=False)
+    id_tag_lista = db.Column(db.Integer, db.ForeignKey('lista_opcoes.id'), nullable=True)
+    descricao = db.Column(db.Text)
     
-    # Relacionamento correto
-    rdo = db.relationship("RDO", backref=db.backref('maos_obra', lazy='dynamic'))
+    tag_lista = db.relationship('TagOcorrencia')

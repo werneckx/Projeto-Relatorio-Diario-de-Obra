@@ -26,7 +26,7 @@ def create_app():
 
     # IMPORTAR MODELOS APÓS INIT DO DB (para o Alembic e o DB saberem quais tabelas mapear)
     # A colocação aqui está correta para evitar o import circular com o 'db'
-    from app.models import usuario, rdo # <--- Se houver um 'clima' aqui, seria um ponto de análise
+    from app.models import usuario, rdo, lista_opcoes # <--- Se houver um 'clima' aqui, seria um ponto de análise
 
     # Registrar blueprints
     from app.routes.auth import auth_bp
