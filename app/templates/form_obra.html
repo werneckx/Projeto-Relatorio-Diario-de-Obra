@@ -112,19 +112,19 @@
 
                 <div class="space-y-1">
                     <label class="text-xs font-bold text-slate-500 uppercase">Contratante (Cliente) <span
-                            class="text-red-500">*</span></label>
+                            class="text-red-500"></span></label>
                     <input type="text" name="contratante" value="{{ item.contratante if item }}"
                         placeholder="Ex: Petrobras"
                         class="w-full border rounded-lg px-3 py-2 h-10 input-field {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}"
-                        {{ 'readonly' if view_mode }} required>
+                        {{ 'readonly' if view_mode }}>
                 </div>
 
                 <div class="space-y-1">
                     <label class="text-xs font-bold text-slate-500 uppercase">Nº do Contrato <span
-                            class="text-red-500">*</span></label>
+                            class="text-red-500"></span></label>
                     <input type="text" name="contrato" value="{{ item.contrato if item }}" placeholder="Ex: 4600012345"
                         class="w-full border rounded-lg px-3 py-2 h-10 input-field {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}"
-                        {{ 'readonly' if view_mode }} required>
+                        {{ 'readonly' if view_mode }}>
                 </div>
 
                 <div class="space-y-1">
