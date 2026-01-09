@@ -235,10 +235,9 @@
 
                 <td>
                     <div class="action-buttons">
-                        <a href="{{ url_for('auth.download_rdo_pdf', rdo_id=rdo.id) }}"
-                            class="button-compact button-info button-acoes" title="Baixar PDF">
-                            <img src="{{ url_for('static', filename='icons/download.png') }}" alt="Download"
-                                class="action-icon">
+                        <a href="{{ url_for('auth.gerar_pdf_rdo_view', rdo_id=rdo.id) }}" target="_blank"
+                            class="button-compact button-info button-acoes" title="Imprimir RDO PDF">
+                            <i class="fa fa-print"></i>
                         </a>
                         <a href="{{ url_for('auth.editar_rdo', rdo_id=rdo.id) }}"
                             class="button-compact button-info button-acoes" title="Editar RDO">
