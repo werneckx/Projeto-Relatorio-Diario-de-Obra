@@ -3,113 +3,131 @@
 {% block title %}Configurações do Sistema{% endblock %}
 
 {% block content %}
-<div x-data="{ editing: false }">
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <!-- Cabeçalho com Alternância de Modo -->
-        <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-            <div>
-                <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
-                    <i class="fas fa-sliders-h text-blue-600"></i> Configurações do Sistema
-                </h2>
-                <p class="text-sm text-gray-500">Visualize ou gerencie a identidade visual da plataforma.</p>
-            </div>
-            <button @click="editing = !editing"
-                :class="editing ? 'bg-gray-200 text-gray-700' : 'bg-blue-600 text-white'"
-                class="px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 shadow-sm">
-                <i :class="editing ? 'fas fa-times' : 'fas fa-edit'"></i>
-                <span x-text="editing ? 'Cancelar Edição' : 'Editar Configurações'"></span>
-            </button>
-        </div>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
-        <form action="{{ url_for('auth.salvar_empresa') }}" method="POST" enctype="multipart/form-data">
-            <div class="p-6 space-y-8">
+<div>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div
+        class="mb-6 p-4 rounded-lg flex items-center gap-3 border shadow-sm transition-all 
+         {{ 'bg-red-100 text-red-700 border-red-200' if category == 'danger' else 'bg-green-100 text-green-700 border-green-200' }}">
+        <i class="fas {{ 'fa-exclamation-circle' if category == 'danger' else 'fa-check-circle' }}"></i>
+        <span class="text-sm font-bold">{{ message }}</span>
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
 
-                <!-- Nome da Empresa -->
-                <div class="space-y-2">
-                    <label class="block text-sm font-semibold text-gray-700">Nome da Empresa</label>
-                    <div x-show="!editing" class="text-lg text-gray-800 font-medium py-2 border-b border-transparent">
-                        {{ config_data.nome_empresa if config_data else 'Não definido' }}
-                    </div>
-                    <input x-show="editing" type="text" name="nome_empresa"
-                        value="{{ config_data.nome_empresa if config_data else '' }}"
-                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                        placeholder="Ex: Enfil SA Controle Ambiental" required>
-                </div>
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-slate-800">
+            Configurações do Sistema
+        </h1>
+        <p class="text-sm text-slate-500">Visualize ou gerencie a identidade visual da plataforma.</p>
+    </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <!-- Gerenciar Logo -->
-                    <div class="space-y-3">
-                        <label class="block text-sm font-semibold text-gray-700">Logotipo Principal</label>
-                        <div class="flex flex-col items-center p-4 bg-gray-50 rounded-xl border border-gray-200">
-                            <div id="preview-logo"
-                                class="w-full h-32 flex items-center justify-center mb-4 bg-gray-200 rounded-lg shadow-inner overflow-hidden">
-                                {% if config_data.logo_path %}
-                                <img src="{{ url_for('static', filename=config_data.logo_path) }}" id="img-logo"
-                                    class="max-w-full max-h-full object-contain">
-                                {% else %}
-                                <i class="fas fa-image text-gray-300 text-4xl"></i>
-                                {% endif %}
-                            </div>
-
-                            <div x-show="editing" class="w-full">
-                                <input type="file" name="logo_empresa" id="logo_empresa" accept="image/*" class="hidden"
-                                    onchange="previewImage(this, 'img-logo')">
-                                <label for="logo_empresa"
-                                    class="block text-center w-full px-4 py-2 bg-white border border-blue-600 text-blue-600 rounded-lg cursor-pointer hover:bg-blue-50 transition-colors text-sm font-medium">
-                                    <i class="fas fa-sync mr-2"></i> Alterar Logotipo
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Gerenciar Ícone (Favicon) -->
-                    <div class="space-y-3">
-                        <label class="block text-sm font-semibold text-gray-700">Ícone da Aba</label>
-                        <div class="flex flex-col items-center p-4 bg-gray-50 rounded-xl border border-gray-200">
-                            <div id="preview-icon"
-                                class="w-32 h-32 flex items-center justify-center mb-4 bg-gray-200 rounded-lg shadow-inner overflow-hidden">
-                                {% if config_data.icone_path %}
-                                <img src="{{ url_for('static', filename=config_data.icone_path) }}" id="img-icon"
-                                    class="w-16 h-16 object-contain">
-                                {% else %}
-                                <i class="fas fa-icons text-gray-300 text-4xl"></i>
-                                {% endif %}
-                            </div>
-
-                            <div x-show="editing" class="w-full">
-                                <input type="file" name="icone_empresa" id="icone_empresa"
-                                    accept="image/x-icon,image/png" class="hidden"
-                                    onchange="previewImage(this, 'img-icon')">
-                                <label for="icone_empresa"
-                                    class="block text-center w-full px-4 py-2 bg-white border border-blue-600 text-blue-600 rounded-lg cursor-pointer hover:bg-blue-50 transition-colors text-sm font-medium">
-                                    <i class="fas fa-upload mr-2"></i> Alterar Ícone
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Botões de Ação (Apenas em modo edição) -->
-            <div x-show="editing" class="p-6 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
-                <button type="submit"
-                    class="px-8 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 shadow-md shadow-green-200 transition-all font-bold flex items-center gap-2">
-                    <i class="fas fa-check"></i> Gravar Alterações
+    <div x-data="{ editing: false }">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <!-- Cabeçalho com Alternância de Modo -->
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                <button @click="editing = !editing"
+                    :class="editing ? 'bg-gray-200 text-gray-700' : 'bg-blue-600 text-white'"
+                    class="px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 shadow-sm">
+                    <i :class="editing ? 'fas fa-times' : 'fas fa-edit'"></i>
+                    <span x-text="editing ? 'Cancelar Edição' : 'Editar Configurações'"></span>
                 </button>
             </div>
-        </form>
-    </div>
-</div>
 
-<!-- Scripts Necessários -->
-<script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
-<script>
-    function previewImage(input, imgId) {
-        const [file] = input.files;
-        if (file) {
-            const preview = document.getElementById(imgId);
-            preview.src = URL.createObjectURL(file);
+            <form action="{{ url_for('auth.salvar_empresa') }}" method="POST" enctype="multipart/form-data">
+                <div class="p-6 space-y-8">
+
+                    <!-- Nome da Empresa -->
+                    <div class="space-y-2">
+                        <label class="block text-sm font-semibold text-gray-700">Nome da Empresa</label>
+                        <div x-show="!editing"
+                            class="text-lg text-gray-800 font-medium py-2 border-b border-transparent">
+                            {{ config_data.nome_empresa if config_data else 'Não definido' }}
+                        </div>
+                        <input x-show="editing" type="text" name="nome_empresa"
+                            value="{{ config_data.nome_empresa if config_data else '' }}"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                            placeholder="Ex: Enfil SA Controle Ambiental" required>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <!-- Gerenciar Logo -->
+                        <div class="space-y-3">
+                            <label class="block text-sm font-semibold text-gray-700">Logotipo Principal</label>
+                            <div class="flex flex-col items-center p-4 bg-gray-50 rounded-xl border border-gray-200">
+                                <div id="preview-logo"
+                                    class="w-full h-32 flex items-center justify-center mb-4 bg-gray-200 rounded-lg shadow-inner overflow-hidden">
+                                    {% if config_data.logo_path %}
+                                    <img src="{{ url_for('static', filename=config_data.logo_path) }}" id="img-logo"
+                                        class="max-w-full max-h-full object-contain">
+                                    {% else %}
+                                    <i class="fas fa-image text-gray-300 text-4xl"></i>
+                                    {% endif %}
+                                </div>
+
+                                <div x-show="editing" class="w-full">
+                                    <input type="file" name="logo_empresa" id="logo_empresa" accept="image/*"
+                                        class="hidden" onchange="previewImage(this, 'img-logo')">
+                                    <label for="logo_empresa"
+                                        class="block text-center w-full px-4 py-2 bg-white border border-blue-600 text-blue-600 rounded-lg cursor-pointer hover:bg-blue-50 transition-colors text-sm font-medium">
+                                        <i class="fas fa-sync mr-2"></i> Alterar Logotipo
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Gerenciar Ícone (Favicon) -->
+                        <div class="space-y-3">
+                            <label class="block text-sm font-semibold text-gray-700">Ícone da Aba</label>
+                            <div class="flex flex-col items-center p-4 bg-gray-50 rounded-xl border border-gray-200">
+                                <div id="preview-icon"
+                                    class="w-32 h-32 flex items-center justify-center mb-4 bg-gray-200 rounded-lg shadow-inner overflow-hidden">
+                                    {% if config_data.icone_path %}
+                                    <img src="{{ url_for('static', filename=config_data.icone_path) }}" id="img-icon"
+                                        class="w-16 h-16 object-contain">
+                                    {% else %}
+                                    <i class="fas fa-icons text-gray-300 text-4xl"></i>
+                                    {% endif %}
+                                </div>
+
+                                <div x-show="editing" class="w-full">
+                                    <input type="file" name="icone_empresa" id="icone_empresa"
+                                        accept="image/x-icon,image/png" class="hidden"
+                                        onchange="previewImage(this, 'img-icon')">
+                                    <label for="icone_empresa"
+                                        class="block text-center w-full px-4 py-2 bg-white border border-blue-600 text-blue-600 rounded-lg cursor-pointer hover:bg-blue-50 transition-colors text-sm font-medium">
+                                        <i class="fas fa-upload mr-2"></i> Alterar Ícone
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botões de Ação (Apenas em modo edição) -->
+                <div x-show="editing" class="p-6 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
+                    <button type="submit"
+                        class="px-8 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 shadow-md shadow-green-200 transition-all font-bold flex items-center gap-2">
+                        <i class="fas fa-check"></i> Gravar Alterações
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scripts Necessários -->
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <script>
+        function previewImage(input, imgId) {
+            const [file] = input.files;
+            if (file) {
+                const preview = document.getElementById(imgId);
+                preview.src = URL.createObjectURL(file);
+            }
         }
-    }
-</script>
-{% endblock %}
+    </script>
+    {% endblock %}
