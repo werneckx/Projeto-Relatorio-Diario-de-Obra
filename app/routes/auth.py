@@ -1230,6 +1230,7 @@ def lista_obras():
             'id': obra_obj.id,
             'nome': obra_obj.nome,
             'cnpj': obra_obj.cnpj,
+            'cliente': obra_obj.contratante,
             'id_matriz': obra_obj.id_matriz,
             'cidade': obra_obj.cidade,
             'estado': obra_obj.estado,
