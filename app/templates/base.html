@@ -63,6 +63,8 @@
                     </ul>
                 </li>
 
+                {% if session.get('user_role') not in ['Cliente', 'Leitor'] %}
+
                 <li class="nav-item dropdown" name="lista">
                     <a href="#" class="nav-link">Cadastro</a>
                     <ul class="dropdown-menu">
@@ -70,10 +72,13 @@
                         <a href="{{ url_for('auth.lista_usuarios') }}">Usuários</a>
                         <a href="{{ url_for('auth.lista_climas') }}">Climas</a>
                         <a href="{{ url_for('auth.lista_equipamentos') }}">Equipamentos</a>
-                        <a href="{{ url_for('auth.lista_tags_ocorrencias') }}">Tags Ocorrencias</a>
+                        <a href="{{ url_for('auth.lista_tags_ocorrencias') }}">Tags Ocorrências</a>
                         <a href="{{ url_for('auth.lista_mao_obra') }}">Mão de Obra</a>
                     </ul>
                 </li>
+
+                {% endif %}
+
             </ul>
         </nav>
     </div>
@@ -86,7 +91,7 @@
 </body>
 
 <footer class="rodape">
-    <p>© 2025 Enfil SA Controle Ambiental | Desenvolvido por Edson Rodrigues | Versão 27.11.2025</p>
+    <p>© 2025 {{nome_empresa_global}} | Desenvolvido por Edson Rodrigues | Versão 27.11.2025</p>
 </footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/js/all.min.js"></script>
