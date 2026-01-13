@@ -28,6 +28,9 @@
 
     <div x-data="{ editing: false }">
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+
+            {% if session.get('user_role') not in ['Cliente', 'Leitor'] %}
+
             <!-- Cabeçalho com Alternância de Modo -->
             <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
                 <button @click="editing = !editing"
@@ -37,6 +40,8 @@
                     <span x-text="editing ? 'Cancelar Edição' : 'Editar Configurações'"></span>
                 </button>
             </div>
+
+            {% endif %}
 
             <form action="{{ url_for('auth.salvar_empresa') }}" method="POST" enctype="multipart/form-data">
                 <div class="p-6 space-y-8">
