@@ -6,7 +6,8 @@
     <meta charset="utf-8" />
 
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Relatório Diário de Obra — RDO</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo/icone.png') }}">
+    <title>Relatório Diário de Obra — RDO#{{ rdo.id }}</title>
     <style>
         /* Fontes */
         @font-face {
@@ -293,6 +294,17 @@
                 {% endif %}
             </div>
         </section>
+        <div style="display: flex; justify-content: space-around; margin-top: 50px;">
+            {% for ass in assinaturas %}
+            <div style="text-align: center;">
+                <img src="file:///{{ upload_path }}/{{ ass.img_assinatura }}" width="150"><br>
+                <hr>
+                <strong>{{ ass.usuario.nome }}</strong><br>
+                <span>{{ ass.usuario.papel }}</span><br>
+                <small>Assinado em: {{ ass.criado_em.strftime('%d/%m/%Y %H:%M') }}</small>
+            </div>
+            {% endfor %}
+        </div>
     </main>
 
 </body>
