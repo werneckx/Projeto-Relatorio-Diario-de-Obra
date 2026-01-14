@@ -1,712 +1,1250 @@
 {% extends "base.html" %}
 
-{% block title %}Gerar Relatório Diário de Obra{% endblock %}
+{% block title %}
+{% if view_mode %}Visualizar{% elif item and item.id %}Editar{% else %}Novo{% endif %} RDO
+{% endblock %}
 
 {% block content %}
+
+<!-- Dependências de UI -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+
 <style>
-    /* --- ESTILOS PARA LIGHTBOX/MODAL --- */
-    .lightbox {
-        display: none;
-        position: fixed;
-        z-index: 9999;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        overflow: auto;
-        background-color: rgba(0, 0, 0, 0.9);
-        justify-content: center;
-        align-items: center;
+    /* --- Variáveis e Estilos Globais --- */
+    :root {
+        --input-border: #e2e8f0;
+        --input-focus: #2563eb;
+        --bg-readonly: #f8fafc;
+        --primary-blue: #2563eb;
+        --success-green: #10b981;
+        --error-red: #ef4444;
     }
 
-    .lightbox-content {
-        display: block;
-        max-width: 90%;
-        max-height: 90vh;
-        width: auto;
+    /* Inputs Padrão */
+    .form-control-std {
+        width: 100%;
+        height: 42px;
+        border: 1px solid var(--input-border);
+        border-radius: 0.5rem;
+        padding: 0 1rem;
+        transition: all 0.2s;
+        outline: none;
+    }
+
+    .form-control-std:focus {
+        border-color: var(--input-focus);
+        box-shadow: 0 0 0 1px var(--input-focus);
+    }
+
+    .form-control-std[readonly],
+    .form-control-std:disabled {
+        background-color: var(--bg-readonly);
+        color: #64748b;
+        cursor: not-allowed;
+    }
+
+    textarea.form-control-std {
         height: auto;
-        animation-name: zoom;
-        animation-duration: 0.3s;
-        transform-origin: 0 0;
-        transition: transform 0.05s ease-out;
-        cursor: zoom-in;
-        user-select: none;
+        min-height: 80px;
+        padding: 0.75rem;
+        resize: vertical;
     }
 
-    .lightbox-content.zoomed {
-        cursor: grab;
-    }
-
-    .lightbox-content.zoomed:active {
-        cursor: grabbing;
-    }
-
-    @keyframes zoom {
-        from {
-            transform: scale(0.8)
-        }
-
-        to {
-            transform: scale(1)
-        }
-    }
-
-    .close-lightbox {
-        position: absolute;
-        top: 15px;
-        right: 35px;
-        color: #f1f1f1;
-        font-size: 40px;
-        font-weight: bold;
-        cursor: pointer;
-    }
-
-    .close-lightbox:hover,
-    .close-lightbox:focus {
-        color: #bbb;
-    }
-
-    .miniaturas-gallery {
+    /* Select2 Customization */
+    .select2-container .select2-selection--single {
+        height: 42px !important;
+        border-color: var(--input-border) !important;
+        border-radius: 0.5rem !important;
         display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        margin-top: 10px;
-    }
-
-    .miniatura {
-        position: relative;
-        width: 80px;
-        height: 80px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        overflow: hidden;
-    }
-
-    .miniatura img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        cursor: zoom-in;
-    }
-
-    .remover-miniatura {
-        position: absolute;
-        top: -5px;
-        right: -5px;
-        background-color: var(--primary);
-        color: white;
-        border: none;
-        border-radius: 50%;
-        width: 20px;
-        height: 20px;
-        line-height: 20px;
-        font-size: 14px;
-        cursor: pointer;
-        padding: 0;
-        box-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
-    }
-
-    .remover-miniatura:hover {
-        background-color: red;
-    }
-
-    /* --- Modal de Sucesso --- */
-    .success-modal {
-        display: none;
-        position: fixed;
-        z-index: 10000;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.7);
-        justify-content: center;
         align-items: center;
     }
 
-    .success-modal-content {
-        background-color: #fff;
-        padding: 30px;
-        border-radius: 8px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-        text-align: center;
-        max-width: 450px;
-        width: 90%;
-        animation-name: dropin;
-        animation-duration: 0.3s;
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        padding-left: 1rem;
+        color: #1e293b;
     }
 
-    @keyframes dropin {
-        from {
-            transform: translateY(-50px);
-            opacity: 0
-        }
-
-        to {
-            transform: translateY(0);
-            opacity: 1
-        }
-    }
-
-    .success-modal-content h2 {
-        color: var(--success);
-        margin-bottom: 10px;
-        font-size: 1.8rem;
-    }
-
-    .success-modal-content p {
-        font-size: 1.1em;
-        margin-bottom: 25px;
-        font-weight: 500;
-        color: var(--text-color);
-    }
-
-    .success-options {
+    /* --- Workflow / Timeline Styles --- */
+    .workflow-container {
         display: flex;
         flex-direction: column;
-        gap: 15px;
-    }
-
-    .td-flex {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        height: 100%;
-        padding: 0.5rem 0;
-    }
-
-    /* --- NOVOS ESTILOS PARA O BOTÃO DE APROVAÇÃO --- */
-    .top-actions-container {
-        display: flex;
-        justify-content: flex-end;
-        align-items: center;
         gap: 1rem;
-        /* Alinha o botão à direita */
-        margin-top: 15px;
-        margin-bottom: 20px;
     }
 
-    .dropdown-action-container {
+    .workflow-step {
         position: relative;
-        display: inline-block;
-    }
-
-    .dropdown-toggle-button {
-        /* Baseado no estilo button-base e button-success (verde para aprovação) */
-        border: none;
-        border-radius: 0.4rem;
-        cursor: pointer;
-        font-family: "Exo Soft", sans-serif;
-        font-weight: 600;
-        text-align: center;
+        display: flex;
+        align-items: flex-start;
+        gap: 1.25rem;
+        padding: 1.25rem;
+        border-radius: 0.75rem;
+        border: 1px solid var(--input-border);
+        background: #fff;
         transition: all 0.3s ease;
-        box-shadow: 0 0.25rem 0.375rem rgba(0, 0, 0, 0.1);
-        padding: 0.625rem 1.25rem;
-        font-size: 1rem;
-        text-decoration: none;
+    }
+
+    .workflow-step.active {
+        border-color: var(--primary-blue);
+        box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.1);
+        transform: scale(1.005);
+        background-color: #f8fafc;
+    }
+
+    .workflow-step.approved {
+        background-color: #f0fdf4;
+        border-color: #bcf0da;
+    }
+
+    .workflow-step.rejected {
+        background-color: #fef2f2;
+        border-color: #fecaca;
+    }
+
+    .workflow-step.locked {
+        opacity: 0.6;
+        background-color: #f9fafb;
+    }
+
+    .step-number {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
         align-items: center;
-        display: inline-flex;
         justify-content: center;
-        gap: 0.5rem;
+        font-weight: bold;
+        font-size: 0.875rem;
+        background: #e2e8f0;
+        color: #64748b;
+        flex-shrink: 0;
+    }
 
-        background-color: var(--success);
-        /* Cor de Sucesso */
+    .approved .step-number {
+        background: var(--success-green);
         color: white;
-        z-index: 100;
     }
 
-    .dropdown-toggle-button:hover {
-        background-color: #218838;
-        /* Success dark */
-        transform: translateY(-0.125rem);
-        box-shadow: 0 0.375rem 0.625rem rgba(0, 0, 0, 0.15);
+    .rejected .step-number {
+        background: var(--error-red);
+        color: white;
     }
 
-    .action-dropdown-menu {
+    .active .step-number {
+        background: var(--primary-blue);
+        color: white;
+    }
+
+    /* --- Modais (Unificado) --- */
+    .modal-overlay {
         display: none;
-        position: absolute;
-        top: 100%;
-        right: 0;
-        min-width: 200px;
-        background-color: #fff;
-        /* Fundo branco para opções */
-        border: 1px solid #ddd;
-        border-radius: 0.4rem;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        z-index: 99;
+        /* Hidden by default */
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 9999;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(2px);
+    }
+
+    .modal-overlay.active {
+        display: flex;
+    }
+
+    .modal-content {
+        background: white;
+        border-radius: 0.75rem;
+        width: 95%;
+        max-width: 600px;
+        max-height: 90vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
         overflow: hidden;
     }
 
-    .action-dropdown-menu.visible {
-        display: block;
+    /* Tags de Status */
+    .bg-status-aprovado {
+        background-color: #dcfce7;
+        color: #166534;
+        border: 1px solid #bbf7d0;
     }
 
-    .action-dropdown-menu form {
+    .bg-status-pendente {
+        background-color: #fef9c3;
+        color: #854d0e;
+        border: 1px solid #fef08a;
+    }
+
+    .bg-status-rejeitado {
+        background-color: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+    }
+
+    .bg-status-rascunho {
+        background-color: #f1f5f9;
+        color: #475569;
+        border: 1px solid #e2e8f0;
+    }
+
+    /* --- Drag and Drop Styles (Novo) --- */
+    .sortable-list {
+        list-style: none;
+        padding: 0;
         margin: 0;
     }
 
-    .action-dropdown-menu .dropdown-item {
-        width: 100%;
-        padding: 0.625rem 1.25rem;
-        border: none;
-        background: none;
-        text-align: left;
-        cursor: pointer;
-        font-weight: 600;
+    .sortable-item {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
-        transition: background-color 0.2s;
+        justify-content: space-between;
+        padding: 0.75rem;
+        background: white;
+        border: 1px solid var(--input-border);
+        border-radius: 0.5rem;
+        margin-bottom: 0.5rem;
+        cursor: grab;
+        transition: all 0.2s;
     }
 
-    /* Estilo para a opção APROVAR */
-    .action-dropdown-menu .dropdown-item.approve {
-        color: var(--success);
+    .sortable-item:active {
+        cursor: grabbing;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
     }
 
-    .action-dropdown-menu .dropdown-item.approve:hover {
-        background-color: var(--success);
-        color: white;
+    .sortable-item.dragging {
+        opacity: 0.5;
+        background: #f1f5f9;
+        border-style: dashed;
     }
 
-    /* Estilo para a opção RECUSAR */
-    .action-dropdown-menu .dropdown-item.reject {
-        color: var(--error);
+    .sortable-item.locked {
+        cursor: default;
+        background-color: #f8fafc;
+        border-color: #e2e8f0;
     }
 
-    .action-dropdown-menu .dropdown-item.reject:hover {
-        background-color: var(--error);
-        color: white;
+    .drag-handle {
+        color: #cbd5e1;
+        margin-right: 0.75rem;
+        cursor: grab;
     }
 
-    /* --- BADGES DE STATUS --- */
-    .status-badge {
-        padding: 0.4rem 0.8rem;
-        border-radius: 999px;
-        font-weight: 700;
-        display: inline-block;
-        font-size: 0.95rem;
-        color: white;
+    .locked .drag-handle {
+        color: transparent;
+        cursor: default;
     }
-
-    .status-approved {
-        background: var(--success);
-    }
-
-    /* verde */
-    .status-pending {
-        background: #ff9f1c;
-    }
-
-    /* amarelo/alaranjado */
-    .status-rejected {
-        background: var(--error);
-    }
-
-    /* vermelho */
-
-    /* --- FIM DOS NOVOS ESTILOS --- */
 </style>
 
-<h1 class="page-title">
-    {% if item %}
-    {% if view_mode %}
-    Visualizar RDO Nº {{ item.numero_sequencial }} - Revisão {{ item.revisao }}
-    {% else %}
-    Editar RDO Nº {{ item.numero_sequencial }} - Revisão {{ item.revisao }}
-    {% endif %}
-    {% else %}
-    Gerar Novo Relatório Diário de Obra
-    {% endif %}
-</h1>
-
-<!-- ✅ NOVO BOTÃO DE APROVAÇÃO CONDICIONAL E BADGE DE STATUS -->
-<div class="top-actions-container">
-    {% if view_mode and item %}
-    <!-- Badge de status -->
-    <div>
-        {% if item.status == 'Aprovado.png' %}
-        <span class="status-badge status-approved">{{ item.status_text or 'Aprovado' }}</span>
-        {% elif item.status == 'Rejeitado.png' %}
-        <span class="status-badge status-rejected">{{ item.status_text or 'Recusado' }}</span>
-        {% else %}
-        <span class="status-badge status-pending">{{ item.status_text or 'Aguardando Aprovação' }}</span>
-        {% endif %}
-    </div>
-
-    <!-- Botão visível apenas para gestor/admin e somente se estiver aguardando aprovação -->
-    {% if item.status == 'Aguardando Aprovação.png' and (is_gestor() or is_admin()) %}
-    <div class="dropdown-action-container">
-        <button id="toggleApprovalDropdown" type="button" class="dropdown-toggle-button">
-            <i class="fas fa-check-circle"></i> Aprovar / Recusar
-        </button>
-
-        <div id="approvalDropdownMenu" class="action-dropdown-menu" aria-hidden="true">
-            <!-- Aprovar -->
-            <form method="post" action="{{ url_for('alterar_status_rdo', rdo_id=item.id) }}">
-                <input type="hidden" name="status" value="Aprovado.png">
-                <button type="submit" class="dropdown-item approve">
-                    <i class="fas fa-thumbs-up"></i> Aprovar
-                </button>
-            </form>
-
-            <!-- Recusar -->
-            <form method="post" action="{{ url_for('alterar_status_rdo', rdo_id=item.id) }}"
-                onsubmit="return confirm('Tem certeza que deseja recusar este RDO?');">
-                <input type="hidden" name="status" value="Rejeitado.png">
-                <button type="submit" class="dropdown-item reject">
-                    <i class="fas fa-times-circle"></i> Recusar
-                </button>
-            </form>
+<div>
+    {# --- MENSAGENS FLASH --- #}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="mb-4">
+        {% for category, message in messages %}
+        <div
+            class="mb-2 p-4 rounded-lg flex items-center gap-3 border shadow-sm {{ 'bg-red-50 text-red-700 border-red-200' if category == 'danger' else 'bg-emerald-50 text-emerald-700 border-emerald-200' }}">
+            <i class="fas {{ 'fa-exclamation-circle' if category == 'danger' else 'fa-check-circle' }}"></i>
+            <span class="font-bold text-sm">{{ message }}</span>
         </div>
+        {% endfor %}
     </div>
     {% endif %}
-    {% endif %}
-</div>
-<!-- FIM DO NOVO BOTÃO -->
+    {% endwith %}
 
-{% with messages = get_flashed_messages(with_categories=true) %}
-{% if messages %}
-{% set rdo_success_message = messages | selectattr(0, '==', 'success_rdo') | list %}
-{% if rdo_success_message %}
-{% set rdo_data = rdo_success_message[0][1] %}
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        try {
-            const rdoData = JSON.parse('{{ rdo_data | safe }}');
-            const modal = document.getElementById('successModal');
-            const message = document.getElementById('successMessage');
-            message.innerHTML = `O Relatório Diário de Obra Nº ${rdoData.rdo_num} foi gerado com sucesso.`;
-            modal.style.display = 'flex';
-        } catch (e) { console.error(e); }
-    });
-</script>
-{% else %}
-{% for category, message in messages %}
-{% endfor %}
-{% endif %}
-{% endif %}
-{% endwith %}
-
-<div class="form-container form-card">
-    <form id="rdoForm" class="rdo-form"
-        action="{% if item and not view_mode %}{{ url_for('editar_item', categoria='rdo', id=item.id) }}{% else %}{{ url_for('auth.gerar') }}{% endif %}"
-        method="POST" enctype="multipart/form-data">
-
-        {% if item and not view_mode %}
-        <input type="hidden" name="rdo_id" value="{{ item.id if item else '' }}">
-        {% endif %}
-
-        <input type="hidden" id="fotosExistentesParaManter" name="fotos_existentes_manter"
-            value='{% if item and item.fotos_json %}{{ item.fotos_json | safe }}{% else %}[]{% endif %}'>
-        <input type="hidden" name="rdo_id" value="{{ item.id }}">
-        <div class="form-row">
-            <div class="form-group">
-                <label for="obra">Obra:</label>
-                <select id="obra" name="obra_id" class="form-control" required {% if item %}disabled{% endif %}>
-                    <option value="">-- Selecione --</option>
-                    {% for obra in obras %}
-                    <option value="{{ obra.id }}" {% if item and item.obra_id==obra.id %}selected{% endif %}>
-                        {{ obra.nome }}
-                    </option>
-                    {% endfor %}
-                </select>
+    {# --- CABEÇALHO --- #}
+    <div class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+        <div class="flex-1">
+            <div class="flex items-center gap-3 flex-wrap">
+                <h1 class="text-2xl font-extrabold text-slate-800">
+                    {% if item %}
+                    {% if view_mode %}Visualizar{% else %}Editar{% endif %} RDO Nº {{ item.id_sequencial }}
+                    <span class="text-sm font-normal text-slate-500">(Rev. {{ item.id_revisao }})</span>
+                    {% else %}
+                    Novo Relatório Diário de Obra
+                    {% endif %}
+                </h1>
+                {% if item %}
+                <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border whitespace-nowrap
+                    {% if item.status == 'Aprovado' %} bg-status-aprovado
+                    {% elif item.status == 'Rejeitado' %} bg-status-rejeitado
+                    {% elif item.status == 'Pendente' %} bg-status-pendente
+                    {% else %} bg-slate-100 text-slate-600 border-slate-200 {% endif %}">
+                    {{ item.status or 'Rascunho' }}
+                </span>
+                {% endif %}
             </div>
-            <div class="form-group">
-                <label for="usuario">Responsável:</label>
-                <select id="usuario" name="usuario_id" class="form-control" required {% if view_mode %}disabled{% endif
-                    %}>
-                    <option value="">-- Selecione --</option>
-                    {% for resp in usuarios %}
-                    <option value="{{ resp.id }}" {% if item and item.usuario_id==resp.id %}selected{% endif %}>{{
-                        resp.nome }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label for="clima_manha">Clima (Manhã):</label>
-                <select id="clima_manha" name="climas_manha" class="form-control" required {% if view_mode %}disabled{%
-                    endif %}>
-                    <option value="">-- Selecione --</option>
-                    {% for c in clima %}
-                    <option value="{{ c.id }}" {% if item and item.climas_manha==c.id %}selected{% endif %}>{{ c.nome
-                        }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label for="clima_tarde">Clima (Tarde):</label>
-                <select id="clima_tarde" name="climas_tarde" class="form-control" required {% if view_mode %}disabled{%
-                    endif %}>
-                    <option value="">-- Selecione --</option>
-                    {% for c in clima %}
-                    <option value="{{ c.id }}" {% if item and item.climas_tarde==c.id %}selected{% endif %}>{{ c.nome
-                        }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-        </div>
-
-        <datalist id="funcoes-list">
-            <option value="Pedreiro"></option>
-            <option value="Carpinteiro"></option>
-            <option value="Ajudante"></option>
-            <option value="Eletricista"></option>
-            <option value="Mestre de Obras"></option>
-        </datalist>
-        <datalist id="frentes-list">
-            <option value="Fundações"></option>
-            <option value="Estrutura Metálica"></option>
-            <option value="Alvenaria"></option>
-            <option value="Instalações Elétricas"></option>
-            <option value="Revestimento"></option>
-            <option value="Acabamento"></option>
-        </datalist>
-
-        <!-- TABELA DE MÃO DE OBRA -->
-        <div class="form-group">
-            <div class="label-actions-container">
-                <label>Mão de Obra:</label>
-                {% if not view_mode %}
-                <div class="table-actions">
-                    <button type="button" id="adicionarMaoObra" class="button-base button-info button-compact">
-                        <i class="fas fa-plus"></i> Adicionar Linha
-                    </button>
+            <div class="flex flex-col gap-1 mt-2">
+                <p class="text-slate-500 font-medium text-xs">Registro diário de atividades.</p>
+                {% if item and (item.criado or item.modificado) %}
+                <div class="flex gap-4 text-[10px] text-slate-400 mt-1">
+                    {% if item.criado %}
+                    <span><i class="far fa-calendar-plus mr-1"></i>Criado: {{ item.criado.strftime('%d/%m/%Y
+                        %H:%M') }}</span><span><i class="far fa-calendar-plus mr-1"></i>Ultima modificação: {{
+                        item.modificado.strftime('%d/%m/%Y
+                        %H:%M') }}</span>
+                    {% endif %}
                 </div>
                 {% endif %}
             </div>
-            <div class="editable-table-container">
-                <table id="maoObraTabela" class="editable-table">
+        </div>
+
+        <div class="flex gap-2 w-full md:w-auto">
+            {% if view_mode %}
+            <a href="{{ url_for('auth.lista_rdo') }}"
+                class="px-4 py-2 text-sm font-bold text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 text-center">Voltar</a>
+
+            {% if item.id %}
+            <a href="{{ url_for('auth.gerar_pdf_rdo_view', rdo_id=item.id) }}" target="_blank"
+                class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 shadow-sm transition">
+                <i class="fas fa-print"></i> PDF / Imprimir
+            </a>
+            {% endif %}
+
+            {% else %}
+            <button type="submit" form="rdoForm"
+                class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-bold text-sm shadow-sm transition">
+                <i class="fas fa-save mr-2"></i> Salvar RDO
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <form id="rdoForm" action="{{ url_for('auth.gerar_rdo') }}" method="POST" enctype="multipart/form-data"
+        class="space-y-6">
+        <input type="hidden" name="rdo_id" value="{{ item.id if item }}">
+
+        {# 1. CONTEXTO DA OBRA #}
+        <section class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm space-y-6">
+            <div class="flex items-center gap-3 mb-2">
+                <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                    <i class="fas fa-project-diagram"></i>
+                </div>
+                <h3 class="font-bold text-slate-800 uppercase text-xs tracking-widest border-l-2 border-blue-600 pl-3">
+                    Contexto & Obra</h3>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
+                <div class="md:col-span-2 space-y-1">
+                    <label class="text-[11px] font-bold text-slate-500 uppercase">Obra / Contrato *</label>
+                    <select name="obra_id" id="select_obra" class="form-control-std select2-enable" {% if item
+                        %}disabled{% endif %} required onchange="fetchObra(this.value)">
+                        <option value="">Selecione...</option>
+                        {% for obra in obras %}
+                        <option value="{{ obra.id }}" {% if item and item.id_obra==obra.id %}selected{% endif %}>{{
+                            obra.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[11px] font-bold text-slate-500 uppercase">Data do RDO *</label>
+                    <input type="date" name="data_rdo" id="data_rdo" value="{{ item.data if item else '' }}"
+                        class="form-control-std" required {{ 'disabled' if view_mode }}>
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[11px] font-bold text-slate-500 uppercase">Frente de Trabalho *</label>
+                    <select name="frente_trabalho_id" id="select_frente" class="form-control-std select2-enable"
+                        required {% if view_mode %} disabled {% endif %}>
+                        <option value="">Selecione a Frente...</option>
+                        {% for frente in frente_trabalho %}
+                        <option value="{{ frente.id_frente_trabalho if frente.id_frente_trabalho else frente.id }}" {%
+                            if item and item.id_frente_trabalho==(frente.id_frente_trabalho if frente.id_frente_trabalho
+                            else frente.id) %}selected{% endif %}>
+                            {{ frente.nome_frente }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        {# 2. HORÁRIO E CLIMA #}
+        <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm space-y-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded bg-orange-50 text-orange-600 flex items-center justify-center"><i
+                            class="fas fa-clock text-sm"></i></div>
+                    <h3 class="font-bold text-slate-800 uppercase text-xs tracking-widest">Jornada</h3>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase">Entrada</label>
+                        <input type="time" name="hora_entrada"
+                            value="{{ item.hora_entrada.strftime('%H:%M') if item and item.hora_entrada else '08:00' }}"
+                            class="form-control-std time-calc" {{ 'readonly' if view_mode }}>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase">Saída</label>
+                        <input type="time" name="hora_saida"
+                            value="{{ item.hora_saida.strftime('%H:%M') if item and item.hora_saida else '17:00' }}"
+                            class="form-control-std time-calc" {{ 'readonly' if view_mode }}>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase">Início Intervalo</label>
+                        <input type="time" name="intervalo_entrada"
+                            value="{{ item.intervalo_entrada.strftime('%H:%M') if item and item.intervalo_entrada else '12:00' }}"
+                            class="form-control-std time-calc" {{ 'readonly' if view_mode }}>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase">Fim Intervalo</label>
+                        <input type="time" name="intervalo_saida"
+                            value="{{ item.intervalo_saida.strftime('%H:%M') if item and item.intervalo_saida else '13:00' }}"
+                            class="form-control-std time-calc" {{ 'readonly' if view_mode }}>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm space-y-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded bg-yellow-50 text-yellow-600 flex items-center justify-center"><i
+                            class="fas fa-cloud-sun text-sm"></i></div>
+                    <h3 class="font-bold text-slate-800 uppercase text-xs tracking-widest">Clima</h3>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase">Manhã *</label>
+                        <select name="climas_manha" class="form-control-std select2-enable" required {{ 'disabled' if
+                            view_mode }}>
+                            <option value="">Selecione...</option>
+                            {% for c in clima %}
+                            <option value="{{ c.id }}" {% if item and item.id_climas_manha==c.id %}selected{% endif %}>
+                                {{ c.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase">Tarde *</label>
+                        <select name="climas_tarde" class="form-control-std select2-enable" required {{ 'disabled' if
+                            view_mode }}>
+                            <option value="">Selecione...</option>
+                            {% for c in clima %}
+                            <option value="{{ c.id }}" {% if item and item.id_climas_tarde==c.id %}selected{% endif %}>
+                                {{ c.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        {# 3. ATIVIDADES #}
+        <section class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm space-y-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded bg-purple-50 text-purple-600 flex items-center justify-center"><i
+                            class="fas fa-list-check text-sm"></i></div>
+                    <h3 class="font-bold text-slate-800 uppercase text-xs tracking-widest">Atividades</h3>
+                </div>
+                {% if not view_mode %}
+                <button type="button" onclick="addAtividadeRow()"
+                    class="text-xs bg-purple-50 text-purple-700 hover:bg-purple-100 px-3 py-1.5 rounded-lg font-bold transition">
+                    <i class="fas fa-plus mr-1"></i> Adicionar
+                </button>
+                {% endif %}
+            </div>
+            <div class="overflow-x-auto border border-slate-100 rounded-lg">
+                <table class="w-full text-left" id="table_atividades">
                     <thead>
-                        <tr>
-                            <th>Função</th>
-                            <th style="width:15%;">Quantidade</th>
-                            <th>Frente de Trabalho</th>
-                            <th style="width:15%;">Tempo em Horas</th>
-                            {% if not view_mode %}<th style="width:10%;">Ações</th>{% endif %}
+                        <tr class="bg-slate-50 text-[10px] uppercase text-slate-500 font-bold">
+                            <th class="p-3 w-3/4">Descrição</th>
+                            <th class="p-3">Status</th>
+                            {% if not view_mode %}<th class="p-3 w-10"></th>{% endif %}
                         </tr>
                     </thead>
-                    <tbody></tbody>
+                    <tbody>
+                        {% if item and item.atividades %}
+                        {% for atv in item.atividades %}
+                        <tr>
+                            <td class="p-2">
+                                <textarea name="atividade_descricao[]" class="form-control-std text-sm" rows="2"
+                                    required {{ 'readonly' if view_mode }}>{{ atv.descricao }}</textarea>
+                            </td>
+                            <td class="p-2 align-top">
+                                <select name="atividade_status[]" class="form-control-std text-sm select2-enable"
+                                    {{ 'disabled' if view_mode }}>
+                                    <option value="Em andamento" {{ 'selected' if atv.status=='Em andamento' }}>Em
+                                        andamento</option>
+                                    <option value="Concluída" {{ 'selected' if atv.status=='Concluída' }}>Concluída
+                                    </option>
+                                    <option value="Iniciada" {{ 'selected' if atv.status=='Iniciada' }}>Iniciada
+                                    </option>
+                                    <option value="Paralisada" {{ 'selected' if atv.status=='Paralisada' }}>Paralisada
+                                    </option>
+                                </select>
+                            </td>
+                            {% if not view_mode %}
+                            <td class="p-2 text-center align-top"><button type="button" onclick="removeRow(this)"
+                                    class="text-red-400 hover:text-red-600 mt-2"><i class="fas fa-times"></i></button>
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <!-- Linha vazia inicial será adicionada via JS se necessário -->
+                        {% endif %}
+                    </tbody>
                 </table>
             </div>
-        </div>
+        </section>
 
-        <div class="form-group">
-            <label for="atividades">Atividades do Dia:</label>
-            <textarea id="atividades" name="atividades" class="form-control" rows="6" required {% if view_mode
-                %}disabled{% endif %}
-                placeholder="Descreva aqui as atividades realizadas durante o dia.">{{ item.atividades if item }}</textarea>
-        </div>
-
-        <!-- FOTOS DA OBRA -->
-        <div class="form-group">
-            <label>Fotos da Obra (Opcional):</label>
-            {% if not view_mode %}
-            <div class="upload-actions-container">
-                <input type="file" id="fotos_input_file" name="fotos[]" class="form-control file-input" accept="image/*"
-                    multiple>
-                <button type="button" id="removerTodasFotos" class="button-base button-danger button-compact"
-                    style="{% if item.fotos_json and item.fotos_json|length > 0 %}display:inline-block{% else %}display:none{% endif %}">
-                    <i class="fas fa-trash"></i> Remover Todas
-                </button>
-            </div>
-            <small class="form-text-muted">Selecione fotos da galeria ou use a câmera (mobile).</small>
-            {% endif %}
-            <div id="miniaturasContainer" class="miniaturas-gallery">
-                {% if item and item.fotos_json %}
-                {% set fotos = item.fotos_json | safe %}
-                {% for foto in fotos %}
-                <div class="miniatura" data-foto="{{ foto }}">
-                    <img src="{{ url_for('static', filename='uploads/' ~ item.id ~ '/' ~ foto) }}"
-                        alt="Foto {{ loop.index }}"
-                        onclick="openLightbox('{{ url_for('static', filename='uploads/' ~ item.id ~ '/' ~ foto) }}')">
+        {# 4. EFETIVO E EQUIPAMENTOS #}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Mão de Obra -->
+            <section class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm space-y-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded bg-indigo-50 text-indigo-600 flex items-center justify-center"><i
+                                class="fas fa-users-cog text-sm"></i></div>
+                        <h3 class="font-bold text-slate-800 uppercase text-xs tracking-widest">Mão de Obra</h3>
+                    </div>
                     {% if not view_mode %}
-                    <button type="button" class="remover-miniatura"
-                        onclick="removerMiniatura(this, '{{ foto }}')">&times;</button>
+                    <button type="button" onclick="openModal('modal_mo')"
+                        class="h-8 bg-indigo-600 hover:bg-indigo-700 text-white px-3 rounded-lg font-bold text-xs"><i
+                            class="fas fa-plus-circle"></i> Vários</button>
                     {% endif %}
+                </div>
+                <div class="overflow-x-auto border border-slate-100 rounded-lg">
+                    <table class="w-full text-left" id="table_mao_obra">
+                        <thead>
+                            <tr class="bg-slate-50 text-[10px] uppercase text-slate-500 font-bold">
+                                <th class="p-3">Função</th>
+                                <th class="p-3 text-center w-20">Própria</th>
+                                <th class="p-3 text-center w-20">Terceiro</th>
+                                {% if not view_mode %}<th class="p-3 w-8"></th>{% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if item and item.maos_obra %}
+                            {% for mo in item.maos_obra %}
+                            <tr>
+                                <td class="p-2">
+                                    <select name="mo_funcao[]" class="form-control-std text-sm select2-enable"
+                                        {{ 'disabled' if view_mode }}>
+                                        {% for op in mao_de_obra_options %}
+                                        <option value="{{ op.nome }}" {% if op.nome==mo.nome_funcao %}selected{% endif
+                                            %}>{{ op.nome }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td class="p-2"><input type="number" name="mo_qtd_propria[]"
+                                        value="{{ mo.quantidade_propria }}" class="form-control-std text-center" min="0"
+                                        {{ 'readonly' if view_mode }}></td>
+                                <td class="p-2"><input type="number" name="mo_qtd_terceirizada[]"
+                                        value="{{ mo.quantidade_terceirizada }}" class="form-control-std text-center"
+                                        min="0" {{ 'readonly' if view_mode }}></td>
+                                {% if not view_mode %}<td class="p-2 text-center"><button type="button"
+                                        onclick="removeRow(this)" class="text-red-400"><i
+                                            class="fas fa-times"></i></button></td>{% endif %}
+                            </tr>
+                            {% endfor %}
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Equipamentos -->
+            <section class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm space-y-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded bg-gray-100 text-gray-600 flex items-center justify-center"><i
+                                class="fas fa-truck text-sm"></i></div>
+                        <h3 class="font-bold text-slate-800 uppercase text-xs tracking-widest">Equipamentos</h3>
+                    </div>
+                    {% if not view_mode %}
+                    <button type="button" onclick="openModal('modal_eq')"
+                        class="h-8 bg-gray-600 hover:bg-gray-700 text-white px-3 rounded-lg font-bold text-xs"><i
+                            class="fas fa-plus-circle"></i> Vários</button>
+                    {% endif %}
+                </div>
+                <div class="overflow-x-auto border border-slate-100 rounded-lg">
+                    <table class="w-full text-left" id="table_equipamentos">
+                        <thead>
+                            <tr class="bg-slate-50 text-[10px] uppercase text-slate-500 font-bold">
+                                <th class="p-3">Equipamento</th>
+                                <th class="p-3 w-20 text-center">Qtd</th>
+                                {% if not view_mode %}<th class="p-3 w-8"></th>{% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if item and item.equipamentos %}
+                            {% for eq in item.equipamentos %}
+                            <tr>
+                                <td class="p-2">
+                                    <select name="eq_id[]" class="form-control-std text-sm select2-enable" {{ 'disabled'
+                                        if view_mode }}>
+                                        {% for opt in equipamentos_options %}
+                                        <option value="{{ opt.id }}" {% if opt.id==eq.id_equipamento_lista %}selected{%
+                                            endif %}>{{ opt.nome }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td class="p-2 w-20"><input type="number" name="eq_qtd[]" value="{{ eq.quantidade }}"
+                                        class="form-control-std text-center" {{ 'readonly' if view_mode }}></td>
+                                {% if not view_mode %}<td class="p-2 w-8 text-center"><button type="button"
+                                        onclick="removeRow(this)" class="text-red-400"><i
+                                            class="fas fa-times"></i></button></td>{% endif %}
+                            </tr>
+                            {% endfor %}
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+        {# 5. OCORRÊNCIAS #}
+        <section class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm space-y-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded bg-red-50 text-red-600 flex items-center justify-center"><i
+                            class="fas fa-exclamation-triangle text-sm"></i></div>
+                    <h3 class="font-bold text-slate-800 uppercase text-xs tracking-widest">Ocorrências</h3>
+                </div>
+                {% if not view_mode %}
+                <button type="button" onclick="openModal('modal_oc')"
+                    class="h-8 bg-red-600 hover:bg-red-700 text-white px-3 rounded-lg font-bold text-xs"><i
+                        class="fas fa-plus-circle"></i> Vários</button>
+                {% endif %}
+            </div>
+            <div class="overflow-x-auto border border-slate-100 rounded-lg">
+                <table class="w-full text-left" id="table_ocorrencias">
+                    <thead>
+                        <tr class="bg-slate-50 text-[10px] uppercase text-slate-500 font-bold">
+                            <th class="p-3 w-1/3">Tipo</th>
+                            <th class="p-3">Descrição</th>
+                            {% if not view_mode %}<th class="p-3 w-8"></th>{% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if item and item.ocorrencias %}
+                        {% for oc in item.ocorrencias %}
+                        <tr>
+                            <td class="p-2 w-1/3">
+                                <select name="oc_tag[]" class="form-control-std text-sm select2-enable" {{ 'disabled' if
+                                    view_mode }}>
+                                    {% for t in tags_options %}
+                                    <option value="{{ t.id }}" {% if t.id==oc.id_tag_lista %}selected{% endif %}>{{
+                                        t.nome }}</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                            <td class="p-2"><input type="text" name="oc_desc[]" value="{{ oc.descricao }}"
+                                    class="form-control-std text-sm" placeholder="Detalhes..." {{ 'readonly' if
+                                    view_mode }}></td>
+                            {% if not view_mode %}<td class="p-2 w-8 text-center"><button type="button"
+                                    onclick="removeRow(this)" class="text-red-400"><i class="fas fa-times"></i></button>
+                            </td>{% endif %}
+                        </tr>
+                        {% endfor %}
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        {# 6. FOTOS #}
+        <section class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm space-y-6">
+            <div class="space-y-2">
+                <label class="font-bold text-slate-800 uppercase text-xs tracking-widest">Comentários Gerais</label>
+                <textarea name="comentarios_gerais" class="form-control-std h-24"
+                    placeholder="Observações adicionais..." {{ 'readonly' if view_mode
+                    }}>{{ item.comentarios_gerais if item else '' }}</textarea>
+            </div>
+            <div class="border-t pt-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-bold text-slate-800 uppercase text-xs tracking-widest"><i
+                            class="fas fa-camera mr-2"></i>Fotos</h3>
+                    <span id="counter_fotos" class="text-xs font-bold bg-slate-100 px-2 py-1 rounded text-slate-500">Máx
+                        20</span>
+                </div>
+                {% if not view_mode %}
+                <div class="relative group mb-4">
+                    <input type="file" id="input_fotos" name="fotos[]" multiple accept="image/*"
+                        class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                    <div
+                        class="w-full border-2 border-dashed border-slate-300 rounded-xl p-6 text-center group-hover:border-blue-500 transition-colors bg-slate-50">
+                        <i class="fas fa-cloud-upload-alt text-2xl text-slate-400 mb-1"></i>
+                        <p class="text-xs text-slate-500 font-bold">Clique ou arraste fotos</p>
+                    </div>
+                </div>
+                {% endif %}
+                <div id="grid_fotos" class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    {% if item %}
+                    {% for foto in item.fotos %}
+                    <div class="relative border rounded-lg overflow-hidden group">
+                        <img src="{{ url_for('static', filename='uploads/rdo/' ~ foto.arquivo) }}"
+                            class="w-full h-32 object-cover" onclick="window.open(this.src)">
+                        <div class="p-2 bg-white">
+                            <p class="text-[10px] text-slate-500 truncate">{{ foto.comentario }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+        </section>
+
+        {# 7. WORKFLOW DE APROVAÇÃO #}
+
+        {% if view_mode %}
+        <section class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm mt-6">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="font-bold text-slate-800 uppercase text-xs tracking-widest">
+                    <i class="fas fa-file-signature mr-2 text-blue-500"></i>Fluxo de Aprovação
+                </h3>
+
+                <!-- Botão de Gerenciar -->
+                {% if item.status not in ['Aprovado', 'Finalizado', 'Rejeitado'] %}
+                <button type="button" onclick="openModal('modal_assinantes')"
+                    class="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-2 rounded-lg hover:bg-blue-100 transition">
+                    <i class="fas fa-user-plus mr-1"></i> Configurar Sequência
+                </button>
+                {% endif %}
+            </div>
+
+            <div class="workflow-container">
+                {# Use a variável 'assinaturas' passada pelo backend, fallback para item.assinaturas #}
+                {% set lista_assinaturas = assinaturas if assinaturas is defined else item.assinaturas %}
+
+                {# Contagem segura #}
+                {% set qtd_assinaturas = lista_assinaturas|length if lista_assinaturas is sequence else
+                lista_assinaturas.count() %}
+
+                {% if qtd_assinaturas == 0 %}
+                <div class="text-center py-10 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50">
+                    <p class="text-slate-400 text-sm italic">Nenhum fluxo de aprovação configurado para este RDO.</p>
+                    {% if not view_mode %}
+                    <p class="text-xs text-blue-500 mt-2 cursor-pointer" onclick="openModal('modal_assinantes')">Clique
+                        aqui para adicionar aprovadores.</p>
+                    {% endif %}
+                </div>
+                {% else %}
+
+                {# Lista ordenada #}
+                {% set assinaturas_ordenadas = lista_assinaturas|sort(attribute='ordem') %}
+                {% set session_uid = session.get('user_id') %}
+
+                {% for ass in assinaturas_ordenadas %}
+
+                {# Lógica de permissão de assinatura #}
+                {% set can_sign = (session_uid is not none and session_uid|int == ass.id_usuario and ass.status ==
+                'Pendente') %}
+
+                {# Busca passo anterior #}
+                {% set prev_step = assinaturas_ordenadas|selectattr("ordem", "equalto", ass.ordem - 1)|first %}
+
+                {# Bloqueio #}
+                {% set is_locked = prev_step and prev_step.status != 'Aprovado' %}
+
+                <div class="workflow-step 
+                            {% if ass.status == 'Aprovado' %}approved
+                            {% elif ass.status == 'Rejeitado' %}rejected
+                            {% elif is_locked %}locked
+                            {% elif can_sign %}active{% endif %}">
+
+                    <div class="step-number">{{ ass.ordem }}</div>
+
+                    <div class="flex-grow">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h4 class="font-bold text-slate-800 text-sm">{{ ass.usuario.nome }}</h4>
+                                <p class="text-[11px] text-slate-500">{{ ass.usuario.papel or 'Aprovador' }}</p>
+                                <p class="text-[11px] text-slate-500">{{ ass.usuario.email }}</p>
+                            </div>
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded uppercase
+                                        {% if ass.status == 'Aprovado' %}bg-green-200 text-green-800
+                                        {% elif ass.status == 'Rejeitado' %}bg-red-200 text-red-800
+                                        {% else %}bg-slate-200 text-slate-600{% endif %}">
+                                {{ ass.status }}
+                            </span>
+                        </div>
+
+                        <div class="mt-3">
+                            {% if ass.status == 'Aprovado' %}
+                            <div class="flex items-center gap-4 bg-white p-2 rounded border border-green-100">
+                                {% if ass.img_assinatura %}
+                                <img src="{{ url_for('static', filename='uploads/assinaturas/' + ass.img_assinatura) }}"
+                                    class="h-8 object-contain" alt="Assinatura">
+                                {% endif %}
+                                <div class="text-[10px] text-slate-500">
+                                    <p class="font-bold text-green-600"><i class="fas fa-check-circle mr-1"></i>Assinado
+                                        Digitalmente</p>
+                                    <p>{{ ass.criado.strftime('%d/%m/%Y às %H:%M') if ass.criado else
+                                        '-' }}</p>
+                                </div>
+                            </div>
+                            {% elif ass.status == 'Rejeitado' %}
+                            <div class="text-xs text-red-700 bg-red-50 p-3 rounded border border-red-100">
+                                <strong><i class="fas fa-times-circle mr-1"></i>Motivo:</strong> {{ ass.motivo_rejeicao
+                                }}<p class="text-[10px] text-slate-500">{{ ass.criado.strftime('%d/%m/%Y às %H:%M') if
+                                    ass.criado else
+                                    '-' }}</p>
+                            </div>
+                            {% elif can_sign %}
+                            {% if is_locked %}
+                            <p class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded">
+                                <i class="fas fa-lock mr-1"></i> Aguardando aprovação de <strong>{{
+                                    prev_step.usuario.nome }}</strong>
+                            </p>
+                            {% else %}
+                            <div class="flex gap-2 mt-2">
+                                <button type="button" onclick="abrirModalAssinatura({{ item.id }})"
+                                    class="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-sm hover:bg-blue-700 flex-1">
+                                    <i class="fas fa-pen-nib mr-2"></i>Assinar e Aprovar
+                                </button>
+                                <button type="button" onclick="abrirModalRejeicao({{ ass.id_assinatura }})"
+                                    class="bg-red-600 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-sm hover:bg-red-700 flex-1">
+                                    Rejeitar
+                                </button>
+                            </div>
+                            {% endif %}
+                            {% else %}
+                            <p class="text-xs text-slate-400 italic mt-1">Aguardando vez...</p>
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
                 {% endfor %}
                 {% endif %}
             </div>
-        </div>
+        </section>
+        {% endif %}
 
-        <!-- BOTÕES -->
-        <div class="form-actions">
-            {% if view_mode %}
-            <a href="{{ url_for('download_rdo_pdf', rdo_id=item.id) }}" class="button-base button-success">
-                <i class="fas fa-file-pdf"></i> Baixar PDF
-            </a>
-            <a href="{{ url_for('lista_rdo') }}" class="button-base button-secondary">
-                <i class="fas fa-arrow-left"></i> Voltar para a Lista
-            </a>
-            {% else %}
-            {% if item %}
-            <button type="submit" class="button-base button-success"><i class="fas fa-save"></i> Salvar Edições</button>
-            <a href="{{ url_for('lista_rdo') }}" class="button-base button-cancel"><i class="fas fa-times"></i>
-                Cancelar</a>
-            {% else %}
-            <button type="submit" class="button-base button-success"><i class="fas fa-file-pdf"></i> Gerar PDF</button>
-            {% endif %}
-            {% endif %}
-            <small id="zoomTip"
-                style="color:#fff; background:#333; padding:5px 10px; border-radius:4px; position:fixed; bottom:10px; right:10px; display:none; z-index:10000;">Use
-                a roda do mouse para Zoom e clique/arraste para mover.</small>
+        {% if not view_mode %}
+        <div class="flex gap-4 pt-6">
+            <button type="submit"
+                class="flex-1 h-12 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-md transition">SALVAR
+                RDO</button>
+            <a href="{{ url_for('auth.lista_rdo') }}"
+                class="px-6 h-12 flex items-center justify-center bg-white border border-slate-300 rounded-lg text-slate-600 font-bold hover:bg-slate-50">Cancelar</a>
         </div>
-
+        {% endif %}
     </form>
 </div>
 
-<!-- LIGHTBOX -->
-<div id="imageLightbox" class="lightbox">
-    <span class="close-lightbox" id="closeLightboxBtn">&times;</span>
-    <img class="lightbox-content" id="lightboxImage">
-</div>
+<!-- ========================================== -->
+<!-- ZONA DE MODAIS (TODOS AGRUPADOS AQUI) -->
+<!-- ========================================== -->
 
-<!-- MODAL DE SUCESSO -->
-<div id="successModal" class="success-modal">
-    <div class="success-modal-content">
-        <h2><i class="fas fa-check-circle"></i> RDO Gerado!</h2>
-        <p id="successMessage">O Relatório Diário de Obra foi gerado com sucesso.</p>
-        <div class="success-options">
-            <button type="button" class="button-base button-secondary" onclick="resetFormAndRedirect()">
-                <i class="fas fa-plus"></i> Iniciar Novo RDO
+<!-- 4. Modal Gerenciar Workflow (REFORMULADO - DRAG AND DROP) -->
+<div id="modal_assinantes" class="modal-overlay">
+    <div class="modal-content max-w-lg flex flex-col max-h-[85vh]">
+        <div class="p-4 border-b flex justify-between items-center bg-slate-50 shrink-0">
+            <div>
+                <h3 class="font-bold text-slate-800 text-sm">Definir Sequência de Aprovação</h3>
+                <p class="text-[10px] text-slate-500">Arraste para reordenar a sequência.</p>
+            </div>
+            <button type="button" onclick="closeModal('modal_assinantes')" class="text-slate-400 hover:text-red-500"><i
+                    class="fas fa-times"></i></button>
+        </div>
+
+        <!-- Área de Sequência Selecionada (Drag and Drop) -->
+        <div class="p-4 bg-slate-50 border-b flex-1 overflow-y-auto">
+            <h4 class="text-[11px] font-bold text-slate-500 uppercase mb-2">Sequência Atual</h4>
+            <ul id="sortable_workflow" class="sortable-list space-y-2">
+                <!-- Itens serão renderizados via JS -->
+            </ul>
+        </div>
+
+        <!-- Área de Adicionar Novos -->
+        <div class="p-4 bg-white flex-1 overflow-hidden flex flex-col">
+            <h4 class="text-[11px] font-bold text-slate-500 uppercase mb-2">Adicionar Colaboradores</h4>
+
+            <!-- Campo de Pesquisa -->
+            <div class="mb-2 relative">
+                <input type="text" id="search_workflow"
+                    onkeyup="filterModalList('search_workflow', 'list_workflow_users')" placeholder="Pesquisar..."
+                    class="form-control-std text-sm pl-8 h-8 w-full">
+            </div>
+
+            <!-- Lista de Opções -->
+            <div class="overflow-y-auto flex-1 pr-1" id="list_workflow_users">
+                {% for u in usuarios_obra %}
+                <label
+                    class="flex items-center justify-between p-2 border border-slate-100 rounded-md cursor-pointer hover:bg-slate-50 transition-all item-filter">
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <input type="checkbox" name="workflow_users" value="{{ u.id }}"
+                            onchange="toggleUserInWorkflow('{{ u.id }}', this.checked)"
+                            class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300">
+                        <div class="truncate">
+                            <p class="text-xs font-bold text-slate-700 truncate name-filter">{{ u.nome }}</p>
+                            <div class="flex items-center gap-2 text-[10px] text-slate-400">
+                                <span class="uppercase tracking-wider">{{ u.papel or 'Colaborador' }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="p-3 border-t bg-white flex justify-end gap-2 shrink-0">
+            <button type="button" onclick="closeModal('modal_assinantes')"
+                class="px-4 py-2 text-slate-600 font-bold text-xs hover:bg-slate-100 rounded">Cancelar</button>
+            <button type="button" onclick="salvarWorkflow()"
+                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold text-xs shadow-sm flex items-center gap-2">
+                <i class="fas fa-save"></i> Salvar Sequência
             </button>
-            <a href="{{ url_for('lista_rdo') }}" class="button-base button-success">
-                <i class="fas fa-arrow-left"></i> Voltar para Lista
-            </a>
         </div>
     </div>
 </div>
 
+<!-- 5. Modal Assinar (Canvas) -->
+<div id="modalAssinatura" class="modal-overlay">
+    <div class="modal-content max-w-md">
+        <div class="bg-slate-50 px-4 py-3 border-b flex justify-between items-center">
+            <h3 class="font-bold text-slate-700">Coletar Assinatura</h3>
+            <button onclick="closeModal('modalAssinatura')"
+                class="text-slate-500 hover:text-red-500 text-xl">&times;</button>
+        </div>
+        <div class="p-6 flex justify-center bg-white">
+            <div class="border-2 border-slate-300 rounded border-dashed relative w-full">
+                <canvas id="signature-pad" class="touch-none w-full"
+                    style="height: 200px; background: #fafafa;"></canvas>
+                <small class="absolute bottom-1 left-2 text-slate-300 text-[10px] pointer-events-none">Assine
+                    aqui</small>
+            </div>
+        </div>
+        <div class="bg-slate-50 px-4 py-3 border-t flex justify-between">
+            <button onclick="limparAssinatura()"
+                class="text-slate-600 hover:text-slate-800 text-sm font-medium px-3 py-2">Limpar</button>
+            <div class="flex space-x-2">
+                <button onclick="closeModal('modalAssinatura')" id="btnCancelarAss"
+                    class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm">Cancelar</button>
+                <button onclick="salvarAssinatura()" id="btnConfirmarAss"
+                    class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm font-medium flex items-center">
+                    <span id="btnText">Confirmar</span><i id="btnIcon" class="fas fa-check ml-2"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 6. Modal Rejeição -->
+<div id="modal_rejeicao" class="modal-overlay">
+    <div class="modal-content max-w-md">
+        <div class="p-4 bg-red-50 border-b border-red-100">
+            <h3 class="font-bold text-red-800"><i class="fas fa-exclamation-triangle mr-2"></i>Rejeitar RDO</h3>
+        </div>
+        <div class="p-6">
+            <input type="hidden" id="id_assinatura_rejeitar">
+            <label class="block text-xs font-bold text-slate-600 uppercase mb-2">Motivo da Rejeição *</label>
+            <textarea id="texto_motivo" rows="4" class="form-control-std w-full"
+                placeholder="Descreva o motivo da reprovação..."></textarea>
+            <p class="text-[10px] text-red-500 mt-2">* Esta ação encerrará o fluxo de aprovação.</p>
+        </div>
+        <div class="p-4 border-t flex justify-end gap-2 bg-slate-50">
+            <button onclick="closeModal('modal_rejeicao')"
+                class="px-4 py-2 text-slate-600 font-bold text-sm">Cancelar</button>
+            <button onclick="confirmarRejeicao()"
+                class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold text-sm">Confirmar
+                Rejeição</button>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- SCRIPTS -->
+<!-- ========================================== -->
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
 <script>
-    // LIGHTBOX
-    function openLightbox(src) {
-        const lightbox = document.getElementById('imageLightbox');
-        const img = document.getElementById('lightboxImage');
-        lightbox.style.display = 'flex';
-        img.src = src;
-        img.classList.remove('zoomed');
-    }
-    document.getElementById('closeLightboxBtn').onclick = function () { document.getElementById('imageLightbox').style.display = 'none'; }
+    const isViewMode = {{ 'true' if view_mode else 'false' }};
+    const currentRdoId = "{{ item.id if item else '' }}";
+    const currentUserId = {{ session.get('user_id') | default (0) }};
+    let signaturePad = null;
 
-    let scale = 1, originX = 0, originY = 0;
-    const lightboxImg = document.getElementById('lightboxImage');
-    lightboxImg.addEventListener('wheel', e => {
-        e.preventDefault();
-        scale += e.deltaY * -0.001;
-        scale = Math.min(Math.max(.5, scale), 5);
-        lightboxImg.style.transform = `scale(${scale}) translate(${originX}px, ${originY}px)`;
-        lightboxImg.classList.add('zoomed');
-    });
-    let isDragging = false, startX = 0, startY = 0;
-    lightboxImg.addEventListener('mousedown', e => { if (!lightboxImg.classList.contains('zoomed')) return; isDragging = true; startX = e.clientX - originX; startY = e.clientY - originY; });
-    window.addEventListener('mouseup', e => { isDragging = false; });
-    window.addEventListener('mousemove', e => { if (!isDragging) return; originX = e.clientX - startX; originY = e.clientY - startY; lightboxImg.style.transform = `scale(${scale}) translate(${originX}px, ${originY}px)`; });
+    // Mapa de usuários para acesso rápido via JS
+    const usersMap = {};
+    {% for u in usuarios_obra %}
+    usersMap["{{ u.id }}"] = {
+        id: "{{ u.id }}",
+        nome: "{{ u.nome }}",
+        papel: "{{ u.papel or 'Colaborador' }}",
+        email: "{{ u.email }}"
+    };
+    {% endfor %}
 
-    // RESET FORM MODAL
-    function resetFormAndRedirect() { window.location.href = "{{ url_for('auth.gerar') }}"; }
-
-    // REMOVER MINIATURAS EXISTENTES
-    function removerMiniatura(button, nomeFoto) {
-        button.closest('.miniatura').remove();
-        let inputFotos = document.getElementById('fotosExistentesParaManter');
-        let fotosExistentes = [];
-        try { fotosExistentes = JSON.parse(inputFotos.value || '[]'); } catch (e) { fotosExistentes = []; }
-        fotosExistentes = fotosExistentes.filter(f => f !== nomeFoto);
-        inputFotos.value = JSON.stringify(fotosExistentes);
-    }
-
-    // TABELA DE MÃO DE OBRA
-    document.addEventListener('DOMContentLoaded', function () {
-        const maoObraTabelaBody = document.getElementById('maoObraTabela').getElementsByTagName('tbody')[0];
-        const adicionarBtn = document.getElementById('adicionarMaoObra');
-        const viewMode = {{ view_mode | tojson | safe
-    }};
-    const itemData = {{ item | tojson | safe }} || {};
-    let maoDeObra = [];
-
-    if (itemData.mao_obra) {
-        try {
-            maoDeObra = Array.isArray(itemData.mao_obra) ? itemData.mao_obra : JSON.parse(itemData.mao_obra || "[]");
-        } catch (e) { maoDeObra = []; }
-    }
-
-    function adicionarLinha(funcao = '', quantidade = '', frente_trabalho = '', tempo_frente = '') {
-        const newRow = maoObraTabelaBody.insertRow();
-        newRow.innerHTML = `
-                <td><input type="text" name="funcao[]" list="funcoes-list" class="form-control" value="${funcao}" ${viewMode ? 'disabled' : 'required'} placeholder="Ex: Pedreiro"></td>
-                <td><input type="number" name="quantidade[]" class="form-control" min="1" value="${quantidade}" ${viewMode ? 'disabled' : ''} placeholder="Ex: 5"></td>
-                <td><input type="text" name="frente_trabalho[]" list="frentes-list" class="form-control" value="${frente_trabalho}" ${viewMode ? 'disabled' : 'required'} placeholder="Ex: Estrutura"></td>
-                <td><input type="text" name="tempo_frente[]" class="form-control" value="${tempo_frente}" ${viewMode ? 'disabled' : 'required'} placeholder="Ex: 8h"></td>
-                ${!viewMode ? `<td class="td-flex"><button type="button" class="button-base button-danger button-compact" onclick="removerLinha(this)"><i class="fas fa-trash-alt"></i> Remover</button></td>` : ''}
-            `;
-    }
-    window.removerLinha = function (button) { button.closest('tr').remove(); };
-    if (maoDeObra.length > 0) { maoDeObra.forEach(mo => adicionarLinha(mo.funcao || '', mo.quantidade || '', mo.frente_trabalho || '', mo.tempo_frente || '')); }
-    if (!itemData.id) adicionarLinha();
-    if (adicionarBtn && !viewMode) adicionarBtn.addEventListener('click', () => adicionarLinha());
-    });
-
-    // MINIATURAS DE NOVOS ARQUIVOS
-    const fotosInput = document.getElementById('fotos_input_file');
-    const removerTodasBtn = document.getElementById('removerTodasFotos');
-    const miniaturasContainer = document.getElementById('miniaturasContainer');
-
-    fotosInput?.addEventListener('change', function () {
-        miniaturasContainer.querySelectorAll('.miniatura.temp').forEach(m => m.remove());
-        const arquivos = Array.from(this.files);
-        arquivos.forEach(file => {
-            const reader = new FileReader();
-            reader.onload = function (e) {
-                const div = document.createElement('div');
-                div.classList.add('miniatura', 'temp');
-                div.innerHTML = `<img src="${e.target.result}" alt="${file.name}" onclick="openLightbox('${e.target.result}')">
-                                     <button type="button" class="remover-miniatura" onclick="removerMiniaturaTemp(this,'${file.name}')">&times;</button>`;
-                miniaturasContainer.appendChild(div);
-            };
-            reader.readAsDataURL(file);
+    // Assinaturas existentes carregadas do backend
+    let existingSignatures = [];
+    {% if item and item.assinaturas %}
+    {% for ass in item.assinaturas | sort(attribute = 'ordem') %}
+    existingSignatures.push({
+        userId: "{{ ass.id_usuario }}",
+        order: {{ ass.ordem }}
         });
-        removerTodasBtn.style.display = (arquivos.length > 0 || miniaturasContainer.querySelectorAll('.miniatura:not(.temp)').length > 0) ? 'inline-block' : 'none';
+    {% endfor %}
+    {% endif %}
+
+    $(document).ready(function () {
+        if (!isViewMode) {
+            $('.select2-enable').select2({ width: '100%', language: { noResults: () => "Nada encontrado" } });
+            if ($('#table_atividades tbody tr').length === 0) addAtividadeRow();
+        }
+
+        // Inicializa o workflow com dados existentes se houver
+        initWorkflowModal();
     });
 
-    function removerMiniaturaTemp(button, nomeArquivo) {
-        button.closest('.miniatura').remove();
-        const dt = new DataTransfer();
-        Array.from(fotosInput.files).forEach(f => { if (f.name !== nomeArquivo) dt.items.add(f); });
-        fotosInput.files = dt.files;
-        if (fotosInput.files.length === 0 && miniaturasContainer.querySelectorAll('.miniatura.temp').length === 0 && miniaturasContainer.querySelectorAll('.miniatura:not(.temp)').length === 0) removerTodasBtn.style.display = 'none';
+    // --- MODAIS ---
+    function openModal(id) {
+        document.getElementById(id).classList.add('active');
+        if (id === 'modalAssinatura') initSignaturePad();
+        if (id === 'modal_assinantes') initWorkflowModal();
+    }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+    function abrirModalAssinatura() { openModal('modalAssinatura'); }
+
+    // --- ASSINATURA ---
+    function initSignaturePad() {
+        const canvas = document.getElementById('signature-pad');
+        if (!signaturePad && canvas) signaturePad = new SignaturePad(canvas, { backgroundColor: 'rgba(255, 255, 255, 0)' });
+        resizeCanvas();
+    }
+    function resizeCanvas() {
+        const canvas = document.getElementById('signature-pad');
+        if (canvas) {
+            const ratio = Math.max(window.devicePixelRatio || 1, 1);
+            canvas.width = canvas.offsetWidth * ratio;
+            canvas.height = canvas.offsetHeight * ratio;
+            canvas.getContext("2d").scale(ratio, ratio);
+            if (signaturePad) signaturePad.clear();
+        }
+    }
+    function limparAssinatura() { if (signaturePad) signaturePad.clear(); }
+
+    async function salvarAssinatura() {
+        if (!signaturePad || signaturePad.isEmpty()) { alert("Assine antes de confirmar."); return; }
+        const btn = document.getElementById('btnConfirmarAss');
+        const original = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...'; btn.disabled = true;
+
+        try {
+            const dataUrl = signaturePad.toDataURL("image/png");
+            const res = await fetch(`/auth/assinar-rdo/${currentRdoId}/aprovar-rdo`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ assinatura_b64: dataUrl })
+            });
+            const json = await res.json();
+            if (json.success) window.location.reload();
+            else alert(json.message);
+        } catch (e) { alert("Erro de conexão."); console.error(e); }
+        finally { btn.innerHTML = original; btn.disabled = false; }
     }
 
-    removerTodasBtn?.addEventListener('click', () => {
-        miniaturasContainer.innerHTML = '';
-        fotosInput.value = '';
-        document.getElementById('fotosExistentesParaManter').value = '[]';
-        removerTodasBtn.style.display = 'none';
-    });
+    // --- WORKFLOW REFORMULADO (Drag and Drop & Lógica de Criador) ---
+    let selectedOrder = []; // Array de strings (IDs dos usuários)
+    let creatorId = null;   // ID do criador (sempre o primeiro)
 
-    // ✅ JS PARA O NOVO BOTÃO DE APROVAÇÃO
-    document.addEventListener('DOMContentLoaded', () => {
-        const toggleButton = document.getElementById('toggleApprovalDropdown');
-        const dropdownMenu = document.getElementById('approvalDropdownMenu');
+    function initWorkflowModal() {
+        selectedOrder = [];
 
-        if (toggleButton && dropdownMenu) {
-            toggleButton.addEventListener('click', (e) => {
-                e.stopPropagation();
-                dropdownMenu.classList.toggle('visible');
-                toggleButton.classList.toggle('active');
-            });
-
-            // Fecha o dropdown se clicar fora
-            document.addEventListener('click', (e) => {
-                if (!dropdownMenu.contains(e.target) && !toggleButton.contains(e.target)) {
-                    dropdownMenu.classList.remove('visible');
-                    toggleButton.classList.remove('active');
-                }
-            });
+        // Determina quem é o criador
+        // Se houver assinaturas, o primeiro é o criador
+        if (existingSignatures.length > 0) {
+            creatorId = existingSignatures[0].userId;
+            // Carrega a ordem existente
+            selectedOrder = existingSignatures.map(s => s.userId);
+        } else {
+            // Se for novo ou sem assinaturas, o usuário atual é o criador
+            creatorId = String(currentUserId);
+            // Inicia com o criador apenas
+            if (usersMap[creatorId]) {
+                selectedOrder.push(creatorId);
+            }
         }
-    });
 
+        renderWorkflowList();
+        updateCheckboxes();
+    }
+
+    function renderWorkflowList() {
+        const container = document.getElementById('sortable_workflow');
+        container.innerHTML = '';
+
+        selectedOrder.forEach((userId, index) => {
+            const user = usersMap[userId];
+            if (!user) return;
+
+            const isCreator = (userId === creatorId);
+
+            const li = document.createElement('li');
+            li.className = `sortable-item ${isCreator ? 'locked' : ''}`;
+            li.setAttribute('data-id', userId);
+
+            if (!isCreator) {
+                li.draggable = true;
+                li.addEventListener('dragstart', handleDragStart);
+                li.addEventListener('dragover', handleDragOver);
+                li.addEventListener('drop', handleDrop);
+                li.addEventListener('dragend', handleDragEnd);
+            }
+
+            li.innerHTML = `
+                <div class="flex items-center">
+                    <div class="drag-handle">
+                        <i class="fas ${isCreator ? 'fa-lock' : 'fa-grip-lines'}"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-slate-700">${user.nome}</p>
+                        <p class="text-[10px] text-slate-400 uppercase">${isCreator ? 'Criador (Fixo)' : (user.papel || 'Aprovador')}</p>
+                    </div>
+                </div>
+                ${!isCreator ? `
+                    <button type="button" onclick="removeUserFromWorkflow('${userId}')" class="text-slate-300 hover:text-red-500">
+                        <i class="fas fa-times"></i>
+                    </button>
+                ` : ''}
+            `;
+            container.appendChild(li);
+        });
+    }
+
+    function toggleUserInWorkflow(userId, isChecked) {
+        if (userId === creatorId) return; // Segurança extra
+
+        if (isChecked) {
+            // Adiciona ao final se não estiver na lista
+            if (!selectedOrder.includes(userId)) {
+                selectedOrder.push(userId);
+            }
+        } else {
+            // Remove da lista
+            selectedOrder = selectedOrder.filter(id => id !== userId);
+        }
+        renderWorkflowList();
+    }
+
+    function removeUserFromWorkflow(userId) {
+        if (userId === creatorId) return;
+        selectedOrder = selectedOrder.filter(id => id !== userId);
+        renderWorkflowList();
+        updateCheckboxes();
+    }
+
+    function updateCheckboxes() {
+        document.querySelectorAll('input[name="workflow_users"]').forEach(chk => {
+            // Se for o criador, garante que está marcado e desabilitado visualmente se necessário
+            // Mas para o fluxo, vamos apenas marcar quem está na lista
+            chk.checked = selectedOrder.includes(chk.value);
+
+            // Opcional: Desabilitar checkbox do criador se ele aparecer na lista de baixo
+            if (chk.value === creatorId) {
+                chk.disabled = true;
+                chk.checked = true;
+            } else {
+                chk.disabled = false;
+            }
+        });
+    }
+
+    // --- Lógica Drag and Drop Nativa ---
+    let dragSrcEl = null;
+
+    function handleDragStart(e) {
+        this.style.opacity = '0.4';
+        dragSrcEl = this;
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/html', this.innerHTML);
+    }
+
+    function handleDragOver(e) {
+        if (e.preventDefault) {
+            e.preventDefault(); // Necessário para permitir o drop
+        }
+        e.dataTransfer.dropEffect = 'move';
+        return false;
+    }
+
+    function handleDrop(e) {
+        if (e.stopPropagation) {
+            e.stopPropagation();
+        }
+
+        // Não faz nada se soltar no mesmo lugar
+        if (dragSrcEl !== this) {
+            // Atualiza o DOM e o Array selectedOrder
+            const sourceId = dragSrcEl.getAttribute('data-id');
+            const targetId = this.getAttribute('data-id');
+
+            const sourceIndex = selectedOrder.indexOf(sourceId);
+            const targetIndex = selectedOrder.indexOf(targetId);
+
+            // Evita mover se um dos itens for o criador (index 0)
+            // Embora a UI já bloqueie o drag do criador, bloqueamos o drop ANTES do criador também
+            if (targetIndex === 0 && creatorId) {
+                return false;
+            }
+
+            // Reordena o array
+            if (sourceIndex > -1 && targetIndex > -1) {
+                selectedOrder.splice(sourceIndex, 1);
+                selectedOrder.splice(targetIndex, 0, sourceId);
+                renderWorkflowList(); // Re-renderiza para corrigir visual
+            }
+        }
+        return false;
+    }
+
+    function handleDragEnd(e) {
+        this.style.opacity = '1';
+        // Remove classes visuais se houver
+    }
+
+    async function salvarWorkflow() {
+        if (selectedOrder.length === 0) { alert("Selecione ao menos um aprovador."); return; }
+
+        // Garante que o criador é o primeiro
+        if (selectedOrder[0] !== creatorId) {
+            // Se algo deu errado, coloca o criador no início
+            selectedOrder = selectedOrder.filter(id => id !== creatorId);
+            selectedOrder.unshift(creatorId);
+        }
+
+        try {
+            // Utiliza a estrutura fetch existente que você já tinha
+            const res = await fetch(`/auth/assinar-rdo/${currentRdoId}/salvar-workflow`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ usuarios_ids: selectedOrder })
+            });
+            if ((await res.json()).success) window.location.reload();
+        } catch (e) { console.error(e); alert("Erro ao salvar workflow."); }
+    }
+
+    // --- REJEIÇÃO ---
+    function abrirModalRejeicao(id) { document.getElementById('id_assinatura_rejeitar').value = id; openModal('modal_rejeicao'); }
+    async function confirmarRejeicao() {
+        const id = document.getElementById('id_assinatura_rejeitar').value;
+        const motivo = document.getElementById('texto_motivo').value;
+        if (!motivo.trim()) { alert("Informe o motivo."); return; }
+        try {
+            const res = await fetch(`/auth/assinar-rdo/${id}/rejeitar-rdo`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ motivo: motivo })
+            });
+            if ((await res.json()).success) window.location.reload();
+        } catch (e) { console.error(e); }
+    }
+
+    // --- UTILS ---
+    function filterModalList(inputId, listId) {
+        const term = document.getElementById(inputId).value.toLowerCase();
+        const items = document.querySelectorAll(`#${listId} .item-filter`);
+        items.forEach(item => {
+            const name = item.querySelector('.name-filter').innerText.toLowerCase();
+            item.style.display = name.includes(term) ? "flex" : "none";
+        });
+    }
+    function removeRow(btn) { $(btn).closest('tr').remove(); }
+    function addAtividadeRow() {
+        $('#table_atividades tbody').append(`<tr><td class="p-2"><textarea name="atividade_descricao[]" class="form-control-std text-sm" rows="2"></textarea></td><td class="p-2"><select name="atividade_status[]" class="form-control-std text-sm select2-enable"><option value="Iniciada">Iniciada</option><option value="Em andamento">Em andamento</option><option value="Concluída">Concluída</option><option value="Paralisada">Paralisada</option></select></td><td class="p-2 text-center"><button type="button" onclick="removeRow(this)" class="text-red-400 mt-2"><i class="fas fa-times"></i></button></td></tr>`);
+        $('.select2-enable').last().select2({ width: '100%' });
+    }
 </script>
 {% endblock %}

@@ -1,17 +1,19 @@
+import base64
+import hashlib
 from math import e
 import os
 from flask import Blueprint, Config, abort, json, render_template, request, redirect, url_for, flash, session, send_file
 from werkzeug.security import check_password_hash
 from app import db # Importar 'db' para uso no filtro (db.or_)
 from app import db, login_manager
-from flask_login import UserMixin
+from flask_login import UserMixin, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from app.models import usuario
 from app.models import rdo
 from app.models.empresa import Empresa
 from app.models.lista_opcoes import Clima
 from app.models.obra import Frente_Trabalho, Obra
-from app.models.rdo import RDO, Equipamentos
+from app.models.rdo import RDO, Assinatura, Equipamentos
 from app.utils.rdo_pdf import regenerar_pdf_rdo
 from sqlalchemy import func, or_
 from datetime import date, datetime, timedelta
@@ -235,7 +237,10 @@ def criar_rdo():
 
     clima = Clima.query.all()
     # Enviamos todas as frentes; o JavaScript no seu HTML já filtra por obra
+    
     frente_trabalho = Frente_Trabalho.query.all() 
+    
+    usuarios_obra = Usuario.query.all()
 
     return render_template(
         "form_rdo.html", 
@@ -243,6 +248,7 @@ def criar_rdo():
         obras=obras, 
         clima=clima, 
         frente_trabalho=frente_trabalho, 
+        usuarios_obra=usuarios_obra,
         view_mode=False,
         mao_de_obra_options=mao_de_obra_options, # ENVIA PARA O HTML
         equipamentos_options=equipamentos_options, # ENVIA PARA O HTML
@@ -372,6 +378,7 @@ def gerar_rdo():
         item_rdo.id_climas_manha = _get_int("climas_manha")
         item_rdo.id_climas_tarde = _get_int("climas_tarde")
         item_rdo.data = data_rdo
+        item_rdo.modificado = datetime.now()
         item_rdo.status = "Pendente"
         item_rdo.comentarios_gerais = request.form.get("comentarios_gerais")
         
@@ -496,13 +503,34 @@ def gerar_rdo():
 @auth_bp.get("/visualizar-rdo/<int:rdo_id>")
 @login_required
 def visualizar_rdo(rdo_id):
-    from app.models.rdo import RDO
+    from app.models.rdo import RDO, RDOMaoObra, Equipamentos, Assinatura
     from app.models.obra import Obra, Frente_Trabalho
-    from app.models.lista_opcoes import Clima
+    from app.models.lista_opcoes import Clima, MaoObra, Equipamento, TagOcorrencia
     from app.models.usuario import Usuario
-    from app.models.rdo import RDOMaoObra, Equipamentos
 
     item = RDO.query.get_or_404(rdo_id)
+    
+    # Dados auxiliares
+    mao_de_obra_options = [{"id": m.id, "nome": m.nome} for m in MaoObra.query.all()]
+    equipamentos_options = [{"id": e.id, "nome": e.nome} for e in Equipamento.query.all()]
+    tags_options = [{"id": t.id, "nome": t.nome} for t in TagOcorrencia.query.all()]
+    
+    # IMPORTANTE: Carregar as assinaturas para exibir o status
+    assinaturas = Assinatura.query.filter_by(id_rdo=rdo_id).order_by(Assinatura.ordem).all()
+    
+    # Carregar usuários da obra para o Modal de Workflow (Apenas ATIVOS)
+    if item.id_obra:
+        # Filtra por Obra E Status Ativo (assumindo que True/1 é ativo)
+        usuarios_obra = Usuario.query.filter(
+            Usuario.obras_permitidas.any(id=item.id_obra),
+            Usuario.status == True 
+        ).all()
+        
+        # Fallback: Se não houver usuários específicos vinculados, pega todos os ativos
+        if not usuarios_obra:
+            usuarios_obra = Usuario.query.filter_by(status=True).all()
+    else:
+        usuarios_obra = Usuario.query.filter_by(status=True).all()
 
     return render_template(
         "form_rdo.html",
@@ -512,8 +540,13 @@ def visualizar_rdo(rdo_id):
         clima=Clima.query.all(),
         frente_trabalho=Frente_Trabalho.query.all(),
         equipamentos=Equipamentos.query.all(),
+        assinaturas=assinaturas,
         mao_obra=RDOMaoObra.query.all(),
-        usuarios=Usuario.query.all()
+        usuarios=Usuario.query.all(),
+        usuarios_obra=usuarios_obra,
+        mao_de_obra_options=mao_de_obra_options,
+        equipamentos_options=equipamentos_options,
+        tags_options=tags_options
     )
 
 # Editar RDO
@@ -521,22 +554,77 @@ def visualizar_rdo(rdo_id):
 @auth_bp.get("/editar-rdo/<int:rdo_id>")
 @login_required
 def editar_rdo(rdo_id):
-    from app.models.rdo import RDO, Atividades, RDOMaoObra
-    from app.models.obra import Obra
+    from app.models.rdo import RDO, Atividades, RDOMaoObra, Assinatura, Equipamentos, Fotos, TagsOcorrencias
+    from app.models.obra import Frente_Trabalho, Obra
     from app.models.lista_opcoes import Clima, MaoObra, Equipamento, TagOcorrencia
     from app.models.usuario import Usuario
-    
+    from app import db
+
+    # 1. Busca o RDO ou retorna 404
     item = RDO.query.get_or_404(rdo_id)
+
+    # 2. Busca utilizadores vinculados a esta obra para o fluxo de assinatura
+    usuarios_obra = Usuario.query.filter(Usuario.obras_permitidas.any(id=item.id_obra)).all()
+
+    
+    # 3. Lógica para o Grid de Assinaturas Dinâmico
+    assinaturas_realizadas = Assinatura.query.filter_by(id_rdo=rdo_id).all()
+    ids_usuarios_que_assinaram = [a.id_usuario for a in assinaturas_realizadas]
+
+    lista_assinaturas_status = []
+    for u in usuarios_obra:
+        ass_obj = next((a for a in assinaturas_realizadas if a.id_usuario == u.id), None)
+        # Exibe no grid o emitente, quem já assinou ou perfis de gestão
+        if u.id == item.id_usuario or u.id in ids_usuarios_que_assinaram or u.papel in ['Admin', 'Engenheiro', 'Supervisor']:
+            lista_assinaturas_status.append({
+                "usuario": u,
+                "assinado": True if ass_obj else False,
+                "dados_assinatura": ass_obj
+            })
+
+    # 4. Dados pré-carregados do RDO para edição
+    # O SQLAlchemy carrega os relacionamentos definidos no model RDO (maos_obra, equipamentos, atividades, etc.)
+    # Se o seu template usa loops como 'for linha in maos_obra_salvas', passamos aqui:
+    maos_obra_salvas = item.maos_obra.all()
+    equipamentos_salvos = item.equipamentos.all()
+    atividades_salvas = item.atividades.all()
+    ocorrencias_salvas = item.ocorrencias.all()
+    fotos_salvas = item.fotos.all()
+    
+    frente_trabalho=Frente_Trabalho.query.all()
 
     return render_template(
         "form_rdo.html",
         item=item,
         view_mode=False,
-        obras=Obra.query.all(),
+        # Tabelas de referência para preencher os selects
+        obras=Obra.query.filter_by(status=1).all(),
+        frente_trabalho=frente_trabalho,
         clima=Clima.query.all(),
-        usuarios=Usuario.query.all(),
-        atividades=Atividades.query.all(),
-        mao_obra=RDOMaoObra.query.all()
+        
+        # Dados específicos já salvos neste RDO
+        maos_obra_salvas=maos_obra_salvas,
+        equipamentos_salvos=equipamentos_salvos,
+        atividades_salvas=atividades_salvas,
+        ocorrencias_salvas=ocorrencias_salvas,
+        fotos_salvas=fotos_salvas,
+        
+        # Opções para os componentes de adição (Modais/Autocomplete)
+        mao_de_obra_options=[{"id": m.id, "nome": m.nome} for m in MaoObra.query.all()],
+        equipamentos_options=[{"id": e.id, "nome": e.nome} for e in Equipamento.query.all()],
+        tags_options=[{"id": t.id, "nome": t.nome} for t in TagOcorrencia.query.all()],
+        
+        # Assinaturas e Utilizadores
+        usuarios_obra=usuarios_obra,
+        lista_assinaturas_status=lista_assinaturas_status,
+        assinaturas=assinaturas_realizadas,
+        
+        # Classes dos modelos (caso o template precise instanciar algo ou referenciar tipos)
+        Atividades=Atividades,
+        RDOMaoObra=RDOMaoObra,
+        Equipamentos=Equipamentos,
+        Fotos=Fotos,
+        TagsOcorrencias=TagsOcorrencias
     )
 
 # Lista RDO (placeholder)
@@ -564,6 +652,164 @@ def lista_rdo():
 
     return render_template("list_rdo.html", rdos=rdos)
 
+# Assinar RDO (Execução da assinatura)
+@auth_bp.route("/assinar-rdo/<int:rdo_id>/aprovar-rdo", methods=["POST"])
+@login_required 
+def assinar_rdo(rdo_id):
+    from app.models.rdo import RDO, Assinatura
+    
+    user_id = session.get("user_id")
+    rdo = RDO.query.get_or_404(rdo_id)
+
+    # 1. Localiza a assinatura PENDENTE deste usuário neste RDO
+    assinatura_pendente = Assinatura.query.filter_by(
+        id_rdo=rdo_id, 
+        id_usuario=user_id, 
+        status='Pendente'
+    ).first()
+
+    if not assinatura_pendente:
+        return jsonify({"success": False, "message": "Você não tem assinaturas pendentes para este RDO."}), 400
+
+    # 2. CHECK DE SEQUÊNCIA: Verifica se existe alguém com ordem MENOR que ainda não aprovou
+    passo_anterior_pendente = Assinatura.query.filter(
+        Assinatura.id_rdo == rdo_id,
+        Assinatura.ordem < assinatura_pendente.ordem,
+        Assinatura.status != 'Aprovado'
+    ).count()
+
+    if passo_anterior_pendente > 0:
+        return jsonify({"success": False, "message": "Aguarde a aprovação do responsável anterior."}), 403
+
+    # 3. Processa Imagem
+    dados = request.get_json()
+    img_data = dados.get('assinatura_b64')
+    
+    if not img_data:
+        return jsonify({"success": False, "message": "Imagem da assinatura não fornecida."}), 400
+
+    try:
+        # Salva o arquivo físico
+        header, encoded = img_data.split(",", 1)
+        file_data = base64.b64decode(encoded)
+        filename = f"sig_{rdo_id}_{user_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}.png"
+        
+        upload_folder = os.path.join(current_app.root_path, 'static', 'uploads', 'assinaturas')
+        if not os.path.exists(upload_folder):
+            os.makedirs(upload_folder)
+            
+        with open(os.path.join(upload_folder, filename), "wb") as f:
+            f.write(file_data)
+
+        # 4. Atualiza Registro
+        assinatura_pendente.img_assinatura = filename
+        assinatura_pendente.criado = datetime.now()
+        assinatura_pendente.status = 'Aprovado'
+        
+        # 5. Verifica se o RDO foi totalmente aprovado
+        restantes = Assinatura.query.filter(
+            Assinatura.id_rdo == rdo_id,
+            Assinatura.status == 'Pendente',
+            Assinatura.id_assinatura != assinatura_pendente.id_assinatura
+        ).count()
+        
+        if restantes == 0:
+            rdo.status = 'Aprovado'
+        else:
+            # Se era Pendente, continua Pendente. Se estava Rejeitado, volta a Pendente? 
+            # Geralmente se assina, o fluxo está ativo.
+            rdo.status = 'Pendente'
+
+        db.session.commit()
+        return jsonify({"success": True})
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "message": str(e)}), 500
+    
+
+# Salvar NOVO Workflow (Definir Sequência)
+@auth_bp.route("/assinar-rdo/<int:rdo_id>/salvar-workflow", methods=["POST"])
+@login_required
+def salvar_workflow_assinaturas(rdo_id):
+    from app.models.rdo import RDO, Assinatura
+    
+    rdo = RDO.query.get_or_404(rdo_id)
+    
+    # Só permite editar workflow se não estiver finalizado
+    if rdo.status in ['Aprovado', 'Rejeitado']:
+         return jsonify({"success": False, "message": "RDO finalizado, não é possível alterar aprovadores."}), 403
+
+    data = request.get_json()
+    # IDs vindo do checkbox (ex: [5, 9])
+    novos_assinantes_ids = [int(uid) for uid in data.get('usuarios_ids', [])] 
+    
+    creator_id = rdo.id_usuario
+
+    # REGRA DE OURO: O criador DEVE estar na lista e DEVE ser o primeiro.
+    # 1. Se o criador já estiver na lista vinda do front, removemos para evitar duplicidade
+    if creator_id in novos_assinantes_ids:
+        novos_assinantes_ids.remove(creator_id)
+    
+    # 2. Inserimos o criador forçadamente na posição 0
+    novos_assinantes_ids.insert(0, creator_id)
+
+    try:
+        # Limpa assinaturas anteriores (Reinicia fluxo)
+        Assinatura.query.filter_by(id_rdo=rdo_id).delete()
+        
+        # Cria novos registros na ordem correta
+        for index, user_id in enumerate(novos_assinantes_ids):
+            nova_ass = Assinatura(
+                id_rdo=rdo_id,
+                id_usuario=user_id,
+                ordem=index + 1, # Ordem 1, 2, 3...
+                status='Pendente'
+            )
+            db.session.add(nova_ass)
+            
+        # Garante que status do RDO volta a Pendente se o workflow reiniciou
+        rdo.status = 'Pendente'
+            
+        db.session.commit()
+        return jsonify({"success": True})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "message": str(e)}), 500
+    
+
+# Rota de Rejeição
+@auth_bp.route("/assinar-rdo/<int:id_assinatura>/rejeitar-rdo", methods=["POST"])
+@login_required
+def rejeitar_assinatura(id_assinatura):
+    from app.models.rdo import RDO, Assinatura
+    
+    dados = request.get_json()
+    motivo = dados.get('motivo')
+    
+    ass = Assinatura.query.get_or_404(id_assinatura)
+    
+    # Valida se quem está rejeitando é o dono da assinatura
+    if ass.id_usuario != session.get('user_id'):
+        return jsonify({"success": False, "message": "Não autorizado."}), 403
+
+    try:
+        # 1. Rejeita a assinatura específica
+        ass.status = 'Rejeitado'
+        ass.motivo_rejeicao = motivo
+        ass.criado = datetime.now()
+        
+        # 2. Rejeita o RDO inteiro
+        rdo = RDO.query.get(ass.id_rdo)
+        rdo.status = 'Rejeitado'
+        
+        db.session.commit()
+        return jsonify({"success": True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "message": str(e)}), 500
+    
 #######################################################################################################
 ####################################################################################################### USUARIOS
 #######################################################################################################

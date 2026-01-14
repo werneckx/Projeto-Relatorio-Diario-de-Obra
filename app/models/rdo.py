@@ -138,3 +138,27 @@ class TagsOcorrencias(db.Model):
     descricao = db.Column(db.Text)
     
     tag_lista = db.relationship('TagOcorrencia')
+
+    
+class Assinatura(db.Model):
+    __tablename__ = 'rdo_assinaturas'
+
+    id_assinatura = db.Column(db.Integer, primary_key=True)
+    id_rdo = db.Column(db.Integer, db.ForeignKey('rdo.id'), nullable=False)
+    id_usuario = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=False)
+    
+    # New Field: Determines the sequence (1, 2, 3...)
+    ordem = db.Column(db.Integer, nullable=False, default=1)
+    
+    # Workflow Status: 'Pendente', 'Aprovado', 'Rejeitado'
+    status = db.Column(db.String(50), default='Pendente') 
+    
+    # Nullable fields (filled only upon action)
+    img_assinatura = db.Column(db.Text, nullable=True) 
+    ip_endereco = db.Column(db.String(50), nullable=True)
+    validacao = db.Column(db.String(255)) # Hash ou token de validação
+    criado = db.Column(db.DateTime, default=datetime.utcnow)
+    motivo_rejeicao = db.Column(db.String(255), nullable=True)
+
+    usuario = db.relationship("Usuario", backref="assinaturas_workflow")
+    rdo = db.relationship('RDO', backref=db.backref('assinaturas', lazy='dynamic'))
