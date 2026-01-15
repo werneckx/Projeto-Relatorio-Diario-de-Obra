@@ -500,6 +500,7 @@ def gerar_rdo():
     
 # Visualizar RDO (redireciona)
 
+# Visualizar RDO 
 @auth_bp.get("/visualizar-rdo/<int:rdo_id>")
 @login_required
 def visualizar_rdo(rdo_id):

@@ -4,316 +4,663 @@
 
 {% block content %}
 
-<!-- Tailwind + Font Awesome (necessário para o estilo dos badges de status) -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<!-- DataTables CSS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
 
-<div class="mb-6">
-    <h1 class="text-2xl font-bold text-slate-800">Lista Relatórios Diários de Obra (RDO)</h1>
-    <p class="text-sm text-slate-500">Gerencie seu RDO's</p>
-</div>
+<!-- Cálculos de Contagem para os Cards -->
+{% set count_total = rdos | length %}
+{% set count_aprovado = rdos | selectattr('status', 'equalto', 'Aprovado') | list | length %}
+{% set count_pendente = rdos | selectattr('status', 'equalto', 'Pendente') | list | length %}
+{% set count_rejeitado = rdos | selectattr('status', 'equalto', 'Rejeitado') | list | length %}
+
+<!-- Lógica para contar Minhas Pendências de Assinatura -->
+<!-- Convertendo session user_id para int para garantir comparação correta -->
+{% set user_id_int = session['user_id'] | int %}
+{% set ns = namespace(count_minhas_pendencias=0) %}
+
+{% for rdo in rdos %}
+{% set tem_pendencia = false %}
+{% if rdo.assinaturas %}
+{% for ass in rdo.assinaturas %}
+{# Comparação rigorosa de inteiros e status #}
+{% if ass.id_usuario | int == user_id_int and ass.status == 'Pendente' %}
+{% set tem_pendencia = true %}
+{% endif %}
+{% endfor %}
+{% endif %}
+
+{% if tem_pendencia %}
+{% set ns.count_minhas_pendencias = ns.count_minhas_pendencias + 1 %}
+{% endif %}
+{% endfor %}
 
 <style>
-    .dataTables_info,
-    .dataTables_paginate,
-    .paging_simple_numbers,
-    .dataTables_length {
-        font-size: 12px;
-        padding: 10px;
-        color: rgb(0, 0, 0);
-        font-weight: 100;
+    /* --- Animações --- */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 
-    .dataTables_length select {
-        cursor: pointer;
+    .animate-fade-up {
+        animation: fadeInUp 0.4s ease-out forwards;
     }
 
-    .filters input:focus {
+    /* --- DataTables Custom --- */
+    .dataTables_wrapper .dataTables_length select {
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+        background-position: right 0.5rem center;
+        background-repeat: no-repeat;
+        background-size: 1.5em 1.5em;
+        padding-right: 2.5rem;
+        border-color: #e2e8f0;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
         outline: none;
-        border-color: #e0202d;
-        box-shadow: 0 0 3px rgba(224, 32, 45, 0.3);
+        transition: border-color 0.2s;
     }
 
-    .filters input {
-        width: 100%;
-        border: none;
-        border-radius: 6px;
-        color: rgb(0, 0, 0);
-        padding: 2px;
-        font-size: 12px;
-        background: #ffffff;
-        transition: 0.2s;
+    .dataTables_wrapper .dataTables_length select:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
     }
 
-    .dataTables_info,
-    .dataTables_paginate,
-    .dataTables_length {
-        font-size: 13px !important;
-        padding: 8px 12px !important;
-        color: #444 !important;
-        font-weight: 400 !important;
-    }
-
-    .dataTables_length select {
-        border-radius: 6px !important;
-        padding: 4px 8px !important;
-        border: 1px solid #ccc !important;
-        background: #f8f8f8;
-        cursor: pointer;
-    }
-
-    .dataTables_paginate a {
-        border-radius: 6px !important;
-        padding: 4px 8px !important;
-        margin: 2px;
-        text-decoration: none;
-        border: 1px solid #ddd !important;
-        background: #fff !important;
-        transition: 0.2s;
-    }
-
-    .dataTables_paginate a:hover {
-        background: #e0202d !important;
-        color: #fff !important;
-        border-color: #e0202d !important;
-    }
-
-    .dataTables_paginate .current {
-        color: #fff !important;
-        background: #eeeeee !important;
-    }
-
-    .action-icon {
-        width: 16px;
-        height: 16px;
-    }
-
-    /* Estilos exclusivos para a coluna STATUS */
-    .status-badge {
-        display: inline-flex;
-        align-items: center;
-        padding: 4px 10px;
-        border-radius: 9999px;
-        /* full rounded */
-        font-size: 11px;
+    /* Paginação */
+    .dataTables_wrapper .dataTables_paginate .paginate_button.current,
+    .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+        background: #3b82f6 !important;
+        color: white !important;
+        border: 1px solid #3b82f6 !important;
+        border-radius: 0.5rem;
         font-weight: 600;
-        gap: 6px;
-        border: none;
+        box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
     }
 
-    /* Cores semelhantes ao Tailwind */
-    .status-aprovado {
-        color: #166534;
-        background: #dcfce7;
+    .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+        background: #f8fafc !important;
+        border: 1px solid #cbd5e1 !important;
+        color: #1e293b !important;
+        border-radius: 0.5rem;
     }
 
-    .status-pendente {
-        color: #a16207;
-        background: #fef9c3;
+    /* Cards Interativos */
+    .stat-card {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
     }
 
-    .status-rejeitado {
-        color: #b91c1c;
-        background: #fee2e2;
+    .stat-card:hover {
+        transform: translateY(-2px);
     }
 
-    .status-rascunho {
-        color: #374151;
-        background: #e5e7eb;
+    .stat-card.active-filter {
+        ring: 2px;
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     }
 
-    /* ícones */
-    .status-badge i {
-        font-size: 12px;
-        margin-right: 4px;
+    /* Cores de anel específicas para cada card ativo */
+    .stat-card.active-filter[data-type="total"] {
+        ring-color: #3b82f6;
+    }
+
+    .stat-card.active-filter[data-type="pendente"] {
+        ring-color: #f59e0b;
+    }
+
+    .stat-card.active-filter[data-type="aprovado"] {
+        ring-color: #10b981;
+    }
+
+    .stat-card.active-filter[data-type="rejeitado"] {
+        ring-color: #ef4444;
+    }
+
+    .stat-card.active-filter[data-type="assinar"] {
+        ring-color: #8b5cf6;
+    }
+
+    /* Roxo para assinatura */
+
+    /* Overlay do Filtro Lateral */
+    #advancedFilterOverlay {
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transform: translateX(100%);
+        box-shadow: -10px 0 30px rgba(0, 0, 0, 0.1);
+    }
+
+    #advancedFilterOverlay.open {
+        transform: translateX(0);
+    }
+
+    /* Actions Column Fix */
+    .action-btn {
+        transition: all 0.2s ease;
+        opacity: 0.7;
+    }
+
+    .action-btn:hover {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+
+    /* Fundo sutil para a linha selecionada */
+    tr.selected-row td {
+        background-color: #eff6ff !important;
+        /* blue-50 */
     }
 </style>
 
-<div class="top-actions-container">
-    <div class="search-form">
-        <input type="text" id="searchInputRDO" placeholder="Buscar RDOs (Obra, Responsável, Clima...)"
-            class="form-control">
-        <button onclick="$('#dataTableRDO').DataTable().search($('#searchInputRDO').val()).draw();"
-            class="button-base button-secondary button-compact" title="Pesquisar">
-            Pesquisar <i class="fas fa-search"></i>
+<div class="space-y-6 pb-10">
+
+    <!-- 1. Cabeçalho -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 animate-fade-up"
+        style="animation-delay: 0ms;">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-800 tracking-tight">Relatórios Diários</h1>
+            <p class="text-sm text-slate-500 mt-1">Gerencie registros, aprovações e exportações.</p>
+        </div>
+        <div class="flex gap-3">
+            <a href="{{ url_for('auth.criar_rdo') }}"
+                class="inline-flex items-center px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-blue-500/30 hover:shadow-blue-500/40 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                <i class="fas fa-plus mr-2"></i> Novo RDO
+            </a>
+        </div>
+    </div>
+
+    <!-- 2. Cards de Filtro (Scrollável em mobile se necessário) -->
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 animate-fade-up" style="animation-delay: 100ms;">
+
+        <!-- Card: Minhas Pendências (NOVO) -->
+        <div onclick="filtrarTabelaPorStatus('minhas_pendencias', this)" data-type="assinar"
+            class="stat-card bg-white p-4 rounded-2xl border border-purple-100 shadow-sm cursor-pointer hover:border-purple-300 group">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-[10px] font-bold text-purple-500 uppercase tracking-widest">Para Assinar</p>
+                    <h3 class="text-2xl font-black text-slate-800 mt-1 group-hover:text-purple-600 transition-colors">{{
+                        ns.count_minhas_pendencias }}</h3>
+                </div>
+                <div
+                    class="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                    <i class="fas fa-file-signature"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card: Total -->
+        <div onclick="filtrarTabelaPorStatus('', this)" data-type="total"
+            class="stat-card active-filter bg-white p-4 rounded-2xl border border-slate-200 shadow-sm cursor-pointer hover:border-blue-300 group">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total</p>
+                    <h3 class="text-2xl font-black text-slate-800 mt-1 group-hover:text-blue-600 transition-colors">{{
+                        count_total }}</h3>
+                </div>
+                <div
+                    class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center shadow-sm group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
+                    <i class="fas fa-layer-group"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card: Aprovados -->
+        <div onclick="filtrarTabelaPorStatus('Aprovado', this)" data-type="aprovado"
+            class="stat-card bg-white p-4 rounded-2xl border border-emerald-100 shadow-sm cursor-pointer hover:border-emerald-300 group">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">Aprovados</p>
+                    <h3 class="text-2xl font-black text-slate-800 mt-1 group-hover:text-emerald-600 transition-colors">
+                        {{ count_aprovado }}</h3>
+                </div>
+                <div
+                    class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card: Pendentes (Geral) -->
+        <div onclick="filtrarTabelaPorStatus('Pendente', this)" data-type="pendente"
+            class="stat-card bg-white p-4 rounded-2xl border border-amber-100 shadow-sm cursor-pointer hover:border-amber-300 group">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-[10px] font-bold text-amber-500 uppercase tracking-widest">Em Análise</p>
+                    <h3 class="text-2xl font-black text-slate-800 mt-1 group-hover:text-amber-600 transition-colors">{{
+                        count_pendente }}</h3>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-sm">
+                    <i class="fas fa-clock"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card: Rejeitados -->
+        <div onclick="filtrarTabelaPorStatus('Rejeitado', this)" data-type="rejeitado"
+            class="stat-card bg-white p-4 rounded-2xl border border-red-100 shadow-sm cursor-pointer hover:border-red-300 group">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-[10px] font-bold text-red-500 uppercase tracking-widest">Rejeitados</p>
+                    <h3 class="text-2xl font-black text-slate-800 mt-1 group-hover:text-red-600 transition-colors">{{
+                        count_rejeitado }}</h3>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center shadow-sm">
+                    <i class="fas fa-times-circle"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Área da Tabela -->
+    <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden animate-fade-up"
+        style="animation-delay: 200ms;">
+
+        <!-- Toolbar -->
+        <div
+            class="p-5 border-b border-slate-100 flex flex-col sm:flex-row gap-4 justify-between items-center bg-slate-50/30">
+            <!-- Busca -->
+            <div class="relative w-full sm:w-80">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i class="fas fa-search text-slate-400"></i>
+                </div>
+                <input type="text" id="customSearch"
+                    class="block w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl bg-white text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all placeholder:text-slate-400"
+                    placeholder="Buscar RDO, obra ou responsável...">
+            </div>
+
+            <!-- Botões -->
+            <div class="flex gap-2 w-full sm:w-auto">
+                <button onclick="toggleAdvancedFilter()"
+                    class="flex-1 sm:flex-none inline-flex justify-center items-center px-4 py-2.5 border border-slate-200 shadow-sm text-sm font-semibold rounded-xl text-slate-600 bg-white hover:bg-slate-50 hover:text-slate-800 transition-all">
+                    <i class="fas fa-sliders-h mr-2 text-slate-400"></i> Filtros
+                </button>
+                <button onclick="resetTableState()"
+                    class="inline-flex justify-center items-center px-4 py-2.5 border border-slate-200 shadow-sm text-sm font-medium rounded-xl text-slate-600 bg-white hover:bg-slate-50 hover:text-blue-600 transition-all"
+                    title="Recarregar">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Tabela -->
+        <div class="overflow-x-auto">
+            <table id="dataTableRDO" class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-50/80 border-b border-slate-200">
+                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Nº / Rev</th>
+                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Data</th>
+                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Obra</th>
+                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                            Responsável/Criação</th>
+                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Ações
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 bg-white">
+                    {% for rdo in rdos %}
+                    {% set s = (rdo.status | default('Pendente')) | trim %}
+
+                    {# Calcula se tenho que assinar este RDO - Usando user_id_int definido no topo #}
+                    {% set min_pendencia = false %}
+                    {% if rdo.assinaturas %}
+                    {% for ass in rdo.assinaturas %}
+                    {# Comparação rigorosa #}
+                    {% if ass.id_usuario | int == user_id_int and ass.status == 'Pendente' %}
+                    {% set min_pendencia = true %}
+                    {% endif %}
+                    {% endfor %}
+                    {% endif %}
+
+                    <tr class="hover:bg-slate-50 transition-colors group"
+                        data-minha-pendencia="{{ 'true' if min_pendencia else 'false' }}">
+
+                        <!-- Status -->
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border
+                                {% if s == 'Aprovado' %} bg-emerald-100 text-emerald-800 border-emerald-200
+                                {% elif s == 'Pendente' %} bg-amber-100 text-amber-800 border-amber-200
+                                {% elif s == 'Rejeitado' %} bg-red-100 text-red-800 border-red-200
+                                {% else %} bg-slate-100 text-slate-600 border-slate-200 {% endif %}">
+                                <span class="w-1.5 h-1.5 rounded-full mr-2
+                                    {% if s == 'Aprovado' %} bg-emerald-500
+                                    {% elif s == 'Pendente' %} bg-amber-500
+                                    {% elif s == 'Rejeitado' %} bg-red-500
+                                    {% else %} bg-slate-500 {% endif %}"></span>
+                                {{ s }}
+                            </span>
+                        </td>
+
+                        <!-- ID / Rev + Indicador de Assinatura -->
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center gap-2">
+                                <div class="text-sm font-bold text-slate-700">
+                                    #{{ '%03d' % (rdo.id_sequencial | int) }}
+                                    <span class="text-slate-400 font-normal ml-0.5">v{{ rdo.id_revisao }}</span>
+                                </div>
+                                {% if min_pendencia %}
+                                <div class="w-6 h-6 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xs animate-pulse"
+                                    title="Sua assinatura é necessária">
+                                    <i class="fas fa-pen-nib"></i>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </td>
+
+                        <!-- Data Referência -->
+                        <td class="px-6 py-4 whitespace-nowrap"
+                            data-order="{{ rdo.data.strftime('%Y%m%d') if rdo.data }}">
+                            <div class="text-sm text-slate-600 flex items-center gap-2">
+                                <i class="far fa-calendar text-slate-400 text-xs"></i>
+                                {{ rdo.data.strftime('%d/%m/%Y') if rdo.data else '-' }}
+                            </div>
+                        </td>
+
+                        <!-- Obra -->
+                        <td class="px-6 py-4">
+                            <div class="text-sm font-medium text-slate-800 truncate max-w-[180px]"
+                                title="{{ rdo.obra.nome }}">
+                                {{ rdo.obra.nome if rdo.obra else 'N/A' }}
+                            </div>
+                            <div class="text-[11px] text-slate-500 truncate max-w-[180px]">
+                                {{ rdo.obra.contratante if rdo.obra else '-' }}
+                            </div>
+                        </td>
+
+                        <!-- Responsável / Criado Em (Coluna 4) -->
+                        {# Adicionado data-order para ordenação correta por Timestamp de criação #}
+                        <td class="px-6 py-4 whitespace-nowrap"
+                            data-order="{{ rdo.criado.strftime('%Y%m%d%H%M%S') if rdo.criado else '0' }}">
+                            <div class="flex items-center">
+                                <div
+                                    class="h-8 w-8 rounded-full bg-slate-100 border border-slate-200 text-slate-500 flex items-center justify-center text-xs font-bold mr-3 uppercase">
+                                    {{ rdo.usuario.nome[:2] if rdo.usuario and rdo.usuario.nome else 'U' }}
+                                </div>
+                                <div>
+                                    <div class="text-sm font-medium text-slate-700">{{ rdo.usuario.nome.split()[0] if
+                                        rdo.usuario else 'Sistema' }}</div>
+                                    <div class="text-[10px] text-slate-400">Criado às {{ rdo.criado.strftime('%H:%M') if
+                                        rdo.criado }}</div>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Ações -->
+                        <td class="px-6 py-4 whitespace-nowrap text-right">
+                            <div class="flex justify-end items-center gap-2">
+                                <a href="{{ url_for('auth.gerar_pdf_rdo_view', rdo_id=rdo.id) }}" target="_blank"
+                                    class="action-btn w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50"
+                                    title="PDF">
+                                    <i class="fas fa-file-pdf"></i>
+                                </a>
+                                <a href="{{ url_for('auth.visualizar_rdo', rdo_id=rdo.id) }}"
+                                    class="action-btn w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50"
+                                    title="Visualizar">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if s != 'Aprovado' %}
+                                <a href="{{ url_for('auth.editar_rdo', rdo_id=rdo.id) }}"
+                                    class="action-btn w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50"
+                                    title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                {% endif %}
+                                <button onclick="excluirItem('{{ rdo.id }}')"
+                                    class="action-btn w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50"
+                                    title="Excluir">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <!-- Empty State -->
+            {% if not rdos %}
+            <div class="py-16 text-center">
+                <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-slate-50 mb-6">
+                    <i class="fas fa-folder-open text-4xl text-slate-300"></i>
+                </div>
+                <h3 class="text-lg font-bold text-slate-800">Nenhum registro encontrado</h3>
+                <p class="mt-2 text-sm text-slate-500 max-w-xs mx-auto">Não há relatórios diários cadastrados para suas
+                    obras permitidas.</p>
+                <div class="mt-8">
+                    <a href="{{ url_for('auth.criar_rdo') }}"
+                        class="inline-flex items-center px-6 py-3 border border-transparent text-sm font-bold rounded-xl text-white bg-blue-600 hover:bg-blue-700 shadow-md transition-all">
+                        <i class="fas fa-plus mr-2"></i> Criar Primeiro RDO
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- OVERLAY FILTROS -->
+<!-- Backdrop: z-[110] -->
+<div id="filterBackdrop"
+    class="fixed inset-0 bg-slate-900/40 z-[110] hidden backdrop-blur-sm transition-opacity duration-300"
+    onclick="toggleAdvancedFilter()"></div>
+
+<!-- Painel: z-[120] -->
+<div id="advancedFilterOverlay"
+    class="fixed inset-y-0 right-0 w-80 max-w-full bg-white shadow-2xl z-[120] flex flex-col transform transition-transform duration-300 translate-x-full">
+    <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+        <h3 class="font-bold text-slate-800 flex items-center gap-2">
+            <i class="fas fa-sliders-h text-blue-600"></i> Filtros
+        </h3>
+        <button onclick="toggleAdvancedFilter()"
+            class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-full transition-colors">
+            <i class="fas fa-times"></i>
         </button>
     </div>
-    <a href="{{ url_for('auth.criar_rdo') }}" class="button-base button-success">
-        <i class="fas fa-plus"></i> Criar Novo RDO
-    </a>
-</div>
 
-<div class="table-container">
-    {% if rdos %}
-    <table id="dataTableRDO" class="display nowrap" style="width:100%">
-        <thead>
-            <tr>
-                <th>Status</th>
-                <th>Nº</th>
-                <th>Rev.</th>
-                <th>Data</th>
-                <th>Obra</th>
-                <th>Responsável</th>
-                <th>Clima Manhã</th>
-                <th>Clima Tarde</th>
-                <th>MDO Total</th>
-                <th>Criador</th>
-                <th>Ações</th>
-            </tr>
-        </thead>
-        <tbody>
+    <div class="p-6 flex-1 overflow-y-auto space-y-6">
+        <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Obra / Contrato</label>
+            <div class="relative">
+                <i class="fas fa-building absolute left-3 top-3 text-slate-400 text-xs"></i>
+                <input type="text" id="filterObra"
+                    class="w-full pl-8 pr-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all placeholder:text-slate-300"
+                    placeholder="Digite o nome da obra...">
+            </div>
+        </div>
 
-            {% for rdo in rdos %}
+        <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Responsável</label>
+            <div class="relative">
+                <i class="fas fa-user absolute left-3 top-3 text-slate-400 text-xs"></i>
+                <input type="text" id="filterUser"
+                    class="w-full pl-8 pr-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all placeholder:text-slate-300"
+                    placeholder="Quem criou o RDO...">
+            </div>
+        </div>
 
-            {# ===========================
-            NOVO SISTEMA DE CORES/STATUS
-            IGUAL AO CÓDIGO DO SEGUNDO MODELO
-            ============================ #}
-
-            {% set current_status = rdo.status | lower | trim %}
-
-            {% if current_status == 'aprovado' %}
-            {% set status_color = 'text-green-700 bg-green-100' %}
-            {% set status_icon = 'fas fa-check-circle' %}
-            {% set status_text = 'Aprovado' %}
-            {% elif current_status == 'pendente' %}
-            {% set status_color = 'text-yellow-700 bg-yellow-100' %}
-            {% set status_icon = 'fas fa-hourglass-half' %}
-            {% set status_text = 'Pendente' %}
-            {% elif current_status == 'rejeitado' %}
-            {% set status_color = 'text-red-700 bg-red-100' %}
-            {% set status_icon = 'fas fa-times-circle' %}
-            {% set status_text = 'Rejeitado' %}
-            {% else %}
-            {% set status_color = 'text-gray-700 bg-gray-200' %}
-            {% set status_icon = 'fas fa-info-circle' %}
-            {% set status_text = 'Rascunho' %}
-            {% endif %}
-
-            <tr id="row-{{ rdo.id }}" class="hover:bg-red-50/50 transition">
-                <td class="whitespace-nowrap">
-                    {% set status_class =
-                    'status-aprovado' if current_status == 'aprovado' else
-                    'status-pendente' if current_status == 'pendente' else
-                    'status-rejeitado' if current_status == 'rejeitado' else
-                    'status-rascunho'
-                    %}
-
-                    <span class="status-badge {{ status_class }}">
-                        <i class="{{ status_icon }}"></i>
-                        {{ status_text }}
-                    </span>
-                </td>
-
-
-                <td>{{ '%03d' % (rdo.id_sequencial | int) }}</td>
-                <td>{{ '%03d' % (rdo.id_revisao | int) }}</td>
-                <td>{{ rdo.data.strftime('%d/%m/%Y') if rdo.data else 'N/A' }}</td>
-
-                <td>
-                    {% if rdo.obra %}
-                    {{ rdo.obra.nome[:15] + '...' if rdo.obra.nome|length > 15 else rdo.obra.nome }}
-                    {% else %}
-                    N/A
-                    {% endif %}
-                </td>
-
-                <td>
-                    {{ rdo.responsavel.nome[:15] + '...' if rdo.responsavel and rdo.responsavel.nome|length > 15 else
-                    (rdo.responsavel.nome if rdo.responsavel else 'N/A') }}
-                </td>
-
-
-                <td>{{ rdo.clima_manha_obj.nome if rdo.clima_manha_obj else 'N/A' }}</td>
-                <td>{{ rdo.clima_tarde_obj.nome if rdo.clima_tarde_obj else 'N/A' }}</td>
-                <td>{{ rdo.total_mo if rdo.total_mo else '0' }}</td>
-
-                <td>
-                    {{ rdo.usuario.nome[:15] + '...' if rdo.usuario and rdo.usuario.nome|length > 15 else
-                    (rdo.usuario.nome if rdo.usuario else 'N/A') }}
-                </td>
-
-
-                <td>
-                    <div class="action-buttons">
-                        <a href="{{ url_for('auth.gerar_pdf_rdo_view', rdo_id=rdo.id) }}" target="_blank"
-                            class="button-compact button-info button-acoes" title="Imprimir RDO PDF">
-                            <i class="fa fa-print"></i>
-                        </a>
-                        <a href="{{ url_for('auth.editar_rdo', rdo_id=rdo.id) }}"
-                            class="button-compact button-info button-acoes" title="Editar RDO">
-                            <img src="{{ url_for('static', filename='icons/edit.png') }}" alt="Editar"
-                                class="action-icon">
-                        </a>
-                        <a href="{{ url_for('auth.visualizar_rdo', rdo_id=rdo.id) }}"
-                            class="button-compact button-secondary button-acoes" title="Visualizar RDO">
-                            <img src="{{ url_for('static', filename='icons/view.png') }}" alt="Visualizar"
-                                class="action-icon">
-                        </a>
-                        <button onclick="excluirItem('{{ rdo.id }}', 'rdo')"
-                            class="button-compact button-danger button-acoes" title="Excluir RDO">
-                            <img src="{{ url_for('static', filename='icons/delete.png') }}" alt="Excluir"
-                                class="action-icon">
-                        </button>
-                    </div>
-                </td>
-            </tr>
-
-            {% endfor %}
-
-        </tbody>
-    </table>
-    {% else %}
-    <div class="empty-state">
-        <p>Nenhum RDO encontrado. <a href="{{ url_for('auth.criar_rdo') }}">Adicione o primeiro agora!</a></p>
+        <div class="border-t border-slate-100 pt-4">
+            <label class="block text-xs font-bold text-slate-500 uppercase mb-3">Período</label>
+            <div class="space-y-3">
+                <div class="relative">
+                    <span class="absolute left-3 top-2.5 text-[10px] font-bold text-slate-400">DE</span>
+                    <input type="date" id="minDate"
+                        class="w-full pl-8 pr-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none">
+                </div>
+                <div class="relative">
+                    <span class="absolute left-3 top-2.5 text-[10px] font-bold text-slate-400">ATÉ</span>
+                    <input type="date" id="maxDate"
+                        class="w-full pl-8 pr-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none">
+                </div>
+            </div>
+        </div>
     </div>
-    {% endif %}
+
+    <div class="p-5 border-t border-slate-100 bg-slate-50 flex gap-3">
+        <button onclick="clearAdvancedFilters()"
+            class="flex-1 py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-slate-800 transition-colors">
+            Limpar
+        </button>
+        <button onclick="applyAdvancedFilters()"
+            class="flex-1 py-3 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-colors">
+            Aplicar Filtros
+        </button>
+    </div>
 </div>
 
-<!-- SCRIPTS DATATABLES -->
-<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
-<link rel="stylesheet" href="https://cdn.datatables.net/colreorder/1.6.2/css/colReorder.dataTables.min.css">
+<!-- Scripts -->
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/colreorder/1.6.2/js/dataTables.colReorder.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
 
 <script>
+    let table;
+
+    // --- Lógica de Filtro Customizado ---
+    $.fn.dataTable.ext.search.push(
+        function (settings, data, dataIndex) {
+            // 1. Filtro de Data
+            let min = $('#minDate').val();
+            let max = $('#maxDate').val();
+            let dateStr = table ? table.row(dataIndex).node().cells[2].getAttribute('data-order') : null;
+
+            if (dateStr) {
+                let minDate = min ? min.replace(/-/g, "") : null;
+                let maxDate = max ? max.replace(/-/g, "") : null;
+                if (!((minDate === null && maxDate === null) ||
+                    (minDate === null && dateStr <= maxDate) ||
+                    (minDate <= dateStr && maxDate === null) ||
+                    (minDate <= dateStr && dateStr <= maxDate))) {
+                    return false;
+                }
+            }
+
+            // 2. Filtro de "Minhas Pendências" (Customizado)
+            // Verificamos se há um card de filtro ativo do tipo "assinar"
+            const activeCard = document.querySelector('.stat-card.active-filter');
+            if (activeCard && activeCard.dataset.type === 'assinar') {
+                // Acessa o atributo data-minha-pendencia da linha (node TR)
+                const tr = table.row(dataIndex).node();
+                const isMyPending = tr.getAttribute('data-minha-pendencia') === 'true';
+                if (!isMyPending) return false;
+            }
+
+            return true;
+        }
+    );
+
     $(document).ready(function () {
-        $('#dataTableRDO').DataTable({
-            colReorder: true,
-            scrollX: true,
+        table = $('#dataTableRDO').DataTable({
             responsive: true,
-            paging: true,
-            searching: true,
-            pageLength: 10,
-            lengthMenu: [[10, 50, 100, -1], [10, 50, 100, "Todos"]],
-            order: [[3, 'asc']],
+            stateSave: false,
+            pageLength: 25,
+            lengthMenu: [[10, 25, 50, -1], ["10 por pág", "25 por pág", "50 por pág", "Todos"]],
+            // ALTERADO: Ordernar pela Coluna 4 (Responsável/Criação), Descendente
+            order: [[4, 'desc']],
             language: {
-                url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json"
+                url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json",
+                search: "",
+                searchPlaceholder: "Filtrar..."
             },
-            dom: 'lrtip'
+            columnDefs: [
+                { orderable: false, targets: 5 }, // Ações
+                { responsivePriority: 1, targets: 0 }, // Status
+                { responsivePriority: 2, targets: 5 }, // Ações
+                { responsivePriority: 3, targets: 1 }  // ID
+            ],
+            dom: 'rt<"flex flex-col sm:flex-row justify-between items-center px-6 py-4 gap-4"li p>'
+        });
+
+        $('#customSearch').on('keyup', function () {
+            table.search(this.value).draw();
         });
     });
 
-    function excluirItem(rdoId, tipo) {
-        if (!confirm("Tem certeza que deseja excluir este RDO?")) return;
+    // --- UI Logic ---
 
-        fetch(`/delete/${tipo}/${rdoId}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-        })
-            .then(response => {
-                if (response.ok) {
-                    const row = document.getElementById(`row-${rdoId}`);
-                    if (row) row.remove();
-                    alert("RDO excluído com sucesso!");
-                } else {
-                    response.json().then(data => alert(data.message || "Erro ao excluir o RDO."));
-                }
+    function toggleAdvancedFilter() {
+        const overlay = document.getElementById('advancedFilterOverlay');
+        const backdrop = document.getElementById('filterBackdrop');
+        const body = document.body;
+
+        if (overlay.classList.contains('open')) {
+            overlay.classList.remove('open');
+            backdrop.classList.add('hidden');
+            body.classList.remove('overflow-hidden');
+        } else {
+            overlay.classList.add('open');
+            backdrop.classList.remove('hidden');
+            body.classList.add('overflow-hidden');
+        }
+    }
+
+    function applyAdvancedFilters() {
+        const obra = $('#filterObra').val();
+        const user = $('#filterUser').val();
+
+        table.column(3).search(obra);
+        table.column(4).search(user);
+        table.draw();
+
+        toggleAdvancedFilter();
+    }
+
+    function clearAdvancedFilters() {
+        $('#advancedFilterOverlay input').val('');
+        table.columns().search('');
+        table.search('');
+        $('#customSearch').val('');
+
+        // Reseta Cards para Total
+        $('.stat-card').removeClass('active-filter');
+        $('.stat-card[data-type="total"]').addClass('active-filter');
+
+        table.draw();
+        toggleAdvancedFilter();
+    }
+
+    function filtrarTabelaPorStatus(status, element) {
+        // UI Update
+        $('.stat-card').removeClass('active-filter');
+        $(element).addClass('active-filter');
+
+        const type = element.dataset.type;
+
+        if (type === 'assinar') {
+            // Se for filtro de assinatura, limpamos o filtro de coluna de status
+            // e deixamos o $.fn.dataTable.ext.search lidar com a lógica
+            table.column(0).search('');
+        } else if (status === "") {
+            // Total
+            table.column(0).search("");
+        } else {
+            // Filtro normal de status (Aprovado, Pendente, etc)
+            table.column(0).search(status);
+        }
+
+        table.draw();
+    }
+
+    function resetTableState() {
+        clearAdvancedFilters();
+    }
+
+    function excluirItem(id) {
+        if (!confirm("Tem certeza que deseja excluir este RDO permanentemente?")) return;
+
+        fetch(`/delete/rdo/${id}`, { method: "POST" })
+            .then(res => {
+                if (res.ok) window.location.reload();
+                else alert("Erro ao excluir o registro.");
             })
-            .catch(err => {
-                console.error(err);
-                alert("Erro na comunicação com o servidor.");
-            });
+            .catch(err => alert("Erro de conexão."));
     }
 </script>
 

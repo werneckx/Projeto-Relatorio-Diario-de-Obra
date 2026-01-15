@@ -22,6 +22,20 @@
         --error-red: #ef4444;
     }
 
+    /* Custom Scrollbar */
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: #f1f5f9;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background-color: #cbd5e1;
+        border-radius: 20px;
+    }
+
     /* Inputs Padrão */
     .form-control-std {
         width: 100%;
@@ -66,7 +80,7 @@
         color: #1e293b;
     }
 
-    /* --- Workflow / Timeline Styles --- */
+    /* --- Workflow / Timeline Styles (Visualização no Form) --- */
     .workflow-container {
         display: flex;
         flex-direction: column;
@@ -139,26 +153,38 @@
     /* --- Modais (Unificado) --- */
     .modal-overlay {
         display: none;
-        /* Hidden by default */
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        background: rgba(0, 0, 0, 0.5);
+        background: rgba(15, 23, 42, 0.6);
+        /* Backdrop mais escuro e azulado */
         z-index: 9999;
         align-items: center;
         justify-content: center;
-        backdrop-filter: blur(2px);
+        backdrop-filter: blur(4px);
     }
 
     .modal-overlay.active {
         display: flex;
+        animation: fadeIn 0.2s ease-out;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
     }
 
     .modal-content {
         background: white;
-        border-radius: 0.75rem;
+        border-radius: 1rem;
+        /* Arredondamento maior */
         width: 95%;
         max-width: 600px;
         max-height: 90vh;
@@ -166,6 +192,19 @@
         flex-direction: column;
         box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
         overflow: hidden;
+        animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes slideUp {
+        from {
+            transform: translateY(20px) scale(0.95);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+        }
     }
 
     /* Tags de Status */
@@ -193,52 +232,16 @@
         border: 1px solid #e2e8f0;
     }
 
-    /* --- Drag and Drop Styles (Novo) --- */
-    .sortable-list {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-    }
-
+    /* Estilo de item arrastável no modal */
     .sortable-item {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 0.75rem;
-        background: white;
-        border: 1px solid var(--input-border);
-        border-radius: 0.5rem;
-        margin-bottom: 0.5rem;
-        cursor: grab;
+        /* Estilos base agora geridos pelo Tailwind no HTML */
         transition: all 0.2s;
-    }
-
-    .sortable-item:active {
-        cursor: grabbing;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
     }
 
     .sortable-item.dragging {
         opacity: 0.5;
-        background: #f1f5f9;
         border-style: dashed;
-    }
-
-    .sortable-item.locked {
-        cursor: default;
         background-color: #f8fafc;
-        border-color: #e2e8f0;
-    }
-
-    .drag-handle {
-        color: #cbd5e1;
-        margin-right: 0.75rem;
-        cursor: grab;
-    }
-
-    .locked .drag-handle {
-        color: transparent;
-        cursor: default;
     }
 </style>
 
@@ -303,7 +306,7 @@
             {% if item.id %}
             <a href="{{ url_for('auth.gerar_pdf_rdo_view', rdo_id=item.id) }}" target="_blank"
                 class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 shadow-sm transition">
-                <i class="fas fa-print"></i> PDF / Imprimir
+                <i class="fas fa-print"></i> Imprimir
             </a>
             {% endif %}
 
@@ -831,66 +834,130 @@
 <!-- ZONA DE MODAIS (TODOS AGRUPADOS AQUI) -->
 <!-- ========================================== -->
 
-<!-- 4. Modal Gerenciar Workflow (REFORMULADO - DRAG AND DROP) -->
+<!-- 4. Modal Gerenciar Workflow (REFORMULADO - MODERNO) -->
 <div id="modal_assinantes" class="modal-overlay">
-    <div class="modal-content max-w-lg flex flex-col max-h-[85vh]">
-        <div class="p-4 border-b flex justify-between items-center bg-slate-50 shrink-0">
+
+    <div class="modal-content max-w-lg flex flex-col max-h-[90vh] rounded-2xl shadow-2xl overflow-hidden">
+
+        <!-- 1. Header -->
+        <div
+            class="px-6 py-5 flex justify-between items-start shrink-0 bg-white z-20 shadow-sm border-b border-slate-50 relative">
             <div>
-                <h3 class="font-bold text-slate-800 text-sm">Definir Sequência de Aprovação</h3>
-                <p class="text-[10px] text-slate-500">Arraste para reordenar a sequência.</p>
+                <h3 class="font-bold text-slate-800 text-lg leading-tight">Definir Sequência</h3>
+                <p class="text-xs text-slate-500 mt-1">Busque colaboradores e organize o fluxo.</p>
             </div>
-            <button type="button" onclick="closeModal('modal_assinantes')" class="text-slate-400 hover:text-red-500"><i
-                    class="fas fa-times"></i></button>
-        </div>
-
-        <!-- Área de Sequência Selecionada (Drag and Drop) -->
-        <div class="p-4 bg-slate-50 border-b flex-1 overflow-y-auto">
-            <h4 class="text-[11px] font-bold text-slate-500 uppercase mb-2">Sequência Atual</h4>
-            <ul id="sortable_workflow" class="sortable-list space-y-2">
-                <!-- Itens serão renderizados via JS -->
-            </ul>
-        </div>
-
-        <!-- Área de Adicionar Novos -->
-        <div class="p-4 bg-white flex-1 overflow-hidden flex flex-col">
-            <h4 class="text-[11px] font-bold text-slate-500 uppercase mb-2">Adicionar Colaboradores</h4>
-
-            <!-- Campo de Pesquisa -->
-            <div class="mb-2 relative">
-                <input type="text" id="search_workflow"
-                    onkeyup="filterModalList('search_workflow', 'list_workflow_users')" placeholder="Pesquisar..."
-                    class="form-control-std text-sm pl-8 h-8 w-full">
-            </div>
-
-            <!-- Lista de Opções -->
-            <div class="overflow-y-auto flex-1 pr-1" id="list_workflow_users">
-                {% for u in usuarios_obra %}
-                <label
-                    class="flex items-center justify-between p-2 border border-slate-100 rounded-md cursor-pointer hover:bg-slate-50 transition-all item-filter">
-                    <div class="flex items-center gap-3 overflow-hidden">
-                        <input type="checkbox" name="workflow_users" value="{{ u.id }}"
-                            onchange="toggleUserInWorkflow('{{ u.id }}', this.checked)"
-                            class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300">
-                        <div class="truncate">
-                            <p class="text-xs font-bold text-slate-700 truncate name-filter">{{ u.nome }}</p>
-                            <div class="flex items-center gap-2 text-[10px] text-slate-400">
-                                <span class="uppercase tracking-wider">{{ u.papel or 'Colaborador' }}</span>
-                            </div>
-                        </div>
-                    </div>
-                </label>
-                {% endfor %}
-            </div>
-        </div>
-
-        <div class="p-3 border-t bg-white flex justify-end gap-2 shrink-0">
             <button type="button" onclick="closeModal('modal_assinantes')"
-                class="px-4 py-2 text-slate-600 font-bold text-xs hover:bg-slate-100 rounded">Cancelar</button>
-            <button type="button" onclick="salvarWorkflow()"
-                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold text-xs shadow-sm flex items-center gap-2">
-                <i class="fas fa-save"></i> Salvar Sequência
+                class="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-2 rounded-full transition-all">
+                <i class="fas fa-times text-lg"></i>
             </button>
         </div>
+
+        <!-- 2. Área de Busca e Adição (Topo e Expansiva) -->
+        <!-- Adicionei z-30 para ficar acima do conteúdo abaixo -->
+        <div class="bg-white shrink-0 z-30 relative">
+            <div class="px-6 pt-4 pb-2">
+                <h4 class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Adicionar Colaborador
+                </h4>
+
+                <!-- Search Input Wrapper -->
+                <div class="relative group">
+                    <div
+                        class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
+                    </div>
+                    <input type="text" id="search_workflow"
+                        onkeyup="filterModalList('search_workflow', 'list_workflow_users')"
+                        onfocus="expandUserList(true)" placeholder="Pesquisar e selecionar..."
+                        class="w-full pl-9 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 focus:ring-2 focus:ring-blue-100 focus:border-blue-300 focus:bg-white transition-all outline-none placeholder:text-slate-400">
+
+                    <!-- Ícone de Chevron para indicar expansão -->
+                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
+                        <i id="chevron-icon" class="fas fa-chevron-down text-xs transition-transform duration-300"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lista de Opções (Agora Absolute/Floating) -->
+            <!-- Alterei classes para posicionamento absoluto, sombra e z-index alto -->
+            <div id="expandable_user_list"
+                class="absolute top-full left-0 w-full max-h-0 overflow-hidden transition-all duration-300 ease-in-out bg-white border-b border-slate-200 shadow-2xl z-50 rounded-b-xl">
+                <div class="overflow-y-auto px-4 pb-4 pt-2 custom-scrollbar max-h-[220px]" id="list_workflow_users">
+
+                    <p class="text-[10px] text-slate-400 px-2 mb-2 italic">Selecione para adicionar à sequência abaixo.
+                    </p>
+
+                    {% for u in usuarios_obra %}
+                    <label id="label_user_{{ u.id }}"
+                        class="flex items-center justify-between p-2.5 mx-1 my-1 rounded-lg cursor-pointer hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200 group item-filter">
+                        <div class="flex items-center gap-3 w-full">
+                            <div class="relative flex items-center shrink-0">
+                                <input type="checkbox" name="workflow_users" value="{{ u.id }}"
+                                    onchange="toggleUserInWorkflow('{{ u.id }}', this.checked)"
+                                    class="peer h-4 w-4 cursor-pointer appearance-none rounded border border-slate-300 bg-white checked:bg-blue-500 checked:border-transparent transition-all">
+                                <i
+                                    class="fas fa-check absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white text-[9px] opacity-0 peer-checked:opacity-100 pointer-events-none"></i>
+                            </div>
+
+                            <!-- Avatar -->
+                            <div
+                                class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xs font-bold group-hover:bg-white group-hover:shadow-sm transition-all shrink-0 uppercase">
+                                {{ u.nome[:2] }}
+                            </div>
+
+                            <div class="truncate">
+                                <p class="text-sm font-medium text-slate-700 leading-tight truncate name-filter">{{
+                                    u.nome }}</p>
+                                <span class="text-[10px] text-slate-400 truncate block">{{ u.papel or 'Colaborador'
+                                    }} | {{u.email}}</span>
+                            </div>
+                        </div>
+
+                        <!-- Badge de Selecionado (Controlado via CSS/JS) -->
+                        <span
+                            class="hidden peer-checked:inline-block text-[9px] font-bold text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded ml-2 shrink-0">OK</span>
+                    </label>
+                    {% endfor %}
+
+                </div>
+
+                <!-- Fecha manual -->
+                <div class="text-center pb-2 pt-1 border-t border-slate-50 cursor-pointer hover:bg-slate-50 transition-colors bg-white sticky bottom-0"
+                    onclick="expandUserList(false)">
+                    <i class="fas fa-chevron-up text-slate-300 text-xs"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Área de Sequência (Timeline em baixo) -->
+        <div class="bg-slate-50/50 flex-1 overflow-y-auto px-6 py-4 custom-scrollbar relative">
+
+            <div
+                class="flex items-center justify-between mb-4 sticky top-0 bg-slate-50/95 backdrop-blur-sm z-10 py-1 border-b border-transparent">
+                <h4 class="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                    <i class="fas fa-sort-amount-down text-slate-300"></i> Sequência Atual
+                </h4>
+            </div>
+
+            <!-- Lista Sortable -->
+            <div class="relative pl-4 border-l-2 border-slate-200 ml-2 space-y-3 pb-2 min-h-[100px]"
+                id="sortable_workflow">
+                <!-- Itens serão renderizados via JS (renderWorkflowList) -->
+            </div>
+
+        </div>
+
+        <!-- 4. Footer -->
+        <div class="p-5 border-t border-slate-100 bg-white flex justify-end gap-3 shrink-0 rounded-b-2xl z-20">
+            <button type="button" onclick="closeModal('modal_assinantes')"
+                class="px-5 py-2.5 text-slate-500 font-semibold text-sm hover:bg-slate-50 hover:text-slate-700 rounded-lg transition-colors">
+                Cancelar
+            </button>
+            <button type="button" onclick="salvarWorkflow()"
+                class="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-medium text-sm shadow-lg shadow-slate-300/50 flex items-center gap-2 transform active:scale-95 transition-all">
+                <i class="fas fa-check"></i>
+                Salvar Sequência
+            </button>
+        </div>
+
     </div>
 </div>
 
@@ -1039,27 +1106,58 @@
     }
 
     // --- WORKFLOW REFORMULADO (Drag and Drop & Lógica de Criador) ---
-    let selectedOrder = []; // Array de strings (IDs dos usuários)
-    let creatorId = null;   // ID do criador (sempre o primeiro)
+    let selectedOrder = [];
+    let creatorId = null;
+
+    function getInitials(name) {
+        if (!name) return "??";
+        return name.substring(0, 2).toUpperCase();
+    }
+
+    // Controle da lista expansiva
+    function expandUserList(show) {
+        const list = document.getElementById('expandable_user_list');
+        const icon = document.getElementById('chevron-icon');
+
+        if (show) {
+            list.style.maxHeight = "250px";
+            if (icon) icon.classList.add('rotate-180');
+        } else {
+            setTimeout(() => {
+                list.style.maxHeight = "0px";
+                if (icon) icon.classList.remove('rotate-180');
+            }, 100);
+        }
+    }
+
+    // Fechar lista ao clicar fora
+    document.addEventListener('click', function (event) {
+        const modal = document.getElementById('modal_assinantes');
+        if (!modal.classList.contains('active')) return; // Só roda se modal aberto
+
+        const searchGroup = document.querySelector('#modal_assinantes .group'); // Wrapper do input
+        const listArea = document.getElementById('expandable_user_list');
+
+        // Verifica se elementos existem antes de checar click
+        if (searchGroup && listArea) {
+            const isClickInside = searchGroup.contains(event.target) || listArea.contains(event.target);
+            if (!isClickInside) {
+                expandUserList(false);
+            }
+        }
+    });
 
     function initWorkflowModal() {
         selectedOrder = [];
-
-        // Determina quem é o criador
-        // Se houver assinaturas, o primeiro é o criador
         if (existingSignatures.length > 0) {
             creatorId = existingSignatures[0].userId;
-            // Carrega a ordem existente
             selectedOrder = existingSignatures.map(s => s.userId);
         } else {
-            // Se for novo ou sem assinaturas, o usuário atual é o criador
             creatorId = String(currentUserId);
-            // Inicia com o criador apenas
             if (usersMap[creatorId]) {
                 selectedOrder.push(creatorId);
             }
         }
-
         renderWorkflowList();
         updateCheckboxes();
     }
@@ -1073,52 +1171,69 @@
             if (!user) return;
 
             const isCreator = (userId === creatorId);
+            const initials = getInitials(user.nome);
 
-            const li = document.createElement('li');
-            li.className = `sortable-item ${isCreator ? 'locked' : ''}`;
-            li.setAttribute('data-id', userId);
+            // Cria o elemento visual do Card
+            const cardDiv = document.createElement('div');
+            // Classes Tailwind do Card
+            cardDiv.className = `relative group sortable-item bg-white p-3 rounded-lg shadow-sm border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all flex items-center gap-3 ml-2 ${isCreator ? 'locked' : 'cursor-grab active:cursor-grabbing'}`;
 
+            // Atributos de drag
+            cardDiv.setAttribute('data-id', userId);
             if (!isCreator) {
-                li.draggable = true;
-                li.addEventListener('dragstart', handleDragStart);
-                li.addEventListener('dragover', handleDragOver);
-                li.addEventListener('drop', handleDrop);
-                li.addEventListener('dragend', handleDragEnd);
+                cardDiv.draggable = true;
+                cardDiv.addEventListener('dragstart', handleDragStart);
+                cardDiv.addEventListener('dragover', handleDragOver);
+                cardDiv.addEventListener('drop', handleDrop);
+                cardDiv.addEventListener('dragend', handleDragEnd);
             }
 
-            li.innerHTML = `
-                <div class="flex items-center">
-                    <div class="drag-handle">
-                        <i class="fas ${isCreator ? 'fa-lock' : 'fa-grip-lines'}"></i>
-                    </div>
-                    <div>
-                        <p class="text-xs font-bold text-slate-700">${user.nome}</p>
-                        <p class="text-[10px] text-slate-400 uppercase">${isCreator ? 'Criador (Fixo)' : (user.papel || 'Aprovador')}</p>
-                    </div>
+            // HTML Interno do Card
+            cardDiv.innerHTML = `
+                <!-- Linha/Dot da Timeline -->
+                <div class="absolute -left-[25px] top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 shadow-sm ${index === 0 ? 'bg-blue-500 border-slate-50 ring-2 ring-blue-100' : 'bg-white border-slate-300 group-hover:border-blue-400'}"></div>
+                
+                <!-- Handle -->
+                <div class="text-slate-300 ${isCreator ? 'cursor-default' : 'group-hover:text-blue-400'}">
+                    <i class="fas ${isCreator ? 'fa-lock text-xs' : 'fa-grip-vertical'}"></i>
                 </div>
+
+                <!-- Avatar -->
+                <div class="w-8 h-8 rounded-full ${isCreator ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-500'} flex items-center justify-center text-xs font-bold shrink-0 uppercase">
+                    ${initials}
+                </div>
+                
+                <!-- Info -->
+                <div class="flex-1 overflow-hidden">
+                    <p class="text-sm font-semibold text-slate-700 truncate">${user.nome}</p>
+                    <p class="text-[10px] text-slate-500 truncate">${isCreator ? 'Criador (Início)' : (user.papel || 'Aprovador')}</p>
+                    <p class="text-[10px] text-slate-500 truncate">${user.email}</p>
+                </div>
+                
+                <!-- Remove Btn -->
                 ${!isCreator ? `
-                    <button type="button" onclick="removeUserFromWorkflow('${userId}')" class="text-slate-300 hover:text-red-500">
-                        <i class="fas fa-times"></i>
+                    <button type="button" onclick="removeUserFromWorkflow('${userId}')" class="text-slate-300 hover:text-red-500 transition-colors p-1">
+                        <i class="fas fa-trash-alt text-xs"></i>
                     </button>
                 ` : ''}
             `;
-            container.appendChild(li);
+
+            container.appendChild(cardDiv);
         });
     }
 
     function toggleUserInWorkflow(userId, isChecked) {
-        if (userId === creatorId) return; // Segurança extra
+        if (userId === creatorId) return;
 
         if (isChecked) {
-            // Adiciona ao final se não estiver na lista
             if (!selectedOrder.includes(userId)) {
                 selectedOrder.push(userId);
             }
         } else {
-            // Remove da lista
             selectedOrder = selectedOrder.filter(id => id !== userId);
         }
         renderWorkflowList();
+        updateCheckboxes(); // Para atualizar o estilo visual da lista
     }
 
     function removeUserFromWorkflow(userId) {
@@ -1130,11 +1245,21 @@
 
     function updateCheckboxes() {
         document.querySelectorAll('input[name="workflow_users"]').forEach(chk => {
-            // Se for o criador, garante que está marcado e desabilitado visualmente se necessário
-            // Mas para o fluxo, vamos apenas marcar quem está na lista
-            chk.checked = selectedOrder.includes(chk.value);
+            const isSelected = selectedOrder.includes(chk.value);
+            chk.checked = isSelected;
 
-            // Opcional: Desabilitar checkbox do criador se ele aparecer na lista de baixo
+            // Controle visual do label pai
+            const label = document.getElementById(`label_user_${chk.value}`);
+            if (label) {
+                if (isSelected) {
+                    label.classList.add('bg-blue-50', 'border-blue-100');
+                    label.classList.remove('hover:bg-slate-50', 'hover:border-slate-200', 'border-transparent');
+                } else {
+                    label.classList.remove('bg-blue-50', 'border-blue-100');
+                    label.classList.add('hover:bg-slate-50', 'hover:border-slate-200', 'border-transparent');
+                }
+            }
+
             if (chk.value === creatorId) {
                 chk.disabled = true;
                 chk.checked = true;
@@ -1144,71 +1269,57 @@
         });
     }
 
-    // --- Lógica Drag and Drop Nativa ---
+    // --- Drag and Drop ---
     let dragSrcEl = null;
 
     function handleDragStart(e) {
-        this.style.opacity = '0.4';
+        this.classList.add('dragging');
         dragSrcEl = this;
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData('text/html', this.innerHTML);
     }
 
     function handleDragOver(e) {
-        if (e.preventDefault) {
-            e.preventDefault(); // Necessário para permitir o drop
-        }
+        if (e.preventDefault) e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
         return false;
     }
 
     function handleDrop(e) {
-        if (e.stopPropagation) {
-            e.stopPropagation();
-        }
+        if (e.stopPropagation) e.stopPropagation();
 
-        // Não faz nada se soltar no mesmo lugar
         if (dragSrcEl !== this) {
-            // Atualiza o DOM e o Array selectedOrder
             const sourceId = dragSrcEl.getAttribute('data-id');
             const targetId = this.getAttribute('data-id');
 
             const sourceIndex = selectedOrder.indexOf(sourceId);
             const targetIndex = selectedOrder.indexOf(targetId);
 
-            // Evita mover se um dos itens for o criador (index 0)
-            // Embora a UI já bloqueie o drag do criador, bloqueamos o drop ANTES do criador também
-            if (targetIndex === 0 && creatorId) {
-                return false;
-            }
+            // Impede drop antes do criador
+            if (targetIndex === 0 && creatorId) return false;
 
-            // Reordena o array
             if (sourceIndex > -1 && targetIndex > -1) {
                 selectedOrder.splice(sourceIndex, 1);
                 selectedOrder.splice(targetIndex, 0, sourceId);
-                renderWorkflowList(); // Re-renderiza para corrigir visual
+                renderWorkflowList();
             }
         }
         return false;
     }
 
     function handleDragEnd(e) {
-        this.style.opacity = '1';
-        // Remove classes visuais se houver
+        this.classList.remove('dragging');
+        document.querySelectorAll('.sortable-item').forEach(item => item.classList.remove('dragging'));
     }
 
     async function salvarWorkflow() {
         if (selectedOrder.length === 0) { alert("Selecione ao menos um aprovador."); return; }
-
-        // Garante que o criador é o primeiro
         if (selectedOrder[0] !== creatorId) {
-            // Se algo deu errado, coloca o criador no início
             selectedOrder = selectedOrder.filter(id => id !== creatorId);
             selectedOrder.unshift(creatorId);
         }
 
         try {
-            // Utiliza a estrutura fetch existente que você já tinha
             const res = await fetch(`/auth/assinar-rdo/${currentRdoId}/salvar-workflow`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ usuarios_ids: selectedOrder })
@@ -1235,6 +1346,10 @@
     // --- UTILS ---
     function filterModalList(inputId, listId) {
         const term = document.getElementById(inputId).value.toLowerCase();
+
+        // Garante que lista abre ao digitar
+        if (term.length > 0) expandUserList(true);
+
         const items = document.querySelectorAll(`#${listId} .item-filter`);
         items.forEach(item => {
             const name = item.querySelector('.name-filter').innerText.toLowerCase();
