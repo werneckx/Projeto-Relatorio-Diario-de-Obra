@@ -16,7 +16,7 @@ from app.models.obra import Frente_Trabalho, Obra
 from app.models.rdo import RDO, Assinatura, Equipamentos
 from app.utils.rdo_pdf import regenerar_pdf_rdo
 from sqlalchemy import func, or_
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from functools import wraps # Mover a importação para o topo para melhor prática
 from sqlalchemy.orm import aliased
 from flask import request, jsonify
@@ -222,7 +222,7 @@ def gerar_pdf_rdo_view(rdo_id):
 @auth_bp.get("/criar-rdo")
 @login_required
 def criar_rdo():
-    from app.models.obra import Obra, Frente_Trabalho # Importe Frente_Trabalho também
+    from app.models.obra import Obra, Frente_Trabalho 
     from app.models.lista_opcoes import Clima 
     from app.models.usuario import Usuario
     from app.models.lista_opcoes import MaoObra, Equipamento, TagOcorrencia, Clima
@@ -250,13 +250,11 @@ def criar_rdo():
         frente_trabalho=frente_trabalho, 
         usuarios_obra=usuarios_obra,
         view_mode=False,
-        mao_de_obra_options=mao_de_obra_options, # ENVIA PARA O HTML
-        equipamentos_options=equipamentos_options, # ENVIA PARA O HTML
-        tags_options=tags_options # ENVIA PARA O HTML
+        mao_de_obra_options=mao_de_obra_options,
+        equipamentos_options=equipamentos_options, 
+        tags_options=tags_options 
     )
     
-# Adicione ao auth_bp
-
 @auth_bp.get("/api/obra/<int:id>")
 @login_required
 def get_obra_api(id):
@@ -301,7 +299,7 @@ def get_obra_api(id):
         "data_inicio_iso": data_inicio_iso,
         "data_fim": data_fim_fmt,
         "data_fim_iso": data_fim_iso,
-        "responsavel": nome_responsavel,     # Valor corrigido no passo 4
+        "responsavel": nome_responsavel,
         "frentes": lista_frentes
     })
     
@@ -314,18 +312,20 @@ def get_frente_api(id):
         "responsavel": frente.responsavel_tecnico.nome if frente.responsavel_tecnico else None
     })
 
-# Gerar RDO (POST)
- 
+# Gerar ou Editar RDO (POST)
 @auth_bp.post("/gerar-rdo")
 @login_required
 def gerar_rdo():
-    from app.models.rdo import RDO, RDOMaoObra, Atividades, Equipamentos, Fotos, TagsOcorrencias
+    from app.models.rdo import RDO, RDOMaoObra, Atividades, Equipamentos, Fotos, TagsOcorrencias, Assinatura
     from app.models.lista_opcoes import Equipamento
-    # CORRETO
-    from flask import current_app  # O current_app sim vem do flask
-    from app import db             # O db vem da sua aplicação (instância do SQLAlchemy)
+    from flask import current_app
+    from app import db
     
     try:
+        sp_tz = timezone(timedelta(hours=-3))
+        now_br = datetime.now(sp_tz).replace(tzinfo=None)
+        current_user_id = session.get("user_id")
+
         # Helpers
         def _get_int(key):
             v = request.form.get(key)
@@ -345,42 +345,55 @@ def gerar_rdo():
         # Dados Básicos
         rdo_id_original = _get_int("rdo_id")
         id_obra = _get_int("obra_id")
-        data_rdo_str = request.form.get("data_rdo") # YYYY-MM-DD
+        data_rdo_str = request.form.get("data_rdo")
         data_rdo = datetime.strptime(data_rdo_str, '%Y-%m-%d').date() if data_rdo_str else date.today()
         
-        # Criação ou Revisão
+        # --- Lógica Principal ---
         if rdo_id_original:
-            # Lógica de revisão: clonar ou atualizar status anterior
-            rdo_antigo = RDO.query.get_or_404(rdo_id_original)
-            # Para simplificar, estamos editando o próprio objeto se for edição simples,
-            # ou criando nova revisão se a regra de negócio exigir. 
-            # Assumindo EDIÇÃO do rascunho ou CRIAÇÃO de nova revisão se aprovado.
-            # Aqui vou seguir a lógica de criar NOVO objeto (Revisão +1) para preservar histórico
+            # ==============================
+            # UPDATE (EDIÇÃO / NOVA REVISÃO)
+            # ==============================
+            item_rdo = RDO.query.get(rdo_id_original)
+            if not item_rdo:
+                abort(404, description="RDO não encontrado para edição.")
             
-            nova_revisao = rdo_antigo.id_revisao + 1
-            item_rdo = RDO(
-                id_obra=rdo_antigo.id_obra,
-                id_sequencial=rdo_antigo.id_sequencial,
-                id_revisao=nova_revisao
-            )
+            # 1. Incrementa a Revisão
+            rev_atual = item_rdo.id_revisao if item_rdo.id_revisao is not None else 0
+            item_rdo.id_revisao = rev_atual + 1
+            
+            # 2. Reseta o status do RDO para Pendente
+            item_rdo.status = "Pendente"
+
+            # 3. REINICIAR WORKFLOW (Resetar assinaturas existentes)
+            assinaturas_existentes = Assinatura.query.filter_by(id_rdo=item_rdo.id).all()
+            
+            for ass in assinaturas_existentes:
+                # Reseta TUDO para Pendente, inclusive o editor atual
+                ass.img_assinatura = None
+                ass.motivo_rejeicao = None
+                ass.status = 'Pendente'
+                ass.criado = None # Limpa a data de assinatura
+
         else:
-            # Novo RDO
+            # ==============================
+            # INSERT (NOVO RDO)
+            # ==============================
             num_existentes = RDO.query.filter_by(id_obra=id_obra, id_revisao=0).count()
             item_rdo = RDO(
                 id_obra=id_obra,
                 id_sequencial=num_existentes + 1,
                 id_revisao=0
             )
+            item_rdo.criado = now_br
+            item_rdo.status = "Pendente"
 
         # Popular campos comuns
         item_rdo.id_frente_trabalho = _get_int("frente_trabalho_id")
-        item_rdo.id_usuario = session.get("user_id")
+        item_rdo.id_usuario = current_user_id
         item_rdo.id_climas_manha = _get_int("climas_manha")
         item_rdo.id_climas_tarde = _get_int("climas_tarde")
         item_rdo.data = data_rdo
-        item_rdo.criado = datetime.now()
-        item_rdo.modificado = datetime.now()
-        item_rdo.status = "Pendente"
+        item_rdo.modificado = now_br
         item_rdo.comentarios_gerais = request.form.get("comentarios_gerais")
         
         # Horários
@@ -389,13 +402,38 @@ def gerar_rdo():
         item_rdo.intervalo_entrada = _get_time("intervalo_entrada")
         item_rdo.intervalo_saida = _get_time("intervalo_saida")
         
-        db.session.add(item_rdo)
-        db.session.flush() # Para gerar o ID do RDO
+        if not rdo_id_original:
+            db.session.add(item_rdo)
+        
+        db.session.flush()
+
+        # [Criação Apenas] Adiciona assinatura do criador se não existir
+        # Nota: Na criação (novo), geralmente o criador já nasce aprovado.
+        # Se você quiser que até na criação ele tenha que ir lá assinar depois, 
+        # mude status='Aprovado' para 'Pendente' aqui também.
+        if not rdo_id_original: 
+            existe_ass = Assinatura.query.filter_by(id_rdo=item_rdo.id, id_usuario=current_user_id).first()
+            if not existe_ass:
+                assinatura_criador = Assinatura(
+                    id_rdo=item_rdo.id,
+                    id_usuario=current_user_id,
+                    ordem=1,
+                    status='Aprovado', # Mantive Aprovado só na CRIAÇÃO DO ZERO
+                    criado=now_br,
+                    ip_endereco=request.remote_addr
+                )
+                db.session.add(assinatura_criador)
+
+        # --- Limpeza de filhos para recriação ---
+        if rdo_id_original:
+            Atividades.query.filter_by(id_rdo=item_rdo.id).delete()
+            RDOMaoObra.query.filter_by(id_rdo=item_rdo.id).delete()
+            Equipamentos.query.filter_by(id_rdo=item_rdo.id).delete()
+            TagsOcorrencias.query.filter_by(id_rdo=item_rdo.id).delete()
 
         # --- 1. Atividades ---
         descricoes = request.form.getlist("atividade_descricao[]")
         status_list = request.form.getlist("atividade_status[]")
-        
         for i, desc in enumerate(descricoes):
             if desc and desc.strip():
                 st = status_list[i] if i < len(status_list) else "Não iniciada"
@@ -407,16 +445,12 @@ def gerar_rdo():
         qtd_prop = request.form.getlist("mo_qtd_propria[]")
         qtd_terc = request.form.getlist("mo_qtd_terceirizada[]")
         tempos = request.form.getlist("mo_tempo[]")
-
         for i, func in enumerate(funcoes):
             if func and func.strip():
                 qp = int(qtd_prop[i]) if i < len(qtd_prop) and qtd_prop[i] else 0
                 qt = int(qtd_terc[i]) if i < len(qtd_terc) and qtd_terc[i] else 0
-                t = _get_time(f"mo_tempo_dummy") # Hack: pegar do valor direto, pois getlist retorna string
-                # Parse manual do tempo da lista
                 tempo_str = tempos[i] if i < len(tempos) else None
                 tempo_obj = datetime.strptime(tempo_str, '%H:%M').time() if tempo_str else None
-                
                 nova_mo = RDOMaoObra(
                     id_rdo=item_rdo.id, nome_funcao=func,
                     quantidade_propria=qp, quantidade_terceirizada=qt, tempo=tempo_obj
@@ -426,11 +460,9 @@ def gerar_rdo():
         # --- 3. Equipamentos ---
         eq_ids = request.form.getlist("eq_id[]")
         eq_qts = request.form.getlist("eq_qtd[]")
-        
         for i, eid in enumerate(eq_ids):
             if eid:
                 qtd = int(eq_qts[i]) if i < len(eq_qts) and eq_qts[i] else 0
-                # Buscar nome para persistência redundante (opcional) ou usar relacionamento
                 eq_obj = Equipamento.query.get(eid)
                 novo_eq = Equipamentos(
                     id_rdo=item_rdo.id, id_equipamento_lista=eid,
@@ -441,38 +473,30 @@ def gerar_rdo():
         # --- 4. Ocorrências ---
         oc_tags = request.form.getlist("oc_tag[]")
         oc_descs = request.form.getlist("oc_desc[]")
-        
         for i, tid in enumerate(oc_tags):
             if tid:
                 desc = oc_descs[i] if i < len(oc_descs) else ""
                 nova_oc = TagsOcorrencias(id_rdo=item_rdo.id, id_tag_lista=tid, descricao=desc)
                 db.session.add(nova_oc)
 
-        # --- 5. Fotos (Upload e Comentários) ---
+        # --- 5. Fotos ---
         UPLOAD_FOLDER = os.path.join(current_app.root_path, 'static', 'uploads', 'rdo')
         if not os.path.exists(UPLOAD_FOLDER):
             os.makedirs(UPLOAD_FOLDER)
             
-        arquivos = request.files.getlist("fotos[]")
-        legendas = request.form.getlist("legenda_foto_nova[]")
-        
-        # Processar fotos antigas (se for revisão, copiar)
-        if rdo_id_original:
-            rdo_antigo = RDO.query.get(rdo_id_original)
-            # Copiar fotos do antigo para o novo
-            for f_antiga in rdo_antigo.fotos:
-                # Aqui você pode decidir se copia o registro ou mantém referência
-                f_nova = Fotos(
-                    id_rdo=item_rdo.id, arquivo=f_antiga.arquivo,
-                    comentario=f_antiga.comentario
-                )
-                db.session.add(f_nova)
+        for key, value in request.form.items():
+            if key.startswith('comentarios_existentes[]'):
+                try:
+                    foto_id = int(key.split('[')[1].split(']')[0])
+                    foto_obj = Fotos.query.get(foto_id)
+                    if foto_obj and foto_obj.id_rdo == item_rdo.id:
+                        foto_obj.comentario = value
+                        db.session.add(foto_obj)
+                except Exception as e:
+                    print(f"Erro ao atualizar legenda foto: {e}")
 
-        # Processar novas fotos
-        # Nota: O input file multiple não garante ordem com inputs text separados facilmente.
-        # Simplificação: assume que legendas novas vêm na ordem.
-        # Melhoria UX: Upload assíncrono seria ideal, mas no submit form tradicional:
-        
+        arquivos = request.files.getlist("fotos[]")
+        legendas = request.form.getlist("novas_fotos_comentarios[]")
         idx_file = 0
         for arquivo in arquivos:
             if arquivo and arquivo.filename:
@@ -482,20 +506,23 @@ def gerar_rdo():
                     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S%f')
                     novo_nome = f"{timestamp}_{idx_file}{ext}"
                     arquivo.save(os.path.join(UPLOAD_FOLDER, novo_nome))
-                    
                     comentario = legendas[idx_file] if idx_file < len(legendas) else ""
-                    
                     nova_foto = Fotos(id_rdo=item_rdo.id, arquivo=novo_nome, comentario=comentario)
                     db.session.add(nova_foto)
                     idx_file += 1
 
         db.session.commit()
-        flash(f"RDO Nº {item_rdo.id_sequencial} (Rev. {item_rdo.id_revisao}) salvo com sucesso!", "success")
+        
+        msg_acao = "revisado" if rdo_id_original else "salvo"
+        flash(f"RDO Nº {item_rdo.id_sequencial} (Rev {item_rdo.id_revisao}) {msg_acao} com sucesso!", "success")
+        
         return redirect(url_for('auth.visualizar_rdo', rdo_id=item_rdo.id))
 
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Erro ao gerar RDO: {e}")
+        import traceback
+        traceback.print_exc()
         flash(f"Erro ao salvar RDO: {str(e)}", "danger")
         return redirect(request.referrer)
     
