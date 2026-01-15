@@ -38,8 +38,10 @@ class RDO(db.Model):
     atividades = db.relationship('Atividades', backref='rdo', cascade='all, delete-orphan', lazy='dynamic')
     fotos = db.relationship('Fotos', backref='rdo', cascade='all, delete-orphan', lazy='dynamic')
     ocorrencias = db.relationship('TagsOcorrencias', backref='rdo', cascade='all, delete-orphan', lazy='dynamic')
+    
+    # [FIX 6] Remover onupdate=utcnow para evitar sobrescrita do Timezone BR
     criado = db.Column(db.DateTime, default=datetime.utcnow)
-    modificado = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    modificado = db.Column(db.DateTime, default=datetime.utcnow) # Remove onupdate
     
     obra = db.relationship("Obra")
     usuario = db.relationship("Usuario", foreign_keys=[id_usuario])
@@ -130,3 +132,7 @@ class Assinatura(db.Model):
 
     usuario = db.relationship("Usuario", backref="assinaturas_workflow")
     rdo = db.relationship('RDO', backref=db.backref('assinaturas', lazy='dynamic'))
+    def aprovar(self, img_assinatura, ip_endereco):
+        self.status = 'Aprovado'
+        self.img_assinatura = img_assinatura
+        self.ip_endereco = ip_endereco

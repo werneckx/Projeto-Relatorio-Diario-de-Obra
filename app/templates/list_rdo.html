@@ -186,7 +186,7 @@
                 <div>
                     <p class="text-[10px] font-bold text-purple-500 uppercase tracking-widest">Para Assinar</p>
                     <h3 class="text-2xl font-black text-slate-800 mt-1 group-hover:text-purple-600 transition-colors">{{
-                        ns.count_minhas_pendencias }}</h3>
+                        count_minhas_pendencias }}</h3>
                 </div>
                 <div
                     class="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
@@ -370,7 +370,7 @@
                                 {{ rdo.obra.nome if rdo.obra else 'N/A' }}
                             </div>
                             <div class="text-[11px] text-slate-500 truncate max-w-[180px]">
-                                {{ rdo.obra.contratante if rdo.obra else '-' }}
+                                {{ rdo.obra.cliente if rdo.obra else '-' }}
                             </div>
                         </td>
 
@@ -560,7 +560,7 @@
         table = $('#dataTableRDO').DataTable({
             responsive: true,
             stateSave: false,
-            pageLength: 25,
+            pageLength: 50,
             lengthMenu: [[10, 25, 50, -1], ["10 por pág", "25 por pág", "50 por pág", "Todos"]],
             // ALTERADO: Ordernar pela Coluna 4 (Responsável/Criação), Descendente
             order: [[4, 'desc']],

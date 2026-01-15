@@ -378,6 +378,7 @@ def gerar_rdo():
         item_rdo.id_climas_manha = _get_int("climas_manha")
         item_rdo.id_climas_tarde = _get_int("climas_tarde")
         item_rdo.data = data_rdo
+        item_rdo.criado = datetime.now()
         item_rdo.modificado = datetime.now()
         item_rdo.status = "Pendente"
         item_rdo.comentarios_gerais = request.form.get("comentarios_gerais")
@@ -650,8 +651,20 @@ def lista_rdo():
         rdos = RDO.query.filter(RDO.id_obra.in_(ids_obras_permitidas)).order_by(RDO.data.desc()).all()
     else:
         rdos = []
+    
+    # Buscar pendências de assinatura (não usadas na view, mas podem ser úteis)
+    lista_pendencias = Assinatura.query.filter_by(
+        id_usuario=current_user_id, 
+        status='Pendencia'
+    ).all()
+    
+    # Contar pendências de assinatura para o usuário atual
+    minhas_pendencias = Assinatura.query.filter_by(
+        id_usuario=current_user_id,
+        status='Pendente'
+    ).count()
 
-    return render_template("list_rdo.html", rdos=rdos)
+    return render_template("list_rdo.html", rdos=rdos, count_minhas_pendencias=minhas_pendencias, lista_pendencias=lista_pendencias)
 
 # Assinar RDO (Execução da assinatura)
 @auth_bp.route("/assinar-rdo/<int:rdo_id>/aprovar-rdo", methods=["POST"])
