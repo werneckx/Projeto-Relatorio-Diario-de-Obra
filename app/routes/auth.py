@@ -418,7 +418,7 @@ def gerar_rdo():
                     id_rdo=item_rdo.id,
                     id_usuario=current_user_id,
                     ordem=1,
-                    status='Aprovado', # Mantive Aprovado só na CRIAÇÃO DO ZERO
+                    status='Pendente', # Mantive Aprovado só na CRIAÇÃO DO ZERO
                     criado=now_br,
                     ip_endereco=request.remote_addr
                 )
@@ -484,17 +484,27 @@ def gerar_rdo():
         if not os.path.exists(UPLOAD_FOLDER):
             os.makedirs(UPLOAD_FOLDER)
             
-        for key, value in request.form.items():
-            if key.startswith('comentarios_existentes[]'):
+        # ATUALIZAÇÃO DE LEGENDAS EXISTENTES (CÓDIGO NOVO)
+        # Recupera as listas paralelas de IDs e Comentários
+        ids_existentes = request.form.getlist("fotos_existentes_ids[]")
+        comentarios_existentes = request.form.getlist("comentarios_existentes_list[]")
+        
+        # Itera sobre os IDs e atualiza a legenda correspondente se existir
+        for i, foto_id_str in enumerate(ids_existentes):
+            if i < len(comentarios_existentes): # Garante que existe legenda para o ID
                 try:
-                    foto_id = int(key.split('[')[1].split(']')[0])
+                    foto_id = int(foto_id_str)
+                    nova_legenda = comentarios_existentes[i]
+                    
                     foto_obj = Fotos.query.get(foto_id)
+                    # Verificação de segurança: a foto pertence a este RDO?
                     if foto_obj and foto_obj.id_rdo == item_rdo.id:
-                        foto_obj.comentario = value
+                        foto_obj.comentario = nova_legenda
                         db.session.add(foto_obj)
                 except Exception as e:
-                    print(f"Erro ao atualizar legenda foto: {e}")
+                    print(f"Erro ao atualizar foto {foto_id_str}: {e}")
 
+        # PROCESSAMENTO DE NOVAS FOTOS (MANTIDO)
         arquivos = request.files.getlist("fotos[]")
         legendas = request.form.getlist("novas_fotos_comentarios[]")
         idx_file = 0
@@ -527,8 +537,6 @@ def gerar_rdo():
         return redirect(request.referrer)
     
 # Visualizar RDO (redireciona)
-
-# Visualizar RDO 
 @auth_bp.get("/visualizar-rdo/<int:rdo_id>")
 @login_required
 def visualizar_rdo(rdo_id):

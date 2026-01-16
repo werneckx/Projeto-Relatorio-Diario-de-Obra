@@ -7,54 +7,59 @@
 {% block content %}
 
 <!-- Dependências de UI -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
 
 <style>
     /* --- Variáveis e Estilos Globais --- */
     :root {
-        --input-border: #e2e8f0;
-        --input-focus: #2563eb;
-        --bg-readonly: #f8fafc;
+        --input-border: #cbd5e1;
+        --input-focus: #3b82f6;
+        --bg-readonly: #f1f5f9;
         --primary-blue: #2563eb;
         --success-green: #10b981;
         --error-red: #ef4444;
     }
 
-    /* Trava o scroll do body quando modal está aberto */
     body.modal-open {
         overflow: hidden;
+        touch-action: none;
     }
 
     /* Custom Scrollbar */
     .custom-scrollbar::-webkit-scrollbar {
         width: 6px;
+        height: 6px;
     }
 
     .custom-scrollbar::-webkit-scrollbar-track {
         background: #f1f5f9;
+        border-radius: 4px;
     }
 
     .custom-scrollbar::-webkit-scrollbar-thumb {
-        background-color: #cbd5e1;
-        border-radius: 20px;
+        background-color: #94a3b8;
+        border-radius: 4px;
     }
 
     /* Inputs Padrão */
     .form-control-std {
         width: 100%;
-        height: 42px;
+        height: 40px;
         border: 1px solid var(--input-border);
         border-radius: 0.5rem;
-        padding: 0 1rem;
-        transition: all 0.2s;
+        padding: 0 0.75rem;
+        transition: all 0.2s ease-in-out;
         outline: none;
+        background-color: #fff;
+        font-size: 0.9rem;
+        color: #1e293b;
     }
 
     .form-control-std:focus {
         border-color: var(--input-focus);
-        box-shadow: 0 0 0 1px var(--input-focus);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
     }
 
     .form-control-std[readonly],
@@ -62,30 +67,58 @@
         background-color: var(--bg-readonly);
         color: #64748b;
         cursor: not-allowed;
+        border-color: #e2e8f0;
     }
 
     textarea.form-control-std {
         height: auto;
-        min-height: 80px;
+        min-height: 100px;
         padding: 0.75rem;
         resize: vertical;
+        line-height: 1.5;
     }
 
-    /* Select2 Customization */
+    .time-calc {
+        text-align: center;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+
+    /* --- Select2 --- */
+    .select2-container .select2-search__field {
+        width: 100% !important;
+    }
+
     .select2-container .select2-selection--single {
-        height: 42px !important;
+        height: 40px !important;
         border-color: var(--input-border) !important;
         border-radius: 0.5rem !important;
         display: flex;
         align-items: center;
+        background-color: #fff;
     }
 
     .select2-container--default .select2-selection--single .select2-selection__rendered {
-        padding-left: 1rem;
+        padding-left: 0.75rem;
+        padding-right: 2rem;
         color: #1e293b;
+        font-size: 0.9rem;
+        line-height: normal;
     }
 
-    /* --- Workflow / Timeline Styles (Visualização no Form) --- */
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 38px !important;
+        right: 8px !important;
+    }
+
+    .select2-dropdown {
+        border-radius: 0.5rem;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        border-color: var(--input-border);
+        z-index: 10005;
+    }
+
+    /* --- Workflow Styles --- */
     .workflow-container {
         display: flex;
         flex-direction: column;
@@ -96,24 +129,34 @@
         position: relative;
         display: flex;
         align-items: flex-start;
-        gap: 1.25rem;
-        padding: 1.25rem;
+        gap: 1rem;
+        padding: 1rem;
         border-radius: 0.75rem;
         border: 1px solid var(--input-border);
         background: #fff;
-        transition: all 0.3s ease;
+        transition: all 0.2s ease;
+    }
+
+    .workflow-step:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        left: 27px;
+        top: 3.5rem;
+        bottom: -1.2rem;
+        width: 2px;
+        background-color: #e2e8f0;
+        z-index: 0;
     }
 
     .workflow-step.active {
         border-color: var(--primary-blue);
         box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.1);
-        transform: scale(1.005);
-        background-color: #f8fafc;
+        background-color: #eff6ff;
     }
 
     .workflow-step.approved {
         background-color: #f0fdf4;
-        border-color: #bcf0da;
+        border-color: #86efac;
     }
 
     .workflow-step.rejected {
@@ -122,57 +165,75 @@
     }
 
     .workflow-step.locked {
-        opacity: 0.6;
-        background-color: #f9fafb;
+        opacity: 0.7;
+        background-color: #f8fafc;
+        border-style: dashed;
     }
 
     .step-number {
-        width: 32px;
-        height: 32px;
+        width: 36px;
+        height: 36px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-weight: bold;
+        font-weight: 700;
         font-size: 0.875rem;
-        background: #e2e8f0;
+        background: #fff;
+        border: 2px solid #cbd5e1;
         color: #64748b;
         flex-shrink: 0;
+        z-index: 1;
     }
 
     .approved .step-number {
         background: var(--success-green);
+        border-color: var(--success-green);
         color: white;
     }
 
     .rejected .step-number {
         background: var(--error-red);
+        border-color: var(--error-red);
         color: white;
     }
 
     .active .step-number {
         background: var(--primary-blue);
+        border-color: var(--primary-blue);
         color: white;
     }
 
-    /* --- Modais (Unificado) --- */
+    /* --- Modais --- */
     .modal-overlay {
         display: none;
         position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(15, 23, 42, 0.6);
+        inset: 0;
+        background: rgba(15, 23, 42, 0.7);
         z-index: 9999;
         align-items: center;
         justify-content: center;
         backdrop-filter: blur(4px);
+        padding: 1rem;
     }
 
     .modal-overlay.active {
         display: flex;
         animation: fadeIn 0.2s ease-out;
+    }
+
+    .modal-content {
+        background: white;
+        border-radius: 1rem;
+        width: 100%;
+        max-width: 600px;
+        max-height: 90vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        position: relative;
+        animation: scaleUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     @keyframes fadeIn {
@@ -185,70 +246,34 @@
         }
     }
 
-    .modal-content {
-        background: white;
-        border-radius: 1rem;
-        width: 95%;
-        max-width: 600px;
-        max-height: 90vh;
-        display: flex;
-        flex-direction: column;
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-        overflow: hidden;
-        animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    @keyframes slideUp {
+    @keyframes scaleUp {
         from {
-            transform: translateY(20px) scale(0.95);
+            transform: scale(0.95);
             opacity: 0;
         }
 
         to {
-            transform: translateY(0) scale(1);
+            transform: scale(1);
             opacity: 1;
         }
     }
 
-    /* Tags de Status */
-    .bg-status-aprovado {
-        background-color: #dcfce7;
-        color: #166534;
-        border: 1px solid #bbf7d0;
+    .status-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        white-space: nowrap;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
     }
 
-    .bg-status-pendente {
-        background-color: #fef9c3;
-        color: #854d0e;
-        border: 1px solid #fef08a;
-    }
-
-    .bg-status-rejeitado {
-        background-color: #fee2e2;
-        color: #991b1b;
-        border: 1px solid #fecaca;
-    }
-
-    .bg-status-rascunho {
-        background-color: #f1f5f9;
-        color: #475569;
-        border: 1px solid #e2e8f0;
-    }
-
-    /* Estilo de item arrastável nos modais e fotos */
-    .sortable-item {
-        transition: all 0.2s;
-    }
-
-    .sortable-item.dragging {
-        opacity: 0.5;
-        border-style: dashed;
-        background-color: #f8fafc;
-    }
-
-    /* Card de Foto */
     .photo-card {
         transition: transform 0.2s, box-shadow 0.2s;
+        touch-action: manipulation;
     }
 
     .photo-card:hover {
@@ -256,25 +281,106 @@
         box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
     }
 
-    .photo-card.deleting {
-        /* opacity: 0.5; REMOVIDO PARA EVITAR ESMAECIMENTO INDESEJADO */
-        /* filter: grayscale(100%); REMOVIDO */
-        transform: scale(0.95);
-        border: 2px solid #ef4444;
-        /* Borda vermelha para indicar deleção */
+    /* --- TABELAS RESPONSIVAS (MOBILE CARDS) --- */
+    /* No desktop, tabela normal. No mobile, vira cards */
+    @media (max-width: 768px) {
+
+        /* Esconde cabeçalho da tabela */
+        .mobile-table thead {
+            display: none;
+        }
+
+        /* Transforma linhas em blocos (cards) */
+        .mobile-table tbody tr {
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Ajusta células */
+        .mobile-table tbody td {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #f1f5f9;
+            width: 100% !important;
+            /* Força largura total */
+        }
+
+        .mobile-table tbody td:last-child {
+            border-bottom: none;
+        }
+
+        /* Usa o atributo data-label para mostrar o título do campo à esquerda */
+        .mobile-table tbody td::before {
+            content: attr(data-label);
+            font-weight: 700;
+            font-size: 0.75rem;
+            color: #64748b;
+            text-transform: uppercase;
+            margin-right: 1rem;
+            min-width: 80px;
+            /* Alinhamento visual */
+        }
+
+        /* Ajustes específicos para inputs dentro das células mobile */
+        .mobile-table .form-control-std {
+            text-align: right;
+            border: 1px solid #e2e8f0;
+            /* Borda mais suave no mobile */
+        }
+
+        /* Inputs de texto ou textarea ocupam linha inteira se necessário */
+        .mobile-table td.full-width-mobile {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        .mobile-table td.full-width-mobile::before {
+            margin-bottom: 0.25rem;
+        }
+
+        .mobile-table td.full-width-mobile .form-control-std {
+            text-align: left;
+        }
+
+        /* Botão de excluir centralizado no final do card */
+        .mobile-table td.action-cell {
+            justify-content: center;
+            border-top: 1px dashed #e2e8f0;
+            margin-top: 0.5rem;
+            padding-top: 0.75rem;
+        }
+
+        .mobile-table td.action-cell::before {
+            display: none;
+        }
+
+        /* Sem label para botão delete */
     }
 </style>
 
-<div>
+<div class="max-w-7xl mx-auto pb-10">
     {# --- MENSAGENS FLASH --- #}
     {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
-    <div class="mb-4">
+    <div class="mb-6 space-y-3">
         {% for category, message in messages %}
         <div
-            class="mb-2 p-4 rounded-lg flex items-center gap-3 border shadow-sm {{ 'bg-red-50 text-red-700 border-red-200' if category == 'danger' else 'bg-emerald-50 text-emerald-700 border-emerald-200' }}">
-            <i class="fas {{ 'fa-exclamation-circle' if category == 'danger' else 'fa-check-circle' }}"></i>
-            <span class="font-bold text-sm">{{ message }}</span>
+            class="p-4 rounded-xl flex items-start gap-4 border shadow-sm {{ 'bg-red-50 text-red-800 border-red-200' if category == 'danger' else 'bg-emerald-50 text-emerald-800 border-emerald-200' }}">
+            <i
+                class="fas {{ 'fa-exclamation-circle' if category == 'danger' else 'fa-check-circle' }} mt-1 text-lg"></i>
+            <div>
+                <h4 class="font-bold text-sm">{{ 'Erro' if category == 'danger' else 'Sucesso' }}</h4>
+                <p class="text-sm opacity-90">{{ message }}</p>
+            </div>
         </div>
         {% endfor %}
     </div>
@@ -282,35 +388,40 @@
     {% endwith %}
 
     {# --- CABEÇALHO --- #}
-    <div class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-        <div class="flex-1">
-            <div class="flex items-center gap-3 flex-wrap">
-                <h1 class="text-2xl font-extrabold text-slate-800">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-5 mb-8">
+        <div class="flex-1 w-full">
+            <div class="flex flex-col sm:flex-row sm:items-center gap-3 mb-2">
+                <h1 class="text-2xl md:text-3xl font-extrabold text-slate-800 tracking-tight">
                     {% if item %}
-                    {% if view_mode %}Visualizar{% else %}Editar{% endif %} RDO Nº {{ item.id_sequencial }}
-                    <span class="text-sm font-normal text-slate-500">(Rev. {{ item.id_revisao }})</span>
+                    {% if view_mode %}Visualizar{% else %}Editar{% endif %} RDO <span class="text-blue-600">#{{
+                        item.id_sequencial }}</span> <span
+                        class="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        Rev. {{ item.id_revisao }}
+                    </span>
                     {% else %}
-                    Novo Relatório Diário de Obra
+                    Novo Relatório
                     {% endif %}
                 </h1>
+
                 {% if item %}
-                <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border whitespace-nowrap
-                    {% if item.status == 'Aprovado' %} bg-status-aprovado
-                    {% elif item.status == 'Rejeitado' %} bg-status-rejeitado
-                    {% elif item.status == 'Pendente' %} bg-status-pendente
-                    {% else %} bg-slate-100 text-slate-600 border-slate-200 {% endif %}">
-                    {{ item.status or 'Rascunho' }}
+                <span class="status-badge w-fit
+                    {% if item.status == 'Aprovado' %} bg-emerald-100 text-emerald-700 border border-emerald-200
+                    {% elif item.status == 'Rejeitado' %} bg-red-100 text-red-700 border border-red-200
+                    {% elif item.status == 'Pendente' %} bg-yellow-100 text-yellow-700 border border-yellow-200
+                    {% else %} bg-slate-100 text-slate-600 border border-slate-200 {% endif %}">
+                    <i class="fas fa-circle text-[8px]"></i> {{ item.status or 'Rascunho' }}
                 </span>
                 {% endif %}
             </div>
-            <div class="flex flex-col gap-1 mt-2">
-                <p class="text-slate-500 font-medium text-xs">Registro diário de atividades.</p>
+
+            <div class="flex flex-col sm:flex-row sm:gap-6 text-sm text-slate-500">
                 {% if item and (item.criado or item.modificado) %}
-                <div class="flex gap-4 text-[10px] text-slate-400 mt-1">
+                <div class="flex gap-4 text-xs mt-1 sm:mt-0">
                     {% if item.criado %}
-                    <span><i class="far fa-calendar-plus mr-1"></i>Criado: {{ item.criado.strftime('%d/%m/%Y %H:%M')
-                        }}</span>
-                    <span><i class="fas fa-pen mr-1"></i>Modificado: {{ item.modificado.strftime('%d/%m/%Y %H:%M')
+                    <span><i class="far fa-calendar mr-1"></i>Criado: {{ item.criado.strftime('%d/%m/%Y') }}</span>
+                    {% endif %}
+                    {% if item.modificado %}
+                    <span><i class="far fa-calendar-alt mr-1"></i>Modificado: {{ item.modificado.strftime('%d/%m/%Y')
                         }}</span>
                     {% endif %}
                 </div>
@@ -318,43 +429,61 @@
             </div>
         </div>
 
-        <div class="flex gap-2 w-full md:w-auto">
+        <!-- Ações do Topo -->
+        <div class="flex gap-3 w-full md:w-auto">
             {% if view_mode %}
             <a href="{{ url_for('auth.lista_rdo') }}"
-                class="px-4 py-2 text-sm font-bold text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 text-center">Voltar</a>
+                class="flex-1 md:flex-none px-5 py-2.5 text-sm font-bold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 text-center transition shadow-sm">
+                <i class="fas fa-arrow-left mr-2"></i> Voltar
+            </a>
             {% if item.id %}
             <a href="{{ url_for('auth.gerar_pdf_rdo_view', rdo_id=item.id) }}" target="_blank"
-                class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 shadow-sm transition">
-                <i class="fas fa-print"></i> Imprimir
+                class="flex-1 md:flex-none bg-slate-800 hover:bg-slate-900 text-white px-5 py-2.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2 shadow-md transition">
+                <i class="fas fa-print"></i> PDF
             </a>
             {% endif %}
             {% else %}
+            <a href="{{ url_for('auth.lista_rdo') }}"
+                class="md:hidden px-4 py-2.5 text-slate-500 hover:text-slate-700 text-sm font-bold">
+                Cancelar
+            </a>
             <button type="submit" form="rdoForm"
-                class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-bold text-sm shadow-sm transition">
-                <i class="fas fa-save mr-2"></i> Salvar RDO
+                class="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white px-8 py-2.5 rounded-lg font-bold text-sm shadow-md hover:shadow-lg transition flex items-center justify-center gap-2">
+                <i class="fas fa-save"></i> Salvar RDO
             </button>
             {% endif %}
         </div>
     </div>
 
     <form id="rdoForm" action="{{ url_for('auth.gerar_rdo') }}" method="POST" enctype="multipart/form-data"
-        class="space-y-6">
+        class="space-y-6 md:space-y-8">
         <input type="hidden" name="rdo_id" value="{{ item.id if item }}">
-        <!-- Inputs hidden para gerenciar exclusão de fotos existentes -->
+        <!-- Inputs hidden para exclusão de fotos -->
         <div id="container_fotos_removidas"></div>
 
-        {# 1. CONTEXTO DA OBRA #}
-        <section class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm space-y-6">
-            <div class="flex items-center gap-3 mb-2">
-                <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-                    <i class="fas fa-project-diagram"></i>
+        {# 1. CONTEXTO E DADOS GERAIS #}
+        <section class="bg-white rounded-2xl p-5 md:p-6 border border-slate-200 shadow-sm">
+            <div class="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
+                <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-sm">
+                    <i class="fas fa-project-diagram text-lg"></i>
                 </div>
-                <h3 class="font-bold text-slate-800 uppercase text-xs tracking-widest border-l-2 border-blue-600 pl-3">
-                    Contexto & Obra</h3>
+                <div>
+                    <h3 class="font-bold text-slate-800 text-lg leading-tight">Dados Gerais</h3>
+                    <p class="text-xs text-slate-400 font-medium uppercase tracking-wider">Localização e Data</p>
+                </div>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
-                <div class="md:col-span-2 space-y-1">
-                    <label class="text-[11px] font-bold text-slate-500 uppercase">Obra / Contrato *</label>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                <!-- Obra (Full width mobile, 2 cols desktop) -->
+                <div class="md:col-span-2 space-y-1.5">
+                    <label for="select_obra" class="block text-sm font-bold text-slate-700">Obra / Contrato <span
+                            class="text-red-500">*</span></label>
+
+                    {# CORREÇÃO: Input hidden para garantir envio quando disabled #}
+                    {% if item %}
+                    <input type="hidden" name="obra_id" value="{{ item.id_obra }}">
+                    {% endif %}
+
                     <select name="obra_id" id="select_obra" class="form-control-std select2-enable" {% if item
                         %}disabled{% endif %} required onchange="fetchObra(this.value)">
                         <option value="">Selecione...</option>
@@ -364,80 +493,137 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="space-y-1">
-                    <label class="text-[11px] font-bold text-slate-500 uppercase">Data do RDO *</label>
-                    <input type="date" name="data_rdo" id="data_rdo" value="{{ item.data if item else '' }}"
-                        class="form-control-std" required {{ 'disabled' if view_mode }}>
-                </div>
-                <div class="space-y-1">
-                    <label class="text-[11px] font-bold text-slate-500 uppercase">Frente de Trabalho *</label>
-                    <select name="frente_trabalho_id" id="select_frente" class="form-control-std select2-enable"
-                        required {% if not item or not item.id_obra %} disabled {% endif %} {% if view_mode %} disabled
-                        {% endif %}>
-                        <option value="">{% if item and item.id_obra %}Carregando...{% else %}Selecione a Obra
-                            primeiro...{% endif %}</option>
-                        {% if item and item.id_frente_trabalho %}
-                        {% for frente in frente_trabalho %}
-                        <option value="{{ frente.id_frente_trabalho if frente.id_frente_trabalho else frente.id }}" {%
-                            if item.id_frente_trabalho==(frente.id_frente_trabalho if frente.id_frente_trabalho else
-                            frente.id) %}selected{% endif %}>
-                            {{ frente.nome_frente }}
-                        </option>
-                        {% endfor %}
+
+                <!-- Data -->
+                <div class="space-y-1.5">
+                    <label for="data_rdo" class="block text-sm font-bold text-slate-700">Data do RDO <span
+                            class="text-red-500">*</span></label>
+                    <div class="flex gap-2">
+                        <div class="relative flex-1">
+                            <!-- INPUT OCULTO QUE ENVIA AO SERVIDOR (Formato YYYY-MM-DD) -->
+                            <input type="hidden" name="data_rdo" id="data_rdo_hidden"
+                                value="{{ item.data.strftime('%Y-%m-%d') if item and item.data else '' }}">
+
+                            <!-- INPUT VISUAL PARA O USUÁRIO (Formato DD/MM/AAAA) -->
+                            <input type="text" id="data_rdo_visual"
+                                value="{{ item.data.strftime('%d/%m/%Y') if item and item.data else '' }}"
+                                class="form-control-std cursor-pointer pr-10" required {{ 'disabled' if view_mode }}
+                                placeholder="DD/MM/AAAA" maxlength="10"
+                                oninput="mascaraData(this); syncDateToHidden(this)" onblur="syncDateToHidden(this)">
+
+                            {% if not view_mode %}
+                            <!-- Botão Ícone Calendário (Gatilho) -->
+                            <div class="absolute inset-y-0 right-0 flex items-center pr-3 z-10" title="Selecionar Data">
+                                <!-- Ícone clicável -->
+                                <i class="far fa-calendar-alt text-lg text-slate-400 hover:text-blue-600 cursor-pointer"
+                                    onclick="document.getElementById('hidden_date_picker').showPicker()"></i>
+
+                                <!-- Input Oculto -->
+                                <input type="date" id="hidden_date_picker"
+                                    class="absolute w-0 h-0 opacity-0 pointer-events-none" tabindex="-1"
+                                    onchange="aplicarDataPicker(this)">
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        {% if not view_mode %}
+                        <!-- Botão Hoje -->
+                        <button type="button" onclick="setDataHoje()"
+                            class="px-3 py-2 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold hover:bg-blue-100 transition border border-blue-200 whitespace-nowrap shadow-sm flex items-center"
+                            title="Definir Data de Hoje">
+                            <i class="fas fa-calendar-day mr-1"></i> Hoje
+                        </button>
                         {% endif %}
-                    </select>
-                    <div id="loader_frente" class="hidden text-xs text-blue-500 mt-1"><i
-                            class="fas fa-spinner fa-spin mr-1"></i> Carregando frentes...</div>
-                    <div id="error_frente" class="hidden text-xs text-red-500 mt-1"><i
-                            class="fas fa-exclamation-circle mr-1"></i> Erro ao carregar frentes. Tente novamente.</div>
+                    </div>
+                </div>
+
+                <!-- Frente de Trabalho -->
+                <div class="space-y-1.5">
+                    <label for="select_frente" class="block text-sm font-bold text-slate-700">Frente de Trabalho <span
+                            class="text-red-500">*</span></label>
+                    <div class="relative">
+
+                        {# CORREÇÃO: Input hidden para garantir envio quando disabled #}
+                        {% if item %}
+                        <input type="hidden" name="frente_trabalho_id" value="{{ item.id_frente_trabalho }}">
+                        {% endif %}
+
+                        <select name="frente_trabalho_id" id="select_frente" class="form-control-std select2-enable"
+                            required {% if not item or not item.id_obra %} disabled {% endif %} {% if view_mode %}
+                            disabled {% endif %} {% if item %}disabled{% endif %}>
+                            <option value="">{% if item and item.id_obra %}Carregando...{% else %}Selecione a Obra...{%
+                                endif %}</option>
+                            {% if item and item.id_frente_trabalho %}
+                            {% for frente in frente_trabalho %}
+                            <option value="{{ frente.id_frente_trabalho if frente.id_frente_trabalho else frente.id }}"
+                                {% if item.id_frente_trabalho==(frente.id_frente_trabalho if frente.id_frente_trabalho
+                                else frente.id) %}selected{% endif %}>
+                                {{ frente.nome_frente }}
+                            </option>
+                            {% endfor %}
+                            {% endif %}
+                        </select>
+                        <div id="loader_frente" class="hidden absolute right-8 top-3 text-blue-500 bg-white"><i
+                                class="fas fa-spinner fa-spin"></i></div>
+                    </div>
+                    <div id="error_frente" class="hidden text-xs text-red-500 mt-1 font-medium"><i
+                            class="fas fa-exclamation-triangle mr-1"></i> Erro ao carregar.</div>
                 </div>
             </div>
         </section>
 
-        {# 2. HORÁRIO E CLIMA #}
-        <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm space-y-4">
-                <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded bg-orange-50 text-orange-600 flex items-center justify-center"><i
-                            class="fas fa-clock text-sm"></i></div>
-                    <h3 class="font-bold text-slate-800 uppercase text-xs tracking-widest">Jornada</h3>
+        {# 2. JORNADA E CLIMA (Grid Responsivo) #}
+        <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Jornada -->
+            <div class="bg-white rounded-2xl p-5 md:p-6 border border-slate-200 shadow-sm h-full">
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="w-8 h-8 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center">
+                        <i class="far fa-clock"></i>
+                    </div>
+                    <h3 class="font-bold text-slate-800">Jornada de Trabalho</h3>
                 </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="text-[10px] font-bold text-slate-400 uppercase">Entrada</label>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-1">
+                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Entrada</label>
                         <input type="time" name="hora_entrada"
                             value="{{ item.hora_entrada.strftime('%H:%M') if item and item.hora_entrada else '08:00' }}"
-                            class="form-control-std time-calc" {{ 'readonly' if view_mode }}>
+                            class="form-control-std time-calc font-mono font-medium" {{ 'readonly' if view_mode }}>
                     </div>
-                    <div>
-                        <label class="text-[10px] font-bold text-slate-400 uppercase">Saída</label>
+                    <div class="space-y-1">
+                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Saída</label>
                         <input type="time" name="hora_saida"
                             value="{{ item.hora_saida.strftime('%H:%M') if item and item.hora_saida else '17:00' }}"
-                            class="form-control-std time-calc" {{ 'readonly' if view_mode }}>
+                            class="form-control-std time-calc font-mono font-medium" {{ 'readonly' if view_mode }}>
                     </div>
-                    <div>
-                        <label class="text-[10px] font-bold text-slate-400 uppercase">Início Intervalo</label>
+                    <div class="space-y-1">
+                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Início Intervalo</label>
                         <input type="time" name="intervalo_entrada"
                             value="{{ item.intervalo_entrada.strftime('%H:%M') if item and item.intervalo_entrada else '12:00' }}"
-                            class="form-control-std time-calc" {{ 'readonly' if view_mode }}>
+                            class="form-control-std time-calc font-mono font-medium" {{ 'readonly' if view_mode }}>
                     </div>
-                    <div>
-                        <label class="text-[10px] font-bold text-slate-400 uppercase">Fim Intervalo</label>
+                    <div class="space-y-1">
+                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Fim Intervalo</label>
                         <input type="time" name="intervalo_saida"
                             value="{{ item.intervalo_saida.strftime('%H:%M') if item and item.intervalo_saida else '13:00' }}"
-                            class="form-control-std time-calc" {{ 'readonly' if view_mode }}>
+                            class="form-control-std time-calc font-mono font-medium" {{ 'readonly' if view_mode }}>
                     </div>
                 </div>
             </div>
-            <div class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm space-y-4">
-                <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded bg-yellow-50 text-yellow-600 flex items-center justify-center"><i
-                            class="fas fa-cloud-sun text-sm"></i></div>
-                    <h3 class="font-bold text-slate-800 uppercase text-xs tracking-widest">Clima</h3>
+
+            <!-- Clima -->
+            <div class="bg-white rounded-2xl p-5 md:p-6 border border-slate-200 shadow-sm h-full">
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="w-8 h-8 rounded-lg bg-yellow-50 text-yellow-600 flex items-center justify-center">
+                        <i class="fas fa-cloud-sun"></i>
+                    </div>
+                    <h3 class="font-bold text-slate-800">Condições Climáticas</h3>
                 </div>
+
                 <div class="space-y-4">
-                    <div>
-                        <label class="text-[10px] font-bold text-slate-400 uppercase">Manhã *</label>
+                    <div class="space-y-1.5">
+                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Manhã <span
+                                class="text-red-500">*</span></label>
                         <select name="climas_manha" class="form-control-std select2-enable" required {{ 'disabled' if
                             view_mode }}>
                             <option value="">Selecione...</option>
@@ -447,8 +633,9 @@
                             {% endfor %}
                         </select>
                     </div>
-                    <div>
-                        <label class="text-[10px] font-bold text-slate-400 uppercase">Tarde *</label>
+                    <div class="space-y-1.5">
+                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Tarde <span
+                                class="text-red-500">*</span></label>
                         <select name="climas_tarde" class="form-control-std select2-enable" required {{ 'disabled' if
                             view_mode }}>
                             <option value="">Selecione...</option>
@@ -462,39 +649,43 @@
             </div>
         </section>
 
-        {# 3. ATIVIDADES #}
-        <section class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm space-y-4">
-            <div class="flex items-center justify-between">
+        {# 3. ATIVIDADES (Responsive Table Pattern) #}
+        <section class="bg-white rounded-2xl p-5 md:p-6 border border-slate-200 shadow-sm">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
                 <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded bg-purple-50 text-purple-600 flex items-center justify-center"><i
-                            class="fas fa-list-check text-sm"></i></div>
-                    <h3 class="font-bold text-slate-800 uppercase text-xs tracking-widest">Atividades</h3>
+                    <div class="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
+                        <i class="fas fa-list-check"></i>
+                    </div>
+                    <h3 class="font-bold text-slate-800">Atividades Realizadas</h3>
                 </div>
                 {% if not view_mode %}
                 <button type="button" onclick="addAtividadeRow()"
-                    class="text-xs bg-purple-50 text-purple-700 hover:bg-purple-100 px-3 py-1.5 rounded-lg font-bold transition">
-                    <i class="fas fa-plus mr-1"></i> Adicionar
+                    class="bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 px-4 py-2 rounded-lg font-bold text-sm transition flex items-center gap-2">
+                    <i class="fas fa-plus"></i> <span class="hidden sm:inline">Adicionar Linha</span>
                 </button>
                 {% endif %}
             </div>
-            <div class="overflow-x-auto border border-slate-100 rounded-lg">
-                <table class="w-full text-left" id="table_atividades">
+
+            <!-- Wrapper com classe mobile-table -->
+            <div class="w-full">
+                <table class="w-full text-left mobile-table" id="table_atividades">
                     <thead>
-                        <tr class="bg-slate-50 text-[10px] uppercase text-slate-500 font-bold">
-                            <th class="p-3 w-3/4">Descrição</th>
-                            <th class="p-3">Status</th>
-                            {% if not view_mode %}<th class="p-3 w-10"></th>{% endif %}
+                        <tr class="bg-slate-100 text-xs uppercase text-slate-500 font-bold border-b border-slate-200">
+                            <th class="p-4 w-3/4">Descrição da Atividade</th>
+                            <th class="p-4 w-[200px]">Status</th>
+                            {% if not view_mode %}<th class="p-4 w-12 text-center"></th>{% endif %}
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody class="divide-y divide-slate-100 bg-white">
                         {% if item and item.atividades %}
                         {% for atv in item.atividades %}
-                        <tr>
-                            <td class="p-2">
-                                <textarea name="atividade_descricao[]" class="form-control-std text-sm" rows="2"
-                                    required {{ 'readonly' if view_mode }}>{{ atv.descricao }}</textarea>
+                        <tr class="group hover:bg-slate-50 transition-colors">
+                            <td class="p-3 align-top full-width-mobile" data-label="Descrição:">
+                                <textarea name="atividade_descricao[]" class="form-control-std text-sm min-h-[80px]"
+                                    rows="2" placeholder="Descreva a atividade..." required {{ 'readonly' if view_mode
+                                    }}>{{ atv.descricao }}</textarea>
                             </td>
-                            <td class="p-2 align-top">
+                            <td class="p-3 align-top" data-label="Status:">
                                 <select name="atividade_status[]" class="form-control-std text-sm select2-enable"
                                     {{ 'disabled' if view_mode }}>
                                     <option value="Em andamento" {{ 'selected' if atv.status=='Em andamento' }}>Em
@@ -508,51 +699,59 @@
                                 </select>
                             </td>
                             {% if not view_mode %}
-                            <td class="p-2 text-center align-top"><button type="button" onclick="removeRow(this)"
-                                    class="text-red-400 hover:text-red-600 mt-2"><i class="fas fa-times"></i></button>
+                            <td class="p-3 align-middle text-center action-cell">
+                                <button type="button" onclick="removeRow(this)"
+                                    class="w-8 h-8 rounded-full text-slate-400 hover:text-red-500 hover:bg-red-50 transition flex items-center justify-center">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
                             </td>
                             {% endif %}
                         </tr>
                         {% endfor %}
                         {% else %}
-                        <!-- Linha vazia inicial será adicionada via JS se necessário -->
+                        <!-- JS vai popular se vazio -->
                         {% endif %}
                     </tbody>
                 </table>
             </div>
         </section>
 
-        {# 4. EFETIVO E EQUIPAMENTOS #}
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {# 4. RECURSOS (MÃO DE OBRA E EQUIPAMENTOS) #}
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
             <!-- Mão de Obra -->
-            <section class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm space-y-4">
-                <div class="flex items-center justify-between">
+            <section class="bg-white rounded-2xl p-5 md:p-6 border border-slate-200 shadow-sm flex flex-col">
+                <div class="flex items-center justify-between gap-3 mb-4">
                     <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded bg-indigo-50 text-indigo-600 flex items-center justify-center"><i
-                                class="fas fa-users-cog text-sm"></i></div>
-                        <h3 class="font-bold text-slate-800 uppercase text-xs tracking-widest">Mão de Obra</h3>
+                        <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                            <i class="fas fa-users-cog"></i>
+                        </div>
+                        <h3 class="font-bold text-slate-800">Mão de Obra</h3>
                     </div>
                     {% if not view_mode %}
                     <button type="button" onclick="openModal('modal_mo')"
-                        class="h-8 bg-indigo-600 hover:bg-indigo-700 text-white px-3 rounded-lg font-bold text-xs"><i
-                            class="fas fa-plus-circle"></i> Vários</button>
+                        class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-2 rounded-lg font-bold text-xs transition border border-indigo-200">
+                        <i class="fas fa-plus mr-1"></i> Adicionar
+                    </button>
                     {% endif %}
                 </div>
-                <div class="overflow-x-auto border border-slate-100 rounded-lg">
-                    <table class="w-full text-left" id="table_mao_obra">
+
+                <div class="w-full flex-1">
+                    <table class="w-full text-left mobile-table" id="table_mao_obra">
                         <thead>
-                            <tr class="bg-slate-50 text-[10px] uppercase text-slate-500 font-bold">
+                            <tr
+                                class="bg-slate-100 text-xs uppercase text-slate-500 font-bold border-b border-slate-200">
                                 <th class="p-3">Função</th>
-                                <th class="p-3 text-center w-20">Própria</th>
-                                <th class="p-3 text-center w-20">Terceiro</th>
-                                {% if not view_mode %}<th class="p-3 w-8"></th>{% endif %}
+                                <th class="p-3 text-center w-24">Própria</th>
+                                <th class="p-3 text-center w-24">Terceiro</th>
+                                {% if not view_mode %}<th class="p-3 w-10"></th>{% endif %}
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody class="divide-y divide-slate-100 bg-white">
                             {% if item and item.maos_obra %}
                             {% for mo in item.maos_obra %}
                             <tr>
-                                <td class="p-2">
+                                <td class="p-2" data-label="Função:">
                                     <select name="mo_funcao[]" class="form-control-std text-sm select2-enable"
                                         {{ 'disabled' if view_mode }}>
                                         {% for op in mao_de_obra_options %}
@@ -561,15 +760,17 @@
                                         {% endfor %}
                                     </select>
                                 </td>
-                                <td class="p-2"><input type="number" name="mo_qtd_propria[]"
-                                        value="{{ mo.quantidade_propria }}" class="form-control-std text-center" min="0"
-                                        {{ 'readonly' if view_mode }}></td>
-                                <td class="p-2"><input type="number" name="mo_qtd_terceirizada[]"
-                                        value="{{ mo.quantidade_terceirizada }}" class="form-control-std text-center"
-                                        min="0" {{ 'readonly' if view_mode }}></td>
-                                {% if not view_mode %}<td class="p-2 text-center"><button type="button"
-                                        onclick="removeRow(this)" class="text-red-400"><i
-                                            class="fas fa-times"></i></button></td>{% endif %}
+                                <td class="p-2" data-label="Qtd Própria:"><input type="number" name="mo_qtd_propria[]"
+                                        value="{{ mo.quantidade_propria }}"
+                                        class="form-control-std text-center font-bold text-slate-700" min="0"
+                                        inputmode="numeric" {{ 'readonly' if view_mode }}></td>
+                                <td class="p-2" data-label="Qtd Terceiro:"><input type="number"
+                                        name="mo_qtd_terceirizada[]" value="{{ mo.quantidade_terceirizada }}"
+                                        class="form-control-std text-center font-bold text-slate-700" min="0"
+                                        inputmode="numeric" {{ 'readonly' if view_mode }}></td>
+                                {% if not view_mode %}<td class="p-2 text-center action-cell"><button type="button"
+                                        onclick="removeRow(this)" class="text-slate-400 hover:text-red-500 p-2"><i
+                                            class="fas fa-trash-alt"></i></button></td>{% endif %}
                             </tr>
                             {% endfor %}
                             {% endif %}
@@ -579,33 +780,37 @@
             </section>
 
             <!-- Equipamentos -->
-            <section class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm space-y-4">
-                <div class="flex items-center justify-between">
+            <section class="bg-white rounded-2xl p-5 md:p-6 border border-slate-200 shadow-sm flex flex-col">
+                <div class="flex items-center justify-between gap-3 mb-4">
                     <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded bg-gray-100 text-gray-600 flex items-center justify-center"><i
-                                class="fas fa-truck text-sm"></i></div>
-                        <h3 class="font-bold text-slate-800 uppercase text-xs tracking-widest">Equipamentos</h3>
+                        <div class="w-8 h-8 rounded-lg bg-gray-100 text-gray-600 flex items-center justify-center">
+                            <i class="fas fa-truck-pickup"></i>
+                        </div>
+                        <h3 class="font-bold text-slate-800">Equipamentos</h3>
                     </div>
                     {% if not view_mode %}
                     <button type="button" onclick="openModal('modal_eq')"
-                        class="h-8 bg-gray-600 hover:bg-gray-700 text-white px-3 rounded-lg font-bold text-xs"><i
-                            class="fas fa-plus-circle"></i> Vários</button>
+                        class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg font-bold text-xs transition border border-gray-300">
+                        <i class="fas fa-plus mr-1"></i> Adicionar
+                    </button>
                     {% endif %}
                 </div>
-                <div class="overflow-x-auto border border-slate-100 rounded-lg">
-                    <table class="w-full text-left" id="table_equipamentos">
+
+                <div class="w-full flex-1">
+                    <table class="w-full text-left mobile-table" id="table_equipamentos">
                         <thead>
-                            <tr class="bg-slate-50 text-[10px] uppercase text-slate-500 font-bold">
+                            <tr
+                                class="bg-slate-100 text-xs uppercase text-slate-500 font-bold border-b border-slate-200">
                                 <th class="p-3">Equipamento</th>
-                                <th class="p-3 w-20 text-center">Qtd</th>
-                                {% if not view_mode %}<th class="p-3 w-8"></th>{% endif %}
+                                <th class="p-3 w-24 text-center">Qtd</th>
+                                {% if not view_mode %}<th class="p-3 w-10"></th>{% endif %}
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody class="divide-y divide-slate-100 bg-white">
                             {% if item and item.equipamentos %}
                             {% for eq in item.equipamentos %}
                             <tr>
-                                <td class="p-2">
+                                <td class="p-2" data-label="Equipamento:">
                                     <select name="eq_id[]" class="form-control-std text-sm select2-enable" {{ 'disabled'
                                         if view_mode }}>
                                         {% for opt in equipamentos_options %}
@@ -614,11 +819,13 @@
                                         {% endfor %}
                                     </select>
                                 </td>
-                                <td class="p-2 w-20"><input type="number" name="eq_qtd[]" value="{{ eq.quantidade }}"
-                                        class="form-control-std text-center" {{ 'readonly' if view_mode }}></td>
-                                {% if not view_mode %}<td class="p-2 w-8 text-center"><button type="button"
-                                        onclick="removeRow(this)" class="text-red-400"><i
-                                            class="fas fa-times"></i></button></td>{% endif %}
+                                <td class="p-2" data-label="Quantidade:"><input type="number" name="eq_qtd[]"
+                                        value="{{ eq.quantidade }}"
+                                        class="form-control-std text-center font-bold text-slate-700"
+                                        inputmode="numeric" {{ 'readonly' if view_mode }}></td>
+                                {% if not view_mode %}<td class="p-2 text-center action-cell"><button type="button"
+                                        onclick="removeRow(this)" class="text-slate-400 hover:text-red-500 p-2"><i
+                                            class="fas fa-trash-alt"></i></button></td>{% endif %}
                             </tr>
                             {% endfor %}
                             {% endif %}
@@ -629,33 +836,36 @@
         </div>
 
         {# 5. OCORRÊNCIAS #}
-        <section class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm space-y-4">
-            <div class="flex items-center justify-between">
+        <section class="bg-white rounded-2xl p-5 md:p-6 border border-slate-200 shadow-sm">
+            <div class="flex items-center justify-between gap-3 mb-4">
                 <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded bg-red-50 text-red-600 flex items-center justify-center"><i
-                            class="fas fa-exclamation-triangle text-sm"></i></div>
-                    <h3 class="font-bold text-slate-800 uppercase text-xs tracking-widest">Ocorrências</h3>
+                    <div class="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <h3 class="font-bold text-slate-800">Ocorrências / Imprevistos</h3>
                 </div>
                 {% if not view_mode %}
                 <button type="button" onclick="openModal('modal_oc')"
-                    class="h-8 bg-red-600 hover:bg-red-700 text-white px-3 rounded-lg font-bold text-xs"><i
-                        class="fas fa-plus-circle"></i> Vários</button>
+                    class="bg-red-50 hover:bg-red-100 text-red-700 px-3 py-2 rounded-lg font-bold text-xs transition border border-red-200">
+                    <i class="fas fa-plus mr-1"></i> Adicionar
+                </button>
                 {% endif %}
             </div>
-            <div class="overflow-x-auto border border-slate-100 rounded-lg">
-                <table class="w-full text-left" id="table_ocorrencias">
+
+            <div class="w-full">
+                <table class="w-full text-left mobile-table" id="table_ocorrencias">
                     <thead>
-                        <tr class="bg-slate-50 text-[10px] uppercase text-slate-500 font-bold">
+                        <tr class="bg-slate-100 text-xs uppercase text-slate-500 font-bold border-b border-slate-200">
                             <th class="p-3 w-1/3">Tipo</th>
-                            <th class="p-3">Descrição</th>
-                            {% if not view_mode %}<th class="p-3 w-8"></th>{% endif %}
+                            <th class="p-3">Descrição Detalhada</th>
+                            {% if not view_mode %}<th class="p-3 w-10"></th>{% endif %}
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody class="divide-y divide-slate-100 bg-white">
                         {% if item and item.ocorrencias %}
                         {% for oc in item.ocorrencias %}
                         <tr>
-                            <td class="p-2 w-1/3">
+                            <td class="p-2 align-top" data-label="Tipo:">
                                 <select name="oc_tag[]" class="form-control-std text-sm select2-enable" {{ 'disabled' if
                                     view_mode }}>
                                     {% for t in tags_options %}
@@ -664,12 +874,13 @@
                                     {% endfor %}
                                 </select>
                             </td>
-                            <td class="p-2"><input type="text" name="oc_desc[]" value="{{ oc.descricao }}"
-                                    class="form-control-std text-sm" placeholder="Detalhes..." {{ 'readonly' if
-                                    view_mode }}></td>
-                            {% if not view_mode %}<td class="p-2 w-8 text-center"><button type="button"
-                                    onclick="removeRow(this)" class="text-red-400"><i class="fas fa-times"></i></button>
-                            </td>{% endif %}
+                            <td class="p-2 full-width-mobile" data-label="Detalhes:"><input type="text" name="oc_desc[]"
+                                    value="{{ oc.descricao }}" class="form-control-std"
+                                    placeholder="Detalhe a ocorrência..." {{ 'readonly' if view_mode }}></td>
+                            {% if not view_mode %}<td class="p-2 align-middle text-center action-cell"><button
+                                    type="button" onclick="removeRow(this)"
+                                    class="text-slate-400 hover:text-red-500 p-2"><i
+                                        class="fas fa-trash-alt"></i></button></td>{% endif %}
                         </tr>
                         {% endfor %}
                         {% endif %}
@@ -678,74 +889,96 @@
             </div>
         </section>
 
-        {# 6. FOTOS APRIMORADAS (SENIOR UX) #}
-        <section class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm space-y-6">
+        {# 6. FOTOS E COMENTÁRIOS #}
+        <section class="bg-white rounded-2xl p-5 md:p-6 border border-slate-200 shadow-sm space-y-6">
             <div class="space-y-2">
-                <label class="font-bold text-slate-800 uppercase text-xs tracking-widest">Comentários Gerais</label>
-                <textarea name="comentarios_gerais" class="form-control-std h-24"
-                    placeholder="Observações adicionais..." {{ 'readonly' if view_mode
+                <label for="comentarios_gerais" class="text-sm font-bold text-slate-700 flex items-center gap-2">
+                    <i class="far fa-comment-alt text-slate-400"></i> Comentários Gerais / Observações
+                </label>
+                <textarea name="comentarios_gerais" id="comentarios_gerais" class="form-control-std h-32"
+                    placeholder="Insira informações adicionais relevantes..." {{ 'readonly' if view_mode
                     }}>{{ item.comentarios_gerais if item else '' }}</textarea>
             </div>
-            <div class="border-t pt-6">
+
+            <div class="border-t border-slate-100 pt-6">
                 <div class="flex items-center justify-between mb-4">
-                    <h3 class="font-bold text-slate-800 uppercase text-xs tracking-widest"><i
-                            class="fas fa-camera mr-2"></i>Galeria de Fotos</h3>
-                    <div class="flex items-center gap-2">
-                        <span id="counter_fotos_total"
-                            class="text-xs font-bold bg-slate-100 px-2 py-1 rounded text-slate-500">
-                            0
-                        </span>
-                        <span class="text-xs text-slate-400">/ 20</span>
+                    <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fas fa-camera text-blue-500"></i> Galeria de Fotos
+                    </h3>
+                    <div class="bg-slate-100 px-3 py-1 rounded-full text-xs font-bold text-slate-600">
+                        <span id="counter_fotos_total">0</span> / 20
                     </div>
                 </div>
 
+                <!-- Inputs hidden para inputs de arquivo já processados -->
+                <div id="file-inputs-container" class="hidden"></div>
+
                 {% if not view_mode %}
-                <div class="flex gap-4 mb-4">
-                    <!-- Botão Adicionar Customizado -->
-                    <label class="flex-1 cursor-pointer">
-                        <input type="file" id="input_fotos_trigger" multiple accept="image/*" class="hidden">
-                        <div
-                            class="w-full h-16 border-2 border-dashed border-blue-300 rounded-xl flex items-center justify-center gap-2 hover:bg-blue-50 transition-colors bg-white text-blue-600">
-                            <i class="fas fa-plus-circle text-xl"></i>
-                            <span class="text-sm font-bold">Adicionar Fotos</span>
+                <div
+                    class="mb-6 flex flex-col sm:flex-row gap-4 items-stretch justify-between bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <div class="text-slate-600 text-sm flex items-center mb-2 sm:mb-0">
+                        <i class="fas fa-info-circle mr-2 text-blue-500"></i>
+                        <span>Adicione fotos:</span>
+                    </div>
+
+                    <div class="flex flex-1 gap-3 sm:gap-4" id="camera-btn-container">
+                        <!-- BOTÃO CÂMERA (Multidevice) -->
+                        <div class="flex-1">
+                            <!-- Input para Mobile (Hidden) -->
+                            <input type="file" id="input-camera-mobile" accept="image/*" capture="environment"
+                                class="hidden" onchange="handleNewPhoto(this)">
+
+                            <!-- Botão Trigger -->
+                            <button type="button" onclick="initCameraCapture()"
+                                class="w-full cursor-pointer bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition-all active:scale-95 flex flex-col sm:flex-row items-center justify-center gap-2 h-full text-center">
+                                <i class="fas fa-camera text-lg"></i>
+                                <span class="text-sm">Tirar Foto</span>
+                            </button>
                         </div>
-                    </label>
-                    <!-- Input real que será enviado (escondido) -->
-                    <input type="file" id="input_fotos_real" name="fotos[]" multiple class="hidden">
+
+                        <!-- BOTÃO UPLOAD/GALERIA -->
+                        <div class="flex-1">
+                            <label for="input-gallery"
+                                class="cursor-pointer bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold py-3 px-4 rounded-lg shadow-sm transition-all active:scale-95 flex flex-col sm:flex-row items-center justify-center gap-2 h-full text-center">
+                                <i class="fas fa-images text-lg text-slate-500"></i>
+                                <span class="text-sm">Upload / Galeria</span>
+                            </label>
+                            <input type="file" id="input-gallery" accept="image/*" class="hidden" multiple
+                                onchange="handleNewPhoto(this)">
+                        </div>
+                    </div>
                 </div>
                 {% endif %}
 
-                <!-- Container Grid Unificado -->
-                <div id="galeria_unificada" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-
-                    {# --- FOTOS JÁ EXISTENTES (DO BANCO) --- #}
+                <!-- Grid Fotos Responsivo -->
+                <div id="galeria_unificada" class="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {# FOTOS EXISTENTES #}
                     {% if item and item.fotos %}
                     {% for foto in item.fotos %}
                     <div class="photo-card relative bg-white border border-slate-200 rounded-xl overflow-hidden group shadow-sm"
                         id="card_existente_{{ foto.id }}">
-                        <div class="relative h-40 bg-slate-100 cursor-pointer overflow-hidden"
+                        <div class="relative aspect-video bg-slate-100 cursor-zoom-in overflow-hidden"
                             onclick="openPhotoViewer('{{ url_for('static', filename='uploads/rdo/' ~ foto.arquivo) }}', '{{ foto.comentario }}')">
                             <img src="{{ url_for('static', filename='uploads/rdo/' ~ foto.arquivo) }}"
-                                class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+                                class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                loading="lazy">
                             <div
-                                class="absolute top-2 right-2 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded backdrop-blur-sm">
-                                Salva</div>
+                                class="absolute top-2 right-2 bg-black/60 text-white text-[10px] font-bold px-2 py-1 rounded backdrop-blur-sm">
+                                SALVA
+                            </div>
                         </div>
 
                         <div class="p-3 space-y-2">
+                            <!-- CORREÇÃO AQUI: USANDO LISTA SIMPLES EM VEZ DE CHAVES DINÂMICAS -->
                             <input type="hidden" name="fotos_existentes_ids[]" value="{{ foto.id }}">
                             <div class="relative">
-                                <i
-                                    class="fas fa-pen absolute top-2.5 left-2.5 text-slate-400 text-xs pointer-events-none"></i>
-                                <input type="text" name="comentarios_existentes[{{ foto.id }}]"
-                                    value="{{ foto.comentario }}" placeholder="Legenda..."
-                                    class="w-full pl-7 pr-2 py-1.5 text-xs border border-slate-200 rounded bg-slate-50 focus:bg-white focus:border-blue-400 outline-none transition-colors"
-                                    {{ 'readonly' if view_mode }}>
+                                <input type="text" name="comentarios_existentes_list[]" value="{{ foto.comentario }}"
+                                    placeholder="Legenda..." class="form-control-std !h-9 !text-xs !pl-8" {{ 'readonly'
+                                    if view_mode }}>
                             </div>
-
                             {% if not view_mode %}
                             <button type="button" onclick="marcarExclusao('{{ foto.id }}')"
-                                class="w-full py-1.5 text-xs font-bold text-red-500 hover:text-white hover:bg-red-500 border border-red-100 hover:border-red-500 rounded transition-all flex items-center justify-center gap-2">
+                                class="w-full py-2 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors flex items-center justify-center gap-2">
                                 <i class="fas fa-trash-alt"></i> Excluir
                             </button>
                             {% endif %}
@@ -753,68 +986,44 @@
                     </div>
                     {% endfor %}
                     {% endif %}
-
-                    {# --- FOTOS NOVAS (PREVIEW JS) --- #}
-                    <!-- Serão inseridas aqui via JS -->
-
                 </div>
-
-                <p class="text-[10px] text-slate-400 mt-4 italic text-center">
-                    <i class="fas fa-info-circle mr-1"></i> Arraste os cartões para reordenar as fotos antes de salvar.
-                </p>
             </div>
         </section>
 
-        {# 7. WORKFLOW DE APROVAÇÃO #}
-
+        {# 7. WORKFLOW E APROVAÇÃO #}
         {% if view_mode %}
-        <section class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm mt-6">
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="font-bold text-slate-800 uppercase text-xs tracking-widest">
-                    <i class="fas fa-file-signature mr-2 text-blue-500"></i>Fluxo de Aprovação
+        <section class="bg-white rounded-2xl p-5 md:p-6 border border-slate-200 shadow-sm mt-6">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <h3 class="font-bold text-slate-800 uppercase text-xs tracking-widest flex items-center gap-2">
+                    <i class="fas fa-signature text-blue-500"></i> Fluxo de Aprovação
                 </h3>
 
-                <!-- Botão de Gerenciar -->
                 {% if item.status not in ['Aprovado', 'Finalizado', 'Rejeitado'] %}
                 <button type="button" onclick="openModal('modal_assinantes')"
-                    class="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-2 rounded-lg hover:bg-blue-100 transition">
-                    <i class="fas fa-user-plus mr-1"></i> Configurar Sequência
+                    class="w-full sm:w-auto text-xs font-bold text-blue-600 bg-blue-50 border border-blue-100 px-4 py-2.5 rounded-lg hover:bg-blue-100 transition flex items-center justify-center gap-2">
+                    <i class="fas fa-cog"></i> Configurar Sequência
                 </button>
                 {% endif %}
             </div>
 
-            <div class="workflow-container">
-                {# Use a variável 'assinaturas' passada pelo backend, fallback para item.assinaturas #}
+            <div class="workflow-container relative pl-2">
                 {% set lista_assinaturas = assinaturas if assinaturas is defined else item.assinaturas %}
-
-                {# Contagem segura #}
                 {% set qtd_assinaturas = lista_assinaturas|length if lista_assinaturas is sequence else
                 lista_assinaturas.count() %}
 
                 {% if qtd_assinaturas == 0 %}
-                <div class="text-center py-10 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50">
-                    <p class="text-slate-400 text-sm italic">Nenhum fluxo de aprovação configurado para este RDO.</p>
-                    {% if not view_mode %}
-                    <p class="text-xs text-blue-500 mt-2 cursor-pointer" onclick="openModal('modal_assinantes')">Clique
-                        aqui para adicionar aprovadores.</p>
-                    {% endif %}
+                <div class="text-center py-8 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50">
+                    <p class="text-slate-500 text-sm font-medium">Nenhum fluxo de aprovação configurado.</p>
                 </div>
                 {% else %}
 
-                {# Lista ordenada #}
                 {% set assinaturas_ordenadas = lista_assinaturas|sort(attribute='ordem') %}
                 {% set session_uid = session.get('user_id') %}
 
                 {% for ass in assinaturas_ordenadas %}
-
-                {# Lógica de permissão de assinatura #}
                 {% set can_sign = (session_uid is not none and session_uid|int == ass.id_usuario and ass.status ==
                 'Pendente') %}
-
-                {# Busca passo anterior #}
                 {% set prev_step = assinaturas_ordenadas|selectattr("ordem", "equalto", ass.ordem - 1)|first %}
-
-                {# Bloqueio #}
                 {% set is_locked = prev_step and prev_step.status != 'Aprovado' %}
 
                 <div class="workflow-step 
@@ -825,56 +1034,54 @@
 
                     <div class="step-number">{{ ass.ordem }}</div>
 
-                    <div class="flex-grow">
-                        <div class="flex justify-between items-start">
+                    <div class="flex-grow min-w-0"> <!-- min-w-0 evita overflow de texto -->
+                        <div class="flex flex-wrap justify-between items-start gap-2">
                             <div>
-                                <h4 class="font-bold text-slate-800 text-sm">{{ ass.usuario.nome }}</h4>
-                                <p class="text-[11px] text-slate-500">{{ ass.usuario.papel or 'Aprovador' }}</p>
-                                <p class="text-[11px] text-slate-500">{{ ass.usuario.email }}</p>
+                                <h4 class="font-bold text-slate-800 text-sm truncate">{{ ass.usuario.nome }}</h4>
+                                <p class="text-[11px] text-slate-500">{{ ass.usuario.papel or 'Aprovador' }} | {{
+                                    ass.usuario.email or '' }}</p>
                             </div>
-                            <span class="text-[10px] font-bold px-2 py-0.5 rounded uppercase
-                                        {% if ass.status == 'Aprovado' %}bg-green-200 text-green-800
-                                        {% elif ass.status == 'Rejeitado' %}bg-red-200 text-red-800
-                                        {% else %}bg-slate-200 text-slate-600{% endif %}">
+                            <span class="status-badge
+                                {% if ass.status == 'Aprovado' %}bg-green-100 text-green-700
+                                {% elif ass.status == 'Rejeitado' %}bg-red-100 text-red-700
+                                {% else %}bg-slate-100 text-slate-500{% endif %}">
                                 {{ ass.status }}
                             </span>
                         </div>
 
                         <div class="mt-3">
                             {% if ass.status == 'Aprovado' %}
-                            <div class="flex items-center gap-4 bg-white p-2 rounded border border-green-100">
+                            <div class="flex items-center gap-3 bg-white p-2 rounded border border-green-100 shadow-sm">
                                 {% if ass.img_assinatura %}
                                 <img src="{{ url_for('static', filename='uploads/assinaturas/' + ass.img_assinatura) }}"
-                                    class="h-8 object-contain" alt="Assinatura">
+                                    class="h-8 md:h-10 object-contain" alt="Assinatura">
                                 {% endif %}
-                                <div class="text-[10px] text-slate-500">
-                                    <p class="font-bold text-green-600"><i class="fas fa-check-circle mr-1"></i>Assinado
-                                        Digitalmente</p>
-                                    <p>{{ ass.criado.strftime('%d/%m/%Y às %H:%M') if ass.criado else
-                                        '-' }}</p>
+                                <div class="text-[10px] text-slate-500 leading-tight">
+                                    <p class="font-bold text-green-600 mb-0.5"><i
+                                            class="fas fa-check-circle mr-1"></i>Assinado</p>
+                                    <p>{{ ass.criado.strftime('%d/%m/%Y às %H:%M') if ass.criado else '-' }}</p>
                                 </div>
                             </div>
                             {% elif ass.status == 'Rejeitado' %}
-                            <div class="text-xs text-red-700 bg-red-50 p-3 rounded border border-red-100">
-                                <strong><i class="fas fa-times-circle mr-1"></i>Motivo:</strong> {{ ass.motivo_rejeicao
-                                }}<p class="text-[10px] text-slate-500">{{ ass.criado.strftime('%d/%m/%Y às %H:%M') if
-                                    ass.criado else
-                                    '-' }}</p>
+                            <div class="text-xs text-red-700 bg-red-50 p-3 rounded-lg border border-red-100">
+                                <strong>Motivo:</strong> {{ ass.motivo_rejeicao }}
+                                <div class="text-[10px] text-slate-500 mt-1 text-right">{{ ass.criado.strftime('%d/%m/%Y
+                                    %H:%M') if ass.criado else '-' }}</div>
                             </div>
                             {% elif can_sign %}
                             {% if is_locked %}
-                            <p class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded">
-                                <i class="fas fa-lock mr-1"></i> Aguardando aprovação de <strong>{{
-                                    prev_step.usuario.nome }}</strong>
+                            <p class="text-xs text-slate-500 bg-slate-50 p-2 rounded flex items-center gap-2">
+                                <i class="fas fa-lock text-slate-400"></i> Aguardando: <strong>{{ prev_step.usuario.nome
+                                    }}</strong>
                             </p>
                             {% else %}
-                            <div class="flex gap-2 mt-2">
+                            <div class="flex flex-wrap gap-2 mt-2">
                                 <button type="button" onclick="abrirModalAssinatura({{ item.id }})"
-                                    class="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-sm hover:bg-blue-700 flex-1">
-                                    <i class="fas fa-pen-nib mr-2"></i>Assinar e Aprovar
+                                    class="flex-1 bg-blue-600 text-white px-4 py-3 rounded-lg text-xs font-bold shadow hover:bg-blue-700 transition">
+                                    Assinar Digitalmente
                                 </button>
                                 <button type="button" onclick="abrirModalRejeicao({{ ass.id_assinatura }})"
-                                    class="bg-red-600 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-sm hover:bg-red-700 flex-1">
+                                    class="flex-1 bg-white text-red-600 border border-red-200 px-4 py-3 rounded-lg text-xs font-bold hover:bg-red-50 transition">
                                     Rejeitar
                                 </button>
                             </div>
@@ -892,320 +1099,301 @@
         {% endif %}
 
         {% if not view_mode %}
-        <div class="flex gap-4 pt-6">
+        <!-- Botão Flutuante ou Fixo no Fim -->
+        <div class="pt-6 pb-20 md:pb-0">
             <button type="submit"
-                class="flex-1 h-12 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-md transition">SALVAR
-                RDO</button>
+                class="w-full h-14 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold text-lg rounded-xl shadow-lg hover:shadow-xl transition transform active:scale-[0.99] flex items-center justify-center gap-3">
+                <i class="fas fa-save"></i> SALVAR RDO
+            </button>
             <a href="{{ url_for('auth.lista_rdo') }}"
-                class="px-6 h-12 flex items-center justify-center bg-white border border-slate-300 rounded-lg text-slate-600 font-bold hover:bg-slate-50">Cancelar</a>
+                class="block w-full text-center mt-4 text-slate-500 font-bold text-sm hover:text-slate-800 py-3">
+                Cancelar e Voltar
+            </a>
         </div>
         {% endif %}
     </form>
 </div>
 
 <!-- ========================================== -->
-<!-- ZONA DE MODAIS (TODOS AGRUPADOS AQUI) -->
+<!-- MODAIS (Mobile Optimized) -->
 <!-- ========================================== -->
+
+<!-- Modal Webcam (Desktop) -->
+<div id="modal_webcam" class="modal-overlay z-[10010]">
+    <div class="modal-content max-w-2xl bg-black border-0">
+        <div class="relative w-full h-[500px] flex flex-col items-center justify-center">
+            <video id="webcam_video" class="w-full h-full object-cover" autoplay playsinline></video>
+            <canvas id="webcam_canvas" class="hidden"></canvas>
+
+            <div
+                class="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/60 to-transparent flex justify-between items-center z-10">
+                <span class="text-white font-bold text-sm shadow-sm"><i class="fas fa-camera mr-2"></i> Captura
+                    Webcam</span>
+                <button type="button" onclick="closeWebcam()" class="text-white hover:text-red-400 transition">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <div
+                class="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent flex justify-center items-center gap-4 z-10">
+                <button type="button" onclick="takeSnapshot()"
+                    class="bg-white text-black rounded-full w-16 h-16 flex items-center justify-center border-4 border-gray-300 shadow-lg active:scale-95 transition hover:scale-105">
+                    <div class="w-12 h-12 bg-white rounded-full border-2 border-black"></div>
+                </button>
+            </div>
+
+            <!-- Loading indicator -->
+            <div id="webcam_loading"
+                class="absolute inset-0 flex items-center justify-center bg-black/50 text-white z-0">
+                <i class="fas fa-spinner fa-spin text-3xl"></i>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- Modal Mão de Obra -->
 <div id="modal_mo" class="modal-overlay">
-    <div class="modal-content max-w-lg">
-        <div class="bg-indigo-50 px-4 py-3 border-b flex justify-between items-center">
-            <h3 class="font-bold text-indigo-700"><i class="fas fa-users-cog mr-2"></i>Adicionar Mão de Obra</h3>
-            <button onclick="closeModal('modal_mo')" class="text-slate-500 hover:text-red-500 text-xl">&times;</button>
+    <div class="modal-content">
+        <div class="px-5 py-4 border-b flex justify-between items-center bg-slate-50">
+            <h3 class="font-bold text-slate-800">Adicionar Mão de Obra</h3>
+            <button onclick="closeModal('modal_mo')"
+                class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-200 text-slate-500 hover:bg-red-100 hover:text-red-500 transition"><i
+                    class="fas fa-times"></i></button>
         </div>
-        <div class="px-4 pt-3 pb-1">
-            <input type="text" id="search_mo" onkeyup="filterModalItems('search_mo', 'list_mo_items')"
-                class="w-full px-3 py-2 border rounded-md text-sm bg-slate-50" placeholder="Pesquisar função...">
+        <div class="p-4 border-b bg-white">
+            <div class="relative">
+                <input type="text" id="search_mo" onkeyup="filterModalItems('search_mo', 'list_mo_items')"
+                    class="form-control-std pl-10" placeholder="Buscar função...">
+            </div>
         </div>
-        <div class="p-4 bg-white flex-1 overflow-y-auto max-h-[50vh] custom-scrollbar">
-            <p class="text-xs text-slate-500 mb-3">Selecione as funções para adicionar:</p>
-            <div class="grid grid-cols-2 gap-2" id="list_mo_items">
+        <div class="p-4 flex-1 overflow-y-auto custom-scrollbar bg-slate-50/50">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2" id="list_mo_items">
                 {% for op in mao_de_obra_options %}
                 <label
-                    class="flex items-center gap-2 p-2 border rounded cursor-pointer hover:bg-indigo-50 transition-colors item-filter">
-                    <input type="checkbox" class="chk-mo w-4 h-4 text-indigo-600" value="{{ op.nome }}">
-                    <span class="text-sm text-slate-700 font-medium name-filter">{{ op.nome }}</span>
+                    class="flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-lg cursor-pointer active:bg-blue-50 transition item-filter shadow-sm">
+                    <input type="checkbox" class="chk-mo w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
+                        value="{{ op.nome }}">
+                    <span class="text-sm font-medium text-slate-700 name-filter">{{ op.nome }}</span>
                 </label>
                 {% endfor %}
             </div>
         </div>
-        <div class="bg-slate-50 px-4 py-3 border-t flex justify-end gap-2">
+        <div class="p-4 border-t bg-white flex gap-3">
             <button onclick="closeModal('modal_mo')"
-                class="px-4 py-2 text-slate-600 text-sm font-bold">Cancelar</button>
+                class="flex-1 py-3 font-bold text-slate-500 hover:bg-slate-50 rounded-lg">Cancelar</button>
             <button onclick="addSelectedMO()"
-                class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700">Adicionar
-                Selecionados</button>
+                class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow-md">Adicionar</button>
         </div>
     </div>
 </div>
 
 <!-- Modal Equipamentos -->
 <div id="modal_eq" class="modal-overlay">
-    <div class="modal-content max-w-lg">
-        <div class="bg-gray-100 px-4 py-3 border-b flex justify-between items-center">
-            <h3 class="font-bold text-gray-700"><i class="fas fa-truck mr-2"></i>Adicionar Equipamentos</h3>
-            <button onclick="closeModal('modal_eq')" class="text-slate-500 hover:text-red-500 text-xl">&times;</button>
+    <div class="modal-content">
+        <div class="px-5 py-4 border-b flex justify-between items-center bg-slate-50">
+            <h3 class="font-bold text-slate-800">Adicionar Equipamentos</h3>
+            <button onclick="closeModal('modal_eq')"
+                class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-200 text-slate-500 hover:bg-red-100 hover:text-red-500 transition"><i
+                    class="fas fa-times"></i></button>
         </div>
-        <div class="px-4 pt-3 pb-1">
-            <input type="text" id="search_eq" onkeyup="filterModalItems('search_eq', 'list_eq_items')"
-                class="w-full px-3 py-2 border rounded-md text-sm bg-slate-50" placeholder="Pesquisar equipamento...">
+        <div class="p-4 border-b bg-white">
+            <div class="relative">
+                <input type="text" id="search_eq" onkeyup="filterModalItems('search_eq', 'list_eq_items')"
+                    class="form-control-std pl-10" placeholder="Buscar equipamento...">
+            </div>
         </div>
-        <div class="p-4 bg-white flex-1 overflow-y-auto max-h-[50vh] custom-scrollbar">
-            <p class="text-xs text-slate-500 mb-3">Selecione os equipamentos:</p>
-            <div class="grid grid-cols-2 gap-2" id="list_eq_items">
+        <div class="p-4 flex-1 overflow-y-auto custom-scrollbar bg-slate-50/50">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2" id="list_eq_items">
                 {% for opt in equipamentos_options %}
                 <label
-                    class="flex items-center gap-2 p-2 border rounded cursor-pointer hover:bg-gray-50 transition-colors item-filter">
-                    <input type="checkbox" class="chk-eq w-4 h-4 text-gray-600" value="{{ opt.id }}"
-                        data-nome="{{ opt.nome }}">
-                    <span class="text-sm text-slate-700 font-medium name-filter">{{ opt.nome }}</span>
+                    class="flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-lg cursor-pointer active:bg-blue-50 transition item-filter shadow-sm">
+                    <input type="checkbox" class="chk-eq w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
+                        value="{{ opt.id }}" data-nome="{{ opt.nome }}">
+                    <span class="text-sm font-medium text-slate-700 name-filter">{{ opt.nome }}</span>
                 </label>
                 {% endfor %}
             </div>
         </div>
-        <div class="bg-slate-50 px-4 py-3 border-t flex justify-end gap-2">
+        <div class="p-4 border-t bg-white flex gap-3">
             <button onclick="closeModal('modal_eq')"
-                class="px-4 py-2 text-slate-600 text-sm font-bold">Cancelar</button>
+                class="flex-1 py-3 font-bold text-slate-500 hover:bg-slate-50 rounded-lg">Cancelar</button>
             <button onclick="addSelectedEq()"
-                class="px-4 py-2 bg-gray-600 text-white rounded-lg text-sm font-bold hover:bg-gray-700">Adicionar
-                Selecionados</button>
+                class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow-md">Adicionar</button>
         </div>
     </div>
 </div>
 
 <!-- Modal Ocorrências -->
 <div id="modal_oc" class="modal-overlay">
-    <div class="modal-content max-w-lg">
-        <div class="bg-red-50 px-4 py-3 border-b flex justify-between items-center">
-            <h3 class="font-bold text-red-700"><i class="fas fa-exclamation-triangle mr-2"></i>Adicionar Ocorrências
-            </h3>
-            <button onclick="closeModal('modal_oc')" class="text-slate-500 hover:text-red-500 text-xl">&times;</button>
+    <div class="modal-content">
+        <div class="px-5 py-4 border-b flex justify-between items-center bg-slate-50">
+            <h3 class="font-bold text-slate-800">Tipos de Ocorrência</h3>
+            <button onclick="closeModal('modal_oc')"
+                class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-200 text-slate-500 hover:bg-red-100 hover:text-red-500 transition"><i
+                    class="fas fa-times"></i></button>
         </div>
-        <div class="px-4 pt-3 pb-1">
-            <input type="text" id="search_oc" onkeyup="filterModalItems('search_oc', 'list_oc_items')"
-                class="w-full px-3 py-2 border rounded-md text-sm bg-slate-50" placeholder="Pesquisar tipo...">
+        <div class="p-4 border-b bg-white">
+            <div class="relative">
+                <input type="text" id="search_oc" onkeyup="filterModalItems('search_oc', 'list_oc_items')"
+                    class="form-control-std pl-10" placeholder="Buscar tipo...">
+            </div>
         </div>
-        <div class="p-4 bg-white flex-1 overflow-y-auto max-h-[50vh] custom-scrollbar">
-            <p class="text-xs text-slate-500 mb-3">Selecione os tipos de ocorrência:</p>
+        <div class="p-4 flex-1 overflow-y-auto custom-scrollbar bg-slate-50/50">
             <div class="grid grid-cols-1 gap-2" id="list_oc_items">
                 {% for t in tags_options %}
                 <label
-                    class="flex items-center gap-2 p-2 border rounded cursor-pointer hover:bg-red-50 transition-colors item-filter">
-                    <input type="checkbox" class="chk-oc w-4 h-4 text-red-600" value="{{ t.id }}"
-                        data-nome="{{ t.nome }}">
-                    <span class="text-sm text-slate-700 font-medium name-filter">{{ t.nome }}</span>
+                    class="flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-lg cursor-pointer active:bg-blue-50 transition item-filter shadow-sm">
+                    <input type="checkbox" class="chk-oc w-5 h-5 text-red-600 rounded focus:ring-red-500"
+                        value="{{ t.id }}" data-nome="{{ t.nome }}">
+                    <span class="text-sm font-medium text-slate-700 name-filter">{{ t.nome }}</span>
                 </label>
                 {% endfor %}
             </div>
         </div>
-        <div class="bg-slate-50 px-4 py-3 border-t flex justify-end gap-2">
+        <div class="p-4 border-t bg-white flex gap-3">
             <button onclick="closeModal('modal_oc')"
-                class="px-4 py-2 text-slate-600 text-sm font-bold">Cancelar</button>
+                class="flex-1 py-3 font-bold text-slate-500 hover:bg-slate-50 rounded-lg">Cancelar</button>
             <button onclick="addSelectedOc()"
-                class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-bold hover:bg-red-700">Adicionar
-                Selecionados</button>
+                class="flex-1 py-3 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 shadow-md">Adicionar</button>
         </div>
     </div>
 </div>
 
-<!-- Modal Foto Viewer (NOVO - SENIOR UX) -->
-<div id="modal_foto_viewer" class="modal-overlay z-[10000]"
-    onclick="if(event.target === this) closeModal('modal_foto_viewer')">
-    <div class="relative bg-transparent p-4 max-w-4xl max-h-screen flex flex-col items-center justify-center w-full">
-        <button onclick="closeModal('modal_foto_viewer')"
-            class="absolute top-4 right-4 text-white hover:text-gray-300 text-3xl z-50 drop-shadow-md cursor-pointer">&times;</button>
-        <img id="img_viewer_src" src=""
-            class="max-w-full max-h-[85vh] rounded-lg shadow-2xl object-contain border-4 border-white bg-black">
-        <p id="img_viewer_caption"
-            class="text-white text-center mt-4 font-medium bg-black/70 px-6 py-2 rounded-full backdrop-blur-sm shadow-lg min-w-[200px]">
-        </p>
-    </div>
-</div>
-
-<!-- 4. Modal Gerenciar Workflow (REFORMULADO - MODERNO) -->
-<div id="modal_assinantes" class="modal-overlay">
-
-    <div class="modal-content max-w-lg flex flex-col max-h-[90vh] rounded-2xl shadow-2xl overflow-hidden">
-
-        <!-- 1. Header -->
-        <div
-            class="px-6 py-5 flex justify-between items-start shrink-0 bg-white z-20 shadow-sm border-b border-slate-50 relative">
-            <div>
-                <h3 class="font-bold text-slate-800 text-lg leading-tight">Definir Sequência</h3>
-                <p class="text-xs text-slate-500 mt-1">Busque colaboradores e organize o fluxo.</p>
-            </div>
-            <button type="button" onclick="closeModal('modal_assinantes')"
-                class="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-2 rounded-full transition-all">
-                <i class="fas fa-times text-lg"></i>
-            </button>
-        </div>
-
-        <!-- 2. Área de Busca e Adição (Topo e Expansiva) -->
-        <!-- Adicionei z-30 para ficar acima do conteúdo abaixo -->
-        <div class="bg-white shrink-0 z-30 relative">
-            <div class="px-6 pt-4 pb-2">
-                <h4 class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Adicionar Colaborador
-                </h4>
-
-                <!-- Search Input Wrapper -->
-                <div class="relative group">
-                    <div
-                        class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
-                    </div>
-                    <input type="text" id="search_workflow"
-                        onkeyup="filterModalList('search_workflow', 'list_workflow_users')"
-                        onfocus="expandUserList(true)" placeholder="Pesquisar e selecionar..."
-                        class="w-full pl-9 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 focus:ring-2 focus:ring-blue-100 focus:border-blue-300 focus:bg-white transition-all outline-none placeholder:text-slate-400">
-
-                    <!-- Ícone de Chevron para indicar expansão -->
-                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
-                        <i id="chevron-icon" class="fas fa-chevron-down text-xs transition-transform duration-300"></i>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Lista de Opções (Agora Absolute/Floating) -->
-            <!-- Alterei classes para posicionamento absoluto, sombra e z-index alto -->
-            <div id="expandable_user_list"
-                class="absolute top-full left-0 w-full max-h-0 overflow-hidden transition-all duration-300 ease-in-out bg-white border-b border-slate-200 shadow-2xl z-50 rounded-b-xl">
-                <div class="overflow-y-auto px-4 pb-4 pt-2 custom-scrollbar max-h-[220px]" id="list_workflow_users">
-
-                    <p class="text-[10px] text-slate-400 px-2 mb-2 italic">Selecione para adicionar à sequência abaixo.
-                    </p>
-
-                    {% for u in usuarios_obra %}
-                    <label id="label_user_{{ u.id }}"
-                        class="flex items-center justify-between p-2.5 mx-1 my-1 rounded-lg cursor-pointer hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200 group item-filter">
-                        <div class="flex items-center gap-3 w-full">
-                            <div class="relative flex items-center shrink-0">
-                                <input type="checkbox" name="workflow_users" value="{{ u.id }}"
-                                    onchange="toggleUserInWorkflow('{{ u.id }}', this.checked)"
-                                    class="peer h-4 w-4 cursor-pointer appearance-none rounded border border-slate-300 bg-white checked:bg-blue-500 checked:border-transparent transition-all">
-                                <i
-                                    class="fas fa-check absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white text-[9px] opacity-0 peer-checked:opacity-100 pointer-events-none"></i>
-                            </div>
-
-                            <!-- Avatar -->
-                            <div
-                                class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xs font-bold group-hover:bg-white group-hover:shadow-sm transition-all shrink-0 uppercase">
-                                {{ u.nome[:2] }}
-                            </div>
-
-                            <div class="truncate">
-                                <p class="text-sm font-medium text-slate-700 leading-tight truncate name-filter">{{
-                                    u.nome }}</p>
-                                <span class="text-[10px] text-slate-400 truncate block">{{ u.papel or 'Colaborador'
-                                    }} | {{u.email}}</span>
-                            </div>
-                        </div>
-
-                        <!-- Badge de Selecionado (Controlado via CSS/JS) -->
-                        <span
-                            class="hidden peer-checked:inline-block text-[9px] font-bold text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded ml-2 shrink-0">OK</span>
-                    </label>
-                    {% endfor %}
-
-                </div>
-
-                <!-- Fecha manual -->
-                <div class="text-center pb-2 pt-1 border-t border-slate-50 cursor-pointer hover:bg-slate-50 transition-colors bg-white sticky bottom-0"
-                    onclick="expandUserList(false)">
-                    <i class="fas fa-chevron-up text-slate-300 text-xs"></i>
-                </div>
-            </div>
-        </div>
-
-        <!-- 3. Área de Sequência (Timeline em baixo) -->
-        <div class="bg-slate-50/50 flex-1 overflow-y-auto px-6 py-4 custom-scrollbar relative">
-
-            <div
-                class="flex items-center justify-between mb-4 sticky top-0 bg-slate-50/95 backdrop-blur-sm z-10 py-1 border-b border-transparent">
-                <h4 class="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                    <i class="fas fa-sort-amount-down text-slate-300"></i> Sequência Atual
-                </h4>
-            </div>
-
-            <!-- Lista Sortable -->
-            <div class="relative pl-4 border-l-2 border-slate-200 ml-2 space-y-3 pb-2 min-h-[100px]"
-                id="sortable_workflow">
-                <!-- Itens serão renderizados via JS (renderWorkflowList) -->
-            </div>
-
-        </div>
-
-        <!-- 4. Footer -->
-        <div class="p-5 border-t border-slate-100 bg-white flex justify-end gap-3 shrink-0 rounded-b-2xl z-20">
-            <button type="button" onclick="closeModal('modal_assinantes')"
-                class="px-5 py-2.5 text-slate-500 font-semibold text-sm hover:bg-slate-50 hover:text-slate-700 rounded-lg transition-colors">
-                Cancelar
-            </button>
-            <button type="button" onclick="salvarWorkflow()"
-                class="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-medium text-sm shadow-lg shadow-slate-300/50 flex items-center gap-2 transform active:scale-95 transition-all">
-                <i class="fas fa-check"></i>
-                Salvar Sequência
-            </button>
-        </div>
-
-    </div>
-</div>
-
-<!-- 5. Modal Assinar (Canvas) -->
+<!-- Modal Assinatura (Canvas Responsive) -->
 <div id="modalAssinatura" class="modal-overlay">
     <div class="modal-content max-w-md">
-        <div class="bg-slate-50 px-4 py-3 border-b flex justify-between items-center">
-            <h3 class="font-bold text-slate-700">Coletar Assinatura</h3>
-            <button onclick="closeModal('modalAssinatura')"
-                class="text-slate-500 hover:text-red-500 text-xl">&times;</button>
+        <div class="px-5 py-4 border-b bg-slate-50">
+            <h3 class="font-bold text-slate-800">Assinatura Digital</h3>
+            <p class="text-xs text-slate-500">Desenhe sua assinatura abaixo</p>
         </div>
-        <div class="p-6 flex justify-center bg-white">
-            <div class="border-2 border-slate-300 rounded border-dashed relative w-full">
-                <canvas id="signature-pad" class="touch-none w-full"
-                    style="height: 200px; background: #fafafa;"></canvas>
-                <small class="absolute bottom-1 left-2 text-slate-300 text-[10px] pointer-events-none">Assine
-                    aqui</small>
+        <div class="p-4 bg-white flex justify-center">
+            <div
+                class="border-2 border-dashed border-slate-300 rounded-xl relative w-full h-[220px] bg-slate-50 overflow-hidden">
+                <canvas id="signature-pad" class="absolute inset-0 w-full h-full touch-none"></canvas>
+                <div
+                    class="absolute bottom-2 left-0 right-0 text-center pointer-events-none opacity-30 text-xs font-bold uppercase">
+                    Área de Assinatura</div>
             </div>
         </div>
-        <div class="bg-slate-50 px-4 py-3 border-t flex justify-between">
+        <div class="p-4 border-t bg-white flex justify-between gap-3">
             <button onclick="limparAssinatura()"
-                class="text-slate-600 hover:text-slate-800 text-sm font-medium px-3 py-2">Limpar</button>
-            <div class="flex space-x-2">
-                <button onclick="closeModal('modalAssinatura')" id="btnCancelarAss"
-                    class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm">Cancelar</button>
+                class="px-4 py-2 text-slate-600 font-bold text-sm bg-slate-100 rounded-lg">Limpar</button>
+            <div class="flex gap-2">
+                <button onclick="closeModal('modalAssinatura')"
+                    class="px-4 py-2 text-slate-600 font-bold text-sm hover:bg-slate-50 rounded-lg">Cancelar</button>
                 <button onclick="salvarAssinatura()" id="btnConfirmarAss"
-                    class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm font-medium flex items-center">
-                    <span id="btnText">Confirmar</span><i id="btnIcon" class="fas fa-check ml-2"></i>
+                    class="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 flex items-center gap-2">
+                    <i class="fas fa-check"></i> Assinar
                 </button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- 6. Modal Rejeição -->
+<!-- Modal Foto Viewer -->
+<div id="modal_foto_viewer" class="modal-overlay z-[10000]"
+    onclick="if(event.target === this) closeModal('modal_foto_viewer')">
+    <div class="relative w-full h-full flex flex-col items-center justify-center p-4">
+        <button onclick="closeModal('modal_foto_viewer')"
+            class="absolute top-5 right-5 text-white bg-black/50 rounded-full w-10 h-10 flex items-center justify-center text-xl z-50 backdrop-blur-md">&times;</button>
+        <img id="img_viewer_src" src="" class="max-w-full max-h-[80vh] rounded-lg shadow-2xl object-contain bg-black">
+        <p id="img_viewer_caption"
+            class="text-white text-center mt-4 font-medium bg-black/70 px-6 py-2 rounded-full backdrop-blur-sm text-sm">
+        </p>
+    </div>
+</div>
+
+<!-- Modal Rejeição -->
 <div id="modal_rejeicao" class="modal-overlay">
     <div class="modal-content max-w-md">
-        <div class="p-4 bg-red-50 border-b border-red-100">
-            <h3 class="font-bold text-red-800"><i class="fas fa-exclamation-triangle mr-2"></i>Rejeitar RDO</h3>
+        <div class="p-5 bg-red-50 border-b border-red-100">
+            <h3 class="font-bold text-red-800 text-lg">Rejeitar RDO</h3>
         </div>
-        <div class="p-6">
+        <div class="p-6 space-y-3">
             <input type="hidden" id="id_assinatura_rejeitar">
-            <label class="block text-xs font-bold text-slate-600 uppercase mb-2">Motivo da Rejeição *</label>
+            <label class="block text-sm font-bold text-slate-700">Motivo da Rejeição <span
+                    class="text-red-500">*</span></label>
             <textarea id="texto_motivo" rows="4" class="form-control-std w-full"
-                placeholder="Descreva o motivo da reprovação..."></textarea>
-            <p class="text-[10px] text-red-500 mt-2">* Esta ação encerrará o fluxo de aprovação.</p>
+                placeholder="Descreva por que este RDO está sendo rejeitado..."></textarea>
+            <p class="text-xs text-red-500 bg-red-50 p-2 rounded"><i class="fas fa-info-circle mr-1"></i> Esta ação
+                interromperá o fluxo e notificará o criador.</p>
         </div>
-        <div class="p-4 border-t flex justify-end gap-2 bg-slate-50">
+        <div class="p-5 border-t bg-white flex justify-end gap-3">
             <button onclick="closeModal('modal_rejeicao')"
-                class="px-4 py-2 text-slate-600 font-bold text-sm">Cancelar</button>
+                class="px-4 py-2 text-slate-600 font-bold text-sm hover:bg-slate-50 rounded-lg">Cancelar</button>
             <button onclick="confirmarRejeicao()"
-                class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold text-sm">Confirmar
+                class="px-6 py-2 bg-red-600 text-white rounded-lg font-bold text-sm hover:bg-red-700 shadow-md">Confirmar
                 Rejeição</button>
         </div>
     </div>
 </div>
 
+<!-- Modal Workflow Config (Mantido lógica, layout mobile) -->
+<div id="modal_assinantes" class="modal-overlay">
+    <div class="modal-content h-[90vh] flex flex-col">
+        <div class="px-5 py-4 border-b flex justify-between items-center bg-white shadow-sm z-10">
+            <div>
+                <h3 class="font-bold text-slate-800">Configurar Aprovadores</h3>
+                <p class="text-xs text-slate-500">Defina quem deve assinar este RDO</p>
+            </div>
+            <button onclick="closeModal('modal_assinantes')" class="text-slate-400 hover:text-slate-600 text-xl"><i
+                    class="fas fa-times"></i></button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto bg-slate-50 p-4">
+            <!-- Add Area -->
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-4">
+                <label class="text-xs font-bold text-slate-400 uppercase mb-2 block">Adicionar Pessoa</label>
+                <div class="relative">
+                    <input type="text" id="search_workflow"
+                        onkeyup="filterModalList('search_workflow', 'list_workflow_users')"
+                        onfocus="expandUserList(true)" placeholder="Buscar por nome..." class="form-control-std">
+                    <div id="expandable_user_list"
+                        class="absolute top-full left-0 w-full max-h-0 overflow-hidden transition-all duration-200 bg-white border border-t-0 border-slate-200 rounded-b-lg shadow-xl z-50">
+                        <div class="p-2 max-h-[200px] overflow-y-auto" id="list_workflow_users">
+                            {% for u in usuarios_obra %}
+                            <div class="flex items-center justify-between p-3 hover:bg-slate-50 rounded-lg cursor-pointer border-b border-slate-50 last:border-0 item-filter"
+                                onclick="toggleUserCheckbox('{{ u.id }}')">
+                                <div class="flex items-center gap-3">
+                                    <input type="checkbox" name="workflow_users" value="{{ u.id }}"
+                                        id="chk_wf_{{ u.id }}"
+                                        onchange="toggleUserInWorkflow('{{ u.id }}', this.checked); event.stopPropagation();"
+                                        class="w-5 h-5 text-blue-600 rounded">
+                                    <div>
+                                        <p class="text-sm font-bold text-slate-700 name-filter">{{ u.nome }}</p>
+                                        <p class="text-xs text-slate-400">{{ u.papel or 'Colaborador' }} | {{ u.email or
+                                            '' }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="bg-slate-50 p-2 text-center text-xs text-slate-400 cursor-pointer"
+                            onclick="expandUserList(false)"><i class="fas fa-chevron-up"></i> Fechar lista</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- List Area -->
+            <h4 class="text-xs font-bold text-slate-400 uppercase mb-2 pl-2">Sequência Atual (Arraste para reordenar)
+            </h4>
+            <div id="sortable_workflow" class="space-y-2 pb-10">
+                <!-- Itens via JS -->
+            </div>
+        </div>
+
+        <div class="p-4 border-t bg-white flex justify-end gap-3 z-10">
+            <button onclick="closeModal('modal_assinantes')"
+                class="px-4 py-3 font-bold text-slate-500">Cancelar</button>
+            <button onclick="salvarWorkflow()"
+                class="px-6 py-3 bg-slate-800 text-white font-bold rounded-lg shadow-md w-full sm:w-auto">Salvar
+                Sequência</button>
+        </div>
+    </div>
+</div>
+
 <!-- ========================================== -->
-<!-- SCRIPTS -->
+<!-- SCRIPTS (Lógica Preservada + Aprimorada) -->
 <!-- ========================================== -->
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
@@ -1215,406 +1403,326 @@
     const currentRdoId = "{{ item.id if item else '' }}";
     const currentUserId = {{ session.get('user_id') | default (0) }};
     let signaturePad = null;
+    let selectedOrder = [];
+    let creatorId = null;
 
-    // --- LÓGICA DE FOTOS (SENIOR UX) ---
-    const dtFotos = new DataTransfer(); // Gerencia os arquivos em memória
-    let nextFileId = 0; // ID temporário para fotos novas (para manipulação de DOM)
-    let totalPhotoCount = 0; // Contador total de fotos (existentes + novas)
-    const maxPhotoLimit = 20; // Limite máximo de fotos permitidas
-    const photoPreviewContainer = $('#photo_preview_container');
-
-    /* JINJA ORIGINAL (Descomentar em Produção): */
+    // Dados injetados do backend
     const usersMap = {};
     {% for u in usuarios_obra %}
-    usersMap["{{ u.id }}"] = {
-        id: "{{ u.id }}",
-        nome: "{{ u.nome }}",
-        papel: "{{ u.papel or 'Colaborador' }}",
-        email: "{{ u.email }}"
-    };
+    usersMap["{{ u.id }}"] = { id: "{{ u.id }}", nome: "{{ u.nome }}", papel: "{{ u.papel or 'Colaborador' }}", email: "{{ u.email }}" };
     {% endfor %}
 
-    // Assinaturas existentes carregadas do backend (Simulação)
     let existingSignatures = [];
     {% if item and item.assinaturas %}
     {% for ass in item.assinaturas | sort(attribute = 'ordem') %}
-    existingSignatures.push({
-        userId: "{{ ass.id_usuario }}",
-        order: {{ ass.ordem }}
-        });
+    existingSignatures.push({ userId: "{{ ass.id_usuario }}", order: {{ ass.ordem }} });
     {% endfor %}
     {% endif %}
 
     $(document).ready(function () {
+        // CORREÇÃO CRÍTICA DE Z-INDEX DO MODAL
+        $('.modal-overlay').appendTo('body');
+
         if (!isViewMode) {
-            $('.select2-enable').select2({ width: '100%', language: { noResults: () => "Nada encontrado" } });
+            $('.select2-enable').select2({
+                width: '100%',
+                language: { noResults: () => "Nada encontrado" },
+                dropdownAutoWidth: true
+            });
             if ($('#table_atividades tbody tr').length === 0) addAtividadeRow();
+        } else {
+            $('.select2-enable').prop('disabled', true);
         }
 
-        // Listener para fotos novas
-        $('#input_fotos_trigger').on('change', handleNewPhotos);
+        window.addEventListener('resize', () => {
+            document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`);
+        });
 
-        // Inicializa o workflow com dados existentes se houver
         initWorkflowModal();
         updateTotalPhotoCount();
     });
 
-    // --- LÓGICA DE FRENTES (CORREÇÃO DE SÊNIOR) ---
+    // --- MASCARA E DATA TOOLS ---
+    function mascaraData(val) {
+        let v = val.value;
+        v = v.replace(/\D/g, ""); // Remove tudo o que não é dígito
+        v = v.replace(/^(\d{2})(\d)/, "$1/$2"); // Coloca barra entre o segundo e o terceiro dígitos
+        v = v.replace(/\/(\d{2})(\d)/, "/$1/$2"); // Coloca barra entre o quinto e o sexto dígitos
+        val.value = v;
+    }
+
+    function syncDateToHidden(input) {
+        const hidden = document.getElementById('data_rdo_hidden');
+        const visualVal = input.value;
+
+        // Regex verify DD/MM/YYYY
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(visualVal)) {
+            const parts = visualVal.split('/');
+            // YYYY-MM-DD
+            hidden.value = `${parts[2]}-${parts[1]}-${parts[0]}`;
+        } else {
+            hidden.value = ''; // Invalid or incomplete
+        }
+    }
+
+    function setDataHoje() {
+        const now = new Date();
+        const dia = String(now.getDate()).padStart(2, '0');
+        const mes = String(now.getMonth() + 1).padStart(2, '0');
+        const ano = now.getFullYear();
+        document.getElementById('data_rdo_visual').value = `${dia}/${mes}/${ano}`;
+        document.getElementById('data_rdo_hidden').value = `${ano}-${mes}-${dia}`;
+    }
+
+    function aplicarDataPicker(input) {
+        if (!input.value) return;
+        const [ano, mes, dia] = input.value.split('-');
+        document.getElementById('data_rdo_visual').value = `${dia}/${mes}/${ano}`;
+        document.getElementById('data_rdo_hidden').value = `${ano}-${mes}-${dia}`;
+    }
+
+    // --- LÓGICA DE OBRA/FRENTE ---
     async function fetchObra(obraId) {
         const selectFrente = $('#select_frente');
-
-        // Reset inicial
         selectFrente.empty().append('<option value="">Selecione a Frente...</option>');
         $('#error_frente').addClass('hidden');
 
         if (!obraId) {
-            selectFrente.prop('disabled', true);
-            if ($.fn.select2) selectFrente.trigger('change.select2');
+            selectFrente.prop('disabled', true).trigger('change.select2');
             return;
         }
 
         const loader = document.getElementById('loader_frente');
         loader.classList.remove('hidden');
         selectFrente.prop('disabled', true);
-        if ($.fn.select2) selectFrente.trigger('change.select2');
 
         try {
-            // CORREÇÃO: A rota correta no auth.py para obter dados da obra (incluindo frentes) é /api/obra/<id>
-            // A rota /api/frente/<id> retorna apenas uma frente específica.
             const response = await fetch(`/auth/api/obra/${obraId}`);
-
-            if (!response.ok) throw new Error('Erro ao buscar dados da obra');
-
+            if (!response.ok) throw new Error('Erro API');
             const data = await response.json();
-            // No auth.py, as frentes estão dentro da chave "frentes" do JSON
             const frentes = data.frentes || [];
 
             if (frentes.length === 0) {
-                selectFrente.empty().append('<option value="">Nenhuma frente encontrada para esta obra</option>');
+                selectFrente.empty().append('<option value="">Nenhuma frente cadastrada</option>');
             } else {
                 let options = '<option value="">Selecione a Frente...</option>';
-                frentes.forEach(f => {
-                    // Mapeia os campos retornados pelo auth.py (id, nome)
-                    options += `<option value="${f.id}">${f.nome}</option>`;
-                });
+                frentes.forEach(f => { options += `<option value="${f.id}">${f.nome}</option>`; });
                 selectFrente.html(options);
             }
-
             selectFrente.prop('disabled', false);
-
         } catch (error) {
-            console.error('Erro de API:', error);
+            console.error(error);
             selectFrente.html('<option value="">Erro ao carregar</option>');
             $('#error_frente').removeClass('hidden');
         } finally {
             loader.classList.add('hidden');
-            if ($.fn.select2) selectFrente.trigger('change');
+            selectFrente.trigger('change');
         }
     }
 
-    // --- LÓGICA DE VISUALIZAÇÃO DE FOTOS (MODAL) ---
-    function openPhotoViewer(src, caption) {
-        const modal = document.getElementById('modal_foto_viewer');
-        const img = document.getElementById('img_viewer_src');
-        const cap = document.getElementById('img_viewer_caption');
+    // --- FOTOS: LÓGICA UNIFICADA (DESKTOP WEBCAM + MOBILE) ---
 
-        img.src = src;
-        cap.innerText = caption || '';
+    function isMobileDevice() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    }
 
-        // Se não tiver legenda, esconde a barra preta
-        if (!caption) cap.classList.add('hidden');
-        else cap.classList.remove('hidden');
+    // Inicializa captura: se mobile, input file; se desktop, modal webcam
+    function initCameraCapture() {
+        if (isMobileDevice()) {
+            document.getElementById('input-camera-mobile').click();
+        } else {
+            openWebcamModal();
+        }
+    }
+
+    // Lida com fotos selecionadas (Input File normal ou Mobile)
+    function handleNewPhoto(inputElement) {
+        // Se houver múltiplos arquivos (upload/galeria)
+        if (inputElement.files && inputElement.files.length > 0) {
+            Array.from(inputElement.files).forEach(file => {
+                addFileToForm(file);
+            });
+
+            // Limpa o input original para permitir selecionar o mesmo arquivo novamente se necessário
+            inputElement.value = '';
+        }
+    }
+
+    // --- LÓGICA WEBCAM (Desktop) ---
+    let webcamStream = null;
+
+    async function openWebcamModal() {
+        const modal = document.getElementById('modal_webcam');
+        const video = document.getElementById('webcam_video');
+        const loading = document.getElementById('webcam_loading');
 
         modal.classList.add('active');
         document.body.classList.add('modal-open');
+        loading.classList.remove('hidden');
+
+        try {
+            webcamStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 } } });
+            video.srcObject = webcamStream;
+            video.onloadedmetadata = () => {
+                loading.classList.add('hidden');
+            };
+        } catch (err) {
+            console.error("Erro webcam:", err);
+            alert("Não foi possível acessar a câmera. Verifique as permissões.");
+            closeWebcam();
+        }
     }
 
-    // --- LÓGICA DE FOTOS (IMPLEMENTAÇÃO) ---
-    function handleNewPhotos(e) {
-        if (!e.target.files) return;
+    function closeWebcam() {
+        const modal = document.getElementById('modal_webcam');
+        const video = document.getElementById('webcam_video');
 
-        // Adiciona arquivos ao DataTransfer global
-        Array.from(e.target.files).forEach(file => {
-            // Validação simples de tipo
-            if (!file.type.startsWith('image/')) return;
-
-            // Adiciona propriedade customizada para rastreio visual (simulado via objeto wrapper se fosse complexo, mas aqui usaremos o indice do dtFotos)
-            dtFotos.items.add(file);
-        });
-
-        // Reseta o input trigger para permitir selecionar o mesmo arquivo novamente se quiser
-        e.target.value = '';
-
-        updatePhotoPreview();
+        if (webcamStream) {
+            webcamStream.getTracks().forEach(track => track.stop());
+            webcamStream = null;
+        }
+        video.srcObject = null;
+        modal.classList.remove('active');
+        document.body.classList.remove('modal-open');
     }
 
-    function updatePhotoPreview() {
-        // Atualiza o input real que será enviado
-        document.getElementById('input_fotos_real').files = dtFotos.files;
+    function takeSnapshot() {
+        const video = document.getElementById('webcam_video');
+        const canvas = document.getElementById('webcam_canvas');
 
-        // Limpa preview de fotos NOVAS (mantém as do banco)
-        $('.photo-card-new').remove();
+        if (!video.videoWidth) return;
 
-        const gallery = document.getElementById('galeria_unificada');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const context = canvas.getContext('2d');
 
-        Array.from(dtFotos.files).forEach((file, index) => {
-            const reader = new FileReader();
-            reader.onload = function (e) {
-                const cardHtml = `
-                    <div class="photo-card photo-card-new relative bg-white border border-blue-200 rounded-xl overflow-hidden group shadow-sm sortable-item" draggable="true" data-index="${index}">
-                         <div class="relative h-40 bg-slate-100 cursor-pointer overflow-hidden" onclick="openPhotoViewer('${e.target.result}', 'Nova Foto')">
-                            <img src="${e.target.result}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
-                            <div class="absolute top-2 right-2 bg-blue-600 text-white text-[10px] px-2 py-0.5 rounded shadow">Nova</div>
-                        </div>
-                        <div class="p-3 space-y-2">
-                             <div class="relative">
-                                <i class="fas fa-pen absolute top-2.5 left-2.5 text-slate-400 text-xs pointer-events-none"></i>
-                                <input type="text" name="novas_fotos_comentarios[]" 
-                                       placeholder="Legenda para esta foto..." 
-                                       class="w-full pl-7 pr-2 py-1.5 text-xs border border-slate-200 rounded bg-slate-50 focus:bg-white focus:border-blue-400 outline-none transition-colors">
-                            </div>
-                            <button type="button" onclick="removeNewPhoto(${index})" 
-                                    class="w-full py-1.5 text-xs font-bold text-slate-400 hover:text-red-500 hover:bg-red-50 border border-slate-100 hover:border-red-200 rounded transition-all flex items-center justify-center gap-2">
-                                <i class="fas fa-trash-alt"></i> Remover
-                            </button>
-                        </div>
+        // Espelhar horizontalmente se for desktop (usabilidade padrão) - opcional, mantendo natural aqui
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        canvas.toBlob(function (blob) {
+            // Cria um arquivo a partir do blob da webcam
+            const filename = "foto_webcam_" + Date.now() + ".jpg";
+            const file = new File([blob], filename, { type: "image/jpeg" });
+
+            addFileToForm(file);
+            closeWebcam();
+        }, 'image/jpeg', 0.90);
+    }
+
+    // --- PROCESSAMENTO CENTRALIZADO DE ARQUIVOS ---
+    function addFileToForm(file) {
+        const uniqueId = Date.now() + Math.floor(Math.random() * 1000);
+
+        // 1. Cria um novo input type="file" escondido para submissão do formulário
+        const container = document.getElementById('file-inputs-container');
+        const newInput = document.createElement('input');
+        newInput.type = 'file';
+        newInput.name = 'fotos[]'; // Nome que o Flask espera
+        newInput.className = 'hidden';
+
+        // Hack: Usa DataTransfer para atribuir o arquivo ao input
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        newInput.files = dt.files;
+
+        // Armazena ID para facilitar remoção futura se necessário (opcional)
+        newInput.dataset.fileId = uniqueId;
+
+        container.appendChild(newInput);
+
+        // 2. Gera Preview
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            createPhotoCard(e.target.result, uniqueId);
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function createPhotoCard(url, id) {
+        const galeria = document.getElementById('galeria_unificada');
+        const cardHtml = `
+            <div class="photo-card relative bg-white border border-blue-200 rounded-xl overflow-hidden group shadow-md animate-fade-in" id="card_nova_${id}">
+                <div class="relative aspect-video bg-slate-100 overflow-hidden">
+                    <img src="${url}" class="w-full h-full object-cover">
+                    <div class="absolute top-2 right-2 bg-blue-600 text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm">
+                        NOVA
                     </div>
-                `;
-                // Insere antes do aviso final
-                $(gallery).append(cardHtml);
+                </div>
+                <div class="p-3 space-y-2">
+                    <div class="relative">
+                        <input type="text" name="novas_fotos_comentarios[]" 
+                            placeholder="Legenda da nova foto..." 
+                            class="w-full h-9 text-xs pl-8 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                    </div>
+                    <button type="button" onclick="removeNewPhoto('${id}')"
+                        class="w-full py-2 text-xs font-bold text-red-600 bg-white border border-red-200 hover:bg-red-50 rounded-lg transition-colors flex items-center justify-center gap-2">
+                        <i class="fas fa-times"></i> Remover
+                    </button>
+                </div>
+            </div>
+        `;
+        galeria.insertAdjacentHTML('beforeend', cardHtml);
+        updateTotalPhotoCount();
+    }
 
-                // Re-bind eventos de drag
-                bindPhotoDragEvents();
-            }
-            reader.readAsDataURL(file);
-        });
+    function removeNewPhoto(id) {
+        // Remove visualmente
+        const card = document.getElementById(`card_nova_${id}`);
+        if (card) card.remove();
+
+        // Remove o input correspondente do DOM (importante para não enviar)
+        const inputToRemove = document.querySelector(`input[data-file-id="${id}"]`);
+        if (inputToRemove) inputToRemove.remove();
 
         updateTotalPhotoCount();
     }
 
-    function removeNewPhoto(index) {
-        dtFotos.items.remove(index);
-        updatePhotoPreview();
-    }
-
     function marcarExclusao(id) {
-        if (!confirm('Tem certeza que deseja remover esta foto salva?')) return;
-
-        // Esconde o card visualmente
+        if (!confirm('Remover esta foto?')) return;
         $(`#card_existente_${id}`).addClass('hidden');
-
-        // Adiciona input hidden para processamento no backend
         $('#container_fotos_removidas').append(`<input type="hidden" name="fotos_remover[]" value="${id}">`);
-
         updateTotalPhotoCount();
     }
 
     function updateTotalPhotoCount() {
-        const existentes = $('.photo-card:not(.hidden)').length;
-        $('#counter_fotos_total').text(existentes);
+        // Conta cards visíveis (novos e existentes não ocultos)
+        const count = document.querySelectorAll('.photo-card:not(.hidden)').length;
+        document.getElementById('counter_fotos_total').innerText = count;
     }
 
-    // --- DRAG AND DROP PARA FOTOS (SIMPLES) ---
-    function bindPhotoDragEvents() {
-        const items = document.querySelectorAll('.photo-card-new');
-        items.forEach(item => {
-            item.addEventListener('dragstart', handlePhotoDragStart);
-            item.addEventListener('dragover', handlePhotoDragOver);
-            item.addEventListener('drop', handlePhotoDrop);
-            item.addEventListener('dragend', handlePhotoDragEnd);
-        });
+    function openPhotoViewer(src, caption) {
+        document.getElementById('img_viewer_src').src = src;
+        document.getElementById('img_viewer_caption').innerText = caption || '';
+        document.getElementById('img_viewer_caption').style.display = caption ? 'block' : 'none';
+        openModal('modal_foto_viewer');
     }
-
-    let dragPhotoSrcEl = null;
-
-    function handlePhotoDragStart(e) {
-        this.classList.add('dragging');
-        dragPhotoSrcEl = this;
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/html', this.innerHTML);
-    }
-
-    function handlePhotoDragOver(e) {
-        if (e.preventDefault) e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-        return false;
-    }
-
-    function handlePhotoDrop(e) {
-        if (e.stopPropagation) e.stopPropagation();
-
-        if (dragPhotoSrcEl !== this) {
-            // Troca o conteúdo visual HTML
-            // Nota: Para reordenação perfeita do FileList, seria necessário reconstruir o DataTransfer.
-            // Para simplificar a UX visual primeiro:
-            const srcHTML = dragPhotoSrcEl.innerHTML;
-            const tgtHTML = this.innerHTML;
-
-            dragPhotoSrcEl.innerHTML = tgtHTML;
-            this.innerHTML = srcHTML;
-
-            // Nota Técnica: A reordenação visual aqui não reordena o array 'files' enviado ao backend.
-            // Para corrigir isso 100%, precisaríamos re-mapear o DataTransfer baseado na nova ordem visual dos data-index.
-            // Dada a complexidade, esta implementação visual serve para agrupar, mas a ordem exata de upload pode variar.
-        }
-        return false;
-    }
-
-    function handlePhotoDragEnd(e) {
-        this.classList.remove('dragging');
-        document.querySelectorAll('.photo-card-new').forEach(item => item.classList.remove('dragging'));
-    }
-
-    // --- MODAIS ---
-    function openModal(id) {
-        document.getElementById(id).classList.add('active');
-        document.body.classList.add('modal-open'); // Trava scroll do fundo
-
-        if (id === 'modalAssinatura') initSignaturePad();
-        if (id === 'modal_assinantes') initWorkflowModal();
-    }
-
-    function closeModal(id) {
-        document.getElementById(id).classList.remove('active');
-        document.body.classList.remove('modal-open'); // Destrava scroll
-    }
-
-    function abrirModalAssinatura() { openModal('modalAssinatura'); }
-
-    // --- FILTER GENÉRICO PARA MODAIS ---
-    function filterModalItems(inputId, listId) {
-        const term = document.getElementById(inputId).value.toLowerCase();
-        const items = document.querySelectorAll(`#${listId} .item-filter`);
-
-        items.forEach(item => {
-            const name = item.querySelector('.name-filter').innerText.toLowerCase();
-            if (name.includes(term)) {
-                item.style.display = "flex";
-            } else {
-                item.style.display = "none";
-            }
-        });
-    }
-
-    // --- ADD FUNCTIONS FOR MODALS ---
-
-    // Mão de Obra
-    function addSelectedMO() {
-        const selected = [];
-        $('.chk-mo:checked').each(function () {
-            selected.push($(this).val());
-            $(this).prop('checked', false); // Reseta
-        });
-
-        if (selected.length === 0) {
-            closeModal('modal_mo');
-            return;
-        }
-
-        selected.forEach(funcao => {
-            const rowHtml = `
-                <tr>
-                    <td class="p-2">
-                        <select name="mo_funcao[]" class="form-control-std text-sm select2-enable">
-                            {% for op in mao_de_obra_options %}
-                            <option value="{{ op.nome }}" ${'{{ op.nome }}' === funcao ? 'selected' : ''}>{{ op.nome }}</option>
-                            {% endfor %}
-                        </select>
-                    </td>
-                    <td class="p-2"><input type="number" name="mo_qtd_propria[]" value="0" class="form-control-std text-center" min="0"></td>
-                    <td class="p-2"><input type="number" name="mo_qtd_terceirizada[]" value="0" class="form-control-std text-center" min="0"></td>
-                    <td class="p-2 text-center"><button type="button" onclick="removeRow(this)" class="text-red-400"><i class="fas fa-times"></i></button></td>
-                </tr>`;
-            $('#table_mao_obra tbody').append(rowHtml);
-        });
-
-        // Re-aplica select2 nas novas linhas
-        $('#table_mao_obra tbody tr:last-child select').select2({ width: '100%' });
-        closeModal('modal_mo');
-    }
-
-    // Equipamentos
-    function addSelectedEq() {
-        const selected = [];
-        $('.chk-eq:checked').each(function () {
-            selected.push({ id: $(this).val(), nome: $(this).data('nome') });
-            $(this).prop('checked', false);
-        });
-
-        if (selected.length === 0) { closeModal('modal_eq'); return; }
-
-        selected.forEach(item => {
-            const rowHtml = `
-                <tr>
-                    <td class="p-2">
-                        <select name="eq_id[]" class="form-control-std text-sm select2-enable">
-                            {% for opt in equipamentos_options %}
-                            <option value="{{ opt.id }}" ${'{{ opt.id }}' == item.id ? 'selected' : ''}>{{ opt.nome }}</option>
-                            {% endfor %}
-                        </select>
-                    </td>
-                    <td class="p-2 w-20"><input type="number" name="eq_qtd[]" value="1" class="form-control-std text-center"></td>
-                    <td class="p-2 w-8 text-center"><button type="button" onclick="removeRow(this)" class="text-red-400"><i class="fas fa-times"></i></button></td>
-                </tr>`;
-            $('#table_equipamentos tbody').append(rowHtml);
-        });
-        $('#table_equipamentos tbody tr:last-child select').select2({ width: '100%' });
-        closeModal('modal_eq');
-    }
-
-    // Ocorrências
-    function addSelectedOc() {
-        const selected = [];
-        $('.chk-oc:checked').each(function () {
-            selected.push({ id: $(this).val(), nome: $(this).data('nome') });
-            $(this).prop('checked', false);
-        });
-
-        if (selected.length === 0) { closeModal('modal_oc'); return; }
-
-        selected.forEach(item => {
-            const rowHtml = `
-                <tr>
-                    <td class="p-2 w-1/3">
-                        <select name="oc_tag[]" class="form-control-std text-sm select2-enable">
-                            {% for t in tags_options %}
-                            <option value="{{ t.id }}" ${'{{ t.id }}' == item.id ? 'selected' : ''}>{{ t.nome }}</option>
-                            {% endfor %}
-                        </select>
-                    </td>
-                    <td class="p-2"><input type="text" name="oc_desc[]" value="" class="form-control-std text-sm" placeholder="Detalhes..."></td>
-                    <td class="p-2 w-8 text-center"><button type="button" onclick="removeRow(this)" class="text-red-400"><i class="fas fa-times"></i></button></td>
-                </tr>`;
-            $('#table_ocorrencias tbody').append(rowHtml);
-        });
-        $('#table_ocorrencias tbody tr:last-child select').select2({ width: '100%' });
-        closeModal('modal_oc');
-    }
-
 
     // --- ASSINATURA ---
     function initSignaturePad() {
-        const canvas = document.getElementById('signature-pad');
-        if (!signaturePad && canvas) signaturePad = new SignaturePad(canvas, { backgroundColor: 'rgba(255, 255, 255, 0)' });
-        resizeCanvas();
-    }
-    function resizeCanvas() {
         const canvas = document.getElementById('signature-pad');
         if (canvas) {
             const ratio = Math.max(window.devicePixelRatio || 1, 1);
             canvas.width = canvas.offsetWidth * ratio;
             canvas.height = canvas.offsetHeight * ratio;
             canvas.getContext("2d").scale(ratio, ratio);
-            if (signaturePad) signaturePad.clear();
+            signaturePad = new SignaturePad(canvas, { backgroundColor: 'rgba(255,255,255,0)' });
         }
     }
+
+    window.addEventListener("resize", function () {
+        if (document.getElementById('modalAssinatura').classList.contains('active')) {
+            initSignaturePad();
+        }
+    });
+
     function limparAssinatura() { if (signaturePad) signaturePad.clear(); }
 
     async function salvarAssinatura() {
-        if (!signaturePad || signaturePad.isEmpty()) { alert("Assine antes de confirmar."); return; }
+        if (!signaturePad || signaturePad.isEmpty()) return alert("Por favor, assine antes de confirmar.");
         const btn = document.getElementById('btnConfirmarAss');
-        const original = btn.innerHTML;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...'; btn.disabled = true;
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+        btn.disabled = true;
 
         try {
             const dataUrl = signaturePad.toDataURL("image/png");
@@ -1625,52 +1733,11 @@
             const json = await res.json();
             if (json.success) window.location.reload();
             else alert(json.message);
-        } catch (e) { alert("Erro de conexão."); console.error(e); }
-        finally { btn.innerHTML = original; btn.disabled = false; }
+        } catch (e) { alert("Erro de conexão."); }
+        finally { btn.innerHTML = originalText; btn.disabled = false; }
     }
 
-    // --- WORKFLOW REFORMULADO (Drag and Drop & Lógica de Criador) ---
-    let selectedOrder = [];
-    let creatorId = null;
-
-    function getInitials(name) {
-        if (!name) return "??";
-        return name.substring(0, 2).toUpperCase();
-    }
-
-    // Controle da lista expansiva
-    function expandUserList(show) {
-        const list = document.getElementById('expandable_user_list');
-        const icon = document.getElementById('chevron-icon');
-
-        if (show) {
-            list.style.maxHeight = "250px";
-            if (icon) icon.classList.add('rotate-180');
-        } else {
-            setTimeout(() => {
-                list.style.maxHeight = "0px";
-                if (icon) icon.classList.remove('rotate-180');
-            }, 100);
-        }
-    }
-
-    // Fechar lista ao clicar fora
-    document.addEventListener('click', function (event) {
-        const modal = document.getElementById('modal_assinantes');
-        if (!modal.classList.contains('active')) return; // Só roda se modal aberto
-
-        const searchGroup = document.querySelector('#modal_assinantes .group'); // Wrapper do input
-        const listArea = document.getElementById('expandable_user_list');
-
-        // Verifica se elementos existem antes de checar click
-        if (searchGroup && listArea) {
-            const isClickInside = searchGroup.contains(event.target) || listArea.contains(event.target);
-            if (!isClickInside) {
-                expandUserList(false);
-            }
-        }
-    });
-
+    // --- WORKFLOW ---
     function initWorkflowModal() {
         selectedOrder = [];
         if (existingSignatures.length > 0) {
@@ -1678,178 +1745,75 @@
             selectedOrder = existingSignatures.map(s => s.userId);
         } else {
             creatorId = String(currentUserId);
-            if (usersMap[creatorId]) {
-                selectedOrder.push(creatorId);
-            }
+            if (usersMap[creatorId]) selectedOrder.push(creatorId);
         }
         renderWorkflowList();
-        updateCheckboxes();
     }
 
     function renderWorkflowList() {
         const container = document.getElementById('sortable_workflow');
         container.innerHTML = '';
-
         selectedOrder.forEach((userId, index) => {
             const user = usersMap[userId];
             if (!user) return;
-
             const isCreator = (userId === creatorId);
-            const initials = getInitials(user.nome);
-
-            // Cria o elemento visual do Card
-            const cardDiv = document.createElement('div');
-            // Classes Tailwind do Card
-            cardDiv.className = `relative group sortable-item bg-white p-3 rounded-lg shadow-sm border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all flex items-center gap-3 ml-2 ${isCreator ? 'locked' : 'cursor-grab active:cursor-grabbing'}`;
-
-            // Atributos de drag
-            cardDiv.setAttribute('data-id', userId);
-            if (!isCreator) {
-                cardDiv.draggable = true;
-                cardDiv.addEventListener('dragstart', handleDragStart);
-                cardDiv.addEventListener('dragover', handleDragOver);
-                cardDiv.addEventListener('drop', handleDrop);
-                cardDiv.addEventListener('dragend', handleDragEnd);
-            }
-
-            // HTML Interno do Card
-            cardDiv.innerHTML = `
-                <!-- Linha/Dot da Timeline -->
-                <div class="absolute -left-[25px] top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 shadow-sm ${index === 0 ? 'bg-blue-500 border-slate-50 ring-2 ring-blue-100' : 'bg-white border-slate-300 group-hover:border-blue-400'}"></div>
-                
-                <!-- Handle -->
-                <div class="text-slate-300 ${isCreator ? 'cursor-default' : 'group-hover:text-blue-400'}">
-                    <i class="fas ${isCreator ? 'fa-lock text-xs' : 'fa-grip-vertical'}"></i>
+            const div = document.createElement('div');
+            div.className = `flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-lg shadow-sm ${!isCreator ? 'cursor-grab active:cursor-grabbing' : ''}`;
+            div.innerHTML = `
+                <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-xs">${index + 1}</div>
+                <div class="flex-1">
+                    <p class="font-bold text-sm text-slate-800">${user.nome}</p>
+                    <p class="text-xs text-slate-400">${isCreator ? 'Criador' : user.papel}</p>
+                    <p class="text-xs text-slate-400">${user.email}</p>
                 </div>
-
-                <!-- Avatar -->
-                <div class="w-8 h-8 rounded-full ${isCreator ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-500'} flex items-center justify-center text-xs font-bold shrink-0 uppercase">
-                    ${initials}
-                </div>
-                
-                <!-- Info -->
-                <div class="flex-1 overflow-hidden">
-                    <p class="text-sm font-semibold text-slate-700 truncate">${user.nome}</p>
-                    <p class="text-[10px] text-slate-500 truncate">${isCreator ? 'Criador (Início)' : (user.papel || 'Aprovador')}</p>
-                    <p class="text-[10px] text-slate-500 truncate">${user.email}</p>
-                </div>
-                
-                <!-- Remove Btn -->
-                ${!isCreator ? `
-                    <button type="button" onclick="removeUserFromWorkflow('${userId}')" class="text-slate-300 hover:text-red-500 transition-colors p-1">
-                        <i class="fas fa-trash-alt text-xs"></i>
-                    </button>
-                ` : ''}
+                ${!isCreator ? `<button type="button" onclick="removeUserFromWorkflow('${userId}')" class="text-red-400 p-2"><i class="fas fa-trash"></i></button>` : '<i class="fas fa-lock text-slate-300 mr-2"></i>'}
             `;
-
-            container.appendChild(cardDiv);
+            container.appendChild(div);
+        });
+        document.querySelectorAll('input[name="workflow_users"]').forEach(chk => {
+            chk.checked = selectedOrder.includes(chk.value);
+            if (chk.value === creatorId) chk.disabled = true;
         });
     }
 
-    function toggleUserInWorkflow(userId, isChecked) {
+    function toggleUserInWorkflow(userId, checked) {
         if (userId === creatorId) return;
-
-        if (isChecked) {
-            if (!selectedOrder.includes(userId)) {
-                selectedOrder.push(userId);
-            }
+        if (checked) {
+            if (!selectedOrder.includes(userId)) selectedOrder.push(userId);
         } else {
             selectedOrder = selectedOrder.filter(id => id !== userId);
         }
         renderWorkflowList();
-        updateCheckboxes(); // Para atualizar o estilo visual da lista
+    }
+
+    function toggleUserCheckbox(userId) {
+        const chk = document.getElementById('chk_wf_' + userId);
+        if (chk && !chk.disabled) {
+            chk.checked = !chk.checked;
+            toggleUserInWorkflow(userId, chk.checked);
+        }
     }
 
     function removeUserFromWorkflow(userId) {
         if (userId === creatorId) return;
         selectedOrder = selectedOrder.filter(id => id !== userId);
         renderWorkflowList();
-        updateCheckboxes();
-    }
-
-    function updateCheckboxes() {
-        document.querySelectorAll('input[name="workflow_users"]').forEach(chk => {
-            const isSelected = selectedOrder.includes(chk.value);
-            chk.checked = isSelected;
-
-            // Controle visual do label pai
-            const label = document.getElementById(`label_user_${chk.value}`);
-            if (label) {
-                if (isSelected) {
-                    label.classList.add('bg-blue-50', 'border-blue-100');
-                    label.classList.remove('hover:bg-slate-50', 'hover:border-slate-200', 'border-transparent');
-                } else {
-                    label.classList.remove('bg-blue-50', 'border-blue-100');
-                    label.classList.add('hover:bg-slate-50', 'hover:border-slate-200', 'border-transparent');
-                }
-            }
-
-            if (chk.value === creatorId) {
-                chk.disabled = true;
-                chk.checked = true;
-            } else {
-                chk.disabled = false;
-            }
-        });
-    }
-
-    // --- Drag and Drop (Workflow) ---
-    let dragSrcEl = null;
-
-    function handleDragStart(e) {
-        this.classList.add('dragging');
-        dragSrcEl = this;
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/html', this.innerHTML);
-    }
-
-    function handleDragOver(e) {
-        if (e.preventDefault) e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-        return false;
-    }
-
-    function handleDrop(e) {
-        if (e.stopPropagation) e.stopPropagation();
-
-        if (dragSrcEl !== this) {
-            const sourceId = dragSrcEl.getAttribute('data-id');
-            const targetId = this.getAttribute('data-id');
-
-            const sourceIndex = selectedOrder.indexOf(sourceId);
-            const targetIndex = selectedOrder.indexOf(targetId);
-
-            // Impede drop antes do criador
-            if (targetIndex === 0 && creatorId) return false;
-
-            if (sourceIndex > -1 && targetIndex > -1) {
-                selectedOrder.splice(sourceIndex, 1);
-                selectedOrder.splice(targetIndex, 0, sourceId);
-                renderWorkflowList();
-            }
-        }
-        return false;
-    }
-
-    function handleDragEnd(e) {
-        this.classList.remove('dragging');
-        document.querySelectorAll('.sortable-item').forEach(item => item.classList.remove('dragging'));
     }
 
     async function salvarWorkflow() {
-        if (selectedOrder.length === 0) { alert("Selecione ao menos um aprovador."); return; }
-        if (selectedOrder[0] !== creatorId) {
-            selectedOrder = selectedOrder.filter(id => id !== creatorId);
-            selectedOrder.unshift(creatorId);
-        }
-
+        if (selectedOrder.length < 1) return alert("Selecione aprovadores.");
         try {
             const res = await fetch(`/auth/assinar-rdo/${currentRdoId}/salvar-workflow`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ usuarios_ids: selectedOrder })
             });
             if ((await res.json()).success) window.location.reload();
-        } catch (e) { console.error(e); alert("Erro ao salvar workflow."); }
+        } catch (e) { alert("Erro ao salvar."); }
+    }
+
+    function expandUserList(show) {
+        const list = document.getElementById('expandable_user_list');
+        list.style.maxHeight = show ? '250px' : '0';
     }
 
     // --- REJEIÇÃO ---
@@ -1857,7 +1821,7 @@
     async function confirmarRejeicao() {
         const id = document.getElementById('id_assinatura_rejeitar').value;
         const motivo = document.getElementById('texto_motivo').value;
-        if (!motivo.trim()) { alert("Informe o motivo."); return; }
+        if (!motivo.trim()) return alert("Informe o motivo.");
         try {
             const res = await fetch(`/auth/assinar-rdo/${id}/rejeitar-rdo`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1867,22 +1831,124 @@
         } catch (e) { console.error(e); }
     }
 
-    // --- UTILS ---
-    function filterModalList(inputId, listId) {
-        const term = document.getElementById(inputId).value.toLowerCase();
-        // Garante que lista abre ao digitar
-        if (term.length > 0) expandUserList(true);
+    // --- MODAIS E UTILS ---
+    function openModal(id) {
+        document.getElementById(id).classList.add('active');
+        document.body.classList.add('modal-open');
+        if (id === 'modalAssinatura') setTimeout(initSignaturePad, 100);
+    }
+    function closeModal(id) {
+        document.getElementById(id).classList.remove('active');
+        document.body.classList.remove('modal-open');
+    }
+    function abrirModalAssinatura(id) { openModal('modalAssinatura'); }
 
-        const items = document.querySelectorAll(`#${listId} .item-filter`);
-        items.forEach(item => {
-            const name = item.querySelector('.name-filter').innerText.toLowerCase();
-            item.style.display = name.includes(term) ? "flex" : "none";
+    function filterModalItems(inputId, listId) {
+        const term = document.getElementById(inputId).value.toLowerCase();
+        $(`#${listId} .item-filter`).each(function () {
+            const name = $(this).find('.name-filter').text().toLowerCase();
+            $(this).toggle(name.includes(term));
         });
     }
+
+    function filterModalList(inputId, listId) {
+        const term = document.getElementById(inputId).value.toLowerCase();
+        if (term.length > 0) expandUserList(true);
+        $(`#${listId} .item-filter`).each(function () {
+            const name = $(this).find('.name-filter').text().toLowerCase();
+            $(this).toggle(name.includes(term));
+        });
+    }
+
     function removeRow(btn) { $(btn).closest('tr').remove(); }
+
     function addAtividadeRow() {
-        $('#table_atividades tbody').append(`<tr><td class="p-2"><textarea name="atividade_descricao[]" class="form-control-std text-sm" rows="2"></textarea></td><td class="p-2"><select name="atividade_status[]" class="form-control-std text-sm select2-enable"><option value="Iniciada">Iniciada</option><option value="Em andamento">Em andamento</option><option value="Concluída">Concluída</option><option value="Paralisada">Paralisada</option></select></td><td class="p-2 text-center"><button type="button" onclick="removeRow(this)" class="text-red-400 mt-2"><i class="fas fa-times"></i></button></td></tr>`);
+        const row = `
+        <tr class="group hover:bg-slate-50 transition-colors">
+            <td class="p-3 align-top full-width-mobile" data-label="Descrição:">
+                <textarea name="atividade_descricao[]" class="form-control-std text-sm min-h-[80px]" rows="2" placeholder="Descreva..." required></textarea>
+            </td>
+            <td class="p-3 align-top" data-label="Status:">
+                <select name="atividade_status[]" class="form-control-std text-sm select2-enable">
+                    <option value="Em andamento">Em andamento</option>
+                    <option value="Iniciada">Iniciada</option>
+                    <option value="Concluída">Concluída</option>
+                    <option value="Paralisada">Paralisada</option>
+                </select>
+            </td>
+            <td class="p-3 align-middle text-center action-cell">
+                <button type="button" onclick="removeRow(this)" class="w-8 h-8 rounded-full text-slate-400 hover:text-red-500 hover:bg-red-50 flex items-center justify-center"><i class="fas fa-trash-alt"></i></button>
+            </td>
+        </tr>`;
+        $('#table_atividades tbody').append(row);
         $('.select2-enable').last().select2({ width: '100%' });
+    }
+
+    function addSelectedMO() {
+        $('.chk-mo:checked').each(function () {
+            const funcao = $(this).val();
+            const row = `
+                <tr>
+                    <td class="p-2" data-label="Função:">
+                        <select name="mo_funcao[]" class="form-control-std text-sm select2-enable">
+                            {% for op in mao_de_obra_options %}
+                            <option value="{{ op.nome }}" ${'{{ op.nome }}' === funcao ? 'selected' : ''}>{{ op.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td class="p-2" data-label="Qtd Própria:"><input type="number" name="mo_qtd_propria[]" value="0" class="form-control-std text-center font-bold" min="0" inputmode="numeric"></td>
+                    <td class="p-2" data-label="Qtd Terceiro:"><input type="number" name="mo_qtd_terceirizada[]" value="0" class="form-control-std text-center font-bold" min="0" inputmode="numeric"></td>
+                    <td class="p-2 text-center action-cell"><button type="button" onclick="removeRow(this)" class="text-slate-400 hover:text-red-500 p-2"><i class="fas fa-trash-alt"></i></button></td>
+                </tr>`;
+            $('#table_mao_obra tbody').append(row);
+            $(this).prop('checked', false);
+        });
+        $('.select2-enable').select2({ width: '100%' });
+        closeModal('modal_mo');
+    }
+
+    function addSelectedEq() {
+        $('.chk-eq:checked').each(function () {
+            const id = $(this).val();
+            const row = `
+                <tr>
+                    <td class="p-2" data-label="Equipamento:">
+                        <select name="eq_id[]" class="form-control-std text-sm select2-enable">
+                            {% for opt in equipamentos_options %}
+                            <option value="{{ opt.id }}" ${'{{ opt.id }}' == id ? 'selected' : ''}>{{ opt.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td class="p-2" data-label="Quantidade:"><input type="number" name="eq_qtd[]" value="1" class="form-control-std text-center font-bold" inputmode="numeric"></td>
+                    <td class="p-2 text-center action-cell"><button type="button" onclick="removeRow(this)" class="text-slate-400 hover:text-red-500 p-2"><i class="fas fa-trash-alt"></i></button></td>
+                </tr>`;
+            $('#table_equipamentos tbody').append(row);
+            $(this).prop('checked', false);
+        });
+        $('.select2-enable').select2({ width: '100%' });
+        closeModal('modal_eq');
+    }
+
+    function addSelectedOc() {
+        $('.chk-oc:checked').each(function () {
+            const id = $(this).val();
+            const row = `
+                <tr>
+                    <td class="p-2 align-top" data-label="Tipo:">
+                        <select name="oc_tag[]" class="form-control-std text-sm select2-enable">
+                            {% for t in tags_options %}
+                            <option value="{{ t.id }}" ${'{{ t.id }}' == id ? 'selected' : ''}>{{ t.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td class="p-2 full-width-mobile" data-label="Detalhes:"><input type="text" name="oc_desc[]" class="form-control-std" placeholder="Detalhes..."></td>
+                    <td class="p-2 text-center align-middle action-cell"><button type="button" onclick="removeRow(this)" class="text-slate-400 hover:text-red-500 p-2"><i class="fas fa-trash-alt"></i></button></td>
+                </tr>`;
+            $('#table_ocorrencias tbody').append(row);
+            $(this).prop('checked', false);
+        });
+        $('.select2-enable').select2({ width: '100%' });
+        closeModal('modal_oc');
     }
 </script>
 {% endblock %}
