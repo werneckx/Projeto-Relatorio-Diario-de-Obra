@@ -1,66 +1,63 @@
 import os
-from flask import render_template, current_app, url_for
-from weasyprint import HTML, CSS
+import pathlib
+from datetime import datetime
+from flask import current_app, render_template
+from app.models.lista_opcoes import Clima, Equipamento, MaoObra, TagOcorrencia
 from app.models.rdo import RDO
-from app.models.obra import Obra
-from app.models.usuario import Usuario
-from app.models.lista_opcoes import Clima
-from app.models.rdo import Fotos, RDOMaoObra
+
+try:
+    from weasyprint import HTML
+except ImportError:
+    HTML = None
 
 def render_rdo_pdf(rdo_id):
     """
-    Renderiza o HTML do RDO e converte para bytes de PDF usando WeasyPrint.
+    Busca os dados do RDO, prepara os caminhos das imagens e renderiza o PDF.
     """
-    # 1. Buscar dados do Banco
+    if not HTML:
+        raise Exception("A biblioteca WeasyPrint não está instalada. Execute: pip install WeasyPrint")
+
+    # 1. Buscar o objeto RDO pelo ID
     rdo = RDO.query.get_or_404(rdo_id)
-    
-    # Carregar relacionamentos auxiliares para passar ao Template
-    # (Caso o seu Model não tenha relationships configurados automaticamente)
-    obra = Obra.query.get(rdo.id_obra)
-    usuario = Usuario.query.get(rdo.id_usuario)
-    clima_manha = Clima.query.get(rdo.id_climas_manha)
-    clima_tarde = Clima.query.get(rdo.id_climas_tarde)
-    fotos = Fotos.query.filter_by(id_rdo=rdo.id).all()
-    
-    # Ajuste manual para objetos dentro do RDO se o template exigir 'rdo.obra.nome'
-    # Se seus models já tiverem relationships (db.relationship), isso não é necessário.
-    rdo.obra = obra
-    rdo.usuario = usuario
-    rdo.clima_manha_obj = clima_manha
-    rdo.clima_tarde_obj = clima_tarde
-    
-    # Tratamento de Fotos: Converter caminho relativo para absoluto para o PDF engine
-    # O WeasyPrint precisa de caminhos absolutos de disco ou URLs completas
-    processed_fotos = []
-    upload_folder = os.path.join(current_app.root_path, 'static', 'uploads', 'rdo')
-    
-    for f in fotos:
-        # Cria um objeto simples para o template com o caminho absoluto do arquivo
-        # O template deve usar 'file://' + path para renderização local segura
-        abs_path = os.path.join(upload_folder, f.arquivo)
-        processed_fotos.append({
-            'url': f"file://{abs_path}", 
-            'filename': f.comentario or "Sem legenda"
-        })
 
-    # Caminho das fontes para o CSS
-    fonts_path = os.path.join(current_app.root_path, 'static', 'fonts')
+    # 2. Configurar caminhos absolutos e convertê-los para URI (file:///)
+    static_folder = current_app.static_folder
 
-    # Logo da empresa (exemplo)
-    logo_path = os.path.join(current_app.root_path, 'static', 'img', 'logo.png')
-    logo_url = f"file://{logo_path}" if os.path.exists(logo_path) else None
+    # Caminhos absolutos do sistema de arquivos
+    raw_upload_folder = os.path.join(static_folder, 'uploads', 'rdo')
+    raw_assinatura_folder = os.path.join(static_folder, 'uploads', 'assinaturas')
+    raw_logo_path = os.path.join(static_folder, 'logo', 'logo.png')
 
-    # 2. Renderizar o HTML como String
+    # CONVERSÃO PARA URI (Compatível com Windows e Linux)
+    # pathlib.Path(...).as_uri() transforma "C:\pasta\arquivo.jpg" em "file:///C:/pasta/arquivo.jpg"
+    upload_folder_uri = pathlib.Path(raw_upload_folder).as_uri()
+    assinatura_folder_uri = pathlib.Path(raw_assinatura_folder).as_uri()
+    
+    mao_de_obra_options = [{"id": m.id, "nome": m.nome} for m in MaoObra.query.all()]
+    equipamentos_options = [{"id": e.id, "nome": e.nome} for e in Equipamento.query.all()]
+    tags_options = [{"id": t.id, "nome": t.nome} for t in TagOcorrencia.query.all()]
+    
+    # Tratamento do Logo
+    if os.path.exists(raw_logo_path):
+        logo_path_uri = pathlib.Path(raw_logo_path).as_uri()
+    else:
+        logo_path_uri = None
+
+    # NOVO: Data de geração para o rodapé do template Enterprise
+    data_geracao = datetime.now().strftime('%d/%m/%Y às %H:%M')
+
+    # 3. Renderizar o Template HTML
     html_string = render_template(
         'modelo_rdo.html',
         rdo=rdo,
-        rdo_fotos=processed_fotos,
-        fonts_path=f"file://{fonts_path}", # Importante para carregar @font-face
-        logo=logo_url
+        logo_path=logo_path_uri,
+        clima=Clima.query.all(),
+        upload_folder=upload_folder_uri,       # Caminho URI para fotos
+        assinatura_folder=assinatura_folder_uri, # Caminho URI para assinaturas
+        data_geracao=data_geracao              # Variável nova para o rodapé
     )
 
-    # 3. Converter para PDF
-    # base_url é definido para que o WeasyPrint ache CSS/Imagens relativos se necessário
-    pdf_bytes = HTML(string=html_string, base_url=current_app.static_folder).write_pdf()
+    # 4. Converter HTML para Bytes PDF
+    pdf_file = HTML(string=html_string, base_url=static_folder).write_pdf()
 
-    return pdf_bytes
+    return pdf_file

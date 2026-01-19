@@ -2,310 +2,528 @@
 <html lang="pt-BR">
 
 <head>
-
-    <meta charset="utf-8" />
-
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo/icone.png') }}">
-    <title>Relatório Diário de Obra — RDO#{{ rdo.id }}</title>
+    <meta charset="UTF-8">
+    <title>RDO #{{ rdo.id_sequencial }} - {{ rdo.obra.nome }}</title>
     <style>
-        /* Fontes */
-        @font-face {
-            font-family: "Exo Soft";
-            src: url("{{ fonts_path }}/Exo Soft W05 Light.otf") format("opentype");
-            font-weight: 300;
+        @page {
+            margin: 1cm;
+            size: A4;
         }
 
-        @font-face {
-            font-family: "Exo Soft";
-            src: url("{{ fonts_path }}/Exo Soft W05 Regular.otf") format("opentype");
-            font-weight: 400;
-        }
-
-        /* Variáveis */
-        :root {
-            --primary: #E0202D;
-            --text-color: #333;
-            --background: #f2f4f8;
-            --border-color: #dcdcdc;
-            --table-header-bg: #f8f9fa;
-            --table-header-color: #495057;
-            --table-row-hover: #f1f1f1;
-        }
-
-        /* Base */
-        html,
         body {
-            height: 100%;
-            margin: 0;
-            padding: 0;
-            font-family: "Exo Soft", sans-serif;
-            color: var(--text-color);
-            background: var(--background);
+            font-family: "Helvetica", "Arial", sans-serif;
+            font-size: 10pt;
+            /* Tamanho base otimizado para impressão */
+            color: #333;
+            line-height: 1.3;
         }
 
-        /* Header */
-        .rdo-header {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            padding: 20px 0;
-            border-bottom: 2px solid var(--border-color);
-            gap: 5px;
-            background: #fff;
-        }
-
-        .rdo-header .logo {
-            height: 50px;
-            width: auto;
-            padding-bottom: 5px;
-        }
-
-        .rdo-header h1 {
-            margin: 0;
-            font-size: 30px;
-            font-weight: 700;
-            color: var(--primary);
-            text-align: left;
-        }
-
-        .doc-number {
-            font-size: 25px;
-            font-weight: bold;
-            color: #555;
-        }
-
-        /* Body */
-        .rdo-body {
-            flex: 1;
-            padding: 10px 0;
-            position: relative;
-        }
-
-        .section,
-        .informacoesObra {
-            margin-bottom: 20px;
-        }
-
-        .section h2,
-        .section h3 {
-            margin: 0 0 10px 0;
-            font-weight: 600;
-        }
-
-        .section h2 {
-            font-size: 16px;
-        }
-
-        .section h3 {
-            font-size: 14px;
-            padding-bottom: 4px;
-        }
-
-        .activities {
-            min-height: 30px;
-            border: 1px solid #bbb;
-            border-radius: 6px;
-            padding: 12px;
-            line-height: 1;
-            white-space: pre-wrap;
-        }
-
-        .two-cols {
-            display: flex;
-            gap: 20px;
-        }
-
-        .two-cols .col {
-            flex: 1;
-            border: 1px solid #e0e0e0;
-            border-radius: 6px;
-            padding: 12px;
-            min-height: 100px;
-            background: #fdfdfd;
-            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03);
-        }
-
-        /* Estilos das tabelas */
-        table {
+        /* --- Header --- */
+        .header {
             width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
+            border-bottom: 2px solid #333;
+            /* Sua cor primária */
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+            display: table;
+            /* Hack para layout em PDF engines antigos */
         }
 
-        thead th {
-            background-color: var(--table-header-bg);
-            color: var(--table-header-color);
-            padding: 12px 15px;
-            font-size: 14px;
-            font-weight: 600;
-            border-bottom: 1px solid #e0e0e0;
-            text-align: left;
+        .header-logo {
+            display: table-cell;
+            vertical-align: middle;
+            width: 20%;
+        }
+
+        .header-logo img {
+            max-width: 120px;
+            max-height: 60px;
+        }
+
+        .header-title {
+            display: table-cell;
+            vertical-align: middle;
+            text-align: center;
+            width: 60%;
+        }
+
+        .header-title h1 {
+            font-size: 18pt;
+            margin: 0;
+            color: #333;
             text-transform: uppercase;
         }
 
-        tbody td {
-            padding: 12px 15px;
-            font-size: 14px;
-            border-bottom: 1px solid #e0e0e0;
+        .header-meta {
+            display: table-cell;
+            vertical-align: middle;
+            text-align: right;
+            width: 20%;
+            font-size: 9pt;
+            color: #666;
         }
 
-        tbody tr:hover {
-            background-color: var(--table-row-hover);
+        .header-meta strong {
+            font-size: 14pt;
+            color: #333;
+            display: block;
         }
 
-        tbody tr:last-child td {
-            border-bottom: none;
-        }
-
-        /* Estilos para a mensagem de 'não aplicável' */
-        .maoObraTable tbody tr td[colspan="4"] {
-            text-align: center;
-            font-style: italic;
-            color: #888;
-        }
-
-        /* INÍCIO: Ajustes do QR Code para Rodapé Fixo em TODAS as páginas */
-        .qr-fixed {
-            /* Posição fixa: permanece no mesmo lugar */
-            position: fixed;
-            bottom: 15px;
-            /* 1.5cm de margem inferior */
-            right: 15px;
-            /* 1.5cm de margem direita */
-            width: 20mm;
-            height: 20mm;
-            z-index: 9999;
-        }
-
-        .qr-fixed img {
-            width: 100%;
-            height: 100%;
-        }
-
-        /* Print tweaks */
-        @media print {
-            body {
-                background: white;
-                /* Adiciona padding no rodapé para não sobrepor o QR */
-                padding-bottom: 30mm;
-            }
-
-            .qr-fixed {
-                position: fixed;
-                bottom: 15px;
-                right: 15px;
-            }
-        }
-
-        /* FIM: Ajustes do QR Code */
-
-        /* Estilos para a galeria de imagens no RDO */
-        .image-gallery {
-            /* Define o layout de grade (grid) */
-            display: grid;
-            /* Ajusta automaticamente o número de colunas (máx. 2) */
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            /* Espaçamento entre as imagens */
+        /* --- Sections --- */
+        .section-title {
+            background-color: #f2f4f8;
+            border-left: 5px solid #333;
+            padding: 5px 10px;
+            font-size: 11pt;
+            font-weight: bold;
             margin-top: 15px;
+            margin-bottom: 8px;
+            color: #333;
+            text-transform: uppercase;
         }
 
-        .image-gallery img {
+        /* --- Info Grid (Dados Gerais) --- */
+        .info-grid {
+            width: 100%;
+            margin-bottom: 10px;
+            border-collapse: collapse;
+        }
+
+        .info-grid td {
+            padding: 4px;
+            vertical-align: top;
+        }
+
+        .label {
+            font-weight: bold;
+            font-size: 8pt;
+            color: #666;
+            text-transform: uppercase;
+            display: block;
+        }
+
+        .value {
+            font-size: 10pt;
+            font-weight: 500;
+        }
+
+        /* --- Tables --- */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+            font-size: 9pt;
+        }
+
+        .data-table th {
+            background-color: #f2f4f8;
+            border: 1px solid #ddd;
+            padding: 6px;
+            text-align: left;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 8pt;
+        }
+
+        .data-table td {
+            border: 1px solid #ddd;
+            padding: 6px;
+        }
+
+        .data-table tr:nth-child(even) {
+            background-color: #fafafa;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        /* --- Layout Columns --- */
+        .row {
+            width: 100%;
+            display: table;
+            table-layout: fixed;
+            border-spacing: 10px 0;
+            /* Espaço entre colunas */
+            margin-left: -5px;
+            /* Compensa o espaçamento */
+            margin-right: -5px;
+        }
+
+        .col-6 {
+            display: table-cell;
+            width: 50%;
+            vertical-align: top;
+        }
+
+        /* --- Comments --- */
+        .comments-box {
+            border: 1px solid #ddd;
+            background-color: #fafafa;
+            padding: 10px;
+            border-radius: 4px;
+            min-height: 50px;
+            font-size: 9pt;
+            white-space: pre-wrap;
+        }
+
+        /* --- Photos --- */
+        .photo-gallery {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .photo-item {
+            display: inline-block;
+            width: 100%;
+
+            /* 3 por linha aproximadamente */
+            margin-right: 1%;
+            margin-bottom: 10px;
+            vertical-align: top;
+            border: 1px solid #eee;
+            padding: 3px;
+            background: #fff;
+        }
+
+        .photo-img-container {
             width: 100%;
             height: auto;
-            padding-top: 10px;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
+            max-height: 500px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f9f9f9;
+        }
+
+        .photo-item img {
+            width: 100%;
+            height: 100%;
             object-fit: cover;
+            /* Tenta preencher */
+        }
+
+        .photo-caption {
+            font-size: 8pt;
+            padding: 4px;
+            background: #f2f4f8;
+            color: #444;
+            min-height: 20px;
+        }
+
+        /* --- Signatures --- */
+        .signatures {
+            margin-top: 30px;
+            width: 100%;
+            page-break-inside: avoid;
+        }
+
+        .sig-box {
+            display: inline-block;
+            width: 30%;
+            margin-right: 3%;
+            text-align: center;
+            vertical-align: top;
+        }
+
+        .sig-line {
+            border-bottom: 1px solid #333;
+            margin-bottom: 5px;
+            height: 80px;
+            /* Espaço para imagem da assinatura */
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+        }
+
+        .sig-img {
+            max-height: 75px;
             max-width: 100%;
+        }
+
+        .sig-name {
+            font-weight: bold;
+            font-size: 9pt;
+        }
+
+        .sig-role {
+            font-size: 8pt;
+            color: #666;
+        }
+
+        .sig-date {
+            font-size: 7pt;
+            color: #999;
+            margin-top: 2px;
+        }
+
+        /* Status colors */
+        .status-badge {
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 8pt;
+            font-weight: bold;
+            text-transform: uppercase;
         }
     </style>
 </head>
 
 <body>
 
-    <header class="rdo-header">
-        {% if logo %}
-        <img src="{{ logo }}" alt="Logo" class="logo">
-        {% endif %}
-        <h1>Relatório Diário de Obra</h1>
-        <div class="doc-number">RDO #{{ rdo.numero_sequencial }} - Revisão {{rdo.revisao}}</div>
-    </header>
+    <!-- CABEÇALHO -->
+    <div class="header">
+        <div class="header-logo">
+            {% if logo_path %}
+            <img src="{{ logo_path }}" alt="Logo">
+            {% else %}
+            <h2 style="color:#ccc;">LOGO</h2>
+            {% endif %}
+        </div>
+        <div class="header-title">
+            <h1>Relatório Diário de Obra</h1>
+        </div>
+        <div class="header-meta">
+            <strong>RDO #{{ rdo.id_sequencial }}</strong>
+            Revisão: {{ rdo.id_revisao }}<br>
+        </div>
+    </div>
 
-    <main class="rdo-body">
-        <section class="informacoesObra">
-            <div class="project">Obra: {{ rdo.obra.nome }}</div>
-            <div class="author">Responsável: {{ rdo.usuario.nome }}</div>
-            <div class="date">Data: {{ rdo.data.strftime("%d/%m/%Y") }}</div>
-            <div class="clima">Clima de manhã: {{ rdo.clima_manha_obj.nome }}</div>
-            <div class="clima">Clima de tarde: {{ rdo.clima_tarde_obj.nome }}</div>
-        </section>
-
-        <section class="section">
-            <h2>Mão de Obra:</h2>
-            <table class="maoObraTable">
-                <thead>
-                    <tr>
-                        <th>Função</th>
-                        <th>Quantidade</th>
-                        <th>Frente de Trabalho</th>
-                        <th>Tempo (h)</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% set mao_de_obra = rdo.mao_obra | safe %}
-                    {% if mao_de_obra %}
-                    {% for item in mao_de_obra %}
-                    <tr>
-                        <td>{{ item.funcao }}</td>
-                        <td>{{ item.quantidade }}</td>
-                        <td>{{ item.frente_trabalho }}</td>
-                        <td>{{ item.tempo_frente }}</td>
-                    </tr>
-                    {% endfor %}
+    <!-- 1. DADOS GERAIS -->
+    <div class="section-title">Dados Gerais</div>
+    <table class="info-grid">
+        <tr>
+            <td width="35%">
+                <span class="label">Obra</span>
+                <span class="value">{{ (rdo.obra.nome if rdo.obra.nome else '-') | truncate(25,true) }}</span>
+            </td>
+            <td width="35%">
+                <span class="label">Cliente</span>
+                <span class="value">{{ (rdo.obra.contratante if rdo.obra.contratante else '-')|
+                    truncate(25,true) }}</span>
+            </td>
+            <td width="35%">
+                <span class="label">CNPJ</span>
+                <span class="value">
+                    {% if rdo.obra.cnpj and rdo.obra.cnpj|length == 14 %}
+                    {{ rdo.obra.cnpj[:2] }}.{{ rdo.obra.cnpj[2:5] }}.{{ rdo.obra.cnpj[5:8] }}/{{ rdo.obra.cnpj[8:12]
+                    }}-{{ rdo.obra.cnpj[12:14] }}
                     {% else %}
-                    <tr>
-                        <td colspan="4">Não aplicável ou não informado.</td>
-                    </tr>
+                    {{ rdo.obra.cnpj if rdo.obra.cnpj else '-' }}
                     {% endif %}
-                </tbody>
-            </table>
-        </section>
+                </span>
+            </td>
+            <td width="35%">
+                <span class="label">Data Inicio</span>
+                <span class="value">{{ rdo.obra.inicio.strftime('%d/%m/%Y') if rdo.obra.inicio else '-' }}</span>
+            </td>
+            <td width="35%">
+                <span class="label">Data Término</span>
+                <span class="value">{{ rdo.obra.termino.strftime('%d/%m/%Y') if rdo.obra.termino else '-' }}</span>
+            </td>
+        </tr>
+    </table>
 
-        <section class="section">
-            <h2>Atividades do Dia</h2>
-            <p class="activities">{{ rdo.atividades }}</p>
-        </section>
+    <!-- 2. CLIMA/HORÁRIO -->
 
-        <section class="section">
-            <div class="photos-section">
-                {% if rdo_fotos %}
-                <h2>Fotos da Obra:</h2>
-                <div class="image-gallery">
-                    {% for foto in rdo_fotos %}
-                    <div class="image-gallery">
-                        <img src="{{ foto.url }}" alt="{{ foto.filename }}"
-                            style="max-width: 100%; height: auto; display: block; margin-bottom: 10px;">
-                        <p>{{ foto.filename }}</p>
-                    </div>
-                    {% endfor %}
-                </div>
+    <div class="section-title">Frente de Trabalho e Condições</div>
+    <table class="info-grid">
+        <tr>
+            <td width="35%">
+                <span class="label">Frente de Trabalho</span>
+                <span class="value">{{ rdo.frente_trabalho.nome_frente if rdo.frente_trabalho else 'Geral' }}</span>
+            </td>
+            <!-- CORREÇÃO AQUI: Uso das propriedades corretas clima_manha_obj e clima_tarde_obj -->
+            <td width="15%">
+                <span class="label">Clima Manhã</span>
+                <span class="value">{{ rdo.clima_manha_obj.nome if rdo.clima_manha_obj else '-' }}</span>
+            </td>
+            <td width="15%">
+                <span class="label">Clima Tarde</span>
+                <span class="value">{{ rdo.clima_tarde_obj.nome if rdo.clima_tarde_obj else '-' }}</span>
+            </td>
+            <td width="15%">
+                <span class="label">Data do RDO</span>
+                <span class="value">{{ rdo.data.strftime('%d/%m/%Y') }}</span>
+            </td>
+            <td width="35%">
+                <span class="label">Jornada</span>
+                <span class="value">
+                    {{ rdo.hora_entrada.strftime('%H:%M') if rdo.hora_entrada else '--:--' }} às
+                    {{ rdo.hora_saida.strftime('%H:%M') if rdo.hora_saida else '--:--' }}
+                </span>
+            </td>
+        </tr>
+    </table>
+
+    <!-- 2. ATIVIDADES -->
+    <div class="section-title">Atividades Realizadas</div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th width="80%">Descrição da Atividade</th>
+                <th width="20%" class="text-center">Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if rdo.atividades %}
+            {% for atv in rdo.atividades %}
+            <tr>
+                <td>{{ atv.descricao }}</td>
+                <td class="text-center">{{ atv.status }}</td>
+            </tr>
+            {% endfor %}
+            {% else %}
+            <tr>
+                <td colspan="2" class="text-center">Nenhuma atividade registrada.</td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+
+    <!-- MÃO DE OBRA -->
+    <div>
+        <div class="section-title" style="margin-top: 0;">Mão de Obra</div>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Função</th>
+                    <th class="text-center" width="20%">Própria</th>
+                    <th class="text-center" width="20%">Tercerizada</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if rdo.maos_obra %}
+                {% for mo in rdo.maos_obra %}
+                <tr>
+                    <td>{{ mo.nome_funcao }}</td>
+                    <td class="text-center">{{ mo.quantidade_propria }}</td>
+                    <td class="text-center">{{ mo.quantidade_terceirizada }}</td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr>
+                    <td colspan="3" class="text-center">-</td>
+                </tr>
                 {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- EQUIPAMENTOS -->
+    <div>
+        <div class="section-title" style="margin-top: 0;">Equipamentos</div>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Equipamento</th>
+                    <th class="text-center" width="25%">Quantidade</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if rdo.equipamentos %}
+                {% for eq in rdo.equipamentos %}
+                <tr>
+                    <td>{{ eq.nome_equipamento }}</td>
+                    <td class="text-center">{{ eq.quantidade }}</td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr>
+                    <td colspan="2" class="text-center">-</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 4. OCORRÊNCIAS -->
+    {% if rdo.ocorrencias %}
+    <div class="section-title">Ocorrências / Imprevistos</div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th width="30%">Tipo</th>
+                <th width="70%">Descrição</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for oc in rdo.ocorrencias %}
+            <tr>
+                <td>{{ oc.tag_lista.nome if oc.tag_lista else 'Geral' }}</td>
+                <td>{{ oc.descricao }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <!-- 5. COMENTÁRIOS -->
+    {% if rdo.comentarios_gerais %}
+    <div class="section-title">Observações Gerais</div>
+    <div class="comments-box">
+        {{ rdo.comentarios_gerais }}
+    </div>
+    {% endif %}
+
+    <!-- 6. FOTOS -->
+    {% if rdo.fotos %}
+    <div class="section-title">Relatório Fotográfico</div>
+    <div class="photo-gallery">
+        {% for foto in rdo.fotos %}
+        <div class="photo-item">
+            <div class="photo-img-container">
+                <!-- CORREÇÃO: Removemos o 'file://' manual. Agora usamos apenas as variáveis concatenadas com / -->
+                <img src="{{ upload_folder }}/{{ foto.arquivo }}" alt="Foto">
             </div>
-        </section>
-        <div style="display: flex; justify-content: space-around; margin-top: 50px;">
-            {% for ass in assinaturas %}
-            <div style="text-align: center;">
-                <img src="file:///{{ upload_path }}/{{ ass.img_assinatura }}" width="150"><br>
-                <hr>
-                <strong>{{ ass.usuario.nome }}</strong><br>
-                <span>{{ ass.usuario.papel }}</span><br>
-                <small>Assinado em: {{ ass.criado_em.strftime('%d/%m/%Y %H:%M') }}</small>
+            <div class="photo-caption">
+                {{ foto.comentario if foto.comentario else 'Sem legenda' }}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- 7. ASSINATURAS -->
+    <div class="signatures">
+        <div class="section-title">Aprovações</div>
+        <div style="width: 100%; text-align: center;">
+            {% for ass in rdo.assinaturas %}
+            <div class="sig-box">
+                <div class="sig-line">
+                    {% if ass.img_assinatura %}
+                    <!-- CORREÇÃO: Removemos o 'file://' manual -->
+                    <img src="{{ assinatura_folder }}/{{ ass.img_assinatura }}" class="sig-img">
+                    {% else %}
+                    <span style="color:#999; font-size: 8pt; margin-bottom: 5px;">Aguardando assinatura</span>
+                    {% endif %}
+                </div>
+                <div class="sig-name">{{ ass.usuario.nome }}</div>
+                <div class="sig-role">{{ ass.usuario.papel or 'Responsável' }} | {{ ass.usuario.email or 'E-mail'
+                    }}</div>
+                {% if ass.criado %}
+                <div class="sig-date">{{ ass.criado.strftime('%d/%m/%Y %H:%M') }}</div>
+                {% endif %}
+                <div style="margin-top: 2px;">
+                    {% if ass.status == 'Aprovado' %}
+                    <span
+                        style="color: green; font-size: 7pt; border: 1px solid green; padding: 1px 3px; border-radius: 2px;">APROVADO</span>
+                    {% elif ass.status == 'Rejeitado' %}
+                    <span
+                        style="color: red; font-size: 7pt; border: 1px solid red; padding: 1px 3px; border-radius: 2px;">REJEITADO</span>
+                    {% else %}
+                    <span
+                        style="color: orange; font-size: 7pt; border: 1px solid orange; padding: 1px 3px; border-radius: 2px;">PENDENTE</span>
+                    {% endif %}
+                </div>
             </div>
             {% endfor %}
         </div>
-    </main>
+    </div>
 
 </body>
 
