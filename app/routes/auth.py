@@ -25,7 +25,7 @@ from app import db
 from app.models.obra import Frente_Trabalho
 from werkzeug.utils import secure_filename
 from flask import make_response
-from app.utils.pdf_service import render_rdo_pdf
+from app.utils.pdf_service import render_rdo_pdf, render_rdo_pdf_compact
 import os
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
 from werkzeug.utils import secure_filename
@@ -199,6 +199,29 @@ def gerar_pdf_rdo_view(rdo_id):
     try:
         # Gera os bytes do PDF
         pdf_content = render_rdo_pdf(rdo_id)
+        
+        # Cria a resposta HTTP com os headers corretos
+        response = make_response(pdf_content)
+        response.headers['Content-Type'] = 'application/pdf'
+        
+        # 'inline' abre no navegador. 'attachment' forçaria o download.
+        filename = f"RDO_{rdo_id}.pdf"
+        response.headers['Content-Disposition'] = f'inline; filename={filename}'
+        
+        return response
+        
+    except Exception as e:
+        # Log do erro para debug
+        print(f"Erro ao gerar PDF: {e}")
+        flash("Erro ao gerar o PDF. Verifique se as imagens e dados estão corretos.", "danger")
+        return redirect(url_for('auth.visualizar_rdo', rdo_id=rdo_id))
+
+@auth_bp.get("/gerar-pdf-compacto/<int:rdo_id>")
+@login_required
+def gerar_pdf_rdo_compacto_view(rdo_id):
+    try:
+        # Gera os bytes do PDF
+        pdf_content = render_rdo_pdf_compact(rdo_id)
         
         # Cria a resposta HTTP com os headers corretos
         response = make_response(pdf_content)

@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <title>RDO #{{ rdo.id_sequencial }} - {{ rdo.obra.nome if rdo.obra else 'Obra' }}</title>
+    <style>
+        /* --- CONFIGURAÇÃO DE PÁGINA FIXA --- */
+        @page {
+            size: A4;
+            /* Margens ajustadas para igualar o modelo detalhado */
+            margin: 0.8cm 0.8cm 1.5cm 0.8cm;
+
+            @bottom-right {
+                content: element(qrFooter);
+            }
+        }
+
+        /* --- ELEMENTO QR CODE NO RODAPÉ --- */
+        .footer-qr-container {
+            position: running(qrFooter);
+            text-align: right;
+            margin-bottom: 10px;
+            /* Ajustado para alinhar melhor com a nova margem inferior */
+        }
+
+        .footer-qr-img {
+            width: 40px;
+            height: 40px;
+            border: 1px solid #ccc;
+            padding: 2px;
+        }
+
+        .footer-qr-text {
+            font-size: 6pt;
+            text-transform: uppercase;
+        }
+
+        /* --- ESTILOS GERAIS --- */
+        body {
+            font-family: "Helvetica", Arial, sans-serif;
+            font-size: 10pt;
+            /* Aumentado para tamanho ideal de leitura */
+            color: #000;
+            line-height: 1.3;
+        }
+
+        /* Títulos de Seção - Faixa Cinza */
+        .sec-title {
+            background-color: #e2e8f0;
+            border-bottom: 1px solid #94a3b8;
+            font-size: 10pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            padding: 4px 6px;
+            margin-top: 10px;
+            margin-bottom: 5px;
+            color: #1e293b;
+        }
+
+        /* Tabelas */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        th {
+            background: #f1f5f9;
+            font-weight: bold;
+            text-align: left;
+            padding: 4px;
+            font-size: 9pt;
+            /* Cabeçalhos levemente menores que o corpo */
+            border-bottom: 1px solid #cbd5e1;
+        }
+
+        td {
+            padding: 4px;
+            border-bottom: 1px solid #e2e8f0;
+            vertical-align: top;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+
+        /* Classes Utilitárias */
+        .text-right {
+            text-align: right;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .wrap-text {
+            white-space: normal;
+        }
+
+        /* Permitir quebra de linha em descrições */
+        .no-border td {
+            border: none;
+        }
+
+        /* --- LAYOUT ESPECÍFICO --- */
+
+        /* Cabeçalho */
+        .header-tbl td {
+            border: none;
+            vertical-align: middle;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #000;
+        }
+
+        .logo {
+            max-height: 50px;
+            max-width: 120px;
+        }
+
+        /* Status Badges */
+        .badge {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 7pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            border: 1px solid #ccc;
+        }
+
+        /* Fotos - Grid de 4 colunas */
+        .photo-grid {
+            margin-top: 5px;
+        }
+
+        .photo-cell {
+            width: 25%;
+            padding: 4px;
+            border: none;
+        }
+
+        .photo-box {
+            height: 110px;
+            width: 100%;
+            background: #f8fafc;
+            border: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .photo-box img {
+            max-height: 100%;
+            max-width: 100%;
+            object-fit: contain;
+        }
+
+        .photo-caption {
+            font-size: 7pt;
+            color: #555;
+            margin-top: 2px;
+            height: 24px;
+            overflow: hidden;
+            line-height: 1.1;
+        }
+
+        /* Assinaturas */
+        .sig-container {
+            margin-top: 15px;
+            border-top: 1px solid #000;
+            padding-top: 10px;
+            page-break-inside: avoid;
+        }
+
+        .sig-box {
+            text-align: center;
+            padding: 0 10px;
+        }
+
+        .sig-img {
+            max-height: 35px;
+        }
+
+        .sig-line {
+            border-bottom: 1px solid #000;
+            height: 35px;
+            margin-bottom: 2px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+        }
+
+        .sig-txt {
+            font-size: 7pt;
+            line-height: 1.2;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 7.5pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            border: 1px solid transparent;
+        }
+
+        .status-aprovado,
+        .status-concluida {
+            background-color: #d1fae5;
+            color: #047857;
+            border-color: #a7f3d0;
+        }
+
+        .status-rejeitado,
+        .status-paralisada {
+            background-color: #fee2e2;
+            color: #b91c1c;
+            border-color: #fecaca;
+        }
+
+        .status-pendente,
+        .status-emandamento {
+            background-color: #fef3c7;
+            color: #b45309;
+            border-color: #fde68a;
+        }
+
+        .status-iniciada {
+            background-color: #e0f2fe;
+            color: #0369a1;
+            border-color: #bae6fd;
+        }
+
+        .status-default {
+            background-color: #f1f5f9;
+            color: #475569;
+            border-color: #cbd5e1;
+        }
+
+        .tag-status-sm {
+            font-size: 7pt;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            display: inline-block;
+            margin-top: 6px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- QR Code para @page -->
+    <div class="footer-qr-container">
+        {% if qr_code_b64 %}
+        <img src="data:image/png;base64,{{ qr_code_b64 }}" class="footer-qr-img">
+        <div class="footer-qr-text">Validar QR Code {{ rdo.id }}</div>
+        {% endif %}
+    </div>
+
+    <!-- CABEÇALHO -->
+    <table class="header-tbl">
+        <tr>
+            <td width="20%"><img src="{{ logo_path }}" class="logo" alt="Logo"></td>
+            <td width="60%" class="text-center">
+                <div style="font-size: 12pt; font-weight: bold;">RELATÓRIO DIÁRIO DE OBRA</div>
+                <div style="font-size: 9pt; margin-top: 2px;">Nº {{ rdo.id_sequencial }} | REV. {{ rdo.id_revisao }} |
+                    {{ rdo.data.strftime('%d/%m/%Y') }}</div>
+            </td>
+            <td width="20%" class="text-right">
+                <span>
+                    {% if rdo.status == 'Aprovado' %}
+                    <span class="status-badge status-aprovado">Aprovado</span>
+                    {% elif rdo.status == 'Rejeitado' %}
+                    <span class="status-badge status-rejeitado">Rejeitado</span>
+                    {% else %}
+                    <span class="status-badge status-pendente">Pendente</span>
+                    {% endif %}
+                </span>
+            </td>
+        </tr>
+    </table>
+
+    <!-- 1. DADOS & CLIMA -->
+    <div class="sec-title">DADOS GERAIS</div>
+    <table class="no-border">
+        <tr>
+            <td width="60%">
+                <b>Obra:</b> {{ rdo.obra.nome|truncate(50) }}<br>
+                <b>Cliente:</b> {{ rdo.obra.contratante|truncate(50) }}<br>
+                <b>Frente:</b> {{ rdo.frente_trabalho.nome_frente|default('Geral') }}
+            </td>
+            <td width="40%">
+                <b>Horário:</b> {{ rdo.hora_entrada.strftime('%H:%M') }} - {{ rdo.hora_saida.strftime('%H:%M') }} (Int:
+                {{ rdo.intervalo_entrada.strftime('%H:%M') }}-{{ rdo.intervalo_saida.strftime('%H:%M') }})<br>
+                <b>Clima Manhã:</b> {{ rdo.clima_manha_obj.nome|default('-') }}<br>
+                <b>Clima Tarde:</b> {{ rdo.clima_tarde_obj.nome|default('-') }}
+            </td>
+        </tr>
+    </table>
+
+    <!-- 2. ATIVIDADES & OCORRÊNCIAS -->
+    <table style="margin-top: 8px;">
+        <tr>
+            <!-- Coluna Esquerda: Atividades -->
+            <td width="60%" style="border:none; padding-right: 10px;">
+                <div class="sec-title" style="margin-top: 0;">ATIVIDADES</div>
+                <table>
+                    {% for atv in rdo.atividades %}
+                    <tr>
+                        <td class="wrap-text" style="font-size: 9pt;">• {{ atv.descricao }}</td>
+                        <td width="20%" class="text-right" style="font-size: 8pt;">{{ atv.status }}</td>
+                    </tr>
+                    {% else %}<tr>
+                        <td>-</td>
+                    </tr>{% endfor %}
+                </table>
+            </td>
+            <!-- Coluna Direita: Ocorrências -->
+            <td width="40%" style="border:none; padding-left: 10px;">
+                <div class="sec-title" style="margin-top: 0;">OCORRÊNCIAS</div>
+                <table>
+                    {% for oc in rdo.ocorrencias %}
+                    <tr>
+                        <td class="wrap-text" style="color: #b91c1c;"><b>{{ oc.tag_lista.nome }}:</b> {{ oc.descricao }}
+                        </td>
+                    </tr>
+                    {% else %}<tr>
+                        <td style="color: #ccc;">Nenhuma</td>
+                    </tr>{% endfor %}
+                </table>
+            </td>
+        </tr>
+    </table>
+
+    <!-- 3. RECURSOS -->
+    <table style="margin-top: 8px;">
+        <tr>
+            <td width="50%" style="border:none; padding-right: 10px;">
+                <div class="sec-title">MÃO DE OBRA</div>
+                <table>
+                    <tr style="background:#f1f5f9;">
+                        <th>Função</th>
+                        <th width="15%" class="text-center">P</th>
+                        <th width="15%" class="text-center">T</th>
+                    </tr>
+                    {% for mo in rdo.maos_obra %}
+                    <tr>
+                        <td>{{ mo.nome_funcao }}</td>
+                        <td class="text-center">{{ mo.quantidade_propria }}</td>
+                        <td class="text-center">{{ mo.quantidade_terceirizada }}</td>
+                    </tr>
+                    {% else %}<tr>
+                        <td colspan="3">-</td>
+                    </tr>{% endfor %}
+                </table>
+            </td>
+            <td width="50%" style="border:none; padding-left: 10px;">
+                <div class="sec-title">EQUIPAMENTOS</div>
+                <table>
+                    <tr style="background:#f1f5f9;">
+                        <th>Equipamento</th>
+                        <th width="15%" class="text-center">Qtd</th>
+                    </tr>
+                    {% for eq in rdo.equipamentos %}
+                    <tr>
+                        <td>{{ eq.nome_equipamento }}</td>
+                        <td class="text-center">{{ eq.quantidade }}</td>
+                    </tr>
+                    {% else %}<tr>
+                        <td colspan="2">-</td>
+                    </tr>{% endfor %}
+                </table>
+            </td>
+        </tr>
+    </table>
+
+    <!-- 4. OBSERVAÇÕES -->
+    {% if rdo.comentarios_gerais %}
+    <div class="sec-title">OBSERVAÇÕES</div>
+    <div class="wrap-text" style="border: 1px solid #ddd; padding: 6px; min-height: 30px; font-size: 9pt;">
+        {{ rdo.comentarios_gerais }}
+    </div>
+    {% endif %}
+
+    <!-- 5. FOTOS -->
+    {% if rdo.fotos %}
+    <div class="sec-title">REGISTRO FOTOGRÁFICO</div>
+    <table class="photo-grid">
+        {% for batch in rdo.fotos|batch(4) %}
+        <tr>
+            {% for foto in batch %}
+            <td class="photo-cell">
+                <div class="photo-box">
+                    <img src="{{ upload_folder }}/{{ foto.arquivo }}">
+                </div>
+                <div class="photo-caption">{{ foto.comentario|default('')|truncate(50) }}</div>
+            </td>
+            {% endfor %}
+            {% for i in range(4 - batch|length) %}<td class="photo-cell"></td>{% endfor %}
+        </tr>
+        {% endfor %}
+    </table>
+    {% endif %}
+
+    <!-- 6. ASSINATURAS -->
+    <div class="sig-container">
+        <table class="no-border">
+            <tr>
+                {% for ass in rdo.assinaturas %}
+                <td class="sig-box">
+                    <div class="sig-line">
+                        {% if ass.img_assinatura %}<img src="{{ assinatura_folder }}/{{ ass.img_assinatura }}"
+                            class="sig-img">{% endif %}
+                    </div>
+                    <div class="sig-txt"><b>{{ ass.usuario.nome|truncate(25) }}</b></div>
+                    <div class="sig-txt" style="color:#555;">{{ ass.usuario.papel }} | {{ass.usuario.email}}</div>
+                    <div>
+                        {% if ass.status == 'Aprovado' %}
+                        <span class="tag-status-sm status-aprovado">Aprovado</span>
+                        {% elif ass.status == 'Rejeitado' %}
+                        <span class="tag-status-sm status-rejeitado">Rejeitado</span>
+                        <span class="sig-meta">Motivo: {{ ass.motivo_rejeicao }}</span>
+                        {% else %}
+                        <span class="tag-status-sm status-pendente">Pendente</span>
+                        {% endif %}
+                    </div>
+                </td>
+                {% endfor %}
+            </tr>
+        </table>
+    </div>
+
+</body>
+
+</html>
