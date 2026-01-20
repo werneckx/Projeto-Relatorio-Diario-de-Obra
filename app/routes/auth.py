@@ -15,6 +15,7 @@ from app.models.lista_opcoes import Clima
 from app.models.obra import Frente_Trabalho, Obra
 from app.models.rdo import RDO, Assinatura, Equipamentos
 from app.utils.rdo_pdf import regenerar_pdf_rdo
+from app.utils.qrcode_utils import gerar_qrcode_b64
 from sqlalchemy import func, or_
 from datetime import date, datetime, timedelta, timezone
 from functools import wraps
@@ -598,6 +599,9 @@ def visualizar_rdo(rdo_id):
             usuarios_obra = Usuario.query.filter_by(status=True).all()
     else:
         usuarios_obra = Usuario.query.filter_by(status=True).all()
+        
+    url_rdo = url_for('auth.visualizar_rdo', rdo_id=rdo_id, _external=True)
+    qr_code_img = gerar_qrcode_b64(url_rdo)
 
     return render_template(
         "form_rdo.html",
@@ -613,7 +617,8 @@ def visualizar_rdo(rdo_id):
         usuarios_obra=usuarios_obra,
         mao_de_obra_options=mao_de_obra_options,
         equipamentos_options=equipamentos_options,
-        tags_options=tags_options
+        tags_options=tags_options,
+        qr_code_b64=qr_code_img
     )
 
 # Editar RDO

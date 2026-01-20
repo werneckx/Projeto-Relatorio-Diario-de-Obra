@@ -1,9 +1,10 @@
 import os
 import pathlib
 from datetime import datetime
-from flask import current_app, render_template
+from flask import current_app, render_template,url_for
 from app.models.lista_opcoes import Clima, Equipamento, MaoObra, TagOcorrencia
 from app.models.rdo import RDO
+from app.utils.qrcode_utils import gerar_qrcode_b64
 
 try:
     from weasyprint import HTML
@@ -22,6 +23,10 @@ def render_rdo_pdf(rdo_id):
 
     # 2. Configurar caminhos absolutos e convertê-los para URI (file:///)
     static_folder = current_app.static_folder
+    url_visualizacao = url_for('auth.visualizar_rdo', rdo_id=rdo.id, _external=True)
+    
+    # 2. Gerar a imagem base64
+    qr_code_b64 = gerar_qrcode_b64(url_visualizacao)
 
     # Caminhos absolutos do sistema de arquivos
     raw_upload_folder = os.path.join(static_folder, 'uploads', 'rdo')
@@ -54,7 +59,8 @@ def render_rdo_pdf(rdo_id):
         clima=Clima.query.all(),
         upload_folder=upload_folder_uri,       # Caminho URI para fotos
         assinatura_folder=assinatura_folder_uri, # Caminho URI para assinaturas
-        data_geracao=data_geracao              # Variável nova para o rodapé
+        data_geracao=data_geracao,             # Variável nova para o rodapé
+        qr_code_b64=qr_code_b64
     )
 
     # 4. Converter HTML para Bytes PDF

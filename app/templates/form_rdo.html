@@ -436,10 +436,14 @@
                 class="flex-1 md:flex-none px-5 py-2.5 text-sm font-bold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 text-center transition shadow-sm">
                 <i class="fas fa-arrow-left mr-2"></i> Voltar
             </a>
+            <button onclick="openModal('modal_qr_code_viewer')"
+                class="flex-1 md:flex-none px-5 py-2.5 text-sm font-bold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 text-center transition shadow-sm">
+                <i class="fas fa-qrcode mr-2"></i> QR Code
+            </button>
             {% if item.id %}
             <a href="{{ url_for('auth.gerar_pdf_rdo_view', rdo_id=item.id) }}" target="_blank"
                 class="flex-1 md:flex-none bg-slate-800 hover:bg-slate-900 text-white px-5 py-2.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2 shadow-md transition">
-                <i class="fas fa-print"></i> PDF
+                <i class="fas fa-print"></i> Imprimir
             </a>
             {% endif %}
             {% else %}
@@ -1301,6 +1305,17 @@
     </div>
 </div>
 
+<!-- Modal QR Code Viewer -->
+<div id="modal_qr_code_viewer" class="modal-overlay z-[10000]"
+    onclick="if(event.target === this) closeModal('modal_qr_code_viewer')">
+    <div class="relative w-full h-full flex flex-col items-center justify-center p-4">
+        <button onclick="closeModal('modal_qr_code_viewer')"
+            class="absolute top-5 right-5 text-white bg-black/50 rounded-full w-10 h-10 flex items-center justify-center text-xl z-50 backdrop-blur-md">&times;</button>
+        <img src="data:image/png;base64,{{ qr_code_b64 }}" class="footer-qr-img" alt="QR Code">
+        <div class="footer-qr-text">Validar Doc.</div>
+    </div>
+</div>
+
 <!-- Modal Rejeição -->
 <div id="modal_rejeicao" class="modal-overlay">
     <div class="modal-content max-w-md">
@@ -1695,6 +1710,13 @@
         document.getElementById('img_viewer_caption').innerText = caption || '';
         document.getElementById('img_viewer_caption').style.display = caption ? 'block' : 'none';
         openModal('modal_foto_viewer');
+    }
+
+    function openQRCodeViewer(src, caption) {
+        document.getElementById('img_viewer_src').src = src;
+        document.getElementById('img_viewer_caption').innerText = caption || '';
+        document.getElementById('img_viewer_caption').style.display = caption ? 'block' : 'none';
+        openModal('modal_qr_code_viewer');
     }
 
     // --- ASSINATURA ---

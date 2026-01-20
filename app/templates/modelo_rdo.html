@@ -5,6 +5,30 @@
     <meta charset="UTF-8">
     <title>RDO #{{ rdo.id_sequencial }} - {{ rdo.obra.nome if rdo.obra else 'Obra' }}</title>
     <style>
+        /* --- CLASSE PARA ELEMENTO DE RODAPÉ (RUNNING ELEMENT) --- */
+        .footer-qr-container {
+            /* Remove do fluxo normal e cria o elemento 'qrFooter' */
+            position: running(qrFooter);
+            text-align: right;
+            padding: 0px 0px 10px 0px;
+        }
+
+        .footer-qr-img {
+            width: 50px;
+            height: 50px;
+            border: 1px solid #ddd;
+            padding: 2px;
+            background: #fff;
+        }
+
+        .footer-qr-text {
+            font-size: 6pt;
+            color: #555;
+            text-transform: uppercase;
+            font-weight: bold;
+            margin-top: 2px;
+        }
+
         /* --- CONFIGURAÇÕES DE PÁGINA (PDF) --- */
         @page {
             margin: 1cm 1cm 2cm 1cm;
@@ -18,12 +42,18 @@
                 color: #555;
             }
 
-            /* Rodapé Direito: Paginação */
-            @bottom-right {
+            /* Rodapé Centro: Paginação */
+            @bottom-center {
                 content: "Pág. " counter(page) " de " counter(pages);
                 font-family: "Segoe UI", sans-serif;
                 font-size: 7pt;
                 color: #555;
+            }
+
+            /* Rodapé Direito: Injeta o elemento QR Code */
+            @bottom-right {
+                content: element(qrFooter);
+                vertical-align: bottom;
             }
         }
 
@@ -32,14 +62,13 @@
             font-family: "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
             font-size: 10pt;
             color: #1a1a1a;
-            /* Preto suave */
             line-height: 1.4;
             background-color: #fff;
             margin: 0;
             padding: 0;
         }
 
-        /* --- MARCA D'ÁGUA DE SEGURANÇA (Monocromática) --- */
+        /* --- MARCA D'ÁGUA DE SEGURANÇA --- */
         .watermark {
             position: fixed;
             top: 50%;
@@ -48,7 +77,6 @@
             font-size: 80pt;
             font-weight: 900;
             color: rgba(0, 0, 0, 0.05);
-            /* Cinza muito suave */
             z-index: -1000;
             text-transform: uppercase;
             pointer-events: none;
@@ -63,31 +91,40 @@
         .header-container {
             width: 100%;
             border-bottom: 3px solid #333;
-            /* Cinza Escuro */
             padding-bottom: 15px;
             margin-bottom: 30px;
             display: table;
+            table-layout: fixed;
         }
 
         .header-logo {
             display: table-cell;
             vertical-align: middle;
-            width: 25%;
+            width: 20%;
+            /* 20% Esquerda */
         }
 
         .header-logo img {
-            max-width: 150px;
+            max-width: 120px;
             max-height: 75px;
             width: auto;
             height: auto;
-            /* Logo permanece original (colorido ou pb, dependendo da imagem) */
         }
 
         .header-content {
             display: table-cell;
             vertical-align: middle;
-            text-align: right;
-            width: 75%;
+            text-align: center;
+            width: 60%;
+            /* 60% Centro */
+        }
+
+        /* Mantivemos a coluna da direita vazia apenas para equilibrar a tabela e centralizar o título */
+        .header-right-spacer {
+            display: table-cell;
+            vertical-align: middle;
+            width: 20%;
+            /* 20% Direita */
         }
 
         .doc-title {
@@ -107,12 +144,10 @@
             font-weight: 500;
         }
 
-        /* --- TÍTULOS DE SEÇÃO COM ÍCONES COLORIDOS --- */
+        /* --- ESTILOS DE TABELAS E SEÇÕES --- */
         .section-header {
             background-color: #f8fafc;
-            /* Cinza muito claro, quase branco */
             color: #1e293b;
-            /* Texto Escuro */
             padding: 8px 15px;
             font-size: 10pt;
             font-weight: 700;
@@ -121,44 +156,35 @@
             margin-top: 25px;
             margin-bottom: 15px;
             border-left: 5px solid #cbd5e1;
-            /* Borda padrão cinza */
             border-bottom: 1px solid #e2e8f0;
             page-break-after: avoid;
             display: flex;
             align-items: center;
         }
 
-        /* Cores específicas para bordas laterais baseadas no contexto (opcional, para reforçar) */
         .header-blue {
             border-left-color: #2563eb;
         }
 
-        /* Dados Gerais */
         .header-orange {
             border-left-color: #ea580c;
         }
 
-        /* Condições/Jornada */
         .header-purple {
             border-left-color: #9333ea;
         }
 
-        /* Atividades */
         .header-indigo {
             border-left-color: #4f46e5;
         }
 
-        /* Mão de Obra */
         .header-gray {
             border-left-color: #4b5563;
         }
 
-        /* Equipamentos */
         .header-red {
             border-left-color: #dc2626;
         }
-
-        /* Ocorrências */
 
         .section-header svg {
             vertical-align: middle;
@@ -167,48 +193,34 @@
             height: 18px;
         }
 
-        /* Cores dos Ícones (Combinando com form_rdo.html) */
         .icon-blue {
             fill: #2563eb;
         }
 
-        /* Dados Gerais / Fotos */
         .icon-orange {
             fill: #ea580c;
         }
 
-        /* Jornada / Condições */
         .icon-yellow {
             fill: #ca8a04;
         }
 
-        /* Clima */
         .icon-purple {
             fill: #9333ea;
         }
 
-        /* Atividades */
         .icon-indigo {
             fill: #4f46e5;
         }
 
-        /* Mão de Obra */
         .icon-gray {
             fill: #4b5563;
         }
 
-        /* Equipamentos */
         .icon-red {
             fill: #dc2626;
         }
 
-        /* Ocorrências */
-
-        .section-header span {
-            vertical-align: middle;
-        }
-
-        /* --- TABELAS --- */
         .info-table {
             width: 100%;
             border-collapse: collapse;
@@ -226,7 +238,6 @@
             font-size: 7.5pt;
             text-transform: uppercase;
             color: #64748b;
-            /* Slate 500 */
             font-weight: 700;
             margin-bottom: 2px;
             letter-spacing: 0.3px;
@@ -236,11 +247,9 @@
             display: block;
             font-size: 10pt;
             color: #0f172a;
-            /* Slate 900 */
             font-weight: 500;
         }
 
-        /* --- TABELAS DE DADOS (CLEAN) --- */
         .clean-table {
             width: 100%;
             border-collapse: collapse;
@@ -253,9 +262,7 @@
             text-align: left;
             padding: 8px 12px;
             background-color: #f1f5f9;
-            /* Slate 100 */
             color: #334155;
-            /* Slate 700 */
             font-weight: 700;
             text-transform: uppercase;
             font-size: 8pt;
@@ -272,7 +279,6 @@
 
         .clean-table tr:nth-child(even) {
             background-color: #f8fafc;
-            /* Slate 50 */
         }
 
         .text-center {
@@ -283,7 +289,6 @@
             text-align: right;
         }
 
-        /* --- BADGES E TAGS (COLORIDOS - Coerente com form_rdo) --- */
         .status-badge {
             display: inline-block;
             padding: 3px 10px;
@@ -294,39 +299,30 @@
             border: 1px solid transparent;
         }
 
-        /* Cores de Status para Atividades e Documento */
         .status-aprovado,
         .status-concluida {
             background-color: #d1fae5;
-            /* Emerald 100 */
             color: #047857;
-            /* Emerald 700 */
             border-color: #a7f3d0;
         }
 
         .status-rejeitado,
         .status-paralisada {
             background-color: #fee2e2;
-            /* Red 100 */
             color: #b91c1c;
-            /* Red 700 */
             border-color: #fecaca;
         }
 
         .status-pendente,
         .status-emandamento {
             background-color: #fef3c7;
-            /* Yellow 100 */
             color: #b45309;
-            /* Yellow 700 */
             border-color: #fde68a;
         }
 
         .status-iniciada {
             background-color: #e0f2fe;
-            /* Sky 100 */
             color: #0369a1;
-            /* Sky 700 */
             border-color: #bae6fd;
         }
 
@@ -336,20 +332,17 @@
             border-color: #cbd5e1;
         }
 
-        /* --- CAIXAS DE TEXTO --- */
         .comments-box {
             background-color: #fff;
             border: 1px solid #cbd5e1;
-            padding: 0px 15px 0px 15px;
+            padding: 15px;
             font-size: 9.5pt;
             color: #334155;
-            white-space: pre-wrap;
             text-align: justify;
             border-radius: 6px;
             box-shadow: 2px 2px 0px #f1f5f9;
         }
 
-        /* --- GALERIA DE FOTOS --- */
         .photo-gallery {
             width: 100%;
             border-collapse: separate;
@@ -400,7 +393,6 @@
             text-align: left;
         }
 
-        /* --- ASSINATURAS --- */
         .signatures-section {
             margin-top: 40px;
             page-break-inside: avoid;
@@ -461,7 +453,6 @@
             margin-top: 2px;
         }
 
-        /* Tags para assinaturas */
         .tag-status-sm {
             font-size: 7pt;
             font-weight: 700;
@@ -476,6 +467,16 @@
 
 <body>
 
+    <!-- 
+      ELEMENTO DE RODAPÉ (INVISÍVEL NO CORPO, APARECE NO RODAPÉ VIA CSS)
+    -->
+    <div class="footer-qr-container">
+        {% if qr_code_b64 %}
+        <img src="data:image/png;base64,{{ qr_code_b64 }}" class="footer-qr-img" alt="QR Code">
+        <div class="footer-qr-text">Validar Doc.</div>
+        {% endif %}
+    </div>
+
     <!-- MARCA D'ÁGUA DE SEGURANÇA -->
     {% if rdo.status == 'Pendente' or (not rdo.status and rdo.assinaturas|selectattr("status", "equalto",
     "Pendente")|list|length > 0) %}
@@ -484,6 +485,7 @@
 
     <!-- CABEÇALHO -->
     <div class="header-container">
+        <!-- 1. Logo (Esquerda) -->
         <div class="header-logo">
             {% if logo_path %}
             <img src="{{ logo_path }}" alt="Logo Empresa">
@@ -493,16 +495,17 @@
                 LOGO EMPRESA</div>
             {% endif %}
         </div>
+
+        <!-- 2. Títulos e Infos (Centro) -->
         <div class="header-content">
             <h1 class="doc-title">Relatório Diário de Obra</h1>
             <div class="doc-subtitle">
                 <span style="color: #000; font-weight: bold;">RDO Nº {{ rdo.id_sequencial }}</span>
                 <span style="color: #999; margin: 0 8px;">|</span>
-                REVISÃO {{ rdo.id_revisao }}
+                REV. {{ rdo.id_revisao }}
                 <span style="color: #999; margin: 0 8px;">|</span>
-                DATA RDO: <strong>{{ rdo.data.strftime('%d/%m/%Y') }}</strong>
+                DATA: <strong>{{ rdo.data.strftime('%d/%m/%Y') }}</strong>
                 <span style="color: #999; margin: 0 8px;">|</span>
-                <!-- Badge de Status Global -->
                 {% if rdo.status == 'Aprovado' %}
                 <span class="status-badge status-aprovado">Aprovado</span>
                 {% elif rdo.status == 'Rejeitado' %}
@@ -513,20 +516,17 @@
             </div>
 
             <div style="font-size: 7pt; color: #666; margin-top: 4px; text-transform: uppercase; font-weight: 500;">
-                {% if rdo.criado %}
-                Criado em: {{ rdo.criado.strftime('%d/%m/%Y %H:%M') }}
-                {% endif %}
-                {% if rdo.modificado %}
-                <span style="margin: 0 6px; color: #ccc;">|</span>
-                Modificado em: {{ rdo.modificado.strftime('%d/%m/%Y %H:%M') }}
-                {% endif %}
+                Criado: {{ rdo.criado.strftime('%d/%m/%Y %H:%M') if rdo.criado else '-' }} |
+                Modificado: {{ rdo.modificado.strftime('%d/%m/%Y %H:%M') if rdo.modificado else '-' }}
             </div>
         </div>
+
+        <!-- 3. Espaçador (Direita) - Vazio para equilíbrio -->
+        <div class="header-right-spacer"></div>
     </div>
 
     <!-- 1. DADOS CONTRATUAIS (AZUL) -->
     <div class="section-header header-blue">
-        <!-- Ícone Predio/Contrato AZUL (#2563eb) -->
         <svg viewBox="0 0 24 24" class="icon-blue">
             <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
         </svg>
@@ -579,7 +579,6 @@
 
     <!-- 2. CONDIÇÕES DO DIA (LARANJA) -->
     <div class="section-header header-orange">
-        <!-- Ícone Relógio/Sol LARANJA (#ea580c) -->
         <svg viewBox="0 0 24 24" class="icon-orange">
             <path
                 d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" />
@@ -617,7 +616,6 @@
 
     <!-- 3. ATIVIDADES REALIZADAS (ROXO) -->
     <div class="section-header header-purple">
-        <!-- Ícone Lista/Clipboard ROXO (#9333ea) -->
         <svg viewBox="0 0 24 24" class="icon-purple">
             <path
                 d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
@@ -664,10 +662,8 @@
     <!-- RECURSOS (Mão de Obra e Equipamentos) -->
     <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
         <tr>
-            <!-- Coluna Mão de Obra (INDIGO) -->
             <td style="width: 49%; vertical-align: top; padding-right: 1%;">
                 <div class="section-header header-indigo" style="margin-top: 0; font-size: 9pt; padding: 5px 10px;">
-                    <!-- Icone Capacete/Pessoa INDIGO (#4f46e5) -->
                     <svg viewBox="0 0 24 24" class="icon-indigo">
                         <path
                             d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
@@ -700,10 +696,8 @@
                 </table>
             </td>
 
-            <!-- Coluna Equipamentos (CINZA/GRAFITE) -->
             <td style="width: 49%; vertical-align: top; padding-left: 1%;">
                 <div class="section-header header-gray" style="margin-top: 0; font-size: 9pt; padding: 5px 10px;">
-                    <!-- Icone Caminhão/Ferramenta CINZA (#4b5563) -->
                     <svg viewBox="0 0 24 24" class="icon-gray">
                         <path
                             d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z" />
@@ -739,7 +733,6 @@
     <!-- 4. OCORRÊNCIAS (VERMELHO) -->
     {% if rdo.ocorrencias %}
     <div class="section-header header-red">
-        <!-- Icone Alerta VERMELHO (#dc2626) -->
         <svg viewBox="0 0 24 24" class="icon-red">
             <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" />
         </svg>
@@ -756,7 +749,6 @@
             {% for oc in rdo.ocorrencias %}
             <tr>
                 <td>
-                    <!-- Texto em Vermelho para destacar ocorrência -->
                     <span style="font-weight: 700; color: #b91c1c;">
                         {{ oc.tag_lista.nome if oc.tag_lista else 'Geral' }}
                     </span>
@@ -771,7 +763,6 @@
     <!-- 5. OBSERVAÇÕES (AZUL CLARO/PADRÃO) -->
     {% if rdo.comentarios_gerais %}
     <div class="section-header header-blue">
-        <!-- Icone Comentario AZUL (#2563eb) -->
         <svg viewBox="0 0 24 24" class="icon-blue">
             <path
                 d="M21.99 4c0-1.1-.89-2-1.99-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4-.01-18zM18 14H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z" />
@@ -786,7 +777,6 @@
     <!-- 6. RELATÓRIO FOTOGRÁFICO (AZUL) -->
     {% if rdo.fotos %}
     <div class="section-header header-blue" style="page-break-before: always;">
-        <!-- Icone Camera AZUL (#2563eb) -->
         <svg viewBox="0 0 24 24" class="icon-blue">
             <path
                 d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z" />
@@ -796,7 +786,6 @@
 
     <table class="photo-gallery">
         {% for foto in rdo.fotos %}
-        <!-- Lógica para abrir linha nova a cada 2 fotos (0, 2, 4...) -->
         {% if loop.index0 is divisibleby(2) %}
         <tr class="photo-row">
             {% endif %}
@@ -811,10 +800,8 @@
                 </div>
             </td>
 
-            <!-- Lógica para fechar linha (ímpar ou última) -->
             {% if (loop.index is divisibleby(2)) or loop.last %}
             {% if loop.last and (loop.index % 2 != 0) %}
-            <!-- Célula vazia para manter grid se sobrar foto ímpar -->
             <td class="photo-cell" style="border:none; background:transparent; box-shadow:none;"></td>
             {% endif %}
         </tr>

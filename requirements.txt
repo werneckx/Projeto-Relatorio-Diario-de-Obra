@@ -9,3 +9,4 @@ flask-login
 qrcode[pil]
 pdfkit
 weasyprint
+qrcode[pil]
