@@ -4,7 +4,7 @@ from math import e
 import os
 from flask import Blueprint, Config, abort, json, render_template, request, redirect, url_for, flash, session, send_file
 from werkzeug.security import check_password_hash
-from app import db # Importar 'db' para uso no filtro (db.or_)
+from app import db
 from app import db, login_manager
 from flask_login import UserMixin, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -17,7 +17,7 @@ from app.models.rdo import RDO, Assinatura, Equipamentos
 from app.utils.rdo_pdf import regenerar_pdf_rdo
 from sqlalchemy import func, or_
 from datetime import date, datetime, timedelta, timezone
-from functools import wraps # Mover a importação para o topo para melhor prática
+from functools import wraps
 from sqlalchemy.orm import aliased
 from flask import request, jsonify
 from app import db
@@ -484,25 +484,55 @@ def gerar_rdo():
         if not os.path.exists(UPLOAD_FOLDER):
             os.makedirs(UPLOAD_FOLDER)
             
-        # ATUALIZAÇÃO DE LEGENDAS EXISTENTES (CÓDIGO NOVO)
-        # Recupera as listas paralelas de IDs e Comentários
+        # --- [CORREÇÃO] 5.1 Processar EXCLUSÕES de fotos ---
+        # Deve ser feito ANTES de atualizar legendas para evitar conflitos
+        # --- 5.1 Processar EXCLUSÕES de fotos ---
+        ids_remover = request.form.getlist("fotos_remover[]")
+        if ids_remover:
+            for id_rem in ids_remover:
+                try:
+                    if not id_rem: continue # Pula se o ID estiver vazio
+                    
+                    # Busca pelo id_foto correto
+                    foto_del = Fotos.query.get(int(id_rem))
+                    
+                    # Garante que a foto pertence ao RDO atual (segurança)
+                    if foto_del and foto_del.id_rdo == item_rdo.id:
+                        # Remover arquivo físico
+                        try:
+                            caminho_arquivo = os.path.join(UPLOAD_FOLDER, foto_del.arquivo)
+                            if os.path.exists(caminho_arquivo):
+                                os.remove(caminho_arquivo)
+                        except Exception as e_file:
+                            print(f"Erro ao deletar arquivo físico da foto {id_rem}: {e_file}")
+                        
+                        # Remove do banco
+                        db.session.delete(foto_del)
+                except ValueError:
+                    print(f"Erro de conversão de ID: {id_rem}")
+                except Exception as e:
+                    print(f"Erro ao excluir foto {id_rem}: {e}")
+            
+        # --- 5.2 ATUALIZAÇÃO DE LEGENDAS EXISTENTES ---
         ids_existentes = request.form.getlist("fotos_existentes_ids[]")
         comentarios_existentes = request.form.getlist("comentarios_existentes_list[]")
         
-        # Itera sobre os IDs e atualiza a legenda correspondente se existir
-        for i, foto_id_str in enumerate(ids_existentes):
-            if i < len(comentarios_existentes): # Garante que existe legenda para o ID
-                try:
-                    foto_id = int(foto_id_str)
-                    nova_legenda = comentarios_existentes[i]
-                    
-                    foto_obj = Fotos.query.get(foto_id)
-                    # Verificação de segurança: a foto pertence a este RDO?
-                    if foto_obj and foto_obj.id_rdo == item_rdo.id:
+        # Usamos ZIP para garantir paridade entre ID e Comentário
+        for foto_id_str, nova_legenda in zip(ids_existentes, comentarios_existentes):
+            try:
+                if not foto_id_str: continue
+
+                foto_id = int(foto_id_str)
+                foto_obj = Fotos.query.get(foto_id)
+                
+                # Verificação de segurança: a foto pertence a este RDO?
+                if foto_obj and foto_obj.id_rdo == item_rdo.id:
+                    # Só atualiza se mudou, evita writes desnecessários
+                    if foto_obj.comentario != nova_legenda:
                         foto_obj.comentario = nova_legenda
                         db.session.add(foto_obj)
-                except Exception as e:
-                    print(f"Erro ao atualizar foto {foto_id_str}: {e}")
+            except Exception as e:
+                print(f"Erro ao atualizar legenda da foto {foto_id_str}: {e}")
 
         # PROCESSAMENTO DE NOVAS FOTOS (MANTIDO)
         arquivos = request.files.getlist("fotos[]")

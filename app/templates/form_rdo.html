@@ -956,7 +956,7 @@
                     {% if item and item.fotos %}
                     {% for foto in item.fotos %}
                     <div class="photo-card relative bg-white border border-slate-200 rounded-xl overflow-hidden group shadow-sm"
-                        id="card_existente_{{ foto.id }}">
+                        id="card_existente_{{ foto.id_foto }}">
                         <div class="relative aspect-video bg-slate-100 cursor-zoom-in overflow-hidden"
                             onclick="openPhotoViewer('{{ url_for('static', filename='uploads/rdo/' ~ foto.arquivo) }}', '{{ foto.comentario }}')">
                             <img src="{{ url_for('static', filename='uploads/rdo/' ~ foto.arquivo) }}"
@@ -969,15 +969,14 @@
                         </div>
 
                         <div class="p-3 space-y-2">
-                            <!-- CORREÇÃO AQUI: USANDO LISTA SIMPLES EM VEZ DE CHAVES DINÂMICAS -->
-                            <input type="hidden" name="fotos_existentes_ids[]" value="{{ foto.id }}">
+                            <input type="hidden" name="fotos_existentes_ids[]" value="{{ foto.id_foto }}">
                             <div class="relative">
                                 <input type="text" name="comentarios_existentes_list[]" value="{{ foto.comentario }}"
                                     placeholder="Legenda..." class="form-control-std !h-9 !text-xs !pl-8" {{ 'readonly'
                                     if view_mode }}>
                             </div>
                             {% if not view_mode %}
-                            <button type="button" onclick="marcarExclusao('{{ foto.id }}')"
+                            <button type="button" onclick="marcarExclusao('{{ foto.id_foto }}')"
                                 class="w-full py-2 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors flex items-center justify-center gap-2">
                                 <i class="fas fa-trash-alt"></i> Excluir
                             </button>
@@ -987,7 +986,6 @@
                     {% endfor %}
                     {% endif %}
                 </div>
-            </div>
         </section>
 
         {# 7. WORKFLOW E APROVAÇÃO #}
@@ -1679,7 +1677,9 @@
 
     function marcarExclusao(id) {
         if (!confirm('Remover esta foto?')) return;
-        $(`#card_existente_${id}`).addClass('hidden');
+        // CORREÇÃO: Removemos o elemento do DOM em vez de apenas esconder
+        // Isso impede que os inputs ocultos (ID e comentário) sejam enviados, resolvendo o conflito
+        $(`#card_existente_${id}`).remove();
         $('#container_fotos_removidas').append(`<input type="hidden" name="fotos_remover[]" value="${id}">`);
         updateTotalPhotoCount();
     }

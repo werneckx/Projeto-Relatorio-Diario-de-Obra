@@ -340,13 +340,12 @@
         .comments-box {
             background-color: #fff;
             border: 1px solid #cbd5e1;
-            padding: 15px;
+            padding: 0px 15px 0px 15px;
             font-size: 9.5pt;
             color: #334155;
             white-space: pre-wrap;
             text-align: justify;
             border-radius: 6px;
-            margin-bottom: 10px;
             box-shadow: 2px 2px 0px #f1f5f9;
         }
 
@@ -846,6 +845,9 @@
                         <div class="sig-content">
                             {% if ass.img_assinatura %}
                             <img src="{{ assinatura_folder }}/{{ ass.img_assinatura }}" class="sig-img">
+                            {% elif ass.status == 'Rejeitado' %}
+                            <span
+                                style="color:#94a3b8; font-size: 9pt; font-style:italic; font-weight:600;">Rejeitado</span>
                             {% else %}
                             <span
                                 style="color:#94a3b8; font-size: 9pt; font-style:italic; font-weight:600;">Pendente</span>
@@ -858,7 +860,7 @@
                     <div class="sig-meta">{{ ass.usuario.email or '' }}</div>
 
                     {% if ass.criado %}
-                    <div class="sig-meta">Data Assinatura: {{ ass.criado.strftime('%d/%m/%Y às %H:%M') }}</div>
+                    <div class="sig-meta">Data de Registro: {{ ass.criado.strftime('%d/%m/%Y às %H:%M') }}</div>
                     {% endif %}
 
                     <div>
@@ -866,6 +868,7 @@
                         <span class="tag-status-sm status-aprovado">Aprovado</span>
                         {% elif ass.status == 'Rejeitado' %}
                         <span class="tag-status-sm status-rejeitado">Rejeitado</span>
+                        <span class="sig-meta">Motivo: {{ ass.motivo_rejeicao }}</span>
                         {% else %}
                         <span class="tag-status-sm status-pendente">Pendente</span>
                         {% endif %}
