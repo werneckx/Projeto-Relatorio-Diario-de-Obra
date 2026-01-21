@@ -773,7 +773,8 @@
         <thead>
             <tr>
                 <th width="25%">Classificação</th>
-                <th width="75%">Descrição Detalhada</th>
+                <th width="50%">Descrição Detalhada</th>
+                <th width="25%">Tempo Parado</th>
             </tr>
         </thead>
         <tbody>
@@ -785,6 +786,7 @@
                     </span>
                 </td>
                 <td>{{ oc.descricao }}</td>
+                <td>{{ oc.tempo_parado }}</td>
             </tr>
             {% endfor %}
         </tbody>

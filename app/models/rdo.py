@@ -106,6 +106,7 @@ class TagsOcorrencias(db.Model):
     id_rdo = db.Column(db.Integer, db.ForeignKey('rdo.id'), nullable=False)
     id_tag_lista = db.Column(db.Integer, db.ForeignKey('lista_opcoes.id'), nullable=True)
     descricao = db.Column(db.Text)
+    tempo_parado = db.Column(db.Time, nullable=True)
     
     tag_lista = db.relationship('TagOcorrencia')
 

@@ -497,11 +497,35 @@ def gerar_rdo():
         # --- 4. Ocorrências ---
         oc_tags = request.form.getlist("oc_tag[]")
         oc_descs = request.form.getlist("oc_desc[]")
+        oc_tempos = request.form.getlist("oc_tempo_parado[]")
+
         for i, tid in enumerate(oc_tags):
-            if tid:
-                desc = oc_descs[i] if i < len(oc_descs) else ""
-                nova_oc = TagsOcorrencias(id_rdo=item_rdo.id, id_tag_lista=tid, descricao=desc)
-                db.session.add(nova_oc)
+            if not tid: continue  # Pula se o ID da tag for vazio
+
+            # Inicia variável do tempo como None
+            tempo_obj = None
+            
+            # Pega o valor do input (string HH:MM ou vazio)
+            tempo_str = oc_tempos[i] if i < len(oc_tempos) else None
+            
+            # Tenta converter se houver string
+            if tempo_str and tempo_str.strip():
+                try:
+                    tempo_obj = datetime.strptime(tempo_str, '%H:%M').time()
+                except ValueError:
+                    tempo_obj = None  # Formato inválido ou vazio
+            
+            # Descrição
+            desc = oc_descs[i] if i < len(oc_descs) else ""
+
+            # Cria objeto com o campo tempo_parado
+            nova_oc = TagsOcorrencias(
+                id_rdo=item_rdo.id, 
+                id_tag_lista=tid, 
+                descricao=desc,
+                tempo_parado=tempo_obj  # Correção aplicada aqui
+            )
+            db.session.add(nova_oc)
 
         # --- 5. Fotos ---
         UPLOAD_FOLDER = os.path.join(current_app.root_path, 'static', 'uploads', 'rdo')
