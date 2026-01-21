@@ -595,8 +595,9 @@
                             {% for frente in frente_trabalho %}
                             <!-- AQUI: Injetamos data-meta e data-unidade para funcionar no carregamento inicial -->
                             <option value="{{ frente.id_frente_trabalho if frente.id_frente_trabalho else frente.id }}"
-                                data-meta="{{ frente.qtd_planejada or 0 }}" data-unidade="{{ frente.unidade or '' }}" {%
-                                if item.id_frente_trabalho==(frente.id_frente_trabalho if frente.id_frente_trabalho else
+                                data-meta="{{ frente.qtd_planejada or 0 }}" data-unidade="{{ frente.unidade or '' }}"
+                                data-realizado="{{ frente.qtd_realizada or 0 }}" {% if
+                                item.id_frente_trabalho==(frente.id_frente_trabalho if frente.id_frente_trabalho else
                                 frente.id) %}selected{% endif %}>
                                 {{ frente.nome_frente }}
                             </option>
@@ -610,33 +611,87 @@
                             class="fas fa-exclamation-triangle mr-1"></i> Erro ao carregar.</div>
                 </div>
 
-                <!-- BLOCO DE AVANÇO FÍSICO (Novo) -->
+                <!-- BLOCO DE AVANÇO FÍSICO (Atualizado com Visual Bonito + Lógica de JS) -->
                 <div id="block_progresso"
                     class="{% if not (item and item.frente_trabalho and item.frente_trabalho.unidade) %}hidden{% endif %} md:col-span-4 bg-blue-50/50 rounded-lg p-3 border border-blue-100 flex flex-col sm:flex-row gap-4 items-center justify-between mt-2">
-                    <div class="flex items-center gap-3 text-sm text-slate-700">
-                        <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
-                            <i class="fas fa-chart-line"></i>
-                        </div>
-                        <div>
-                            <p class="text-xs text-slate-500 font-bold uppercase">Meta da Frente</p>
-                            <p class="font-bold text-lg leading-none">
-                                <span id="label_meta">{{ item.frente_trabalho.qtd_planejada if item and
-                                    item.frente_trabalho else '0' }}</span>
-                                <span id="label_unidade" class="text-xs text-slate-500 ml-1 font-normal">{{
-                                    item.frente_trabalho.unidade if item and item.frente_trabalho else '-' }}</span>
-                            </p>
+
+                    <!-- Card Visual com IDs específicos para o JS atualizar -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 w-full sm:w-2/3 md:w-1/2">
+                        <div class="flex items-start gap-4">
+                            <!-- Ícone Destacado -->
+                            <div
+                                class="w-12 h-12 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 text-lg">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+
+                            <!-- Conteúdo -->
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center justify-between">
+                                    <!-- Bloco Meta -->
+                                    <div class="mb-3">
+                                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">
+                                            Meta da Frente</p>
+                                        <div class="flex items-baseline gap-1">
+                                            <!-- ID para JS -->
+                                            <span id="label_meta_valor"
+                                                class="text-xl font-bold text-slate-800 leading-none">
+                                                {{ item.frente_trabalho.qtd_planejada if item and item.frente_trabalho
+                                                else '0' }}
+                                            </span>
+                                            <!-- Classe para JS atualizar todas as unidades -->
+                                            <span class="label_unidade_dinamica text-xs text-slate-500 font-medium">
+                                                {{ item.frente_trabalho.unidade if item and item.frente_trabalho else
+                                                '-' }}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Bloco Realizado -->
+                                    <div class="mb-3 text-right">
+                                        <p class="text-[10px] text-emerald-600 font-bold uppercase tracking-wider mb-1">
+                                            Acumulado</p>
+                                        <div class="flex items-baseline gap-1 justify-end">
+                                            <!-- ID para JS -->
+                                            <span id="label_realizado_valor"
+                                                class="text-xl font-bold text-slate-900 leading-none">
+                                                {{ item.frente_trabalho.qtd_realizada if item and item.frente_trabalho
+                                                else '0' }}
+                                            </span>
+                                            <span class="label_unidade_dinamica text-xs text-slate-500 font-medium">
+                                                {{ item.frente_trabalho.unidade if item and item.frente_trabalho else
+                                                '-' }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Barra de progresso dinâmica -->
+                                {% set realizado = item.frente_trabalho.qtd_realizada if item and item.frente_trabalho
+                                else 0 %}
+                                {% set meta = item.frente_trabalho.qtd_planejada if item and item.frente_trabalho else 0
+                                %}
+                                {% set porcentagem = (realizado / meta * 100) if meta > 0 else 0 %}
+
+                                <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                                    <div id="progress_bar_dinamica"
+                                        class="bg-blue-500 h-full rounded-full transition-all duration-500"
+                                        style="width: {{ porcentagem | round }}%"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
                     <div class="flex-1 w-full sm:w-auto sm:max-w-xs">
-                        <label class="text-xs font-bold text-slate-500 uppercase mb-1 block">Produção Realizada</label>
+                        <label class="text-xs font-bold text-slate-500 uppercase mb-1 block">Produção Realizada no
+                            dia</label>
                         <div class="flex items-center gap-2">
                             <input type="number" name="qtd_produzida" step="0.01"
-                                class="form-control-std font-bold text-blue-700 text-center" placeholder="0.00"
+                                class="form-control-std font-bold text-blue-700 text-center h-12 text-lg"
+                                placeholder="0.00"
                                 value="{{ item.qtd_produzida if item and item.qtd_produzida is not none else '' }}"
-                                {{ 'readonly' if view_mode }}>
-                            <span id="label_unidade_input"
-                                class="text-sm font-bold text-slate-400 w-10 text-center bg-slate-100 rounded py-2 border border-slate-200">{{
+                                {{ 'disabled' if view_mode }}>
+                            <span
+                                class="label_unidade_dinamica text-sm font-bold text-slate-400 w-12 text-center bg-slate-100 rounded py-3 border border-slate-200">{{
                                 item.frente_trabalho.unidade if item and item.frente_trabalho else '-' }}</span>
                         </div>
                     </div>
@@ -1194,7 +1249,7 @@
 <!-- ========================================== -->
 <!-- MODAIS (Mobile Optimized) -->
 <!-- ========================================== -->
-
+<!-- (Os modais permanecem iguais) -->
 <!-- Modal Webcam (Desktop) -->
 <div id="modal_webcam" class="modal-overlay z-[10010]">
     <div class="modal-content max-w-2xl bg-black border-0">
@@ -1540,24 +1595,42 @@
             const selectedOption = $(this).find(':selected');
             const meta = selectedOption.data('meta');
             const unidade = selectedOption.data('unidade');
+            const realizado = selectedOption.data('realizado') || 0; // Se não tiver, assume 0
 
             const blocoProgresso = document.getElementById('block_progresso');
-            const labelMeta = document.getElementById('label_meta');
-            const labelUnidade = document.getElementById('label_unidade');
-            const labelUnidadeInput = document.getElementById('label_unidade_input');
+            // Elementos de texto
+            const labelMeta = document.getElementById('label_meta_valor');
+            const labelRealizado = document.getElementById('label_realizado_valor');
+            // Elementos de classe (unidade aparece em vários lugares)
+            const labelsUnidade = document.querySelectorAll('.label_unidade_dinamica');
+
+            // Barra de Progresso
+            const progressBar = document.getElementById('progress_bar_dinamica');
 
             // Se tem meta definida (maior que zero ou unidade definida), mostra o bloco
             if (unidade && unidade !== '') {
                 blocoProgresso.classList.remove('hidden');
-                labelMeta.textContent = meta || '0';
-                labelUnidade.textContent = unidade;
-                labelUnidadeInput.textContent = unidade;
+
+                // Atualiza Textos
+                if (labelMeta) labelMeta.textContent = meta || '0';
+                if (labelRealizado) labelRealizado.textContent = realizado || '0';
+
+                labelsUnidade.forEach(el => {
+                    el.textContent = unidade;
+                });
+
+                // Calcula e anima barra de progresso
+                let porcentagem = 0;
+                if (meta > 0) {
+                    porcentagem = (realizado / meta) * 100;
+                }
+                if (progressBar) progressBar.style.width = Math.round(porcentagem) + '%';
+
             } else if (selectedOption.val() === '') {
                 // Se desmarcou (selecione...), esconde
                 blocoProgresso.classList.add('hidden');
             } else {
-                // Caso não tenha meta definida na frente, podemos esconder ou mostrar zerado.
-                // Opção: Esconder para não poluir se não for usar.
+                // Caso não tenha meta definida na frente
                 blocoProgresso.classList.add('hidden');
             }
         });
@@ -1631,10 +1704,13 @@
             } else {
                 let options = '<option value="">Selecione a Frente...</option>';
                 frentes.forEach(f => {
-                    // ATUALIZAÇÃO: Incluindo data-meta e data-unidade
+                    // ATUALIZAÇÃO: Incluindo data-meta, data-unidade e data-realizado
                     const meta = f.qtd_planejada || 0;
                     const unid = f.unidade || '';
-                    options += `<option value="${f.id}" data-meta="${meta}" data-unidade="${unid}">${f.nome}</option>`;
+                    // Se a API não retornar qtd_realizada, assumimos 0. Idealmente a API /api/obra deve retornar isso
+                    const realizado = f.qtd_realizada || 0;
+
+                    options += `<option value="${f.id}" data-meta="${meta}" data-unidade="${unid}" data-realizado="${realizado}">${f.nome}</option>`;
                 });
                 selectFrente.html(options);
             }

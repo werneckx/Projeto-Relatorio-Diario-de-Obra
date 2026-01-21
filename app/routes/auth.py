@@ -314,7 +314,8 @@ def get_obra_api(id):
             "responsavel_nome": nome_resp_frente,
             "responsavel_id": id_resp_frente,
             "unidade": f.unidade or "",
-            "qtd_planejada": f.qtd_planejada or 0
+            "qtd_planejada": f.qtd_planejada or 0,
+            "qtd_realizada": f.qtd_realizada or 0
         })
 
     # 6. Retorno do JSON com os nomes de campos corretos
