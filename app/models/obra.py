@@ -35,11 +35,28 @@ class Frente_Trabalho(db.Model):
     # Garanta que a FK aponte para 'obras.id' (nome da tabela e coluna)
     id_obra = db.Column(db.Integer, db.ForeignKey('obras.id'), nullable=False)
     # AJUSTE: nullable=True para permitir criar a frente sem atribuir um responsável de imediato
-    # Verifique se o __tablename__ do seu modelo de usuário é realmente 'usuarios'
     id_responsavel = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=True)
     nome_frente = db.Column(db.String(120), nullable=False)
+    unidade = db.Column(db.String(50), nullable=False)
+    qtd_planejada = db.Column(db.Float, nullable=False)
     
     responsavel = db.relationship('Usuario', backref='frentes')
+
+    # --- NOVA PROPRIEDADE ---
+    @property
+    def qtd_realizada(self):
+        """Calcula o total realizado somando a qtd_produzida dos RDOs desta frente."""
+        from app import db
+        from app.models.rdo import RDO
+        from sqlalchemy import func
+        
+        # Soma a coluna qtd_produzida da tabela RDO filtrando pela frente atual
+        # Opcional: Adicionar .filter(RDO.status != 'Rejeitado') se quiser ignorar rejeitados
+        total = db.session.query(func.sum(RDO.qtd_produzida)).filter(
+            RDO.id_frente_trabalho == self.id_frente_trabalho
+        ).scalar()
+        
+        return total if total is not None else 0.0
 
     def __repr__(self):
         return f'<Frente {self.nome_frente}>'

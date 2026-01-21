@@ -312,7 +312,9 @@ def get_obra_api(id):
             "id": f.id_frente_trabalho, 
             "nome": f.nome_frente,
             "responsavel_nome": nome_resp_frente,
-            "responsavel_id": id_resp_frente
+            "responsavel_id": id_resp_frente,
+            "unidade": f.unidade or "",
+            "qtd_planejada": f.qtd_planejada or 0
         })
 
     # 6. Retorno do JSON com os nomes de campos corretos
@@ -334,6 +336,7 @@ def get_frente_api(id):
     frente = Frente_Trabalho.query.get_or_404(id)
     return jsonify({
         "responsavel": frente.responsavel_tecnico.nome if frente.responsavel_tecnico else None
+        
     })
 
 # Gerar ou Editar RDO (POST)
@@ -363,6 +366,7 @@ def gerar_rdo():
             
         def _get_float(key):
             v = request.form.get(key)
+            if not v: return None
             try: return float(v.replace(',', '.'))
             except: return None
 
@@ -402,10 +406,16 @@ def gerar_rdo():
             # ==============================
             # INSERT (NOVO RDO)
             # ==============================
-            num_existentes = RDO.query.filter_by(id_obra=id_obra, id_revisao=0).count()
+            # CORREÇÃO: Usar MAX(id_sequencial) em vez de COUNT para evitar erros se houver exclusões
+            # Buscamos o maior id_sequencial usado nesta obra, independente de revisão ou exclusão
+            max_seq = db.session.query(func.max(RDO.id_sequencial)).filter_by(id_obra=id_obra).scalar()
+            
+            # Se não houver nenhum, começa do 1. Se houver, soma 1.
+            proximo_seq = (max_seq if max_seq is not None else 0) + 1
+            
             item_rdo = RDO(
                 id_obra=id_obra,
-                id_sequencial=num_existentes + 1,
+                id_sequencial=proximo_seq,
                 id_revisao=0
             )
             item_rdo.criado = now_br
@@ -419,6 +429,8 @@ def gerar_rdo():
         item_rdo.data = data_rdo
         item_rdo.modificado = now_br
         item_rdo.comentarios_gerais = request.form.get("comentarios_gerais")
+        # ALTERAÇÃO AQUI: Usando _get_float para converter corretamente
+        item_rdo.qtd_produzida = _get_float("qtd_produzida")
         
         # Horários
         item_rdo.hora_entrada = _get_time("hora_entrada")
@@ -469,14 +481,14 @@ def gerar_rdo():
         qtd_prop = request.form.getlist("mo_qtd_propria[]")
         qtd_terc = request.form.getlist("mo_qtd_terceirizada[]")
         tempos = request.form.getlist("mo_tempo[]")
-        for i, func in enumerate(funcoes):
-            if func and func.strip():
+        for i, mo_func in enumerate(funcoes):
+            if mo_func and mo_func.strip():
                 qp = int(qtd_prop[i]) if i < len(qtd_prop) and qtd_prop[i] else 0
                 qt = int(qtd_terc[i]) if i < len(qtd_terc) and qtd_terc[i] else 0
                 tempo_str = tempos[i] if i < len(tempos) else None
                 tempo_obj = datetime.strptime(tempo_str, '%H:%M').time() if tempo_str else None
                 nova_mo = RDOMaoObra(
-                    id_rdo=item_rdo.id, nome_funcao=func,
+                    id_rdo=item_rdo.id, nome_funcao=mo_func,
                     quantidade_propria=qp, quantidade_terceirizada=qt, tempo=tempo_obj
                 )
                 db.session.add(nova_mo)
@@ -1830,7 +1842,7 @@ def gerar_obra():
             
             flash("Obra cadastrada com sucesso!", "success")
 
-        # --- PROCESSAMENTO DAS FRENTES (Comum a Criação e Edição) ---
+        # --- PROCESSAMENTO DAS FRENTES (CORRIGIDO) ---
         if frentes_payload:
             data = json.loads(frentes_payload)
             
@@ -1840,10 +1852,14 @@ def gerar_obra():
             
             # 2. Adicionar novas frentes
             for f_nova in data.get('novas', []):
+                # CORREÇÃO: Removida a instanciação duplicada
                 nova_frente = Frente_Trabalho(
-                    id_obra=obra.id, # AQUI O ID JÁ EXISTE (graças ao flush ou query.get)
+                    id_obra=obra.id,
                     nome_frente=f_nova['nome_frente'],
-                    id_responsavel=f_nova['id_responsavel'] if f_nova['id_responsavel'] else None
+                    id_responsavel=f_nova['id_responsavel'] if f_nova['id_responsavel'] else None,
+                    # Novos campos incluídos aqui:
+                    unidade=f_nova.get('unidade'),
+                    qtd_planejada=float(f_nova.get('qtd_planejada')) if f_nova.get('qtd_planejada') else 0
                 )
                 db.session.add(nova_frente)
 

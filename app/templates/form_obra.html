@@ -341,7 +341,7 @@
             </div>
         </section>
 
-        {# SEÇÃO DE FRENTES - Agora sempre visível #}
+        {# SEÇÃO DE FRENTES - Agora com Select de Unidades #}
         <section class="bg-white rounded-lg p-6 border shadow-sm space-y-6 mt-6">
             <div class="flex items-center gap-3 mb-4">
                 <div class="w-10 h-10 rounded bg-purple-100 text-purple-600 flex items-center justify-center">
@@ -349,56 +349,99 @@
                 </div>
                 <div>
                     <h3 class="font-semibold text-slate-800 uppercase text-sm tracking-wide">Frentes de Trabalho</h3>
-                    <p class="text-[10px] text-slate-500">Defina as divisões operacionais desta obra.</p>
+                    <p class="text-[10px] text-slate-500">Defina as divisões operacionais, unidade e metas físicas desta
+                        obra.</p>
                 </div>
             </div>
 
             {% if not view_mode %}
             <div class="grid grid-cols-1 md:grid-cols-12 gap-2 bg-white p-4 rounded-lg border border-slate-200">
                 <input type="text" id="nome_frente_nova" placeholder="Nome da Frente (ex: Alvenaria)"
-                    class="md:col-span-5 border rounded-lg px-3 py-2 h-10 text-sm focus:ring-1 focus:ring-purple-500 outline-none">
+                    class="md:col-span-4 border rounded-lg px-3 py-2 text-sm outline-none focus:border-purple-500 transition">
+
+                <!-- ALTERAÇÃO AQUI: Select de Unidades -->
+                <select id="unidade_nova"
+                    class="md:col-span-2 border rounded-lg px-3 py-2 text-sm outline-none focus:border-purple-500 transition text-center bg-white"
+                    title="Unidade de Medida">
+                    <option value="m²">m²</option>
+                    <option value="m³">m³</option>
+                    <option value="m">m</option>
+                    <option value="un">un</option>
+                    <option value="kg">kg</option>
+                    <option value="t">t</option>
+                    <option value="vb">vb</option> <!-- Verba -->
+                    <option value="cj">cj</option> <!-- Conjunto -->
+                    <option value="h">h</option> <!-- Horas -->
+                </select>
+
+                <input type="number" id="qtd_nova" placeholder="Qtd Total" step="0.01" value="0.00"
+                    class="md:col-span-2 border rounded-lg px-3 py-2 text-sm outline-none focus:border-purple-500 transition text-center"
+                    title="Quantidade Planejada/Executada">
+                <!-- FIM ALTERAÇÃO -->
+
                 <select id="id_responsavel_novo"
-                    class="md:col-span-5 border rounded-lg px-3 py-2 h-10 text-sm focus:ring-1 focus:ring-purple-500 outline-none">
-                    <option value="">Responsável Técnico</option>
+                    class="md:col-span-3 border rounded-lg px-3 py-2 text-sm outline-none focus:border-purple-500 transition">
+                    <option value="">Responsável</option>
                     {% for u in usuarios %}
                     <option value="{{ u.id }}" data-nome="{{ u.nome }}">{{ u.nome }}</option>
                     {% endfor %}
                 </select>
+
                 <button type="button" onclick="interagirFrente()"
-                    class="md:col-span-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition flex items-center justify-center">
+                    class="md:col-span-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition shadow-sm">
                     <i class="fas fa-plus"></i>
                 </button>
             </div>
             {% endif %}
 
-            <div class="overflow-x-auto border bg-white rounded-lg">
+            <div class="overflow-x-auto border bg-white rounded-lg mt-3">
                 <table class="w-full text-left text-sm">
                     <thead class="bg-slate-50 border-b">
                         <tr>
-                            <th class="px-4 py-3 font-bold text-slate-600 uppercase text-[10px]">Nome da Frente</th>
-                            <th class="px-4 py-3 font-bold text-slate-600 uppercase text-[10px] text-right">Ações</th>
+                            <th class="px-4 py-3 font-bold text-slate-600 uppercase text-[10px] w-5/12">Nome da Frente
+                            </th>
+                            <th class="px-4 py-3 font-bold text-slate-600 uppercase text-[10px] text-center w-2/12">
+                                Unid.</th>
+                            <th class="px-4 py-3 font-bold text-slate-600 uppercase text-[10px] text-center w-2/12">Qtd.
+                                Planejada</th>
+                            <th class="px-4 py-3 font-bold text-slate-600 uppercase text-[10px] text-center w-2/12">Qtd.
+                                Realizada</th>
+                            <th class="px-4 py-3 font-bold text-slate-600 uppercase text-[10px] text-right w-3/12">Ações
+                            </th>
                         </tr>
                     </thead>
                     <tbody id="lista-frentes">
                         {% if frentes %}
                         {% for f in frentes %}
-                        <tr class="border-b last:border-0" id="frente-real-{{ f.id_frente_trabalho }}">
+                        <tr class="border-b last:border-0 hover:bg-slate-50 transition"
+                            id="frente-real-{{ f.id_frente_trabalho }}">
                             <td class="px-4 py-3">
                                 <p class="font-medium text-slate-800">{{ f.nome_frente }}</p>
                                 <p class="text-xs text-slate-500">Resp: {{ f.responsavel.nome if f.responsavel else 'Não
                                     definido' }}</p>
                             </td>
+                            <td class="px-4 py-3 text-center text-slate-600 font-mono text-xs">
+                                {{ f.unidade or '-' }}
+                            </td>
+                            <td class="px-4 py-3 text-center text-slate-800 font-bold text-xs">
+                                {{ f.qtd_planejada or '0.00' }}
+                            </td>
+                            <td class="px-4 py-3 text-center text-slate-800 font-bold text-xs">
+                                {{ f.qtd_realizada or '0.00' }}
+                            </td>
                             <td class="px-4 py-3 text-right">
                                 {% if not view_mode %}
                                 <button type="button" onclick="removerFrenteExistente({{ f.id_frente_trabalho }})"
-                                    class="text-red-400 hover:text-red-600"><i class="fas fa-trash-alt"></i></button>
+                                    class="text-red-400 hover:text-red-600 transition p-2 rounded-full hover:bg-red-50">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
                                 {% endif %}
                             </td>
                         </tr>
                         {% endfor %}
                         {% else %}
                         <tr id="sem-frentes">
-                            <td colspan="2" class="px-4 py-8 text-center text-slate-400 italic">Nenhuma frente
+                            <td colspan="4" class="px-4 py-8 text-center text-slate-400 italic">Nenhuma frente
                                 adicionada.</td>
                         </tr>
                         {% endif %}
@@ -406,7 +449,6 @@
                 </table>
             </div>
         </section>
-
 
         <div class="flex flex-col sm:flex-row gap-3 pt-4 border-t">
             {% if view_mode %}
@@ -611,6 +653,11 @@
         const idResp = selectResp.value;
         const nomeResp = selectResp.options[selectResp.selectedIndex].getAttribute('data-nome') || 'Não definido';
 
+        // NOVOS CAMPOS
+        // Pega o valor do SELECT agora
+        const unidade = document.getElementById('unidade_nova').value;
+        const qtd = document.getElementById('qtd_nova').value.trim();
+
         if (!nome) return alert("Digite o nome da frente");
 
         // Adiciona à lista local de novas frentes
@@ -618,16 +665,20 @@
             id_temp: Date.now(), // ID temporário apenas para manipulação DOM
             nome_frente: nome,
             id_responsavel: idResp || null,
-            nome_responsavel: nomeResp
+            nome_responsavel: nomeResp,
+            unidade: unidade || 'm²',
+            qtd_planejada: qtd || 0
         };
 
         frentesNovas.push(novaFrente);
         renderizarFrenteNova(novaFrente);
         atualizarInputJson();
 
-        // Limpa campos
+        // Limpa campos e reseta valores padrão
         document.getElementById('nome_frente_nova').value = '';
         document.getElementById('id_responsavel_novo').value = '';
+        document.getElementById('unidade_nova').value = 'm²'; // Reseta para o padrão
+        document.getElementById('qtd_nova').value = '0.00';
         document.getElementById('nome_frente_nova').focus();
     }
 
@@ -646,8 +697,14 @@
                 <p class="font-medium text-slate-800">${f.nome_frente} <span class="text-[9px] bg-purple-100 text-purple-600 px-1 rounded ml-2">Novo</span></p>
                 <p class="text-xs text-slate-500">Resp: ${f.nome_responsavel}</p>
             </td>
+            <td class="px-4 py-3 text-center text-slate-600 font-mono text-xs">
+                ${f.unidade}
+            </td>
+            <td class="px-4 py-3 text-center text-slate-800 font-bold text-xs">
+                ${f.qtd_planejada}
+            </td>
             <td class="px-4 py-3 text-right">
-                <button type="button" onclick="removerFrenteLocal(${f.id_temp})" class="text-red-400 hover:text-red-600">
+                <button type="button" onclick="removerFrenteLocal(${f.id_temp})" class="text-red-400 hover:text-red-600 p-2 rounded-full hover:bg-red-50">
                     <i class="fas fa-times"></i>
                 </button>
             </td>

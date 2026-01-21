@@ -618,24 +618,33 @@
     </div>
     <table class="info-table">
         <tr>
-            <td width="40%">
+            <td width="30%">
                 <span class="label">Frente de Trabalho Ativa</span>
                 <span class="value">{{ rdo.frente_trabalho.nome_frente if rdo.frente_trabalho else 'Geral /
                     Administrativo' }}</span>
             </td>
-            <td width="20%">
+            <td width="15%">
+                <span class="label">Meta</span>
+                <span class="value">{{ rdo.frente_trabalho.qtd_planejada }} {{ rdo.frente_trabalho.unidade }}</span>
+            </td>
+            <td width="15%">
+                <span class="label">Realizada no dia</span>
+                <span class="value">{{ rdo.qtd_produzida if rdo.qtd_produzida else '0.00' }} {{
+                    rdo.frente_trabalho.unidade }}</span>
+            </td>
+            <td width="15%">
                 <span class="label">Clima Manhã</span>
                 <span class="value">
                     {{ rdo.clima_manha_obj.nome if rdo.clima_manha_obj else '-' }}
                 </span>
             </td>
-            <td width="20%">
+            <td width="15%">
                 <span class="label">Clima Tarde</span>
                 <span class="value">
                     {{ rdo.clima_tarde_obj.nome if rdo.clima_tarde_obj else '-' }}
                 </span>
             </td>
-            <td width="20%">
+            <td width="15%">
                 <span class="label">Horário de Trabalho</span>
                 <span class="value">
                     {{ rdo.hora_entrada.strftime('%H:%M') if rdo.hora_entrada else '--:--' }} às

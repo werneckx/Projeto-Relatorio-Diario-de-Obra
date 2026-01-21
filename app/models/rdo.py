@@ -25,6 +25,7 @@ class RDO(db.Model):
     data = db.Column(db.Date, nullable=False)
     status = db.Column(db.String(100)) # Pendente, Revisado, Aprovado, Rejeitado
     comentarios_gerais = db.Column(db.Text, nullable=True)
+    qtd_produzida = db.Column(db.Float, nullable=True)
 
     # Campos de Horário (Novos)
     hora_entrada = db.Column(db.Time, nullable=True)

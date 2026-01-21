@@ -291,6 +291,10 @@
                 <b>Obra:</b> {{ rdo.obra.nome|truncate(50) }}<br>
                 <b>Cliente:</b> {{ rdo.obra.contratante|truncate(50) }}<br>
                 <b>Frente:</b> {{ rdo.frente_trabalho.nome_frente|default('Geral') }}
+                <b>Meta da frente:</b> {{ rdo.frente_trabalho.qtd_planejada }} {{ rdo.frente_trabalho.unidade }}<br>
+                <b>Produção Realizada:</b> {{ rdo.qtd_produzida if rdo.qtd_produzida else '0.00' }} {{
+                rdo.frente_trabalho.unidade
+                }}<br>
             </td>
             <td width="40%">
                 <b>Horário:</b> {{ rdo.hora_entrada.strftime('%H:%M') }} - {{ rdo.hora_saida.strftime('%H:%M') }} (Int:

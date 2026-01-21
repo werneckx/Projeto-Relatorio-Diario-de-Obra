@@ -593,9 +593,11 @@
                                 endif %}</option>
                             {% if item and item.id_frente_trabalho %}
                             {% for frente in frente_trabalho %}
+                            <!-- AQUI: Injetamos data-meta e data-unidade para funcionar no carregamento inicial -->
                             <option value="{{ frente.id_frente_trabalho if frente.id_frente_trabalho else frente.id }}"
-                                {% if item.id_frente_trabalho==(frente.id_frente_trabalho if frente.id_frente_trabalho
-                                else frente.id) %}selected{% endif %}>
+                                data-meta="{{ frente.qtd_planejada or 0 }}" data-unidade="{{ frente.unidade or '' }}" {%
+                                if item.id_frente_trabalho==(frente.id_frente_trabalho if frente.id_frente_trabalho else
+                                frente.id) %}selected{% endif %}>
                                 {{ frente.nome_frente }}
                             </option>
                             {% endfor %}
@@ -607,6 +609,39 @@
                     <div id="error_frente" class="hidden text-xs text-red-500 mt-1 font-medium"><i
                             class="fas fa-exclamation-triangle mr-1"></i> Erro ao carregar.</div>
                 </div>
+
+                <!-- BLOCO DE AVANÇO FÍSICO (Novo) -->
+                <div id="block_progresso"
+                    class="{% if not (item and item.frente_trabalho and item.frente_trabalho.unidade) %}hidden{% endif %} md:col-span-4 bg-blue-50/50 rounded-lg p-3 border border-blue-100 flex flex-col sm:flex-row gap-4 items-center justify-between mt-2">
+                    <div class="flex items-center gap-3 text-sm text-slate-700">
+                        <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-500 font-bold uppercase">Meta da Frente</p>
+                            <p class="font-bold text-lg leading-none">
+                                <span id="label_meta">{{ item.frente_trabalho.qtd_planejada if item and
+                                    item.frente_trabalho else '0' }}</span>
+                                <span id="label_unidade" class="text-xs text-slate-500 ml-1 font-normal">{{
+                                    item.frente_trabalho.unidade if item and item.frente_trabalho else '-' }}</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="flex-1 w-full sm:w-auto sm:max-w-xs">
+                        <label class="text-xs font-bold text-slate-500 uppercase mb-1 block">Produção Realizada</label>
+                        <div class="flex items-center gap-2">
+                            <input type="number" name="qtd_produzida" step="0.01"
+                                class="form-control-std font-bold text-blue-700 text-center" placeholder="0.00"
+                                value="{{ item.qtd_produzida if item and item.qtd_produzida is not none else '' }}"
+                                {{ 'readonly' if view_mode }}>
+                            <span id="label_unidade_input"
+                                class="text-sm font-bold text-slate-400 w-10 text-center bg-slate-100 rounded py-2 border border-slate-200">{{
+                                item.frente_trabalho.unidade if item and item.frente_trabalho else '-' }}</span>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </section>
 
@@ -1493,6 +1528,39 @@
 
         initWorkflowModal();
         updateTotalPhotoCount();
+
+        // --- INICIALIZAR LÓGICA DE FRENTES ---
+        // Se já tiver uma frente selecionada (edição), dispara o evento para mostrar o bloco de progresso
+        if ($('#select_frente').val()) {
+            $('#select_frente').trigger('change');
+        }
+
+        // Listener para mudança na frente
+        $('#select_frente').on('change', function () {
+            const selectedOption = $(this).find(':selected');
+            const meta = selectedOption.data('meta');
+            const unidade = selectedOption.data('unidade');
+
+            const blocoProgresso = document.getElementById('block_progresso');
+            const labelMeta = document.getElementById('label_meta');
+            const labelUnidade = document.getElementById('label_unidade');
+            const labelUnidadeInput = document.getElementById('label_unidade_input');
+
+            // Se tem meta definida (maior que zero ou unidade definida), mostra o bloco
+            if (unidade && unidade !== '') {
+                blocoProgresso.classList.remove('hidden');
+                labelMeta.textContent = meta || '0';
+                labelUnidade.textContent = unidade;
+                labelUnidadeInput.textContent = unidade;
+            } else if (selectedOption.val() === '') {
+                // Se desmarcou (selecione...), esconde
+                blocoProgresso.classList.add('hidden');
+            } else {
+                // Caso não tenha meta definida na frente, podemos esconder ou mostrar zerado.
+                // Opção: Esconder para não poluir se não for usar.
+                blocoProgresso.classList.add('hidden');
+            }
+        });
     });
 
     // --- MASCARA E DATA TOOLS ---
@@ -1540,6 +1608,9 @@
         selectFrente.empty().append('<option value="">Selecione a Frente...</option>');
         $('#error_frente').addClass('hidden');
 
+        // Esconde o bloco de progresso ao trocar de obra
+        document.getElementById('block_progresso').classList.add('hidden');
+
         if (!obraId) {
             selectFrente.prop('disabled', true).trigger('change.select2');
             return;
@@ -1559,7 +1630,12 @@
                 selectFrente.empty().append('<option value="">Nenhuma frente cadastrada</option>');
             } else {
                 let options = '<option value="">Selecione a Frente...</option>';
-                frentes.forEach(f => { options += `<option value="${f.id}">${f.nome}</option>`; });
+                frentes.forEach(f => {
+                    // ATUALIZAÇÃO: Incluindo data-meta e data-unidade
+                    const meta = f.qtd_planejada || 0;
+                    const unid = f.unidade || '';
+                    options += `<option value="${f.id}" data-meta="${meta}" data-unidade="${unid}">${f.nome}</option>`;
+                });
                 selectFrente.html(options);
             }
             selectFrente.prop('disabled', false);
