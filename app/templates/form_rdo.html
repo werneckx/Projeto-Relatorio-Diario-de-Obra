@@ -367,7 +367,7 @@
     }
 </style>
 
-<div class="max-w-7xl mx-auto pb-10">
+<div class="max-w-7xl mx-auto">
     {# --- MENSAGENS FLASH --- #}
     {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
@@ -418,10 +418,12 @@
                 {% if item and (item.criado or item.modificado) %}
                 <div class="flex gap-4 text-xs mt-1 sm:mt-0">
                     {% if item.criado %}
-                    <span><i class="far fa-calendar mr-1"></i>Criado: {{ item.criado.strftime('%d/%m/%Y') }}</span>
+                    <span><i class="far fa-calendar mr-1"></i>Criado: {{ item.criado.strftime('%d/%m/%Y %H:%M')
+                        }}</span>
                     {% endif %}
                     {% if item.modificado %}
-                    <span><i class="far fa-calendar-alt mr-1"></i>Modificado: {{ item.modificado.strftime('%d/%m/%Y')
+                    <span><i class="far fa-calendar-alt mr-1"></i>Modificado: {{ item.modificado.strftime('%d/%m/%Y
+                        %H:%M')
                         }}</span>
                     {% endif %}
                 </div>
@@ -1134,7 +1136,7 @@
 
         {% if not view_mode %}
         <!-- Botão Flutuante ou Fixo no Fim -->
-        <div class="pt-6 pb-20 md:pb-0">
+        <div class="pt-6 ">
             <button type="submit"
                 class="w-full h-14 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold text-lg rounded-xl shadow-lg hover:shadow-xl transition transform active:scale-[0.99] flex items-center justify-center gap-3">
                 <i class="fas fa-save"></i> SALVAR RDO
@@ -1422,7 +1424,7 @@
             <!-- List Area -->
             <h4 class="text-xs font-bold text-slate-400 uppercase mb-2 pl-2">Sequência Atual (Arraste para reordenar)
             </h4>
-            <div id="sortable_workflow" class="space-y-2 pb-10">
+            <div id="sortable_workflow" class="space-y-2">
                 <!-- Itens via JS -->
             </div>
         </div>
