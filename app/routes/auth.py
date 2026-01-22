@@ -49,7 +49,7 @@ def index():
 ####################################################################################################### Login e Logout
 #######################################################################################################
 
-# Decorator: login_required
+# Decorator para proteger rotas que exigem login
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -61,14 +61,12 @@ def login_required(f):
 
     return decorated
 
-
-# Tela de Login (GET)
+# Tela de Login (Renderização)
 @auth_bp.get("/login")
 def login():
     return render_template("login.html")
 
-
-# Tela de Login (POST)
+# Tela de Login (Logar)
 @auth_bp.post("/login")
 def login_post():
     email = request.form.get("email")
@@ -77,26 +75,20 @@ def login_post():
     # Importar Usuario aqui, apenas onde é usado na rota
     from app.models.usuario import Usuario
 
-    # 1. Adicionar o filtro 'ativo=1' (ou outro campo/valor que defina o status ativo)
-    # Supondo que 'ativo' é um campo booleano (1 para Ativo, 0 para Inativo)
+    # 1. Adicionar o filtro 'ativo=1'
     user = Usuario.query.filter_by(email=email, status=1).first()
 
-    # Se 'ativo' for o nome do campo de status:
+    # 2. Verificar se o usuário existe e se a senha está correta
     if not user or not check_password_hash(user.senha, senha):
-        # O usuário não existe, a senha está incorreta OU o status não é ativo (ativo != 1)
         flash("E-mail, senha ou status de usuário inválido.", "error")
         return redirect(url_for("auth.login"))
-
-    # Se a lógica for não filtrar no banco, mas checar o status 'ativo' depois:
-    # user = Usuario.query.filter_by(email=email).first()
-    # if not user or not check_password_hash(user.senha, senha) or user.ativo != 1:
-    #     flash("E-mail, senha ou status de usuário inválido.", "error")
-    #     return redirect(url_for("auth.login"))
     
     session["user_id"] = user.id
     session["user_name"] = user.nome
     session["user_email"] = user.email
     session["user_role"] = user.papel
+
+    flash("Bem vindo " + user.nome, "success")
 
     return redirect(url_for("auth.inicio"))
 
@@ -118,20 +110,18 @@ def inicio():
     return render_template("inicio.html")
 
 #######################################################################################################
-####################################################################################################### Configurações
+####################################################################################################### Empresa
 #######################################################################################################
 
+# Injetar nome da empresa globalmente
 @auth_bp.app_context_processor
 def inject_company_info():
     from app.models.empresa import Empresa
-    # Aqui simulamos a busca no banco. 
-    # Se não houver nada no banco, define um nome padrão.
     nome_empresa = Empresa.query.first().nome_empresa if Empresa.query.first() else "Não definido" 
-    # No futuro: nome_empresa = Configuracao.query.first().nome_empresa
     
     return dict(nome_empresa_global=nome_empresa)
 
-# Página inicio
+# Página Empresa (Configurações)
 @auth_bp.get("/empresa")
 @login_required
 def empresa():
@@ -140,9 +130,10 @@ def empresa():
         'nome_empresa': Empresa.query.first().nome_empresa if Empresa.query.first() else '',
         'logo_path': 'logo/logo.png',
         'icone_path': 'logo/icone.png'
-    }
-    return render_template('configuracoes.html', config_data=config_data, view_mode=True)
+    } # Carrega dados da empresa do banco de dados
+    return render_template('empresa.html', config_data=config_data, view_mode=True)
 
+# Salvar Configurações da Empresa
 @auth_bp.route('/salvar-empresa', methods=['POST'])
 def salvar_empresa():
     nome_empresa = request.form.get('nome_empresa')
@@ -151,7 +142,6 @@ def salvar_empresa():
 
     try:
         # 1. Atualizar Nome no Banco de Dados
-        # Ajuste o filtro se houver mais de uma empresa, ou use .first()
         db.session.query(Empresa).update({'nome_empresa': nome_empresa})
         
         upload_folder = os.path.join(current_app.root_path, 'static', 'logo')
@@ -193,6 +183,7 @@ def salvar_empresa():
 ####################################################################################################### PDF
 #######################################################################################################
 
+# Gerar PDF RDO
 @auth_bp.get("/gerar-pdf/<int:rdo_id>")
 @login_required
 def gerar_pdf_rdo_view(rdo_id):
@@ -216,6 +207,7 @@ def gerar_pdf_rdo_view(rdo_id):
         flash("Erro ao gerar o PDF. Verifique se as imagens e dados estão corretos.", "danger")
         return redirect(url_for('auth.visualizar_rdo', rdo_id=rdo_id))
 
+# Gerar PDF RDO Compacto
 @auth_bp.get("/gerar-pdf-compacto/<int:rdo_id>")
 @login_required
 def gerar_pdf_rdo_compacto_view(rdo_id):
@@ -243,6 +235,7 @@ def gerar_pdf_rdo_compacto_view(rdo_id):
 ####################################################################################################### RDO
 #######################################################################################################
 
+# Criar RDO
 @auth_bp.get("/criar-rdo")
 @login_required
 def criar_rdo():
@@ -278,7 +271,8 @@ def criar_rdo():
         equipamentos_options=equipamentos_options, 
         tags_options=tags_options 
     )
-    
+
+# API Obra JSON
 @auth_bp.get("/api/obra/<int:id>")
 @login_required
 def get_obra_api(id):
@@ -330,7 +324,8 @@ def get_obra_api(id):
         "responsavel": nome_responsavel,
         "frentes": lista_frentes
     })
-    
+
+# API Frente de Trabalho JSON
 @auth_bp.get("/api/frente/<int:id>")
 @login_required
 def get_frente_api(id):
@@ -683,7 +678,6 @@ def visualizar_rdo(rdo_id):
     )
 
 # Editar RDO
-
 @auth_bp.get("/editar-rdo/<int:rdo_id>")
 @login_required
 def editar_rdo(rdo_id):
@@ -759,7 +753,8 @@ def editar_rdo(rdo_id):
         Fotos=Fotos,
         TagsOcorrencias=TagsOcorrencias
     )
-    
+
+# Excluir RDO
 @auth_bp.post("/excluir-rdo/<int:rdo_id>")
 @login_required
 def excluir_rdo(rdo_id):
@@ -796,7 +791,6 @@ def excluir_rdo(rdo_id):
         return redirect(url_for('auth.inicio'))
 
 # Lista RDO (placeholder)
-
 @auth_bp.get("/lista-rdo")
 @login_required
 def lista_rdo():
@@ -831,6 +825,60 @@ def lista_rdo():
     ).count()
 
     return render_template("list_rdo.html", rdos=rdos, count_minhas_pendencias=minhas_pendencias, lista_pendencias=lista_pendencias)
+
+#######################################################################################################
+####################################################################################################### Assinaturas RDO
+#######################################################################################################
+
+# Salvar NOVO Workflow (Definir Sequência)
+@auth_bp.route("/assinar-rdo/<int:rdo_id>/salvar-workflow", methods=["POST"])
+@login_required
+def salvar_workflow_assinaturas(rdo_id):
+    from app.models.rdo import RDO, Assinatura
+    
+    rdo = RDO.query.get_or_404(rdo_id)
+    
+    # Só permite editar workflow se não estiver finalizado
+    if rdo.status in ['Aprovado', 'Rejeitado']:
+         return jsonify({"success": False, "message": "RDO finalizado, não é possível alterar aprovadores."}), 403
+
+    data = request.get_json()
+    # IDs vindo do checkbox (ex: [5, 9])
+    novos_assinantes_ids = [int(uid) for uid in data.get('usuarios_ids', [])] 
+    
+    creator_id = rdo.id_usuario
+
+    # REGRA DE OURO: O criador DEVE estar na lista e DEVE ser o primeiro.
+    # 1. Se o criador já estiver na lista vinda do front, removemos para evitar duplicidade
+    if creator_id in novos_assinantes_ids:
+        novos_assinantes_ids.remove(creator_id)
+    
+    # 2. Inserimos o criador forçadamente na posição 0
+    novos_assinantes_ids.insert(0, creator_id)
+
+    try:
+        # Limpa assinaturas anteriores (Reinicia fluxo)
+        Assinatura.query.filter_by(id_rdo=rdo_id).delete()
+        
+        # Cria novos registros na ordem correta
+        for index, user_id in enumerate(novos_assinantes_ids):
+            nova_ass = Assinatura(
+                id_rdo=rdo_id,
+                id_usuario=user_id,
+                ordem=index + 1, # Ordem 1, 2, 3...
+                status='Pendente'
+            )
+            db.session.add(nova_ass)
+            
+        # Garante que status do RDO volta a Pendente se o workflow reiniciou
+        rdo.status = 'Pendente'
+            
+        db.session.commit()
+        return jsonify({"success": True})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "message": str(e)}), 500
 
 # Assinar RDO (Execução da assinatura)
 @auth_bp.route("/assinar-rdo/<int:rdo_id>/aprovar-rdo", methods=["POST"])
@@ -907,58 +955,6 @@ def assinar_rdo(rdo_id):
         db.session.rollback()
         return jsonify({"success": False, "message": str(e)}), 500
     
-
-# Salvar NOVO Workflow (Definir Sequência)
-@auth_bp.route("/assinar-rdo/<int:rdo_id>/salvar-workflow", methods=["POST"])
-@login_required
-def salvar_workflow_assinaturas(rdo_id):
-    from app.models.rdo import RDO, Assinatura
-    
-    rdo = RDO.query.get_or_404(rdo_id)
-    
-    # Só permite editar workflow se não estiver finalizado
-    if rdo.status in ['Aprovado', 'Rejeitado']:
-         return jsonify({"success": False, "message": "RDO finalizado, não é possível alterar aprovadores."}), 403
-
-    data = request.get_json()
-    # IDs vindo do checkbox (ex: [5, 9])
-    novos_assinantes_ids = [int(uid) for uid in data.get('usuarios_ids', [])] 
-    
-    creator_id = rdo.id_usuario
-
-    # REGRA DE OURO: O criador DEVE estar na lista e DEVE ser o primeiro.
-    # 1. Se o criador já estiver na lista vinda do front, removemos para evitar duplicidade
-    if creator_id in novos_assinantes_ids:
-        novos_assinantes_ids.remove(creator_id)
-    
-    # 2. Inserimos o criador forçadamente na posição 0
-    novos_assinantes_ids.insert(0, creator_id)
-
-    try:
-        # Limpa assinaturas anteriores (Reinicia fluxo)
-        Assinatura.query.filter_by(id_rdo=rdo_id).delete()
-        
-        # Cria novos registros na ordem correta
-        for index, user_id in enumerate(novos_assinantes_ids):
-            nova_ass = Assinatura(
-                id_rdo=rdo_id,
-                id_usuario=user_id,
-                ordem=index + 1, # Ordem 1, 2, 3...
-                status='Pendente'
-            )
-            db.session.add(nova_ass)
-            
-        # Garante que status do RDO volta a Pendente se o workflow reiniciou
-        rdo.status = 'Pendente'
-            
-        db.session.commit()
-        return jsonify({"success": True})
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"success": False, "message": str(e)}), 500
-    
-
 # Rota de Rejeição
 @auth_bp.route("/assinar-rdo/<int:id_assinatura>/rejeitar-rdo", methods=["POST"])
 @login_required
@@ -995,7 +991,6 @@ def rejeitar_assinatura(id_assinatura):
 #######################################################################################################
 
 # Rota para a lista de usuários
-
 @auth_bp.get("/lista-usuarios")
 @login_required
 def lista_usuarios():
@@ -1033,7 +1028,6 @@ def lista_usuarios():
     return render_template("list_usuarios.html", opcoes=usuarios, categoria="usuario")
 
 # Abrir Formulário de Cadastro de Usuario
-
 @auth_bp.get("/criar-usuario")
 @login_required
 def criar_usuario():
@@ -1056,7 +1050,6 @@ def criar_usuario():
     )
 
 # Salvar/Gerar Usuario (POST)
-
 @auth_bp.post("/gerar-usuario")
 @login_required
 def gerar_usuario():
@@ -1158,7 +1151,6 @@ def gerar_usuario():
             return render_template("form_usuario.html", item=item_form, todas_obras=todas_obras, obra_hierarchy=obra_hierarchy)
 
 # Mudar Status do Usuário (POST)
-
 @auth_bp.post("/mudar-status-usuario/<int:userId>")
 @login_required
 def toggle_user_status(userId):
@@ -1177,21 +1169,18 @@ def toggle_user_status(userId):
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": f"Erro ao atualizar: {str(e)}"}), 500
-    
-    
+     
 # Rota de Reset de Senha corrigida
-
 @auth_bp.post("/usuario-reset/<int:id>")
 @login_required
 def reset_senha_usuario(id):
     from app.models.usuario import Usuario
     user = Usuario.query.get_or_404(id)
-    user.set_senha("EnfilSA@") # Senha padrão solicitada
+    user.set_senha("Usuario123") # Senha padrão solicitada
     db.session.commit()
     return {"message": "Sucesso"}, 200
 
-# Editar Usuário
-        
+# Editar Usuário 
 @auth_bp.route("/editar-usuario/<int:id>", methods=['GET', 'POST'])
 @login_required
 def editar_usuario(id):
@@ -1217,7 +1206,6 @@ def editar_usuario(id):
     )
     
 # Visualizar Usuário
-
 @auth_bp.get("/visualizar-usuario/<int:id>")
 def visualizar_usuario(id):
     from app.models.usuario import Usuario
@@ -1261,7 +1249,6 @@ def visualizar_usuario(id):
     return render_template("form_usuario.html", item=user, categoria="usuario", todas_obras=todas_obras, view_mode=view_mode, obra_hierarchy=obra_hierarchy, supervisor_chain=supervisor_chain, default_supervisor=default_supervisor)
 
 # Endpoint que retorna lista de usuários para selecionar como supervisor
-
 @auth_bp.get('/supervisores')
 @login_required
 def lista_supervisores():
@@ -1276,6 +1263,7 @@ def lista_supervisores():
 ####################################################################################################### CLIMAS
 #######################################################################################################
 
+# Rota para a lista de climas
 @auth_bp.get("/lista-climas")
 @login_required
 def lista_climas():
@@ -1284,14 +1272,14 @@ def lista_climas():
     climas = Clima.query.order_by(Clima.nome.asc()).all()
     return render_template("list_climas.html", opcoes=climas, categoria="clima")
 
-
+# Criar Clima
 @auth_bp.get('/criar-clima')
 @login_required
 def criar_clima():
     # Mostra formulário para criação
     return render_template('form_clima.html', item=None, view_mode=False)
 
-
+# Salvar/Gerar Clima (POST)
 @auth_bp.post('/gerar-clima')
 @login_required
 def gerar_clima():
@@ -1322,7 +1310,7 @@ def gerar_clima():
     flash('Clima criado com sucesso.', 'success')
     return redirect(url_for('auth.lista_climas'))
 
-
+# Visualizar Clima
 @auth_bp.get('/visualizar-clima/<int:id>')
 @login_required
 def visualizar_clima(id):
@@ -1330,7 +1318,7 @@ def visualizar_clima(id):
     clima = Clima.query.get_or_404(id)
     return render_template('form_clima.html', item=clima, view_mode=True)
 
-
+# Editar Clima
 @auth_bp.get('/editar-clima/<int:id>')
 @login_required
 def editar_clima(id):
@@ -1338,7 +1326,7 @@ def editar_clima(id):
     clima = Clima.query.get_or_404(id)
     return render_template('form_clima.html', item=clima, view_mode=False)
 
-
+# Excluir Clima
 @auth_bp.post('/excluir-clima/<int:id>')
 @login_required
 def excluir_clima(id):
@@ -1356,6 +1344,7 @@ def excluir_clima(id):
 ####################################################################################################### EQUIPAMENTOS
 #######################################################################################################
 
+# Rota para a lista de equipamentos
 @auth_bp.get("/lista-equipamentos")
 @login_required
 def lista_equipamentos():
@@ -1364,14 +1353,14 @@ def lista_equipamentos():
     equipamentos = Equipamento.query.order_by(Equipamento.nome.asc()).all()
     return render_template("list_equipamentos.html", opcoes=equipamentos, categoria="equipamento")
 
-
+# Criar Equipamento
 @auth_bp.get('/criar-equipamento')
 @login_required
 def criar_equipamento():
     # Mostra formulário para criação
     return render_template('form_equipamento.html', item=None, view_mode=False)
 
-
+# Salvar/Gerar Equipamento (POST)
 @auth_bp.post('/gerar-equipamento')
 @login_required
 def gerar_equipamento():
@@ -1402,6 +1391,7 @@ def gerar_equipamento():
     flash('Equipamento criado com sucesso.', 'success')
     return redirect(url_for('auth.lista_equipamentos'))
 
+# Visualizar Equipamento
 @auth_bp.get('/visualizar-equipamento/<int:id>')
 @login_required
 def visualizar_equipamento(id):
@@ -1409,6 +1399,7 @@ def visualizar_equipamento(id):
     equipamento = Equipamento.query.get_or_404(id)
     return render_template('form_equipamento.html', item=equipamento, view_mode=True)
 
+# Editar Equipamento
 @auth_bp.get('/editar-equipamento/<int:id>')
 @login_required
 def editar_equipamento(id):
@@ -1416,6 +1407,7 @@ def editar_equipamento(id):
     equipamento = Equipamento.query.get_or_404(id)
     return render_template('form_equipamento.html', item=equipamento, view_mode=False)
 
+# Excluir Equipamento
 @auth_bp.post('/excluir-equipamento/<int:id>')
 @login_required
 def excluir_equipamento(id):
@@ -1433,6 +1425,7 @@ def excluir_equipamento(id):
 ####################################################################################################### TAGS OCORRENCIAS
 #######################################################################################################
 
+# Rota para a lista de tagsOcorrencias
 @auth_bp.get("/lista-tags-ocorrencias")
 @login_required
 def lista_tags_ocorrencias():
@@ -1441,14 +1434,14 @@ def lista_tags_ocorrencias():
     tagsOcorrencias = TagOcorrencia.query.order_by(TagOcorrencia.nome.asc()).all()
     return render_template("list_tags_ocorrencias.html", opcoes=tagsOcorrencias, categoria="tagsOcorrencias")
 
-
+# Criar TagOcorrencia
 @auth_bp.get('/criar-tags-ocorrencias')
 @login_required
 def criar_tags_ocorrencias():
     # Mostra formulário para criação
     return render_template('form_tags_ocorrencias.html', item=None, view_mode=False)
 
-
+# Salvar/Gerar TagOcorrencia (POST)
 @auth_bp.post('/gerar-tags-ocorrencias')
 @login_required
 def gerar_tags_ocorrencias():
@@ -1479,6 +1472,7 @@ def gerar_tags_ocorrencias():
     flash('Tag de ocorrência criada com sucesso.', 'success')
     return redirect(url_for('auth.lista_tags_ocorrencias'))
 
+# Visualizar TagOcorrencia
 @auth_bp.get('/visualizar-tags-ocorrencias/<int:id>')
 @login_required
 def visualizar_tags_ocorrencias(id):
@@ -1486,6 +1480,7 @@ def visualizar_tags_ocorrencias(id):
     tag_ocorrencia = TagOcorrencia.query.get_or_404(id)
     return render_template('form_tags_ocorrencias.html', item=tag_ocorrencia, view_mode=True)
 
+# Editar TagOcorrencia
 @auth_bp.get('/editar-tags-ocorrencias/<int:id>')
 @login_required
 def editar_tags_ocorrencias(id):
@@ -1493,6 +1488,7 @@ def editar_tags_ocorrencias(id):
     tag_ocorrencia = TagOcorrencia.query.get_or_404(id)
     return render_template('form_tags_ocorrencias.html', item=tag_ocorrencia, view_mode=False)
 
+# Excluir TagOcorrencia
 @auth_bp.post('/excluir-tags-ocorrencias/<int:id>')
 @login_required
 def excluir_tags_ocorrencias(id):
@@ -1506,11 +1502,11 @@ def excluir_tags_ocorrencias(id):
     db.session.commit()
     return redirect(url_for('auth.lista_tags_ocorrencias'))
 
-
 #######################################################################################################
 ####################################################################################################### MAO DE OBRA
 #######################################################################################################
 
+# Rota para a lista de mão de obra
 @auth_bp.get("/lista-mao-obra")
 @login_required
 def lista_mao_obra():
@@ -1523,7 +1519,7 @@ def lista_mao_obra():
         categoria="mao_obra"
     )
 
-
+# Criar Mão de Obra
 @auth_bp.get('/criar-mao-obra')
 @login_required
 def criar_mao_obra():
@@ -1534,7 +1530,7 @@ def criar_mao_obra():
         view_mode=False
     )
 
-
+# Salvar/Gerar Mão de Obra (POST)
 @auth_bp.post('/gerar-mao-obra')
 @login_required
 def gerar_mao_obra():
@@ -1575,7 +1571,7 @@ def gerar_mao_obra():
     flash('Mão de obra criada com sucesso.', 'success')
     return redirect(url_for('auth.lista_mao_obra'))
 
-
+# Visualizar Mão de Obra
 @auth_bp.get('/visualizar-mao-obra/<int:id>')
 @login_required
 def visualizar_mao_obra(id):
@@ -1587,7 +1583,7 @@ def visualizar_mao_obra(id):
         view_mode=True
     )
 
-
+# Editar Mão de Obra
 @auth_bp.get('/editar-mao-obra/<int:id>')
 @login_required
 def editar_mao_obra(id):
@@ -1599,7 +1595,7 @@ def editar_mao_obra(id):
         view_mode=False
     )
 
-
+# Excluir Mão de Obra
 @auth_bp.post('/excluir-mao-obra/<int:id>')
 @login_required
 def excluir_mao_obra(id):
@@ -1617,13 +1613,11 @@ def excluir_mao_obra(id):
     flash('Mão de obra excluída com sucesso.', 'success')
     return redirect(url_for('auth.lista_mao_obra'))
 
-
 #######################################################################################################
 ####################################################################################################### OBRAS
 #######################################################################################################
 
 # Rota para a lista de obras
-
 @auth_bp.get("/lista-obras")
 @login_required
 def lista_obras():
@@ -1750,7 +1744,6 @@ def get_supervisor_chain_for_user(user):
     return chain
 
 # Rota para criar nova obra
-
 @auth_bp.get("/criar-obra")
 @login_required
 def criar_obra():
@@ -1765,7 +1758,6 @@ def criar_obra():
     return render_template("form_obra.html", item=None, opcoes_matriz=opcoes_matriz, usuarios=usuarios)
 
 # Rota para mudar status da obra (POST)
-
 @auth_bp.post("/mudar-status-obras/<int:obraid>")
 @login_required
 def toggle_user_obras(obraid):
@@ -1784,8 +1776,7 @@ def toggle_user_obras(obraid):
         db.session.rollback()
         return {"message": f"Erro ao atualizar: {str(e)}"}, 500
     
-# Rota para salvar obra
-
+# Rota para salvar obra (POST)
 @auth_bp.route('/gerar-obra', methods=['POST'])
 @login_required
 def gerar_obra():
@@ -1916,7 +1907,6 @@ def gerar_obra():
         return redirect(url_for('auth.lista_obras'))
     
 # Rota pra editar obra
-
 @auth_bp.get("/editar-obra/<int:id>")
 @login_required
 def editar_obra(id):
@@ -1977,8 +1967,7 @@ def visualizar_obra(id):
         usuarios=usuarios
     )
 
-# Rota para toggle de status da obra (usado em list_obras.html)
-
+# Rota para toggle de status da obra
 @auth_bp.post("/obra/toggle-status/<int:id>")
 @login_required
 def toggle_obra_status(id):
