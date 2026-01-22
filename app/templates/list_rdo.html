@@ -991,8 +991,8 @@
     }
 
     function excluirItem(id) {
-        if (!confirm("Tem certeza que deseja excluir este RDO?")) return;
-        fetch(`/delete/rdo/${id}`, { method: "POST" })
+        if (!confirm("Tem certeza que deseja excluir este RDO? A ação não pode ser desfeita.")) return;
+        fetch(`/auth/excluir-rdo/${id}`, { method: "POST" })
             .then(res => {
                 if (res.ok) window.location.reload();
                 else alert("Erro ao excluir.");

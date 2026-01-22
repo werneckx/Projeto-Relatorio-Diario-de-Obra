@@ -611,53 +611,51 @@
                             class="fas fa-exclamation-triangle mr-1"></i> Erro ao carregar.</div>
                 </div>
 
-                <!-- BLOCO DE AVANÇO FÍSICO (Atualizado com Visual Bonito + Lógica de JS) -->
+                <!-- BLOCO DE AVANÇO FÍSICO (Atualizado com Visual Bonito + Input Otimizado) -->
                 <div id="block_progresso"
-                    class="{% if not (item and item.frente_trabalho and item.frente_trabalho.unidade) %}hidden{% endif %} md:col-span-4 bg-blue-50/50 rounded-lg p-3 border border-blue-100 flex flex-col sm:flex-row gap-4 items-center justify-between mt-2">
+                    class="{% if not (item and item.frente_trabalho and item.frente_trabalho.unidade) %}hidden{% endif %} md:col-span-4 bg-blue-50/50 rounded-lg p-3 border border-blue-100 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mt-2">
 
-                    <!-- Card Visual com IDs específicos para o JS atualizar -->
-                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 w-full sm:w-2/3 md:w-1/2">
+                    <!-- 1. Card Visual de Metas (Lado Esquerdo) -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 w-full sm:flex-1">
                         <div class="flex items-start gap-4">
-                            <!-- Ícone Destacado -->
+                            <!-- Ícone -->
                             <div
-                                class="w-12 h-12 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 text-lg">
+                                class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 text-base">
                                 <i class="fas fa-chart-line"></i>
                             </div>
 
-                            <!-- Conteúdo -->
+                            <!-- Conteúdo de Valores -->
                             <div class="flex-1 min-w-0">
-                                <div class="flex items-center justify-between">
-                                    <!-- Bloco Meta -->
-                                    <div class="mb-3">
-                                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">
-                                            Meta da Frente</p>
+                                <div class="flex items-center justify-between mb-2">
+                                    <!-- Meta -->
+                                    <div>
+                                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">
+                                            Meta</p>
                                         <div class="flex items-baseline gap-1">
-                                            <!-- ID para JS -->
                                             <span id="label_meta_valor"
-                                                class="text-xl font-bold text-slate-800 leading-none">
+                                                class="text-lg font-bold text-slate-800 leading-none">
                                                 {{ item.frente_trabalho.qtd_planejada if item and item.frente_trabalho
                                                 else '0' }}
                                             </span>
-                                            <!-- Classe para JS atualizar todas as unidades -->
-                                            <span class="label_unidade_dinamica text-xs text-slate-500 font-medium">
+                                            <span class="label_unidade_dinamica text-[10px] text-slate-500 font-medium">
                                                 {{ item.frente_trabalho.unidade if item and item.frente_trabalho else
                                                 '-' }}
                                             </span>
                                         </div>
                                     </div>
 
-                                    <!-- Bloco Realizado -->
-                                    <div class="mb-3 text-right">
-                                        <p class="text-[10px] text-emerald-600 font-bold uppercase tracking-wider mb-1">
-                                            Acumulado</p>
+                                    <!-- Acumulado -->
+                                    <div class="text-right">
+                                        <p
+                                            class="text-[10px] text-emerald-600 font-bold uppercase tracking-wider mb-0.5">
+                                            Realizado</p>
                                         <div class="flex items-baseline gap-1 justify-end">
-                                            <!-- ID para JS -->
                                             <span id="label_realizado_valor"
-                                                class="text-xl font-bold text-slate-900 leading-none">
+                                                class="text-lg font-bold text-slate-900 leading-none">
                                                 {{ item.frente_trabalho.qtd_realizada if item and item.frente_trabalho
                                                 else '0' }}
                                             </span>
-                                            <span class="label_unidade_dinamica text-xs text-slate-500 font-medium">
+                                            <span class="label_unidade_dinamica text-[10px] text-slate-500 font-medium">
                                                 {{ item.frente_trabalho.unidade if item and item.frente_trabalho else
                                                 '-' }}
                                             </span>
@@ -665,7 +663,7 @@
                                     </div>
                                 </div>
 
-                                <!-- Barra de progresso dinâmica -->
+                                <!-- Barra de progresso -->
                                 {% set realizado = item.frente_trabalho.qtd_realizada if item and item.frente_trabalho
                                 else 0 %}
                                 {% set meta = item.frente_trabalho.qtd_planejada if item and item.frente_trabalho else 0
@@ -681,20 +679,37 @@
                         </div>
                     </div>
 
-                    <div class="flex-1 w-full sm:w-auto sm:max-w-xs">
-                        <label class="text-xs font-bold text-slate-500 uppercase mb-1 block">Produção Realizada no
-                            dia</label>
+                    <!-- 2. Área de Input de Produção (Lado Direito - Otimizado) -->
+                    <div class="w-full sm:w-auto sm:max-w-sm shrink-0">
+
+                        <label class="text-xs font-bold text-slate-500 uppercase mb-2 block">
+                            Produção Realizada no Dia
+                        </label>
+
+                        <!-- Box de Instruções Compacto -->
+                        <div
+                            class="mb-2 p-2 bg-white border border-slate-200 rounded text-[11px] leading-tight text-slate-500 shadow-sm">
+                            <p class="mb-1">Informe o que foi <strong>100% finalizado</strong> hoje.</p>
+                            <ul class="list-disc list-inside opacity-80">
+                                <li>Serviço pela metade não conta.</li>
+                                <li>Respeite a unidade ao lado.</li>
+                            </ul>
+                        </div>
+
                         <div class="flex items-center gap-2">
                             <input type="number" name="qtd_produzida" step="0.01"
-                                class="form-control-std font-bold text-blue-700 text-center h-12 text-lg"
+                                class="form-control-std font-bold text-blue-700 text-center h-10 text-lg w-full border border-slate-300 rounded px-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 placeholder="0.00"
                                 value="{{ item.qtd_produzida if item and item.qtd_produzida is not none else '' }}"
                                 {{ 'disabled' if view_mode }}>
+
                             <span
-                                class="label_unidade_dinamica text-sm font-bold text-slate-400 w-12 text-center bg-slate-100 rounded py-3 border border-slate-200">{{
-                                item.frente_trabalho.unidade if item and item.frente_trabalho else '-' }}</span>
+                                class="label_unidade_dinamica flex items-center justify-center text-xs font-bold text-slate-500 h-10 w-12 bg-slate-100 rounded border border-slate-200 shadow-sm">
+                                {{ item.frente_trabalho.unidade if item and item.frente_trabalho else '-' }}
+                            </span>
                         </div>
                     </div>
+
                 </div>
 
             </div>

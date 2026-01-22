@@ -759,6 +759,41 @@ def editar_rdo(rdo_id):
         Fotos=Fotos,
         TagsOcorrencias=TagsOcorrencias
     )
+    
+@auth_bp.post("/excluir-rdo/<int:rdo_id>")
+@login_required
+def excluir_rdo(rdo_id):
+    from app.models.rdo import RDO, Atividades, RDOMaoObra, Equipamentos, Fotos, TagsOcorrencias, Assinatura
+    from app import db  
+    try:
+        item_rdo = RDO.query.get_or_404(rdo_id)
+
+        # Excluir fotos fisicamente
+        upload_folder = os.path.join(current_app.root_path, 'static', 'uploads', 'rdo')
+        fotos = Fotos.query.filter_by(id_rdo=item_rdo.id).all()
+        for foto in fotos:
+            caminho_arquivo = os.path.join(upload_folder, foto.arquivo)
+            if os.path.exists(caminho_arquivo):
+                os.remove(caminho_arquivo)
+
+        # Excluir registros relacionados
+        Atividades.query.filter_by(id_rdo=item_rdo.id).delete()
+        RDOMaoObra.query.filter_by(id_rdo=item_rdo.id).delete()
+        Equipamentos.query.filter_by(id_rdo=item_rdo.id).delete()
+        TagsOcorrencias.query.filter_by(id_rdo=item_rdo.id).delete()
+        Fotos.query.filter_by(id_rdo=item_rdo.id).delete()
+        Assinatura.query.filter_by(id_rdo=item_rdo.id).delete()
+
+        # Excluir o RDO
+        db.session.delete(item_rdo)
+        db.session.commit()
+
+        flash(f"RDO Nº {item_rdo.id_sequencial} excluído com sucesso!", "success")
+        return redirect(url_for('auth.inicio'))
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Ocorreu um erro ao excluir o RDO: {str(e)}", "danger")
+        return redirect(url_for('auth.inicio'))
 
 # Lista RDO (placeholder)
 
