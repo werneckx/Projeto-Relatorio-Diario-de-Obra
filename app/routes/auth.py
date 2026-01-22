@@ -315,6 +315,7 @@ def get_obra_api(id):
             "responsavel_id": id_resp_frente,
             "unidade": f.unidade or "",
             "qtd_planejada": f.qtd_planejada or 0,
+            "data_planejada": f.data_planejada or 0,
             "qtd_realizada": f.qtd_realizada or 0
         })
 
@@ -1860,7 +1861,8 @@ def gerar_obra():
                     id_responsavel=f_nova['id_responsavel'] if f_nova['id_responsavel'] else None,
                     # Novos campos incluídos aqui:
                     unidade=f_nova.get('unidade'),
-                    qtd_planejada=float(f_nova.get('qtd_planejada')) if f_nova.get('qtd_planejada') else 0
+                    qtd_planejada=float(f_nova.get('qtd_planejada')) if f_nova.get('qtd_planejada') else 0,
+                    data_planejada=datetime.strptime(f_nova.get('data_planejada'), '%Y-%m-%d').date() if f_nova.get('data_planejada') else None
                 )
                 db.session.add(nova_frente)
 

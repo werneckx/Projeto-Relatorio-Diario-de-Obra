@@ -387,6 +387,10 @@
                     {% endfor %}
                 </select>
 
+                <input type="date" id="data_planejada_nova"
+                    class="md:col-span-2 border rounded-lg px-3 py-2 text-sm outline-none focus:border-purple-500 transition text-center"
+                    title="Data Planejada">
+
                 <button type="button" onclick="interagirFrente()"
                     class="md:col-span-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition shadow-sm">
                     <i class="fas fa-plus"></i>
@@ -403,6 +407,8 @@
                             <th class="px-4 py-3 font-bold text-slate-600 uppercase text-[10px] text-center w-2/12">
                                 Unid.</th>
                             <th class="px-4 py-3 font-bold text-slate-600 uppercase text-[10px] text-center w-2/12">Qtd.
+                                Planejada</th>
+                            <th class="px-4 py-3 font-bold text-slate-600 uppercase text-[10px] text-center w-2/12">Data
                                 Planejada</th>
                             <th class="px-4 py-3 font-bold text-slate-600 uppercase text-[10px] text-center w-2/12">Qtd.
                                 Realizada</th>
@@ -425,6 +431,9 @@
                             </td>
                             <td class="px-4 py-3 text-center text-slate-800 font-bold text-xs">
                                 {{ f.qtd_planejada or '0.00' }}
+                            </td>
+                            <td class="px-4 py-3 text-center text-slate-800 font-bold text-xs">
+                                {{ f.data_planejada.strftime('%d/%m/%Y') if f.data_planejada else '00/00/0000' }}
                             </td>
                             <td class="px-4 py-3 text-center text-slate-800 font-bold text-xs">
                                 {{ f.qtd_realizada or '0.00' }}
@@ -657,6 +666,7 @@
         // Pega o valor do SELECT agora
         const unidade = document.getElementById('unidade_nova').value;
         const qtd = document.getElementById('qtd_nova').value.trim();
+        const data_planejada = document.getElementById('data_planejada_nova').value;
 
         if (!nome) return alert("Digite o nome da frente");
 
@@ -667,7 +677,8 @@
             id_responsavel: idResp || null,
             nome_responsavel: nomeResp,
             unidade: unidade || 'm²',
-            qtd_planejada: qtd || 0
+            qtd_planejada: qtd || 0,
+            data_planejada: data_planejada || 0
         };
 
         frentesNovas.push(novaFrente);
@@ -679,6 +690,7 @@
         document.getElementById('id_responsavel_novo').value = '';
         document.getElementById('unidade_nova').value = 'm²'; // Reseta para o padrão
         document.getElementById('qtd_nova').value = '0.00';
+        document.getElementById('data_planejada_nova').value = '';
         document.getElementById('nome_frente_nova').focus();
     }
 
@@ -702,6 +714,9 @@
             </td>
             <td class="px-4 py-3 text-center text-slate-800 font-bold text-xs">
                 ${f.qtd_planejada}
+            </td>
+            <td class="px-4 py-3 text-center text-slate-800 font-bold text-xs">
+                ${f.data_planejada ? new Date(f.data_planejada).toLocaleDateString('pt-BR') : '00/00/0000'} 
             </td>
             <td class="px-4 py-3 text-right">
                 <button type="button" onclick="removerFrenteLocal(${f.id_temp})" class="text-red-400 hover:text-red-600 p-2 rounded-full hover:bg-red-50">
