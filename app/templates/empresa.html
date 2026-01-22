@@ -3,74 +3,85 @@
 {% block title %}Configurações do Sistema{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<!-- Removemos max-w-2xl para ocupar mais espaço se necessário, mas mantemos um container base -->
+<div class="">
 
-<div>
+    <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-    {% for category, message in messages %}
-    <div
-        class="mb-6 p-4 rounded-lg flex items-center gap-3 border shadow-sm transition-all 
-         {{ 'bg-red-100 text-red-700 border-red-200' if category == 'danger' else 'bg-green-100 text-green-700 border-green-200' }}">
-        <i class="fas {{ 'fa-exclamation-circle' if category == 'danger' else 'fa-check-circle' }}"></i>
-        <span class="text-sm font-bold">{{ message }}</span>
-    </div>
-    {% endfor %}
-    {% endif %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="mb-6 p-4 rounded-xl flex items-start gap-3 border shadow-sm transition-all
+                    {{ 'bg-red-50 text-red-700 border-red-100' if category == 'danger' else 'bg-emerald-50 text-emerald-700 border-emerald-100' }}">
+                    <i class="fas {{ 'fa-exclamation-circle' if category == 'danger' else 'fa-check-circle' }} mt-0.5"></i>
+                    <div class="text-sm font-medium leading-tight">{{ message }}</div>
+                </div>
+            {% endfor %}
+        {% endif %}
     {% endwith %}
 
-    <div class="mb-6">
-        <h1 class="text-2xl font-bold text-slate-800">
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold text-slate-900 tracking-tight">
             Configurações do Sistema
         </h1>
-        <p class="text-sm text-slate-500">Visualize ou gerencie a identidade visual da plataforma.</p>
+        <p class="text-sm text-slate-500 mt-1">Gerencie a identidade visual e informações da empresa.</p>
     </div>
 
     <div x-data="{ editing: false }">
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
 
             {% if session.get('user_role') not in ['Cliente', 'Leitor'] %}
-
             <!-- Cabeçalho com Alternância de Modo -->
-            <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide flex items-center gap-2">
+                    <i class="fas fa-cog text-slate-400"></i> Geral
+                </h3>
+                
                 <button @click="editing = !editing"
-                    :class="editing ? 'bg-gray-200 text-gray-700' : 'bg-blue-600 text-white'"
-                    class="px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 shadow-sm">
-                    <i :class="editing ? 'fas fa-times' : 'fas fa-edit'"></i>
-                    <span x-text="editing ? 'Cancelar Edição' : 'Editar Configurações'"></span>
+                    :class="editing ? 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50' : 'bg-blue-600 border-transparent text-white hover:bg-blue-700'"
+                    class="px-4 py-2 border rounded-lg text-sm font-medium transition-all flex items-center gap-2 shadow-sm">
+                    <i :class="editing ? 'fas fa-times' : 'fas fa-pen'"></i>
+                    <span x-text="editing ? 'Cancelar Edição' : 'Editar Dados'"></span>
                 </button>
             </div>
-
             {% endif %}
 
             <form action="{{ url_for('auth.salvar_empresa') }}" method="POST" enctype="multipart/form-data">
                 <div class="p-6 space-y-8">
 
                     <!-- Nome da Empresa -->
-                    <div class="space-y-2">
-                        <label class="block text-sm font-semibold text-gray-700">Nome da Empresa</label>
-                        <div x-show="!editing"
-                            class="text-lg text-gray-800 font-medium py-2 border-b border-transparent">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Nome da Empresa</label>
+                        
+                        <!-- Modo Visualização -->
+                        <div x-show="!editing" class="p-3 bg-slate-50 rounded-lg border border-slate-200 text-slate-700 font-medium">
                             {{ config_data.nome_empresa if config_data else 'Não definido' }}
                         </div>
-                        <input x-show="editing" type="text" name="nome_empresa"
-                            value="{{ config_data.nome_empresa if config_data else '' }}"
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                            placeholder="Ex: Enfil SA Controle Ambiental" required>
+
+                        <!-- Modo Edição -->
+                        <div x-show="editing">
+                             <input type="text" name="nome_empresa"
+                                value="{{ config_data.nome_empresa if config_data else '' }}"
+                                class="block w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm shadow-sm placeholder-slate-400
+                                       focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                                placeholder="Ex: Construtora Exemplo Ltda" required>
+                        </div>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <!-- Gerenciar Logo -->
                         <div class="space-y-3">
-                            <label class="block text-sm font-semibold text-gray-700">Logotipo Principal</label>
-                            <div class="flex flex-col items-center p-4 bg-gray-50 rounded-xl border border-gray-200">
+                            <label class="block text-xs font-bold text-slate-500 uppercase">Logotipo Principal</label>
+                            <div class="flex flex-col p-4 bg-slate-50 rounded-xl border border-slate-200 border-dashed relative">
                                 <div id="preview-logo"
-                                    class="w-full h-32 flex items-center justify-center mb-4 bg-gray-200 rounded-lg shadow-inner overflow-hidden">
+                                    class="w-full h-32 flex items-center justify-center bg-white rounded-lg shadow-sm border border-slate-100 overflow-hidden mb-3">
                                     {% if config_data.logo_path %}
                                     <img src="{{ url_for('static', filename=config_data.logo_path) }}" id="img-logo"
-                                        class="max-w-full max-h-full object-contain">
+                                        class="max-w-full max-h-full object-contain p-2">
                                     {% else %}
-                                    <i class="fas fa-image text-gray-300 text-4xl"></i>
+                                    <div class="text-center text-slate-300">
+                                        <i class="fas fa-image text-3xl mb-1 block"></i>
+                                        <span class="text-xs">Sem logo</span>
+                                    </div>
                                     {% endif %}
                                 </div>
 
@@ -78,24 +89,28 @@
                                     <input type="file" name="logo_empresa" id="logo_empresa" accept="image/*"
                                         class="hidden" onchange="previewImage(this, 'img-logo')">
                                     <label for="logo_empresa"
-                                        class="block text-center w-full px-4 py-2 bg-white border border-blue-600 text-blue-600 rounded-lg cursor-pointer hover:bg-blue-50 transition-colors text-sm font-medium">
-                                        <i class="fas fa-sync mr-2"></i> Alterar Logotipo
+                                        class="block w-full py-2.5 bg-white border border-blue-200 text-blue-600 rounded-lg cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-all text-sm font-semibold text-center shadow-sm">
+                                        <i class="fas fa-upload mr-2"></i> Escolher Imagem
                                     </label>
+                                    <p class="text-[10px] text-slate-400 mt-2 text-center">Recomendado: PNG Transparente</p>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Gerenciar Ícone (Favicon) -->
                         <div class="space-y-3">
-                            <label class="block text-sm font-semibold text-gray-700">Ícone da Aba</label>
-                            <div class="flex flex-col items-center p-4 bg-gray-50 rounded-xl border border-gray-200">
+                            <label class="block text-xs font-bold text-slate-500 uppercase">Ícone do Navegador</label>
+                            <div class="flex flex-col p-4 bg-slate-50 rounded-xl border border-slate-200 border-dashed relative">
                                 <div id="preview-icon"
-                                    class="w-32 h-32 flex items-center justify-center mb-4 bg-gray-200 rounded-lg shadow-inner overflow-hidden">
+                                    class="w-full h-32 flex items-center justify-center bg-white rounded-lg shadow-sm border border-slate-100 overflow-hidden mb-3">
                                     {% if config_data.icone_path %}
                                     <img src="{{ url_for('static', filename=config_data.icone_path) }}" id="img-icon"
-                                        class="w-16 h-16 object-contain">
+                                        class="w-12 h-12 object-contain">
                                     {% else %}
-                                    <i class="fas fa-icons text-gray-300 text-4xl"></i>
+                                    <div class="text-center text-slate-300">
+                                        <i class="fas fa-icons text-3xl mb-1 block"></i>
+                                        <span class="text-xs">Sem ícone</span>
+                                    </div>
                                     {% endif %}
                                 </div>
 
@@ -104,9 +119,10 @@
                                         accept="image/x-icon,image/png" class="hidden"
                                         onchange="previewImage(this, 'img-icon')">
                                     <label for="icone_empresa"
-                                        class="block text-center w-full px-4 py-2 bg-white border border-blue-600 text-blue-600 rounded-lg cursor-pointer hover:bg-blue-50 transition-colors text-sm font-medium">
-                                        <i class="fas fa-upload mr-2"></i> Alterar Ícone
+                                        class="block w-full py-2.5 bg-white border border-blue-200 text-blue-600 rounded-lg cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-all text-sm font-semibold text-center shadow-sm">
+                                        <i class="fas fa-upload mr-2"></i> Escolher Ícone
                                     </label>
+                                    <p class="text-[10px] text-slate-400 mt-2 text-center">Recomendado: .ICO ou .PNG (32x32)</p>
                                 </div>
                             </div>
                         </div>
@@ -114,10 +130,14 @@
                 </div>
 
                 <!-- Botões de Ação (Apenas em modo edição) -->
-                <div x-show="editing" class="p-6 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
+                <div x-show="editing" class="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3" x-transition>
+                    <button type="button" @click="editing = false"
+                        class="px-5 py-2.5 bg-white border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50 font-semibold text-sm transition-colors">
+                        Cancelar
+                    </button>
                     <button type="submit"
-                        class="px-8 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 shadow-md shadow-green-200 transition-all font-bold flex items-center gap-2">
-                        <i class="fas fa-check"></i> Gravar Alterações
+                        class="px-6 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 shadow-md shadow-emerald-500/20 transition-all font-bold text-sm flex items-center gap-2">
+                        <i class="fas fa-check"></i> Salvar Alterações
                     </button>
                 </div>
             </form>
@@ -131,8 +151,18 @@
             const [file] = input.files;
             if (file) {
                 const preview = document.getElementById(imgId);
-                preview.src = URL.createObjectURL(file);
+                // Verifica se é o container vazio ou a imagem
+                if (preview.tagName !== 'IMG') {
+                   // Se não for IMG, recarrega a página ou manipula DOM (simplificação: apenas substitui src se img existir, se não, teria que criar img)
+                   // Para simplificar neste template, assumimos que o preview mostra a imagem.
+                   // Se o preview original era um ícone, teríamos que substituir o innerHTML.
+                   const parent = preview.parentElement;
+                   parent.innerHTML = `<img src="${URL.createObjectURL(file)}" id="${imgId}" class="max-w-full max-h-full object-contain p-2">`;
+                } else {
+                    preview.src = URL.createObjectURL(file);
+                }
             }
         }
     </script>
-    {% endblock %}
+</div>
+{% endblock %}

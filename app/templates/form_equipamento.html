@@ -1,73 +1,114 @@
 {% extends "base.html" %}
 
-{% block title %}{% if view_mode %}Visualizar{% elif item and item.id %}Editar{% else %}Cadastrar{% endif %}
-Equipamento{%
-endblock %}
+{% block title %}
+{% if view_mode %}Visualizar{% elif item and item.id %}Editar{% else %}Cadastrar{% endif %} Equipamento
+{% endblock %}
 
 {% block content %}
 <div>
 
+    <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
     {% for category, message in messages %}
     <div
-        class="mb-6 p-4 rounded-lg flex items-center gap-3 border shadow-sm transition-all {{ 'bg-red-100 text-red-700 border-red-200' if category == 'danger' else 'bg-green-100 text-green-700 border-green-200' }}">
-        <i class="fas {{ 'fa-exclamation-circle' if category == 'danger' else 'fa-check-circle' }}"></i>
-        <span class="text-sm font-bold">{{ message }}</span>
+        class="mb-6 p-4 rounded-xl flex items-start gap-3 border shadow-sm transition-all
+                    {{ 'bg-red-50 text-red-700 border-red-100' if category == 'danger' else 'bg-emerald-50 text-emerald-700 border-emerald-100' }}">
+        <i class="fas {{ 'fa-exclamation-circle' if category == 'danger' else 'fa-check-circle' }} mt-0.5"></i>
+        <div class="text-sm font-medium leading-tight">{{ message }}</div>
     </div>
     {% endfor %}
     {% endif %}
     {% endwith %}
 
-    <div class="mb-6">
-        <h1 class="text-2xl font-bold text-slate-800">{% if view_mode %}Visualizar{% elif item and item.id %}Editar{%
-            else %}Novo{% endif %} Equipamento</h1>
-        <p class="text-sm text-slate-500">Cadastro de tipos de equipamento usados nos RDOs.</p>
+    <!-- Cabeçalho -->
+    <div class="mb-8 flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">
+                {% if view_mode %}Visualizar{% elif item and item.id %}Editar{% else %}Novo{% endif %} Equipamento
+            </h1>
+            <p class="text-sm text-slate-500 mt-1">
+                {% if view_mode %}Detalhes do equipamento selecionado.{% elif item and item.id %}Atualize as
+                informações.{% else %}Cadastre um novo equipamento no sistema.{% endif %}
+            </p>
+        </div>
+        <!-- Botão Voltar (Desktop) -->
+        <a href="{{ url_for('auth.lista_equipamentos') }}"
+            class="hidden md:inline-flex items-center text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors">
+            <i class="fas fa-arrow-left mr-2"></i> Voltar
+        </a>
     </div>
 
-    <form action="{{ url_for('auth.gerar_equipamento') }}" method="POST" id="equipamentoForm"
-        class="space-y-6 rdo-form">
+    <!-- Formulário -->
+    <form action="{{ url_for('auth.gerar_equipamento') }}" method="POST" id="equipamentoForm" class="space-y-6">
         <input type="hidden" name="id" value="{{ item.id if item and item.id }}">
 
-        <section class="bg-white rounded-lg p-6 border shadow-sm">
-            <div class="flex items-center justify-between mb-4">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
-                        <i class="fas fa-cloud-sun"></i>
-                    </div>
-                    <h3
-                        class="font-semibold text-slate-800 border-l-2 border-blue-600 pl-3 uppercase text-sm tracking-wide">
-                        Informações do Equipamento</h3>
+        <!-- Card Principal -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <!-- Título da Seção -->
+            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
+                <div
+                    class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 text-sm">
+                    <i class="fas fa-tools"></i>
                 </div>
+                <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">
+                    Dados do Equipamento
+                </h3>
             </div>
 
-            <div class="space-y-4">
+            <div class="p-6 space-y-6">
+                <!-- Campo Nome -->
                 <div>
-                    <label class="text-xs font-bold text-slate-500 uppercase">Nome do Equipamento <span
-                            class="text-red-500">*</span></label>
-                    <input type="text" name="nome" value="{{ item.nome if item }}"
-                        class="w-full border rounded-lg px-3 py-2 transition h-10 {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}"
-                        {{ 'readonly' if view_mode }} required>
+                    <label for="nome" class="block text-xs font-bold text-slate-500 uppercase mb-2">
+                        Nome do Equipamento <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <input type="text" name="nome" id="nome" value="{{ item.nome if item }}"
+                            class="block w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm shadow-sm placeholder-slate-400
+                                      focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500
+                                      disabled:bg-slate-50 disabled:text-slate-500 disabled:border-slate-200 disabled:shadow-none transition-all"
+                            placeholder="Ex: Betoneira, Furadeira, Andaime..." {{ 'readonly disabled' if view_mode }}
+                            required>
+                        {% if not view_mode %}
+                        <div
+                            class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
+                            <i class="fas fa-pen text-xs"></i>
+                        </div>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
-        </section>
+        </div>
 
-        <div class="flex flex-col sm:flex-row gap-3 pt-4 border-t">
+        <!-- Barra de Ações -->
+        <div class="flex flex-col-reverse sm:flex-row gap-3 pt-2">
+            <a href="{{ url_for('auth.lista_equipamentos') }}"
+                class="flex-1 px-4 py-2.5 bg-white border border-slate-300 text-slate-700 font-semibold rounded-lg shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-200 transition-all text-center text-sm">
+                {{ 'Voltar' if view_mode else 'Cancelar' }}
+            </a>
+
             {% if view_mode %}
             <a href="{{ url_for('auth.editar_equipamento', id=item.id) }}"
-                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-sm text-center transition flex items-center justify-center gap-2">Editar
-                Equipamento</a>
-            <a href="{{ url_for('auth.lista_equipamentos') }}"
-                class="flex-1 bg-white border border-slate-300 text-slate-500 font-bold py-3 rounded-lg text-center transition hover:bg-slate-50">Voltar
-                para Lista</a>
+                class="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-sm shadow-blue-500/30 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-all text-center text-sm flex items-center justify-center gap-2">
+                <i class="fas fa-edit"></i> Editar
+            </a>
             {% else %}
             <button type="submit" id="submitBtn"
-                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-sm flex items-center justify-center gap-2 transition">Salvar</button>
-            <a href="{{ url_for('auth.lista_equipamentos') }}"
-                class="flex-1 flex items-center justify-center bg-white border border-slate-300 text-slate-500 py-3 rounded-lg font-semibold transition hover:bg-slate-50">Cancelar</a>
+                class="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-sm shadow-blue-500/30 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-all text-center text-sm flex items-center justify-center gap-2">
+                <i class="fas fa-save"></i> Salvar Registro
+            </button>
             {% endif %}
         </div>
     </form>
 </div>
 
+<script>
+    document.getElementById('equipamentoForm').addEventListener('submit', function (e) {
+        const btn = document.getElementById('submitBtn');
+        if (btn) {
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+            btn.classList.add('opacity-75', 'cursor-not-allowed');
+        }
+    });
+</script>
 {% endblock %}
