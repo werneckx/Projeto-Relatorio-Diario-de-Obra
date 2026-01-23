@@ -7,6 +7,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 # Tabela Associativa (Many-to-Many)
 # -----------------------
 usuarios_acessos_obras = db.Table('usuarios_acessos_obras',
+    db.Column('id', db.Integer, primary_key=True),
     db.Column('id_usuario', db.Integer, db.ForeignKey('usuarios.id'), primary_key=True),
     db.Column('id_obra', db.Integer, db.ForeignKey('obras.id'), primary_key=True)
 )

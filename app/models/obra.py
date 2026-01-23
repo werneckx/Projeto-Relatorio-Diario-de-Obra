@@ -1,5 +1,6 @@
 from app import db
 from datetime import date
+from sqlalchemy import func
 
 class Obra(db.Model):
     __tablename__ = "obras"
@@ -32,29 +33,28 @@ class Frente_Trabalho(db.Model):
     __tablename__ = "obras_frente_trabalho"
     
     id_frente_trabalho = db.Column(db.Integer, primary_key=True)
-    # Garanta que a FK aponte para 'obras.id' (nome da tabela e coluna)
     id_obra = db.Column(db.Integer, db.ForeignKey('obras.id'), nullable=False)
-    # AJUSTE: nullable=True para permitir criar a frente sem atribuir um responsável de imediato
     id_responsavel = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=True)
     nome_frente = db.Column(db.String(120), nullable=False)
     unidade = db.Column(db.String(50), nullable=False)
     qtd_planejada = db.Column(db.Float, nullable=False)
+    data_inicio = db.Column(db.Date, nullable=True)
     data_planejada = db.Column(db.Date, nullable=True)
     
     responsavel = db.relationship('Usuario', backref='frentes')
-
-    # --- NOVA PROPRIEDADE ---
+    obra = db.relationship('Obra', backref='frentes_trabalho')
+    
     @property
     def qtd_realizada(self):
-        """Calcula o total realizado somando a qtd_produzida dos RDOs desta frente."""
-        from app import db
+        """Calcula o total realizado somando a qtd_produzida dos RDOs aprovados/pendentes desta frente."""
+        # Importação local para evitar ciclo, pois RDO importa Frente_Trabalho
         from app.models.rdo import RDO
-        from sqlalchemy import func
         
-        # Soma a coluna qtd_produzida da tabela RDO filtrando pela frente atual
-        # Opcional: Adicionar .filter(RDO.status != 'Rejeitado') se quiser ignorar rejeitados
+        # Filtra RDOs para NÃO somar os Rejeitados
+        # Se o RDO foi rejeitado, o trabalho não conta como realizado oficial
         total = db.session.query(func.sum(RDO.qtd_produzida)).filter(
-            RDO.id_frente_trabalho == self.id_frente_trabalho
+            RDO.id_frente_trabalho == self.id_frente_trabalho,
+            RDO.status != 'Rejeitado'
         ).scalar()
         
         return total if total is not None else 0.0
@@ -63,62 +63,68 @@ class Frente_Trabalho(db.Model):
     def qtd_esperada_curva_s(self):
         """
         Calcula quanto deveria estar pronto hoje usando Curva S (Smoothstep).
-        Fórmula: 3t² - 2t³ (t = % do tempo decorrido)
+        Retorna a QUANTIDADE (na unidade da frente) esperada.
         """
-        from datetime import date
-        
-        # Se não tiver data planejada, não há como calcular meta
+        # Se não tiver meta ou data final, expectativa é 0
         if not self.data_planejada or not self.qtd_planejada:
             return 0.0
         
-        # Usa data de início da Obra como base (se a frente não tiver data inicio própria)
-        if not self.obra or not self.obra.inicio:
+        # Lógica de Data de Início:
+        # 1. Usa data específica da Frente
+        # 2. Fallback para data da Obra Pai
+        dt_inicio = self.data_inicio
+        if not dt_inicio and self.obra:
+             dt_inicio = self.obra.inicio
+
+        # Se ainda assim não tiver data, não calcula
+        if not dt_inicio:
             return 0.0
-            
-        dt_inicio = self.obra.inicio
+
         dt_fim = self.data_planejada
         dt_hoje = date.today()
         
-        # Cálculo do tempo
+        # Cálculo de dias totais do cronograma
         total_dias = (dt_fim - dt_inicio).days
+        
+        # Se a data fim é igual ou anterior ao inicio, assume 100% se hoje >= fim
         if total_dias <= 0: 
-            return self.qtd_planejada # Evita erro se datas forem iguais ou invertidas
+            return self.qtd_planejada if dt_hoje >= dt_fim else 0.0
             
         dias_passados = (dt_hoje - dt_inicio).days
         
         # Normaliza o tempo (t) entre 0.0 e 1.0
         t = dias_passados / total_dias
         
-        # Limites (Clamping)
-        if t <= 0: return 0.0             # Obra ainda não começou
-        if t >= 1: return self.qtd_planejada # Obra já deveria ter acabado
+        # Se ainda não começou
+        if t <= 0: return 0.0             
+        # Se já acabou o prazo
+        if t >= 1: return self.qtd_planejada 
         
-        # --- A MÁGICA DA CURVA S (Smoothstep) ---
-        # Substitui a linha reta (linear) por uma curva suave
+        # Fórmula Smoothstep (3x² - 2x³) para gerar a Curva S
+        # Isso cria uma progressão mais lenta no início, acelera no meio, e desacelera no fim
         fator_curva = (3 * (t ** 2)) - (2 * (t ** 3))
         
         return self.qtd_planejada * fator_curva
-
+    
     @property
     def status_prazo(self):
-        """Define o farol do KPI automaticamente comparando Real x Curva S"""
+        """KPI Farol: Compara Realizado vs Esperado (SPI - Schedule Performance Index)"""
         realizado = self.qtd_realizada
         esperado = self.qtd_esperada_curva_s
         
-        # Evita divisão por zero no início da obra
+        # Evita divisão por zero ou início prematuro
         if esperado < 0.01:
+            # Se já realizou algo mas 'esperado' é zero (ex: começou antes da data), está adiantado
+            if realizado > 0:
+                return "Adiantado"
             return "Não Iniciado"
             
-        # SPI (Schedule Performance Index)
+        # SPI = Índice de Desempenho de Prazo
         indice = realizado / esperado
         
-        # Regra do Farol (com tolerância de 10%)
         if indice < 0.90:
-            return "Atrasado"  # Vermelho
+            return "Atrasado"  # Vermelho (< 90% do esperado)
         elif indice > 1.10:
-            return "Adiantado" # Azul/Verde Escuro
+            return "Adiantado" # Verde (> 110% do esperado)
         else:
-            return "No Prazo"  # Verde
-
-    def __repr__(self):
-        return f'<Frente {self.nome_frente}>'   
+            return "No Prazo"  # Azul (Entre 90% e 110%)

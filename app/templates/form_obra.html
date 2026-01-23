@@ -5,767 +5,1029 @@
 {% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
-<div>
-    {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-    {% for category, message in messages %}
-    <div
-        class="mb-6 p-4 rounded-lg flex items-center gap-3 border shadow-sm transition-all 
-         {{ 'bg-red-100 text-red-700 border-red-200' if category == 'danger' else 'bg-green-100 text-green-700 border-green-200' }}">
-        <i class="fas {{ 'fa-exclamation-circle' if category == 'danger' else 'fa-check-circle' }}"></i>
-        <span class="text-sm font-bold">{{ message }}</span>
-    </div>
-    {% endfor %}
+<!-- Definição de Estilos Dinâmicos -->
+{% set input_base_css = "block w-full px-3 py-2.5 text-sm rounded-lg border transition-all outline-none appearance-none"
+%}
+{% set input_edit_css = "bg-white border-slate-300 text-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+shadow-sm placeholder:text-slate-400" %}
+{% set input_view_css = "bg-slate-100/60 border-slate-200 text-slate-800 font-semibold shadow-none cursor-default" %}
+
+{% set final_input_css = input_base_css ~ " " ~ (input_view_css if view_mode else input_edit_css) %}
+{% set select_view_css = "!bg-slate-100/60 !text-slate-800 !opacity-100 font-semibold bg-no-repeat" if view_mode else ""
+%}
+
+{# --- CÁLCULO DE PROGRESSO GLOBAL E CURVA S (Média das Frentes) --- #}
+{% set ns = namespace(total_realized_pct=0, total_expected_pct=0, count=0) %}
+{% if frentes %}
+{% for f in frentes %}
+{% set plan = f.qtd_planejada or 0 %}
+{% set real = f.qtd_realizada or 0 %}
+{# Propriedade do model que calcula a Curva S baseada na data de hoje e data inicio da frente #}
+{% set expected = f.qtd_esperada_curva_s or 0 %}
+
+{% if plan > 0 %}
+{# Cálculo % Realizado #}
+{% set pct_real = (real / plan) * 100 %}
+{% if pct_real > 100 %}{% set pct_real = 100 %}{% endif %}
+
+{# Cálculo % Esperado (Curva S) #}
+{% set pct_exp = (expected / plan) * 100 %}
+{% if pct_exp > 100 %}{% set pct_exp = 100 %}{% endif %}
+
+{% set ns.total_realized_pct = ns.total_realized_pct + pct_real %}
+{% set ns.total_expected_pct = ns.total_expected_pct + pct_exp %}
+{% set ns.count = ns.count + 1 %}
+{% endif %}
+{% endfor %}
+{% endif %}
+
+{% set global_realized = (ns.total_realized_pct / ns.count) if ns.count > 0 else 0 %}
+{% set global_expected = (ns.total_expected_pct / ns.count) if ns.count > 0 else 0 %}
+
+{# Define status global visual #}
+{% set global_status_text = "Não Iniciado" %}
+{% set global_color = "text-slate-400" %}
+{% set global_bg = "bg-slate-100" %}
+
+{% if global_expected > 0.1 %}
+{# SPI: Índice de Desempenho de Prazo #}
+{% set spi = global_realized / global_expected %}
+
+{% if spi < 0.9 %} {% set global_status_text="Atrasado" %} {% set global_color="text-red-600" %} {% set
+    global_bg="bg-red-50" %} {% elif spi> 1.1 %}
+    {% set global_status_text = "Adiantado" %}
+    {% set global_color = "text-emerald-600" %}
+    {% set global_bg = "bg-emerald-50" %}
+    {% else %}
+    {% set global_status_text = "No Prazo" %}
+    {% set global_color = "text-blue-600" %}
+    {% set global_bg = "bg-blue-50" %}
     {% endif %}
-    {% endwith %}
+    {% elif global_realized > 0 %}
+    {# Caso especial: Começou antes do previsto #}
+    {% set global_status_text = "Adiantado" %}
+    {% set global_color = "text-emerald-600" %}
+    {% set global_bg = "bg-emerald-50" %}
+    {% endif %}
 
-    <div class="mb-6">
-        <h1 class="text-2xl font-bold text-slate-800">
-            {% if view_mode %}Visualizar{% elif item and item.id %}Editar{% else %}Nova{% endif %} Obra
-        </h1>
-        <p class="text-sm text-slate-500">Gestão do portfólio operacional de obras.</p>
-    </div>
+    <div class="animate-fade-in-up">
 
-    {# INFORMAÇÕES DE HIERARQUIA #}
-    {% if item and item.id %}
-    {% set is_matriz = item.id_matriz == None or item.id_matriz == 0 %}
-    {% set status_icon = 'fa-sitemap' if is_matriz else 'fa-code-branch' %}
-    {% set status_text = 'MATRIZ PRINCIPAL' if is_matriz else 'FILIAL / SUBSIDIÁRIA' %}
-    {% set border_class = 'border-red-600' if is_matriz else 'border-blue-600' %}
-    {% set bg_class = 'bg-red-50' if is_matriz else 'bg-blue-50' %}
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div
+            class="mb-6 p-4 rounded-xl flex items-start gap-3 border shadow-sm transition-all
+                {{ 'bg-red-50 text-red-700 border-red-100' if category == 'danger' else 'bg-emerald-50 text-emerald-700 border-emerald-100' }}">
+            <i class="fas {{ 'fa-exclamation-circle' if category == 'danger' else 'fa-check-circle' }} mt-0.5"></i>
+            <div class="text-sm font-medium leading-tight">{{ message }}</div>
+        </div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
 
-    <div
-        class="mb-6 p-4 rounded-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border shadow-sm {{ bg_class }} {{ border_class }} border-l-4 transition">
-        <div class="flex items-center gap-3">
-            <i class="fas {{ status_icon }} text-xl text-slate-600"></i>
+        <!-- Cabeçalho -->
+        <div class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-                <span class="text-xs font-bold uppercase tracking-wider text-slate-500">{{ status_text }}</span>
-                <h2 class="text-lg font-bold text-slate-800">{{ item.nome }}</h2>
+                <h1 class="text-2xl font-bold text-slate-900 tracking-tight">
+                    {% if view_mode %}Visualizar{% elif item and item.id %}Editar{% else %}Nova{% endif %} Obra
+                </h1>
+                <p class="text-sm text-slate-500 mt-1">
+                    {% if view_mode %}
+                    Ficha técnica do projeto.
+                    {% elif item and item.id %}
+                    Atualize os dados da obra e frentes de trabalho.
+                    {% else %}
+                    Cadastro inicial de um novo projeto.
+                    {% endif %}
+                </p>
             </div>
+
+            <a href="{{ url_for('auth.lista_obras') }}"
+                class="hidden md:inline-flex items-center text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors">
+                <i class="fas fa-arrow-left mr-2"></i> Voltar para Lista
+            </a>
         </div>
 
-        {% if not is_matriz %}
-        <div class="md:text-right md:border-l md:border-slate-300 md:pl-4 pt-2 md:pt-0">
-            <span class="text-xs font-semibold uppercase text-slate-600">Vinculada à Matriz</span>
-            <p class="font-bold text-sm text-slate-800">{{ item.nome_matriz }}</p>
-            <span class="text-[10px] text-slate-500">ID da Matriz: {{ item.id_matriz }}</span>
+        <!-- CARD DE STATUS DO PROJETO (Curva S Global) -->
+        {% if item and item.id %}
+        <!-- CORREÇÃO: Removido 'overflow-hidden' para permitir que o Tooltip apareça completo -->
+        <div class="mb-6 bg-white rounded-xl border border-slate-200 shadow-sm p-6 relative">
+            <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-2">
+                <h3 class="text-sm font-bold text-slate-700 uppercase tracking-wide flex items-center gap-2">
+                    <i class="fas fa-chart-line text-blue-500"></i> Performance Global
+                </h3>
+                <span class="text-xs font-bold uppercase px-2 py-1 rounded {{ global_bg }} {{ global_color }}">
+                    {{ global_status_text }}
+                </span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Progresso Real -->
+                <div>
+                    <div class="flex justify-between items-end mb-2">
+                        <div>
+                            <span class="text-xs font-bold text-emerald-600 uppercase">Realizado</span>
+                            <p class="text-[10px] text-slate-400">Média de avanço físico</p>
+                        </div>
+                        <div class="text-2xl font-bold text-slate-800">{{ global_realized | round(1) }}%</div>
+                    </div>
+                    <div class="w-full bg-slate-100 rounded-full h-3 overflow-hidden shadow-inner">
+                        <div class="bg-gradient-to-r from-emerald-400 to-emerald-600 h-3 rounded-full transition-all duration-1000 ease-out"
+                            style="width: {{ global_realized }}%"></div>
+                    </div>
+                </div>
+
+                <!-- Curva S (Esperado) -->
+                <div>
+                    <div class="flex justify-between items-end mb-2">
+
+                        <!-- Tooltip da Curva S -->
+                        <div class="relative group cursor-help z-10">
+                            <div class="flex items-center gap-1.5">
+                                <span
+                                    class="text-xs font-bold text-blue-600 uppercase border-b border-dashed border-blue-300">
+                                    Esperado (Curva S)
+                                </span>
+                                <i class="fas fa-question-circle text-[10px] text-blue-400"></i>
+                            </div>
+
+                            <p class="text-[10px] text-slate-400">Planejado para hoje</p>
+
+                            <!-- O Tooltip -->
+                            <!-- z-[100] garante que fique acima de tudo, inclusive de outros cards se houver overlap -->
+                            <div
+                                class="absolute bottom-full left-0 mb-2 w-72 p-4 bg-slate-800 text-white text-xs rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-[100] transform group-hover:-translate-y-1">
+                                <div class="font-bold text-blue-300 mb-1 border-b border-slate-600 pb-1">
+                                    <i class="fas fa-chart-line mr-1"></i> Fator de Cálculo: Curva S
+                                </div>
+                                <p class="leading-relaxed text-slate-300 mb-2">
+                                    A <strong>Curva S</strong> é usada para definir a meta diária. Diferente de uma
+                                    média linear, ela considera o ritmo natural da engenharia:
+                                </p>
+                                <ul class="space-y-1 text-[10px] text-slate-400 list-disc list-inside">
+                                    <li><strong>Início:</strong> Ritmo lento (mobilização).</li>
+                                    <li><strong>Meio:</strong> Aceleração máxima (pico de produção).</li>
+                                    <li><strong>Fim:</strong> Desaceleração (acabamentos).</li>
+                                </ul>
+                                <!-- Seta do Tooltip -->
+                                <div
+                                    class="absolute top-full left-4 -mt-1 border-4 border-transparent border-t-slate-800">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-2xl font-bold text-slate-400">{{ global_expected | round(1) }}%</div>
+                    </div>
+                    <div class="w-full bg-slate-100 rounded-full h-3 overflow-hidden shadow-inner relative"
+                        title="Meta esperada: {{ global_expected | round(2) }}%">
+                        <div class="bg-blue-400 h-3 rounded-full transition-all duration-1000 ease-out opacity-60"
+                            style="width: {{ global_expected }}%"></div>
+                    </div>
+                </div>
+            </div>
         </div>
         {% endif %}
-    </div>
-    {% endif %}
 
-    <form action="{{ url_for('auth.gerar_obra') }}" method="POST" id="mainForm" class="space-y-6 rdo-form">
-        <input type="hidden" name="id" value="{{ item.id if item and item.id }}">
-        <input type="hidden" name="categoria" value="obra">
-        <!-- Campo oculto que levará o JSON com as mudanças nas frentes -->
-        <input type="hidden" name="frentes_json" id="frentes_json">
-
-
-        <section class="bg-white rounded-lg p-6 border shadow-sm space-y-6">
-            <div class="flex items-center justify-between mb-6">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
-                        <i class="fas fa-building"></i>
-                    </div>
-                    <h3
-                        class="font-semibold text-slate-800 border-l-2 border-blue-600 pl-3 uppercase text-sm tracking-wide">
-                        Informações da Obra
-                    </h3>
-                </div>
-
-                <div class="flex items-center h-10 px-4 bg-slate-50 border rounded-lg shadow-inner">
-                    <label
-                        class="relative inline-flex items-center {{ 'cursor-not-allowed opacity-60' if view_mode else 'cursor-pointer' }}">
-                        <input type="checkbox" name="status" class="sr-only peer" {{ 'checked' if (item and
-                            item.status==1 ) or not item }} {{ 'disabled' if view_mode }}>
-                        <div
-                            class="w-11 h-6 bg-slate-300 rounded-full peer peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:h-5 after:w-5 after:rounded-full after:transition-all peer-checked:after:translate-x-full">
-                        </div>
-                        <span id="statusLabel"
-                            class="ml-3 text-[10px] font-bold transition-colors {{ 'text-blue-600' if (item and item.status==1) or not item else 'text-slate-400' }}">
-                            {{ 'Obra Ativa' if (item and item.status==1) or not item else 'Obra Inativa' }}
-                        </span>
-                    </label>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div class="md:col-span-2 space-y-1">
-                    <label class="text-xs font-bold text-slate-500 uppercase">Nome da Obra <span
-                            class="text-red-500">*</span></label>
-                    <input type="text" name="nome" value="{{ item.nome if item }}"
-                        placeholder="Ex: Construção Edifício Apolo"
-                        class="w-full border rounded-lg px-3 py-2 h-10 input-field {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}"
-                        {{ 'readonly' if view_mode }} required>
-                </div>
-
-                <div>
-                    <label class="text-xs font-bold text-slate-500 uppercase">CNPJ <span
-                            class="text-red-500">*</span></label>
-                    <input type="text" name="cnpj" id="cnpj" maxlength="14" value="{{ item.cnpj if item }}"
-                        placeholder="Apenas números"
-                        class="w-full border rounded-lg px-3 py-2 h-10 input-field {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}"
-                        {{ 'readonly' if view_mode }} required>
-                </div>
-
-                <div class="space-y-1">
-                    <label class="text-xs font-bold text-slate-500 uppercase">Contratante (Cliente) <span
-                            class="text-red-500"></span></label>
-                    <input type="text" name="contratante" value="{{ item.contratante if item }}"
-                        placeholder="Ex: Petrobras"
-                        class="w-full border rounded-lg px-3 py-2 h-10 input-field {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}"
-                        {{ 'readonly' if view_mode }}>
-                </div>
-
-                <div class="space-y-1">
-                    <label class="text-xs font-bold text-slate-500 uppercase">Nº do Contrato <span
-                            class="text-red-500"></span></label>
-                    <input type="text" name="contrato" value="{{ item.contrato if item }}" placeholder="Ex: 4600012345"
-                        class="w-full border rounded-lg px-3 py-2 h-10 input-field {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}"
-                        {{ 'readonly' if view_mode }}>
-                </div>
-
-                <div class="space-y-1">
-                    <label class="text-xs font-bold text-slate-500 uppercase">Responsável pela Obra</label>
-                    <select name="id_responsavel"
-                        class="w-full border rounded-lg px-3 py-2 h-10 transition {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}"
-                        {{ 'disabled' if view_mode }}>
-                        <option value="">Selecione um responsável...</option>
-                        {% for usuario in usuarios %}
-                        <option value="{{ usuario.id }}" {% if item and item.id_responsavel==usuario.id %}selected{%
-                            endif %}>
-                            {{ usuario.nome }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                {# NOVO CAMPO: Seleção de Matriz #}
-                <div class="md:col-span-2 space-y-1">
-                    <label class="text-xs font-bold text-slate-500 uppercase">Vincular à Matriz (Se for Filial)</label>
-                    <select name="id_matriz" id="id_matriz"
-                        class="w-full border rounded-lg px-3 py-2 h-10 transition {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}"
-                        {{ 'disabled' if view_mode }}>
-                        <option value="" {% if (item and (item.id_matriz==0 or item.id_matriz==None)) or not item
-                            %}selected{% endif %}>
-                            Nenhuma (Marcar como Matriz Principal)
-                        </option>
-                        {% for matriz in opcoes_matriz %}
-                        {% if not item or item.id != matriz.id %}
-                        <option value="{{ matriz.id }}" {% if item and item.id_matriz==matriz.id %}selected{% endif %}>
-                            {{ matriz.nome }} (ID: {{ matriz.id }})
-                        </option>
-                        {% endif %}
-                        {% endfor %}
-                    </select>
-                </div>
-            </div>
-        </section>
-
-        <section class="bg-white rounded-xl p-6 border shadow-sm space-y-6">
-            <div class="flex items-center gap-3 mb-2">
+        <!-- Informações de Hierarquia -->
+        {% if item and item.id %}
+        {% set is_matriz = item.id_matriz == None or item.id_matriz == 0 %}
+        <div
+            class="mb-6 p-5 rounded-xl border border-l-4 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white {{ 'border-l-indigo-500' if is_matriz else 'border-l-slate-400' }}">
+            <div class="flex items-center gap-4">
                 <div
-                    class="w-10 h-10 rounded-lg bg-green-100 text-green-600 flex items-center justify-center shadow-sm">
-                    <i class="fas fa-calendar-alt text-lg"></i>
+                    class="w-10 h-10 rounded-lg flex items-center justify-center text-xl shrink-0 {{ 'bg-indigo-50 text-indigo-600' if is_matriz else 'bg-slate-100 text-slate-500' }}">
+                    <i class="fas {{ 'fa-sitemap' if is_matriz else 'fa-building' }}"></i>
                 </div>
                 <div>
-                    <h3
-                        class="font-bold text-slate-800 border-l-2 border-green-600 pl-3 uppercase text-xs tracking-widest">
-                        Datas de Execução
-                    </h3>
-                    <p class="text-[10px] text-slate-400 pl-3 uppercase font-medium">Cronograma de Atividades</p>
+                    <span
+                        class="text-[10px] font-bold uppercase tracking-wider {{ 'text-indigo-600' if is_matriz else 'text-slate-500' }}">
+                        {{ 'Matriz Principal' if is_matriz else 'Filial / Subsidiária' }}
+                    </span>
+                    <h2 class="text-lg font-bold text-slate-800 leading-tight">{{ item.nome }}</h2>
                 </div>
             </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="flex flex-col gap-1.5">
-                    <div class="flex justify-between items-center">
-                        <label class="text-[11px] font-bold text-slate-500 uppercase tracking-tight">Início <span
-                                class="text-red-500">*</span></label>
-                        <button type="button" onclick="fillToday('data_inicio')"
-                            class="text-[10px] font-bold text-green-600 hover:bg-green-50 px-2 py-1 rounded transition-all cursor-pointer">
-                            <i class="fas fa-magic mr-1"></i>HOJE
-                        </button>
-                    </div>
-                    <input type="date" id="data_inicio" name="inicio"
-                        value="{{ item.inicio | string if item and item.inicio }}" oninput="checkDateLogic()"
-                        class="w-full border-slate-200 rounded-lg px-3 py-2.5 h-11 text-sm transition-all outline-none cursor-text focus:ring-4 focus:ring-green-50 focus:border-green-500 shadow-sm">
-                </div>
-
-                <div class="flex flex-col gap-1.5">
-                    <div class="flex justify-between items-center">
-                        <label class="text-[11px] font-bold text-slate-500 uppercase tracking-tight">Término <span
-                                class="text-red-500">*</span></label>
-                        <button type="button" onclick="fillToday('data_termino')"
-                            class="text-[10px] font-bold text-green-600 hover:bg-green-50 px-2 py-1 rounded transition-all cursor-pointer">
-                            <i class="fas fa-magic mr-1"></i>HOJE
-                        </button>
-                    </div>
-                    <input type="date" id="data_termino" name="termino"
-                        value="{{ item.termino | string if item and item.termino }}" oninput="checkDateLogic()"
-                        class="w-full border-slate-200 rounded-lg px-3 py-2.5 h-11 text-sm transition-all outline-none cursor-text focus:ring-4 focus:ring-green-50 focus:border-green-500 shadow-sm">
-
-                    <div id="erro_data" class="hidden items-center gap-1.5 text-red-500 mt-1">
-                        <i class="fas fa-times-circle text-[10px]"></i>
-                        <span class="text-[10px] font-bold uppercase tracking-tighter">Erro: O término deve ser após o
-                            início</span>
-                    </div>
+            {% if not is_matriz %}
+            <div
+                class="w-full md:w-auto md:text-right md:border-l md:border-slate-100 md:pl-6 pt-3 md:pt-0 border-t border-slate-100 md:border-t-0">
+                <span class="text-[10px] font-bold uppercase text-slate-400 block mb-0.5">Vinculada à Matriz</span>
+                <div class="flex items-center md:justify-end gap-2 text-sm font-semibold text-slate-700">
+                    <i class="fas fa-level-up-alt fa-rotate-90 text-slate-300"></i>
+                    {{ item.nome_matriz }}
                 </div>
             </div>
-        </section>
-
-        <script>
-            // Função para apenas checar a lógica e avisar o usuário visualmente
-            function checkDateLogic() {
-                const inicio = document.getElementById('data_inicio');
-                const termino = document.getElementById('data_termino');
-                const erroMsg = document.getElementById('erro_data');
-
-                if (inicio.value && termino.value) {
-                    if (new Date(inicio.value) > new Date(termino.value)) {
-                        termino.classList.add('border-red-400', 'bg-red-50');
-                        erroMsg.classList.replace('hidden', 'flex');
-                        return false;
-                    }
-                }
-
-                // Se estiver tudo OK ou campos vazios, remove o alerta
-                termino.classList.remove('border-red-400', 'bg-red-50');
-                erroMsg.classList.replace('flex', 'hidden');
-                return true;
-            }
-
-            // Atalho para data de hoje
-            function fillToday(id) {
-                document.getElementById(id).value = new Date().toISOString().split('T')[0];
-                checkDateLogic();
-            }
-
-            /**
-             * INTEGRAÇÃO COM O SEU FORMULÁRIO:
-             * No seu <form onsubmit="return validarAntesDeSalvar()">
-             */
-            function validarAntesDeSalvar() {
-                const isValido = checkDateLogic();
-                if (!isValido) {
-                    alert("Corrija as datas antes de salvar. O término não pode ser anterior ao início.");
-                    return false; // Impede o envio do formulário
-                }
-                return true; // Permite o envio
-            }
-        </script>
-
-        <style>
-            /* Muda o cursor para pointer apenas no ícone do calendário para indicar ação */
-            input[type="date"]::-webkit-calendar-picker-indicator {
-                cursor: pointer;
-            }
-
-            /* Cursor de texto no input para parecer natural */
-            input[type="date"] {
-                cursor: text;
-            }
-        </style>
-
-        <section class="bg-white rounded-lg p-6 border shadow-sm space-y-6">
-            <div class="flex items-center gap-3 mb-4">
-                <div class="w-10 h-10 rounded bg-orange-100 text-orange-600 flex items-center justify-center">
-                    <i class="fas fa-map-marker-alt"></i>
-                </div>
-                <h3
-                    class="font-semibold text-slate-800 border-l-2 border-orange-600 pl-3 uppercase text-sm tracking-wide">
-                    Localização Completa
-                </h3>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
-                <div>
-                    <label class="text-xs font-bold text-slate-500 uppercase">CEP <span
-                            class="text-red-500">*</span></label>
-                    <input type="text" name="cep" id="cep" maxlength="8" value="{{ item.cep if item }}"
-                        placeholder="Apenas números"
-                        class="w-full border rounded-lg px-3 py-2 h-10 input-field {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}"
-                        {{ 'readonly' if view_mode }} required>
-                    <p id="cep-message" class="text-xs pt-1"></p>
-                </div>
-
-                <div class="md:col-span-3">
-                    <label class="text-xs font-bold text-slate-500 uppercase">Endereço <span
-                            class="text-red-500">*</span></label>
-                    <input type="text" name="endereco" id="endereco" value="{{ item.endereco if item }}"
-                        class="w-full border rounded-lg px-3 py-2 h-10 input-field {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}"
-                        required {{ 'readonly' if view_mode }}>
-                </div>
-
-                <div>
-                    <label class="text-xs font-bold text-slate-500 uppercase">Número <span
-                            class="text-red-500">*</span></label>
-                    <input type="text" name="numero" id="numero" value="{{ item.numero if item }}"
-                        class="w-full border rounded-lg px-3 py-2 h-10 input-field {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}"
-                        required {{ 'readonly' if view_mode }}>
-                </div>
-
-                <div>
-                    <label class="text-xs font-bold text-slate-500 uppercase">Complemento</label>
-                    <input type="text" name="complemento" id="complemento" value="{{ item.complemento if item }}"
-                        class="w-full border rounded-lg px-3 py-2 h-10 input-field {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}"
-                        {{ 'readonly' if view_mode }}>
-                </div>
-
-                <div>
-                    <label class="text-xs font-bold text-slate-500 uppercase">Bairro <span
-                            class="text-red-500">*</span></label>
-                    <input type="text" name="bairro" id="bairro" value="{{ item.bairro if item }}"
-                        class="w-full border rounded-lg px-3 py-2 h-10 input-field {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}"
-                        required {{ 'readonly' if view_mode }}>
-                </div>
-
-                <div>
-                    <label class="text-xs font-bold text-slate-500 uppercase">Cidade <span
-                            class="text-red-500">*</span></label>
-                    <input type="text" name="cidade" id="cidade" value="{{ item.cidade if item }}"
-                        class="w-full border rounded-lg px-3 py-2 h-10 input-field {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}"
-                        required {{ 'readonly' if view_mode }}>
-                </div>
-
-                <div>
-                    <label class="text-xs font-bold text-slate-500 uppercase">UF <span
-                            class="text-red-500">*</span></label>
-                    <input type="text" name="estado" id="estado" maxlength="2" value="{{ item.estado if item }}"
-                        placeholder="SP"
-                        class="w-full border rounded-lg px-3 py-2 h-10 uppercase input-field {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}"
-                        required {{ 'readonly' if view_mode }}>
-                </div>
-            </div>
-        </section>
-
-        {# SEÇÃO DE FRENTES - Agora com Select de Unidades #}
-        <section class="bg-white rounded-lg p-6 border shadow-sm space-y-6 mt-6">
-            <div class="flex items-center gap-3 mb-4">
-                <div class="w-10 h-10 rounded bg-purple-100 text-purple-600 flex items-center justify-center">
-                    <i class="fas fa-hard-hat"></i>
-                </div>
-                <div>
-                    <h3 class="font-semibold text-slate-800 uppercase text-sm tracking-wide">Frentes de Trabalho</h3>
-                    <p class="text-[10px] text-slate-500">Defina as divisões operacionais, unidade e metas físicas desta
-                        obra.</p>
-                </div>
-            </div>
-
-            {% if not view_mode %}
-            <div class="grid grid-cols-1 md:grid-cols-12 gap-2 bg-white p-4 rounded-lg border border-slate-200">
-                <input type="text" id="nome_frente_nova" placeholder="Nome da Frente (ex: Alvenaria)"
-                    class="md:col-span-4 border rounded-lg px-3 py-2 text-sm outline-none focus:border-purple-500 transition">
-
-                <!-- ALTERAÇÃO AQUI: Select de Unidades -->
-                <select id="unidade_nova"
-                    class="md:col-span-2 border rounded-lg px-3 py-2 text-sm outline-none focus:border-purple-500 transition text-center bg-white"
-                    title="Unidade de Medida">
-                    <option value="m²">m²</option>
-                    <option value="m³">m³</option>
-                    <option value="m">m</option>
-                    <option value="un">un</option>
-                    <option value="kg">kg</option>
-                    <option value="t">t</option>
-                    <option value="vb">vb</option> <!-- Verba -->
-                    <option value="cj">cj</option> <!-- Conjunto -->
-                    <option value="h">h</option> <!-- Horas -->
-                </select>
-
-                <input type="number" id="qtd_nova" placeholder="Qtd Total" step="0.01" value="0.00"
-                    class="md:col-span-2 border rounded-lg px-3 py-2 text-sm outline-none focus:border-purple-500 transition text-center"
-                    title="Quantidade Planejada/Executada">
-                <!-- FIM ALTERAÇÃO -->
-
-                <select id="id_responsavel_novo"
-                    class="md:col-span-3 border rounded-lg px-3 py-2 text-sm outline-none focus:border-purple-500 transition">
-                    <option value="">Responsável</option>
-                    {% for u in usuarios %}
-                    <option value="{{ u.id }}" data-nome="{{ u.nome }}">{{ u.nome }}</option>
-                    {% endfor %}
-                </select>
-
-                <input type="date" id="data_planejada_nova"
-                    class="md:col-span-2 border rounded-lg px-3 py-2 text-sm outline-none focus:border-purple-500 transition text-center"
-                    title="Data Planejada">
-
-                <button type="button" onclick="interagirFrente()"
-                    class="md:col-span-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition shadow-sm">
-                    <i class="fas fa-plus"></i>
-                </button>
-            </div>
-            {% endif %}
-
-            <div class="overflow-x-auto border bg-white rounded-lg mt-3">
-                <table class="w-full text-left text-sm">
-                    <thead class="bg-slate-50 border-b">
-                        <tr>
-                            <th class="px-4 py-3 font-bold text-slate-600 uppercase text-[10px] w-5/12">Nome da Frente
-                            </th>
-                            <th class="px-4 py-3 font-bold text-slate-600 uppercase text-[10px] text-center w-2/12">
-                                Unid.</th>
-                            <th class="px-4 py-3 font-bold text-slate-600 uppercase text-[10px] text-center w-2/12">Qtd.
-                                Planejada</th>
-                            <th class="px-4 py-3 font-bold text-slate-600 uppercase text-[10px] text-center w-2/12">Data
-                                Planejada</th>
-                            <th class="px-4 py-3 font-bold text-slate-600 uppercase text-[10px] text-center w-2/12">Qtd.
-                                Realizada</th>
-                            <th class="px-4 py-3 font-bold text-slate-600 uppercase text-[10px] text-right w-3/12">Ações
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody id="lista-frentes">
-                        {% if frentes %}
-                        {% for f in frentes %}
-                        <tr class="border-b last:border-0 hover:bg-slate-50 transition"
-                            id="frente-real-{{ f.id_frente_trabalho }}">
-                            <td class="px-4 py-3">
-                                <p class="font-medium text-slate-800">{{ f.nome_frente }}</p>
-                                <p class="text-xs text-slate-500">Resp: {{ f.responsavel.nome if f.responsavel else 'Não
-                                    definido' }}</p>
-                            </td>
-                            <td class="px-4 py-3 text-center text-slate-600 font-mono text-xs">
-                                {{ f.unidade or '-' }}
-                            </td>
-                            <td class="px-4 py-3 text-center text-slate-800 font-bold text-xs">
-                                {{ f.qtd_planejada or '0.00' }}
-                            </td>
-                            <td class="px-4 py-3 text-center text-slate-800 font-bold text-xs">
-                                {{ f.data_planejada.strftime('%d/%m/%Y') if f.data_planejada else '00/00/0000' }}
-                            </td>
-                            <td class="px-4 py-3 text-center text-slate-800 font-bold text-xs">
-                                {{ f.qtd_realizada or '0.00' }}
-                            </td>
-                            <td class="px-4 py-3 text-right">
-                                {% if not view_mode %}
-                                <button type="button" onclick="removerFrenteExistente({{ f.id_frente_trabalho }})"
-                                    class="text-red-400 hover:text-red-600 transition p-2 rounded-full hover:bg-red-50">
-                                    <i class="fas fa-trash-alt"></i>
-                                </button>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                        {% else %}
-                        <tr id="sem-frentes">
-                            <td colspan="4" class="px-4 py-8 text-center text-slate-400 italic">Nenhuma frente
-                                adicionada.</td>
-                        </tr>
-                        {% endif %}
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
-        <div class="flex flex-col sm:flex-row gap-3 pt-4 border-t">
-            {% if view_mode %}
-            <a href="{{ url_for('auth.editar_obra', id=item.id) }}"
-                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2">
-                Editar Obra
-            </a>
-            <a href="{{ url_for('auth.lista_obras') }}"
-                class="flex-1 bg-white border border-slate-300 text-slate-500 font-bold py-3 rounded-lg hover:bg-slate-50 flex items-center justify-center">
-                Voltar para Lista
-            </a>
-            {% else %}
-            <button type="submit" id="submitBtn"
-                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-sm flex items-center justify-center gap-2">
-                <span id="btnText">{{ 'Atualizar Obra' if item and item.id else 'Salvar Cadastro' }}</span>
-                <i class="fas fa-spinner fa-spin hidden" id="spinner"></i>
-            </button>
-            <a href="{{ url_for('auth.lista_obras') }}"
-                class="flex-1 bg-white border border-slate-300 text-slate-500 py-3 rounded-lg hover:bg-slate-50 flex items-center justify-center">
-                Cancelar
-            </a>
             {% endif %}
         </div>
-    </form>
-</div>
+        {% endif %}
 
-<style>
-    .input-field:focus {
-        border-color: #2563eb;
-        box-shadow: 0 0 0 1px #2563eb;
-    }
+        <!-- Formulário Principal -->
+        <form action="{{ url_for('auth.gerar_obra') }}" method="POST" id="mainForm" class="space-y-6">
+            <input type="hidden" name="id" value="{{ item.id if item and item.id }}">
+            <input type="hidden" name="categoria" value="obra">
+            <!-- Input JSON essencial para o Backend processar as frentes (novas e editadas) -->
+            <input type="hidden" name="frentes_json" id="frentes_json">
 
-    input[readonly] {
-        background-color: #f8fafc;
-        border-color: #e2e8f0;
-        cursor: default;
-    }
+            <!-- 1. Dados Gerais -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div
+                    class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 text-sm">
+                            <i class="fas fa-building"></i>
+                        </div>
+                        <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">Informações Básicas
+                        </h3>
+                    </div>
 
-    select[disabled] {
-        background-color: #f8fafc;
-        opacity: 1;
-        color: #475569;
-        -webkit-appearance: none;
-    }
-</style>
+                    <!-- Status Badge / Toggle -->
+                    {% if view_mode %}
+                    <span
+                        class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide {{ 'bg-emerald-100 text-emerald-700' if (item and item.status == 1) else 'bg-red-100 text-red-700' }}">
+                        <i
+                            class="fas {{ 'fa-check-circle' if (item and item.status == 1) else 'fa-times-circle' }} mr-1.5"></i>
+                        {{ 'Ativa' if (item and item.status == 1) else 'Inativa' }}
+                    </span>
+                    {% else %}
+                    <label class="relative inline-flex items-center cursor-pointer group">
+                        <input type="checkbox" name="status" class="sr-only peer" {{ 'checked' if (item and
+                            item.status==1) or not item }}>
+                        <div
+                            class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500">
+                        </div>
+                        <span id="statusLabel"
+                            class="ml-3 text-xs font-bold uppercase transition-colors {{ 'text-emerald-600' if (item and item.status == 1) or not item else 'text-slate-400' }}">
+                            {{ 'Ativa' if (item and item.status == 1) or not item else 'Inativa' }}
+                        </span>
+                    </label>
+                    {% endif %}
+                </div>
 
-<script>
-    /* Helper para encurtar document.getElementById */
-    const el = (id) => document.getElementById(id);
-    const ADDRESS_FIELDS = ["endereco", "numero", "complemento", "bairro", "cidade", "estado"];
+                <div class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6">
+                    <!-- Nome -->
+                    <div class="lg:col-span-8">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Nome da Obra</label>
+                        <input type="text" name="nome" value="{{ item.nome if item }}"
+                            placeholder="Ex: Reforma do Galpão Logístico" class="{{ final_input_css }}"
+                            {{ 'readonly disabled' if view_mode }} required>
+                    </div>
 
-    // Define se estamos apenas visualizando (pega do contexto do Jinja)
-    const isViewMode = {{ 'true' if view_mode else 'false' }};
+                    <!-- CNPJ -->
+                    <div class="lg:col-span-4">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">CNPJ</label>
+                        <input type="text" name="cnpj" id="cnpj" maxlength="18" value="{{ item.cnpj if item }}"
+                            placeholder="00.000.000/0000-00" class="{{ final_input_css }} font-mono"
+                            {{ 'readonly disabled' if view_mode }} required>
+                    </div>
 
-    function applyNumberMask(id) {
-        const element = el(id);
-        if (element) {
-            element.addEventListener('input', e => e.target.value = e.target.value.replace(/\D/g, ''));
-        }
-    }
+                    <!-- Cliente -->
+                    <div class="lg:col-span-6">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Cliente</label>
+                        <input type="text" name="contratante" value="{{ item.contratante if item }}"
+                            placeholder="Ex: Indústria XYZ Ltda" class="{{ final_input_css }}" {{ 'readonly disabled' if
+                            view_mode }}>
+                    </div>
 
-    function toggleAddressFields(enable) {
-        if (isViewMode) return;
-        ADDRESS_FIELDS.forEach(id => {
-            const field = el(id);
-            if (field) {
-                field.readOnly = !enable;
-                field.classList.toggle('bg-slate-50', !enable);
-                field.classList.toggle('opacity-70', !enable);
-            }
-        });
-    }
+                    <!-- Contrato -->
+                    <div class="lg:col-span-3">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Nº Contrato</label>
+                        <input type="text" name="contrato" value="{{ item.contrato if item }}"
+                            class="{{ final_input_css }}" {{ 'readonly disabled' if view_mode }}>
+                    </div>
 
-    function setCepMessage(message, type) {
-        const msgEl = el("cep-message");
-        if (!msgEl) return;
-        msgEl.className = 'text-xs pt-1 ' + (type === 'success' ? 'text-green-600' : type === 'error' ? 'text-red-600' : 'text-slate-500');
-        msgEl.innerText = message;
-    }
+                    <!-- Responsável -->
+                    <div class="lg:col-span-3">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Responsável Técnico</label>
+                        <div class="relative">
+                            <select name="id_responsavel" class="{{ final_input_css }} {{ select_view_css }}"
+                                {{ 'disabled' if view_mode }}>
+                                <option value="">Selecione...</option>
+                                {% for usuario in usuarios %}
+                                <option value="{{ usuario.id }}" {% if item and item.id_responsavel==usuario.id
+                                    %}selected{% endif %}>{{ usuario.nome }} ({{ usuario.email }})</option>
+                                {% endfor %}
+                            </select>
+                            {% if not view_mode %}
+                            <div
+                                class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
+                                <i class="fas fa-chevron-down text-xs"></i>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
 
-    function searchCep(cepValue, isManualSearch = false) {
-        const cleanCep = cepValue.replace(/\D/g, '');
-        if (cleanCep.length !== 8) return;
+                    <!-- Vinculação Matriz -->
+                    <div class="lg:col-span-12">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">
+                            Vinculação {% if not view_mode %}<i class="fas fa-info-circle ml-1 text-slate-400"
+                                title="Deixe em 'Nenhuma' se esta for a Matriz Principal"></i>{% endif %}
+                        </label>
+                        <div class="relative">
+                            <select name="id_matriz" id="id_matriz" class="{{ final_input_css }} {{ select_view_css }}"
+                                {{ 'disabled' if view_mode }}>
+                                <option value="" {% if (item and (item.id_matriz==0 or item.id_matriz==None)) or not
+                                    item %}selected{% endif %}>Nenhuma (Definir como Matriz Principal)</option>
+                                {% for matriz in opcoes_matriz %}
+                                {% if not item or item.id != matriz.id %}
+                                <option value="{{ matriz.id }}" {% if item and item.id_matriz==matriz.id %}selected{%
+                                    endif %}>Filial de: {{ matriz.nome }} (ID: {{ matriz.id }})</option>
+                                {% endif %}
+                                {% endfor %}
+                            </select>
+                            {% if not view_mode %}
+                            <div
+                                class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
+                                <i class="fas fa-sitemap text-xs"></i>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-        setCepMessage("Buscando...", 'info');
+            <!-- 2. Datas e Localização -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 8000);
+                <!-- Datas -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden h-full">
+                    <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
+                        <div
+                            class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 text-sm">
+                            <i class="fas fa-calendar-alt"></i>
+                        </div>
+                        <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">Cronograma</h3>
+                    </div>
+                    <div class="p-6 space-y-5">
+                        <!-- Início -->
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <label class="text-xs font-bold text-slate-500 uppercase">Data de Início</label>
+                                {% if not view_mode %}
+                                <button type="button" onclick="setToday('data_inicio_visual', 'data_inicio_hidden')"
+                                    class="text-[10px] font-bold text-emerald-600 hover:bg-emerald-50 px-2 py-1 rounded transition-colors border border-emerald-100 shadow-sm flex items-center">
+                                    <i class="fas fa-magic mr-1"></i> HOJE
+                                </button>
+                                {% endif %}
+                            </div>
+                            <div class="relative">
+                                <input type="hidden" name="inicio" id="data_inicio_hidden"
+                                    value="{{ item.inicio | string if item and item.inicio else '' }}">
+                                <input type="text" id="data_inicio_visual"
+                                    value="{{ item.inicio.strftime('%d/%m/%Y') if item and item.inicio else '' }}"
+                                    placeholder="DD/MM/AAAA" maxlength="10"
+                                    class="{{ final_input_css }} {{ 'pr-10' if not view_mode else '' }}"
+                                    {{ 'readonly disabled' if view_mode }} required
+                                    oninput="mascaraData(this); syncDate(this, 'data_inicio_hidden')"
+                                    onblur="syncDate(this, 'data_inicio_hidden')">
+                                {% if not view_mode %}
+                                <div class="absolute inset-y-0 right-0 flex items-center pr-3 z-10">
+                                    <i class="far fa-calendar-alt text-slate-400 hover:text-emerald-600 cursor-pointer text-lg"
+                                        onclick="this.nextElementSibling.showPicker()"></i>
+                                    <input type="date" class="absolute w-0 h-0 opacity-0 pointer-events-none"
+                                        tabindex="-1"
+                                        onchange="applyPicker(this, 'data_inicio_visual', 'data_inicio_hidden')">
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
 
-        fetch(`https://viacep.com.br/ws/${cleanCep}/json/`, { signal: controller.signal })
-            .then(r => r.json())
-            .then(data => {
-                clearTimeout(timeout);
-                if (data.erro) {
-                    setCepMessage("CEP não encontrado. Preencha manualmente.", 'error');
-                    toggleAddressFields(true);
-                    return;
-                }
+                        <!-- Término -->
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <label class="text-xs font-bold text-slate-500 uppercase">Previsão de Término</label>
+                                {% if not view_mode %}
+                                <button type="button" onclick="setToday('data_termino_visual', 'data_termino_hidden')"
+                                    class="text-[10px] font-bold text-emerald-600 hover:bg-emerald-50 px-2 py-1 rounded transition-colors border border-emerald-100 shadow-sm flex items-center">
+                                    <i class="fas fa-magic mr-1"></i> HOJE
+                                </button>
+                                {% endif %}
+                            </div>
+                            <div class="relative">
+                                <input type="hidden" name="termino" id="data_termino_hidden"
+                                    value="{{ item.termino | string if item and item.termino else '' }}">
+                                <input type="text" id="data_termino_visual"
+                                    value="{{ item.termino.strftime('%d/%m/%Y') if item and item.termino else '' }}"
+                                    placeholder="DD/MM/AAAA" maxlength="10"
+                                    class="{{ final_input_css }} {{ 'pr-10' if not view_mode else '' }}"
+                                    {{ 'readonly disabled' if view_mode }} required
+                                    oninput="mascaraData(this); syncDate(this, 'data_termino_hidden')"
+                                    onblur="syncDate(this, 'data_termino_hidden')">
+                                {% if not view_mode %}
+                                <div class="absolute inset-y-0 right-0 flex items-center pr-3 z-10">
+                                    <i class="far fa-calendar-alt text-slate-400 hover:text-emerald-600 cursor-pointer text-lg"
+                                        onclick="this.nextElementSibling.showPicker()"></i>
+                                    <input type="date" class="absolute w-0 h-0 opacity-0 pointer-events-none"
+                                        tabindex="-1"
+                                        onchange="applyPicker(this, 'data_termino_visual', 'data_termino_hidden')">
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div id="erro_data"
+                                class="hidden items-center gap-2 mt-2 text-red-600 bg-red-50 p-2 rounded-lg text-xs font-medium animate-pulse">
+                                <i class="fas fa-exclamation-triangle"></i><span>O término deve ser posterior ao
+                                    início.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-                if (el("endereco")) el("endereco").value = data.logradouro || "";
-                if (el("bairro")) el("bairro").value = data.bairro || "";
-                if (el("cidade")) el("cidade").value = data.localidade || "";
-                if (el("estado")) el("estado").value = data.uf || "";
+                <!-- Localização -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden h-full">
+                    <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
+                        <div
+                            class="w-8 h-8 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center shrink-0 text-sm">
+                            <i class="fas fa-map-marker-alt"></i>
+                        </div>
+                        <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">Endereço</h3>
+                    </div>
+                    <div class="p-6 grid grid-cols-12 gap-4">
+                        <!-- CEP -->
+                        <div class="col-span-5 sm:col-span-4">
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">CEP</label>
+                            <input type="text" name="cep" id="cep" maxlength="9" value="{{ item.cep if item }}"
+                                placeholder="00000-000" class="{{ final_input_css }}" {{ 'readonly disabled' if
+                                view_mode }} required>
+                            <p id="cep-message" class="text-[10px] mt-1 h-3"></p>
+                        </div>
+                        <div class="col-span-7 sm:col-span-8 flex items-end pb-1">
+                            {% if not view_mode %}<span class="text-[10px] text-slate-400 italic"><i
+                                    class="fas fa-search mr-1"></i>Digite o CEP para buscar</span>{% endif %}
+                        </div>
 
-                toggleAddressFields(true);
-                setCepMessage("Endereço encontrado!", 'success');
+                        <!-- Campos de endereço -->
+                        <div class="col-span-12">
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Endereço</label>
+                            <input type="text" name="endereco" id="endereco" value="{{ item.endereco if item }}"
+                                class="{{ final_input_css }}" required {{ 'readonly disabled' if view_mode }}>
+                        </div>
+                        <div class="col-span-4">
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Nº</label>
+                            <input type="text" name="numero" id="numero" value="{{ item.numero if item }}"
+                                class="{{ final_input_css }}" required {{ 'readonly disabled' if view_mode }}>
+                        </div>
+                        <div class="col-span-8">
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Complemento</label>
+                            <input type="text" name="complemento" id="complemento"
+                                value="{{ item.complemento if item }}" class="{{ final_input_css }}"
+                                {{ 'readonly disabled' if view_mode }}>
+                        </div>
+                        <div class="col-span-6">
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Bairro</label>
+                            <input type="text" name="bairro" id="bairro" value="{{ item.bairro if item }}"
+                                class="{{ final_input_css }}" required {{ 'readonly disabled' if view_mode }}>
+                        </div>
+                        <div class="col-span-4">
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Cidade</label>
+                            <input type="text" name="cidade" id="cidade" value="{{ item.cidade if item }}"
+                                class="{{ final_input_css }}" required {{ 'readonly disabled' if view_mode }}>
+                        </div>
+                        <div class="col-span-2">
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">UF</label>
+                            <input type="text" name="estado" id="estado" maxlength="2" value="{{ item.estado if item }}"
+                                class="{{ final_input_css }} text-center uppercase" required {{ 'readonly disabled' if
+                                view_mode }}>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                if (isManualSearch && el("numero")) {
-                    el("numero").focus();
-                }
-            })
-            .catch(err => {
-                clearTimeout(timeout);
-                setCepMessage("Erro ao buscar CEP. Tente preencher manualmente.", 'error');
-                toggleAddressFields(true);
-            });
-    }
+            <!-- 3. Frentes de Trabalho -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div
+                    class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex flex-wrap items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="w-8 h-8 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center shrink-0 text-sm">
+                            <i class="fas fa-hard-hat"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">Frentes de Trabalho
+                            </h3>
+                            <p class="text-[10px] text-slate-500 hidden sm:block">Defina metas físicas e cronograma
+                                (obrigatório para Curva S).</p>
+                        </div>
+                    </div>
+                    {% if not view_mode %}
+                    <button type="button" onclick="addFrenteRow()"
+                        class="bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 px-4 py-2 rounded-lg font-bold text-xs transition flex items-center gap-2">
+                        <i class="fas fa-plus"></i> <span class="hidden sm:inline">Adicionar Frente</span>
+                    </button>
+                    {% endif %}
+                </div>
 
-    document.addEventListener("DOMContentLoaded", () => {
-        applyNumberMask("cnpj");
-        applyNumberMask("cep");
+                <!-- Tabela de Frentes -->
+                <div class="w-full overflow-hidden">
+                    <table class="w-full text-left mobile-table" id="table_frentes">
+                        <thead>
+                            <tr
+                                class="bg-slate-50 text-[10px] uppercase text-slate-500 font-bold border-b border-slate-200">
+                                <!-- Larguras balanceadas para incluir Data Inicio -->
+                                <th class="p-3 w-[25%]">Nome da Frente</th>
+                                <th class="p-3 w-[15%]">Responsável</th>
+                                <th class="p-3 w-[8%] text-center">Unid.</th>
+                                <th class="p-3 w-[10%] text-center">Meta</th>
+                                <th class="p-3 w-[12%] text-center">Data Início</th>
+                                <th class="p-3 w-[12%] text-center">Data Fim</th>
+                                <th class="p-3 w-[15%] text-center">Progresso</th>
+                                {% if not view_mode %}<th class="p-3 w-[3%] text-center"></th>{% endif %}
+                            </tr>
+                        </thead>
+                        <tbody id="lista-frentes" class="divide-y divide-slate-100 bg-white">
+                            {% if frentes %}
+                            {% for f in frentes %}
+                            <!-- Cálculos auxiliares -->
+                            {% set plan_f = f.qtd_planejada or 0 %}
+                            {% set real_f = f.qtd_realizada or 0 %}
+                            {% set pct_f = (real_f / plan_f * 100) if plan_f > 0 else 0 %}
+                            {% if pct_f > 100 %}{% set pct_f = 100 %}{% endif %}
 
-        const cepField = el("cep");
-        const statusToggle = document.querySelector('input[name="status"]');
-        const statusLabel = el("statusLabel");
-        const form = el("mainForm");
+                            {% set expected_val = f.qtd_esperada_curva_s or 0 %}
+                            {% set pct_exp_f = (expected_val / plan_f * 100) if plan_f > 0 else 0 %}
+                            {% if pct_exp_f > 100 %}{% set pct_exp_f = 100 %}{% endif %}
 
-        // Lógica Inicial do CEP
-        if (cepField && !isViewMode) {
-            if (cepField.value.length === 8) {
-                searchCep(cepField.value);
-            } else {
-                toggleAddressFields(false);
-                setCepMessage("Preencha o CEP para liberar o endereço.", 'info');
-            }
+                            {% set status_f = f.status_prazo or 'N/A' %}
 
-            cepField.addEventListener("blur", () => searchCep(cepField.value, true));
-            cepField.addEventListener("keydown", e => {
-                if (e.key === "Enter") {
-                    e.preventDefault();
-                    searchCep(cepField.value, true);
-                }
-            });
-            cepField.addEventListener("input", () => {
-                if (cepField.value.length < 8) {
-                    toggleAddressFields(false);
-                    setCepMessage("Faltam dígitos no CEP.", 'info');
-                }
-            });
-        }
+                            <tr class="group hover:bg-slate-50 transition-colors">
+                                <input type="hidden" name="frente_id[]" value="{{ f.id_frente_trabalho }}">
 
-        // Toggle de Status
-        if (statusToggle && statusLabel) {
-            statusToggle.addEventListener("change", () => {
-                const isChecked = statusToggle.checked;
-                statusLabel.innerText = isChecked ? "Obra Ativa" : "Obra Inativa";
-                statusLabel.classList.toggle("text-blue-600", isChecked);
-                statusLabel.classList.toggle("text-slate-400", !isChecked);
-            });
-        }
+                                <td class="p-2 full-width-mobile" data-label="Nome:">
+                                    <input type="text" name="frente_nome[]" value="{{ f.nome_frente }}"
+                                        class="{{ 'w-full h-9 text-sm px-2 rounded-md bg-transparent border-none font-semibold text-slate-800' if view_mode else 'form-control-std h-9 text-sm' }}"
+                                        placeholder="Nome..." required {{ 'readonly' if view_mode }}>
+                                </td>
 
-        // Submit do Formulário
-        if (form && !isViewMode) {
-            form.addEventListener("submit", (e) => {
-                const btn = el("submitBtn");
-                const selects = form.querySelectorAll('select[disabled]');
-                selects.forEach(s => s.disabled = false); // Habilita para enviar o dado
+                                <td class="p-2" data-label="Resp:">
+                                    <select name="frente_responsavel[]"
+                                        class="{{ 'w-full h-9 text-sm px-2 rounded-md bg-transparent border-none text-slate-700 appearance-none pointer-events-none' if view_mode else 'form-control-std h-9 text-sm' }}"
+                                        {{ 'disabled' if view_mode }}>
+                                        <option value="">Selecione...</option>
+                                        {% for u in usuarios %}
+                                        <option value="{{ u.id }}" {% if f.id_responsavel==u.id %}selected{% endif %}>{{
+                                            u.nome }} ({{ u.email }})</option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
 
-                // Validação de datas antes de enviar
-                if (!checkDateLogic()) {
-                    e.preventDefault();
-                    alert("Por favor, corrija as datas de início e término antes de salvar.");
-                    return;
-                }
+                                <td class="p-2" data-label="Unid:">
+                                    <select name="frente_unidade[]"
+                                        class="{{ 'w-full h-9 text-sm text-center px-2 rounded-md bg-transparent border-none text-slate-700 appearance-none pointer-events-none' if view_mode else 'form-control-std h-9 text-sm text-center bg-white' }}"
+                                        {{ 'disabled' if view_mode }}>
+                                        {% for u in ['m²', 'm³', 'm', 'un', 'kg', 't', 'vb', 'cj', 'h'] %}
+                                        <option value="{{ u }}" {% if f.unidade==u %}selected{% endif %}>{{ u }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
 
-                if (btn) {
-                    btn.querySelector("#btnText").classList.add("hidden");
-                    btn.querySelector("#spinner").classList.remove("hidden");
-                    btn.disabled = true;
-                }
-            });
-        }
-    });
+                                <td class="p-2" data-label="Meta:">
+                                    <input type="number" name="frente_qtd[]" value="{{ f.qtd_planejada }}" step="0.01"
+                                        class="{{ 'w-full h-9 text-sm text-center px-2 rounded-md bg-transparent border-none font-bold text-slate-800' if view_mode else 'form-control-std h-9 text-sm text-center font-bold' }}"
+                                        {{ 'readonly' if view_mode }}>
+                                </td>
 
-    // --- GERENCIAMENTO DE FRENTES (Correção Aplicada) ---
+                                <!-- DATA INÍCIO -->
+                                <td class="p-2" data-label="Data Início:">
+                                    <div class="relative">
+                                        <!-- Campo Oculto formatado YYYY-MM-DD para o Backend -->
+                                        <input type="hidden" name="frente_data_inicio[]"
+                                            value="{{ f.data_inicio or '' }}" class="frente-date-hidden">
 
-    // Armazena novos itens e IDs de itens removidos
-    let frentesNovas = [];
-    let frentesRemovidas = [];
+                                        <!-- Campo Visual formatado DD/MM/AAAA -->
+                                        <input type="text"
+                                            value="{{ f.data_inicio.strftime('%d/%m/%Y') if f.data_inicio else '' }}"
+                                            class="{{ 'w-full h-9 text-sm text-center px-2 rounded-md bg-transparent border-none text-slate-700' if view_mode else 'form-control-std h-9 text-sm text-left pr-8 frente-date-visual cursor-pointer' }}"
+                                            placeholder="{{ '-' if view_mode else 'DD/MM/AAAA' }}" maxlength="10"
+                                            oninput="mascaraData(this); syncRowDate(this)" {{ 'readonly' if view_mode
+                                            }}>
 
-    function atualizarInputJson() {
-        const dados = {
-            novas: frentesNovas,
-            removidas: frentesRemovidas
-        };
-        document.getElementById('frentes_json').value = JSON.stringify(dados);
-    }
+                                        {% if not view_mode %}
+                                        <div class="absolute inset-y-0 right-0 flex items-center pr-2 cursor-pointer z-10"
+                                            onclick="this.nextElementSibling.showPicker()">
+                                            <i class="far fa-calendar-alt text-slate-400 hover:text-purple-600"></i>
+                                        </div>
+                                        <input type="date" class="absolute w-0 h-0 opacity-0 pointer-events-none"
+                                            tabindex="-1" onchange="applyRowPicker(this)">
+                                        {% endif %}
+                                    </div>
+                                </td>
 
-    function interagirFrente() {
-        const nome = document.getElementById('nome_frente_nova').value.trim();
-        const selectResp = document.getElementById('id_responsavel_novo');
-        const idResp = selectResp.value;
-        const nomeResp = selectResp.options[selectResp.selectedIndex].getAttribute('data-nome') || 'Não definido';
+                                <!-- DATA PLANEJADA -->
+                                <td class="p-2" data-label="Data Fim:">
+                                    <div class="relative">
+                                        <input type="hidden" name="frente_data_planejada[]"
+                                            value="{{ f.data_planejada or '' }}" class="frente-date-hidden">
 
-        // NOVOS CAMPOS
-        // Pega o valor do SELECT agora
-        const unidade = document.getElementById('unidade_nova').value;
-        const qtd = document.getElementById('qtd_nova').value.trim();
-        const data_planejada = document.getElementById('data_planejada_nova').value;
+                                        <input type="text"
+                                            value="{{ f.data_planejada.strftime('%d/%m/%Y') if f.data_planejada else '' }}"
+                                            class="{{ 'w-full h-9 text-sm text-center px-2 rounded-md bg-transparent border-none text-slate-700' if view_mode else 'form-control-std h-9 text-sm text-left pr-8 frente-date-visual cursor-pointer' }}"
+                                            placeholder="{{ '-' if view_mode else 'DD/MM/AAAA' }}" maxlength="10"
+                                            oninput="mascaraData(this); syncRowDate(this)" {{ 'readonly' if view_mode
+                                            }}>
 
-        if (!nome) return alert("Digite o nome da frente");
+                                        {% if not view_mode %}
+                                        <div class="absolute inset-y-0 right-0 flex items-center pr-2 cursor-pointer z-10"
+                                            onclick="this.nextElementSibling.showPicker()">
+                                            <i class="far fa-calendar-alt text-slate-400 hover:text-purple-600"></i>
+                                        </div>
+                                        <input type="date" class="absolute w-0 h-0 opacity-0 pointer-events-none"
+                                            tabindex="-1" onchange="applyRowPicker(this)">
+                                        {% endif %}
+                                    </div>
+                                </td>
 
-        // Adiciona à lista local de novas frentes
-        const novaFrente = {
-            id_temp: Date.now(), // ID temporário apenas para manipulação DOM
-            nome_frente: nome,
-            id_responsavel: idResp || null,
-            nome_responsavel: nomeResp,
-            unidade: unidade || 'm²',
-            qtd_planejada: qtd || 0,
-            data_planejada: data_planejada || 0
-        };
+                                <!-- STATUS / CURVA S -->
+                                <td class="p-2 text-center" data-label="Status:">
+                                    <div class="flex flex-col items-center justify-center w-full space-y-1">
+                                        <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden border border-slate-200"
+                                            title="Realizado: {{ pct_f | round(1) }}%">
+                                            <div class="h-1.5 rounded-full {{ 'bg-emerald-500' if pct_f >= 100 else 'bg-blue-500' }}"
+                                                style="width: {{ pct_f }}%"></div>
+                                        </div>
+                                        <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden border border-slate-200"
+                                            title="Esperado (Curva S): {{ pct_exp_f | round(1) }}%">
+                                            <div class="h-1.5 rounded-full bg-slate-400 opacity-60"
+                                                style="width: {{ pct_exp_f }}%"></div>
+                                        </div>
+                                        <div
+                                            class="flex justify-between w-full text-[9px] font-bold uppercase tracking-wider mt-1">
+                                            <span class="text-blue-600">{{ pct_f | round(0) }}%</span>
+                                            <span class="text-slate-400">{{ pct_exp_f | round(0) }}% (S)</span>
+                                        </div>
+                                        <span
+                                            class="text-[9px] font-bold uppercase {{ 'text-emerald-600' if status_f == 'No Prazo' or status_f == 'Adiantado' else 'text-red-600' if status_f == 'Atrasado' else 'text-slate-400' }}">
+                                            {{ status_f }}
+                                        </span>
+                                    </div>
+                                </td>
 
-        frentesNovas.push(novaFrente);
-        renderizarFrenteNova(novaFrente);
-        atualizarInputJson();
+                                {% if not view_mode %}
+                                <td class="p-2 text-center action-cell">
+                                    <button type="button" onclick="removeRow(this, {{ f.id_frente_trabalho }})"
+                                        class="w-8 h-8 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition flex items-center justify-center">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </td>
+                                {% endif %}
+                            </tr>
+                            {% endfor %}
+                            {% else %}
+                            <!-- Mensagem Vazia -->
+                            {% if view_mode %}
+                            <tr>
+                                <td colspan="8" class="p-8 text-center text-slate-400 italic bg-slate-50">Nenhuma frente
+                                    de trabalho cadastrada neste projeto.</td>
+                            </tr>
+                            {% endif %}
 
-        // Limpa campos e reseta valores padrão
-        document.getElementById('nome_frente_nova').value = '';
-        document.getElementById('id_responsavel_novo').value = '';
-        document.getElementById('unidade_nova').value = 'm²'; // Reseta para o padrão
-        document.getElementById('qtd_nova').value = '0.00';
-        document.getElementById('data_planejada_nova').value = '';
-        document.getElementById('nome_frente_nova').focus();
-    }
+                            {% if not view_mode %}
+                            <script>window.addEventListener('DOMContentLoaded', () => { if (document.getElementById('lista-frentes').children.length === 0) addFrenteRow(); });</script>
+                            {% endif %}
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
-    function renderizarFrenteNova(f) {
-        const tbody = document.getElementById('lista-frentes');
-        const semFrentes = document.getElementById('sem-frentes');
+            <!-- Barra de Ações -->
+            <div class="flex flex-col-reverse sm:flex-row gap-3 pt-4 border-t border-slate-200">
+                <a href="{{ url_for('auth.lista_obras') }}"
+                    class="flex-1 px-4 py-3 bg-white border border-slate-300 text-slate-700 font-bold rounded-xl shadow-sm hover:bg-slate-50 transition-colors text-center text-sm">
+                    {{ 'Voltar' if view_mode else 'Cancelar' }}
+                </a>
 
-        // Se o placeholder "Nenhuma frente" existir, remove
-        if (semFrentes) semFrentes.style.display = 'none';
-
-        const tr = document.createElement('tr');
-        tr.className = 'border-b last:border-0 linha-nova bg-purple-50/30';
-        tr.id = `frente-temp-${f.id_temp}`;
-        tr.innerHTML = `
-            <td class="px-4 py-3">
-                <p class="font-medium text-slate-800">${f.nome_frente} <span class="text-[9px] bg-purple-100 text-purple-600 px-1 rounded ml-2">Novo</span></p>
-                <p class="text-xs text-slate-500">Resp: ${f.nome_responsavel}</p>
-            </td>
-            <td class="px-4 py-3 text-center text-slate-600 font-mono text-xs">
-                ${f.unidade}
-            </td>
-            <td class="px-4 py-3 text-center text-slate-800 font-bold text-xs">
-                ${f.qtd_planejada}
-            </td>
-            <td class="px-4 py-3 text-center text-slate-800 font-bold text-xs">
-                ${f.data_planejada ? new Date(f.data_planejada).toLocaleDateString('pt-BR') : '00/00/0000'} 
-            </td>
-            <td class="px-4 py-3 text-right">
-                <button type="button" onclick="removerFrenteLocal(${f.id_temp})" class="text-red-400 hover:text-red-600 p-2 rounded-full hover:bg-red-50">
-                    <i class="fas fa-times"></i>
+                {% if view_mode %}
+                <a href="{{ url_for('auth.editar_obra', id=item.id) }}"
+                    class="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md shadow-blue-500/20 transition-all text-center text-sm flex items-center justify-center gap-2">
+                    <i class="fas fa-edit"></i> Editar Obra
+                </a>
+                {% else %}
+                <button type="button" onclick="submitObraForm()" id="submitBtn"
+                    class="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md shadow-blue-500/20 transition-all text-center text-sm flex items-center justify-center gap-2">
+                    <span id="btnText">{{ 'Salvar Alterações' if item and item.id else 'Cadastrar Obra' }}</span>
+                    <i class="fas fa-spinner fa-spin hidden" id="spinner"></i>
                 </button>
-            </td>
-        `;
-        tbody.appendChild(tr);
-    }
+                {% endif %}
+            </div>
+        </form>
+    </div>
 
-    function removerFrenteLocal(idTemp) {
-        // Remove do array de novas
-        frentesNovas = frentesNovas.filter(f => f.id_temp !== idTemp);
-
-        // Remove do DOM
-        const row = document.getElementById(`frente-temp-${idTemp}`);
-        if (row) row.remove();
-
-        // Se não sobrar nada (nem reais, nem novas), exibe mensagem "sem frentes" se necessário
-        verificarListaVazia();
-
-        atualizarInputJson();
-    }
-
-    function removerFrenteExistente(idFrenteReal) {
-        if (!confirm("Deseja realmente remover esta frente? A exclusão será efetivada ao salvar a obra.")) return;
-
-        // Adiciona ao array de removidas
-        frentesRemovidas.push(idFrenteReal);
-
-        // Esconde a linha na tabela (não remove para manter integridade visual até o reload)
-        const row = document.getElementById(`frente-real-${idFrenteReal}`);
-        if (row) {
-            row.style.display = 'none';
-            row.classList.add('frente-removida'); // Marcador útil
+    <style>
+        /* Estilos auxiliares */
+        .form-control-std {
+            width: 100%;
+            border: 1px solid #cbd5e1;
+            border-radius: 0.5rem;
+            padding: 0 0.5rem;
+            transition: all 0.2s;
+            outline: none;
+            color: #334155;
         }
 
-        verificarListaVazia();
-        atualizarInputJson();
-    }
-
-    function verificarListaVazia() {
-        const linhasVisiveisReais = document.querySelectorAll('tr[id^="frente-real-"]:not([style*="display: none"])').length;
-        const linhasVisiveisNovas = frentesNovas.length;
-        const semFrentes = document.getElementById('sem-frentes');
-
-        if (linhasVisiveisReais + linhasVisiveisNovas === 0) {
-            if (semFrentes) semFrentes.style.display = 'table-row';
+        .form-control-std:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
         }
-    }
-</script>
-{% endblock %}
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-fade-in-up {
+            animation: fadeInUp 0.4s ease-out forwards;
+        }
+
+        /* CSS Mobile */
+        @media (max-width: 768px) {
+            .mobile-table thead {
+                display: none;
+            }
+
+            .mobile-table tbody tr {
+                display: flex;
+                flex-direction: column;
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                border-radius: 0.75rem;
+                margin-bottom: 1rem;
+                padding: 1rem;
+                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            }
+
+            .mobile-table tbody td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 0.5rem 0;
+                border-bottom: 1px solid #f1f5f9;
+                width: 100%;
+            }
+
+            .mobile-table tbody td:last-child {
+                border-bottom: none;
+            }
+
+            .mobile-table tbody td::before {
+                content: attr(data-label);
+                font-weight: 700;
+                font-size: 0.7rem;
+                color: #64748b;
+                text-transform: uppercase;
+                margin-right: 1rem;
+            }
+
+            .mobile-table td.full-width-mobile {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.25rem;
+            }
+
+            .mobile-table .form-control-std {
+                text-align: right;
+                border: 1px solid #e2e8f0;
+            }
+
+            .mobile-table td.full-width-mobile .form-control-std {
+                text-align: left;
+            }
+        }
+    </style>
+
+    <script>
+        const el = (id) => document.getElementById(id);
+        const ADDRESS_FIELDS = ["endereco", "numero", "complemento", "bairro", "cidade", "estado"];
+        const isViewMode = {{ 'true' if view_mode else 'false' }};
+        let frentesRemovidas = [];
+
+        // --- MÁSCARAS ---
+        function applyMasks() {
+            if (el('cnpj')) el('cnpj').addEventListener('input', e => {
+                let x = e.target.value.replace(/\D/g, '').match(/(\d{0,2})(\d{0,3})(\d{0,3})(\d{0,4})(\d{0,2})/);
+                e.target.value = !x[2] ? x[1] : x[1] + '.' + x[2] + '.' + x[3] + '/' + x[4] + (x[5] ? '-' + x[5] : '');
+            });
+            if (el('cep')) el('cep').addEventListener('input', e => {
+                let x = e.target.value.replace(/\D/g, '').match(/(\d{0,5})(\d{0,3})/);
+                e.target.value = !x[2] ? x[1] : x[1] + '-' + x[2];
+            });
+        }
+
+        // --- DATAS ---
+        function mascaraData(val) {
+            let v = val.value.replace(/\D/g, "").replace(/^(\d{2})(\d)/, "$1/$2").replace(/\/(\d{2})(\d)/, "/$1/$2");
+            val.value = v;
+        }
+
+        function syncDate(visualInput, hiddenId) {
+            const hidden = el(hiddenId);
+            const parts = visualInput.value.split('/');
+            if (parts.length === 3 && parts[2].length === 4) hidden.value = `${parts[2]}-${parts[1]}-${parts[0]}`;
+            else hidden.value = '';
+            checkDateLogic();
+        }
+
+        // CORRIGIDO: Busca elementos apenas dentro da célula atual
+        function syncRowDate(visualInput) {
+            // Usa 'closest' para achar o container pai relativo (a célula da tabela)
+            const container = visualInput.closest('.relative');
+            const hidden = container.querySelector('.frente-date-hidden');
+
+            const parts = visualInput.value.split('/');
+            if (parts.length === 3 && parts[2].length === 4) {
+                hidden.value = `${parts[2]}-${parts[1]}-${parts[0]}`;
+            } else {
+                hidden.value = '';
+            }
+        }
+
+        function applyPicker(picker, visualId, hiddenId) {
+            if (!picker.value) return;
+            const [y, m, d] = picker.value.split('-');
+            el(visualId).value = `${d}/${m}/${y}`;
+            el(hiddenId).value = picker.value;
+            checkDateLogic();
+        }
+
+        // CORRIGIDO: Busca elementos apenas dentro da célula atual
+        function applyRowPicker(picker) {
+            if (!picker.value) return;
+
+            // Usa 'closest' para achar o container pai relativo (a célula da tabela)
+            // Antes estava buscando na 'tr', o que pegava sempre o primeiro input (Data Inicio)
+            const container = picker.closest('.relative');
+            const visual = container.querySelector('.frente-date-visual');
+            const hidden = container.querySelector('.frente-date-hidden');
+
+            const [y, m, d] = picker.value.split('-');
+            visual.value = `${d}/${m}/${y}`;
+            hidden.value = picker.value;
+        }
+
+        function setToday(visualId, hiddenId) {
+            const now = new Date();
+            el(visualId).value = now.toLocaleDateString('pt-BR');
+            el(hiddenId).value = now.toISOString().split('T')[0];
+            checkDateLogic();
+        }
+
+        function checkDateLogic() {
+            const i = el('data_inicio_hidden').value, t = el('data_termino_hidden').value;
+            const visual = el('data_termino_visual'), msg = el('erro_data');
+            if (i && t && new Date(i) > new Date(t)) {
+                if (visual) visual.classList.add('border-red-300', 'bg-red-50');
+                if (msg) msg.classList.replace('hidden', 'flex');
+                return false;
+            }
+            if (visual) visual.classList.remove('border-red-300', 'bg-red-50');
+            if (msg) msg.classList.replace('flex', 'hidden');
+            return true;
+        }
+
+        // --- CEP ---
+        function searchCep(cepValue) {
+            const clean = cepValue.replace(/\D/g, '');
+            if (clean.length !== 8) return;
+            el("cep-message").innerText = "Buscando...";
+            fetch(`https://viacep.com.br/ws/${clean}/json/`).then(r => r.json()).then(d => {
+                if (d.erro) { el("cep-message").innerText = "CEP não encontrado."; return; }
+                el("endereco").value = d.logradouro; el("bairro").value = d.bairro;
+                el("cidade").value = d.localidade; el("estado").value = d.uf;
+                el("cep-message").innerText = ""; el("numero").focus();
+            }).catch(() => el("cep-message").innerText = "Erro ao buscar.");
+        }
+
+        // --- TABELA DINÂMICA (ADD/REMOVE) ---
+        function addFrenteRow() {
+            const tbody = el('lista-frentes');
+            const tr = document.createElement('tr');
+            tr.className = 'group hover:bg-slate-50 transition-colors animate-fade-in-up';
+
+            // Estrutura HTML idêntica à do Jinja para garantir consistência
+            tr.innerHTML = `
+        <input type="hidden" name="frente_id[]" value="">
+        
+        <td class="p-2 full-width-mobile" data-label="Nome:">
+            <input type="text" name="frente_nome[]" class="form-control-std h-9 text-sm" placeholder="Nome..." required>
+        </td>
+
+        <td class="p-2" data-label="Resp:">
+            <select name="frente_responsavel[]" class="form-control-std h-9 text-sm">
+                <option value="" class="cursor-pointer">Selecione...</option>
+                {% for u in usuarios %}<option value="{{ u.id }}">{{ u.nome }} ({{ u.email }})</option>{% endfor %}
+            </select>
+        </td>
+
+        <td class="p-2" data-label="Unid:">
+            <select name="frente_unidade[]" class="form-control-std h-9 text-sm text-center bg-white cursor-pointer">
+                {% for u in ['m²', 'm³', 'm', 'un', 'kg', 't', 'vb', 'cj', 'h'] %}<option value="{{ u }}">{{ u }}</option>{% endfor %}
+            </select>
+        </td>
+
+        <td class="p-2" data-label="Meta:">
+            <input type="number" name="frente_qtd[]" value="0.00" step="0.01" class="form-control-std h-9 text-sm text-center font-bold">
+        </td>
+
+        <td class="p-2" data-label="Data Início:">
+            <div class="relative">
+                <input type="hidden" name="frente_data_inicio[]" class="frente-date-hidden">
+                <input type="text" class="form-control-std h-9 text-sm text-left pr-8 frente-date-visual cursor-pointer" 
+                    placeholder="DD/MM/AAAA" maxlength="10" oninput="mascaraData(this); syncRowDate(this)">
+                
+                <div class="absolute inset-y-0 right-0 flex items-center pr-2 cursor-pointer z-10" onclick="this.nextElementSibling.showPicker()">
+                    <i class="far fa-calendar-alt text-slate-400 hover:text-purple-600"></i>
+                </div>
+                <input type="date" class="absolute w-0 h-0 opacity-0 pointer-events-none" tabindex="-1" onchange="applyRowPicker(this)">
+            </div>
+        </td>
+
+        <td class="p-2" data-label="Data Fim:">
+            <div class="relative">
+                <input type="hidden" name="frente_data_planejada[]" class="frente-date-hidden">
+                <input type="text" class="form-control-std h-9 text-sm text-left pr-8 frente-date-visual cursor-pointer" 
+                    placeholder="DD/MM/AAAA" maxlength="10" oninput="mascaraData(this); syncRowDate(this)">
+                
+                <div class="absolute inset-y-0 right-0 flex items-center pr-2 cursor-pointer z-10" onclick="this.nextElementSibling.showPicker()">
+                    <i class="far fa-calendar-alt text-slate-400 hover:text-purple-600"></i>
+                </div>
+                <input type="date" class="absolute w-0 h-0 opacity-0 pointer-events-none" tabindex="-1" onchange="applyRowPicker(this)">
+            </div>
+        </td>
+
+        <td class="p-2 text-center text-xs text-slate-400" data-label="Status:">Nova</td>
+
+        <td class="p-2 text-center action-cell">
+            <button type="button" onclick="removeRow(this, null)" class="w-8 h-8 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        </td>
+    `;
+            tbody.appendChild(tr);
+        }
+
+        function removeRow(btn, id) {
+            if (id) frentesRemovidas.push(id);
+            btn.closest('tr').remove();
+        }
+
+        // --- SUBMISSÃO DO FORM ---
+        function submitObraForm() {
+            if (!checkDateLogic()) return alert("Verifique as datas globais da obra.");
+
+            // Limpeza do CNPJ
+            const cnpjInput = el('cnpj');
+            if (cnpjInput) cnpjInput.value = cnpjInput.value.replace(/\D/g, '');
+
+            // --- CORREÇÃO CEP ---
+            // Remove máscara do CEP antes de enviar (transforma '12345-678' em '12345678')
+            const cepInput = el('cep');
+            if (cepInput) cepInput.value = cepInput.value.replace(/\D/g, '');
+
+            // Monta o JSON das frentes para o Backend processar
+            const frentes = [];
+            document.querySelectorAll('#lista-frentes tr').forEach(row => {
+                // Ignora a linha se for a mensagem de "vazio"
+                if (!row.querySelector('[name="frente_nome[]"]')) return;
+
+                const id = row.querySelector('[name="frente_id[]"]').value;
+                frentes.push({
+                    id_frente_trabalho: id || null,
+                    nome_frente: row.querySelector('[name="frente_nome[]"]').value,
+                    id_responsavel: row.querySelector('[name="frente_responsavel[]"]').value || null,
+                    unidade: row.querySelector('[name="frente_unidade[]"]').value,
+                    qtd_planejada: row.querySelector('[name="frente_qtd[]"]').value,
+                    // Pega o valor do input HIDDEN (YYYY-MM-DD) para enviar ao backend
+                    data_inicio: row.querySelector('[name="frente_data_inicio[]"]').value,
+                    data_planejada: row.querySelector('[name="frente_data_planejada[]"]').value
+                });
+            });
+
+            // Payload formatado para a lógica "novas/editadas/removidas" do Python
+            const jsonPayload = {
+                novas: frentes.filter(f => !f.id_frente_trabalho),
+                editadas: frentes.filter(f => f.id_frente_trabalho),
+                removidas: frentesRemovidas
+            };
+
+            el('frentes_json').value = JSON.stringify(jsonPayload);
+
+            const btn = el("submitBtn");
+            el("btnText").classList.add("hidden");
+            el("spinner").classList.remove("hidden");
+            btn.disabled = true;
+
+            el("mainForm").submit();
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            applyMasks();
+            if (el('cep') && !isViewMode) el('cep').addEventListener('blur', e => searchCep(e.target.value));
+        });
+    </script>
+    {% endblock %}

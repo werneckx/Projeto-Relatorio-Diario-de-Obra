@@ -1662,6 +1662,7 @@ def lista_obras():
             'status': obra_obj.status,
             # 'nome_matriz' é o resultado do JOIN, adicionado ao dicionário
             'nome_matriz': nome_matriz,
+            'frentes_trabalho': obra_obj.frentes_trabalho  # Inclui as frentes de trabalho relacionadas
         }
         
         obras_formatadas.append(obra_dict)
@@ -1874,23 +1875,40 @@ def gerar_obra():
         if frentes_payload:
             data = json.loads(frentes_payload)
             
-            # 1. Remover frentes marcadas para exclusão
+            # 1. REMOVIDAS: Exclui frentes marcadas
             for f_id in data.get('removidas', []):
-                Frente_Trabalho.query.filter_by(id_frente_trabalho=f_id, id_obra=obra.id).delete()
+                if f_id: # Garante que não é nulo
+                    Frente_Trabalho.query.filter_by(id_frente_trabalho=f_id, id_obra=obra.id).delete()
             
-            # 2. Adicionar novas frentes
+            # 2. NOVAS: Adiciona frentes criadas no grid
             for f_nova in data.get('novas', []):
-                # CORREÇÃO: Removida a instanciação duplicada
                 nova_frente = Frente_Trabalho(
                     id_obra=obra.id,
                     nome_frente=f_nova['nome_frente'],
                     id_responsavel=f_nova['id_responsavel'] if f_nova['id_responsavel'] else None,
-                    # Novos campos incluídos aqui:
                     unidade=f_nova.get('unidade'),
                     qtd_planejada=float(f_nova.get('qtd_planejada')) if f_nova.get('qtd_planejada') else 0,
+                    # [NOVO] Processando Data de Início
+                    data_inicio=datetime.strptime(f_nova.get('data_inicio'), '%Y-%m-%d').date() if f_nova.get('data_inicio') else None,
                     data_planejada=datetime.strptime(f_nova.get('data_planejada'), '%Y-%m-%d').date() if f_nova.get('data_planejada') else None
                 )
                 db.session.add(nova_frente)
+
+            # 3. EDITADAS: Atualiza frentes que já existiam e foram alteradas
+            for f_edit in data.get('editadas', []):
+                # Busca a frente existente
+                frente_existente = Frente_Trabalho.query.get(f_edit['id_frente_trabalho'])
+                
+                # Validação de segurança: verifica se a frente pertence mesmo a esta obra
+                if frente_existente and frente_existente.id_obra == obra.id:
+                    frente_existente.nome_frente = f_edit['nome_frente']
+                    frente_existente.id_responsavel = f_edit['id_responsavel'] if f_edit['id_responsavel'] else None
+                    frente_existente.unidade = f_edit.get('unidade')
+                    frente_existente.qtd_planejada = float(f_edit.get('qtd_planejada')) if f_edit.get('qtd_planejada') else 0
+                    
+                    # [NOVO] Atualizando Datas (Início e Fim)
+                    frente_existente.data_inicio = datetime.strptime(f_edit.get('data_inicio'), '%Y-%m-%d').date() if f_edit.get('data_inicio') else None
+                    frente_existente.data_planejada = datetime.strptime(f_edit.get('data_planejada'), '%Y-%m-%d').date() if f_edit.get('data_planejada') else None
 
         db.session.commit()
         return redirect(url_for('auth.lista_obras'))

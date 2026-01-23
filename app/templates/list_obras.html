@@ -2,240 +2,536 @@
 {% block title %}Lista de Obras{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
-<div class="mb-6">
-    <h1 class="text-2xl font-bold text-slate-800">Lista de Obras</h1>
-    <p class="text-sm text-slate-500">Administre o cadastro e status das obras.</p>
-</div>
+<!-- DataTables CSS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
-    /* Estilos exatos da tabela RDO para manter a consistência visual */
-    .dataTables_info,
-    .dataTables_paginate,
-    .paging_simple_numbers,
-    .dataTables_length {
-        font-size: 12px;
-        padding: 10px;
-        color: rgb(0, 0, 0);
-        font-weight: 100;
+    /* Estilos globais */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    body {
+        font-family: 'Inter', sans-serif;
+        background-color: #f8fafc;
     }
 
-    .dataTables_length select {
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .animate-fade-up {
+        animation: fadeInUp 0.4s ease-out forwards;
+    }
+
+    /* --- Customização DataTables (Paginação) --- */
+    .dataTables_wrapper .dataTables_length select {
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+        background-position: right 0.5rem center;
+        background-repeat: no-repeat;
+        background-size: 1.2em 1.2em;
+        padding: 0.35rem 2rem 0.35rem 0.75rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+        color: #475569;
+        outline: none;
+        transition: all 0.2s;
+    }
+
+    .dataTables_wrapper .dataTables_paginate {
+        margin-top: 1rem;
+        display: flex;
+        justify-content: center;
+        gap: 0.25rem;
+        flex-wrap: wrap;
+    }
+
+    @media (min-width: 640px) {
+        .dataTables_wrapper .dataTables_paginate {
+            justify-content: flex-end;
+            margin-top: 0;
+        }
+    }
+
+    .dataTables_wrapper .dataTables_paginate .paginate_button {
+        padding: 0.3rem 0.6rem;
+        border-radius: 0.5rem;
+        border: 1px solid transparent;
+        color: #64748b !important;
+        font-size: 0.8rem;
+        font-weight: 500;
         cursor: pointer;
     }
 
-    .filters input:focus {
-        outline: none;
-        border-color: #e0202d;
-        box-shadow: 0 0 3px rgba(224, 32, 45, 0.3);
+    .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+        background: #f1f5f9 !important;
+        border-color: #cbd5e1 !important;
+        color: #0f172a !important;
     }
 
-    .filters input {
-        width: 100%;
-        border: none;
-        border-radius: 6px;
-        color: rgb(0, 0, 0);
-        padding: 2px;
-        font-size: 12px;
-        background: #ffffff;
-        transition: 0.2s;
+    .dataTables_wrapper .dataTables_paginate .paginate_button.current,
+    .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+        background: #3b82f6 !important;
+        border-color: #3b82f6 !important;
+        color: white !important;
     }
 
-    .dataTables_info,
-    .dataTables_paginate,
-    .dataTables_length {
-        font-size: 13px !important;
-        padding: 8px 12px !important;
-        color: #444 !important;
-        font-weight: 400 !important;
-    }
+    /* --- MOBILE CARD VIEW (Corrigido Overflow) --- */
+    @media (max-width: 1024px) {
 
-    .dataTables_length select {
-        border-radius: 6px !important;
-        padding: 4px 8px !important;
-        border: 1px solid #ccc !important;
-        background: #f8f8f8;
-        cursor: pointer;
-    }
+        /* Esconde o cabeçalho original da tabela */
+        table#dataTableObras thead {
+            display: none;
+        }
 
-    .dataTables_paginate a {
-        border-radius: 6px !important;
-        padding: 4px 8px !important;
-        margin: 2px;
-        text-decoration: none;
-        border: 1px solid #ddd !important;
-        background: #fff !important;
-        transition: 0.2s;
-    }
+        /* Força a tabela a se comportar como blocos e remove larguras fixas */
+        table#dataTableObras,
+        table#dataTableObras tbody,
+        table#dataTableObras tr,
+        table#dataTableObras td {
+            display: block;
+            width: 100% !important;
+            /* Importante para sobrescrever estilo inline do DataTables */
+            box-sizing: border-box;
+        }
 
-    .dataTables_paginate a:hover {
-        background: #e0202d !important;
-        color: #fff !important;
-        border-color: #e0202d !important;
-    }
+        /* Container do Card (TR) */
+        table#dataTableObras tbody tr {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+            padding: 0;
+            overflow: hidden;
+            position: relative;
+        }
 
-    .dataTables_paginate .current {
-        color: #fff !important;
-        background: #eeeeee !important;
-    }
+        /* Reset de células para evitar overflow de texto */
+        table#dataTableObras tbody td {
+            border: none !important;
+            padding: 0;
+            white-space: normal !important;
+            /* Permite quebra de linha */
+            word-wrap: break-word;
+            /* Quebra palavras longas se necessário */
+        }
 
-    /* Filtro customizado */
-    .filters input {
-        width: 100%;
-        border: none;
-        border-radius: 6px;
-        padding: 2px;
-        font-size: 12px;
-        background: #ffffff;
-        transition: 0.2s;
-    }
+        /* --- Reorganização Interna --- */
 
-    .filters input:focus {
-        outline: none;
-        border-color: #e0202d;
-        box-shadow: 0 0 3px rgba(224, 32, 45, 0.3);
-    }
+        /* 1. NOME DA OBRA (Cabeçalho do Card) - TD INFO */
+        table#dataTableObras tbody td.td-info {
+            padding: 16px 16px 8px 16px;
+            border-bottom: none;
+        }
 
-    .status-badge-ui {
-        padding: 2px 8px;
-        border-radius: 9999px;
-        font-size: 10px;
-        font-weight: bold;
-        text-transform: uppercase;
-    }
+        table#dataTableObras tbody td.td-info .obra-nome {
+            font-size: 1.125rem !important;
+            color: #0f172a;
+            font-weight: 700;
+            margin-bottom: 4px;
+            padding-right: 70px;
+            /* Espaço seguro para o ID absoluto */
+            line-height: 1.3;
+        }
 
-    /* Novo estilo para destacar Matrizes */
-    .is-matriz {
-        background-color: #fffbeb !important;
-        /* Cor de fundo amarelada clara */
+        /* 2. ID (Posicionado no topo direito do card) */
+        table#dataTableObras tbody td.td-id {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            width: auto !important;
+            /* Exceção: ID ocupa apenas o necessário */
+            padding: 4px 8px;
+            background: #f1f5f9;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.75rem;
+            color: #64748b;
+            font-weight: 600;
+            z-index: 10;
+        }
+
+        /* 3. DADOS SECUNDÁRIOS (CNPJ, Tipo) */
+        table#dataTableObras tbody td.td-cnpj,
+        table#dataTableObras tbody td.td-tipo {
+            padding: 4px 16px;
+            font-size: 0.85rem;
+            color: #64748b;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            /* Permite quebrar se o label+valor for muito longo */
+        }
+
+        table#dataTableObras tbody td.td-cnpj::before {
+            content: 'CNPJ: ';
+            font-weight: 600;
+            min-width: 50px;
+            color: #94a3b8;
+            font-size: 0.75rem;
+        }
+
+        table#dataTableObras tbody td.td-tipo::before {
+            content: 'Tipo: ';
+            font-weight: 600;
+            min-width: 50px;
+            color: #94a3b8;
+            font-size: 0.75rem;
+        }
+
+        /* Espaço extra antes do rodapé */
+        table#dataTableObras tbody td.td-tipo {
+            padding-bottom: 8px;
+            /* Reduzi um pouco para caber o progresso */
+        }
+
+        /* 4. PROGRESSO (Mobile - Novo Bloco) */
+        table#dataTableObras tbody td.td-progress {
+            padding: 4px 16px 12px 16px;
+            width: 100% !important;
+        }
+
+        table#dataTableObras tbody td.td-progress .mobile-label {
+            display: inline-block;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #94a3b8;
+            margin-bottom: 4px;
+        }
+
+        /* 5. STATUS (Rodapé Esquerdo) */
+        table#dataTableObras tbody td.td-status {
+            width: 50% !important;
+            /* Força metade da largura */
+            float: left;
+            padding: 12px 16px;
+            background: #f8fafc;
+            border-top: 1px dashed #e2e8f0;
+            height: 60px;
+            /* Altura fixa para alinhar com ações */
+            display: flex;
+            align-items: center;
+        }
+
+        /* 6. AÇÕES (Rodapé Direito) */
+        table#dataTableObras tbody td.td-actions {
+            width: 50% !important;
+            /* Força metade da largura */
+            float: right;
+            padding: 10px 16px;
+            background: #f8fafc;
+            border-top: 1px dashed #e2e8f0;
+            height: 60px;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Clearfix para garantir que o container abrace os floats */
+        table#dataTableObras tbody tr::after {
+            content: "";
+            clear: both;
+            display: table;
+        }
+
+        /* Botões Mobile */
+        table#dataTableObras tbody td.td-actions a,
+        table#dataTableObras tbody td.td-actions button {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            background: white;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Remove padding do wrapper DataTables que as vezes causa scroll */
+        .dataTables_wrapper {
+            padding: 0;
+            margin: 0;
+            width: 100%;
+        }
+
+        /* Remove hover */
+        table.dataTable tbody tr:hover {
+            background-color: #fff !important;
+        }
     }
 </style>
 
-<div class="top-actions-container">
-    <div class="search-form">
-        <input type="text" id="obraInputSearch" placeholder="Buscar por Nome, CNPJ, Cidade..." class="form-control">
-        <button onclick="$('#dataTableObras').DataTable().search($('#obraInputSearch').val()).draw();"
-            class="button-base button-secondary button-compact" title="Pesquisar">
-            Pesquisar <i class="fas fa-search"></i>
-        </button>
+<div class="space-y-5 max-w-[1600px] mx-auto px-2 sm:px-0">
+
+    <!-- Cabeçalho -->
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 animate-fade-up">
+        <div>
+            <h1 class="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">Lista de Obras</h1>
+            <p class="text-slate-500 mt-1 text-xs md:text-sm">Administre o cadastro, filiais e status das obras.</p>
+        </div>
+        <div>
+            <a href="{{ url_for('auth.criar_obra') }}"
+                class="w-full md:w-auto inline-flex justify-center items-center px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-sm shadow-blue-500/30 transition-all hover:-translate-y-0.5">
+                <i class="fas fa-plus mr-2"></i> Registrar Nova Obra
+            </a>
+        </div>
     </div>
-    <a href="{{ url_for('auth.criar_obra') }}" class="button-base button-success">
-        <i class="fas fa-plus"></i> Registrar Nova Obra
-    </a>
+
+    <!-- Tabela Container -->
+    <div class="bg-white border border-slate-200 rounded-xl shadow-sm animate-fade-up flex flex-col overflow-hidden"
+        style="animation-delay: 100ms;">
+
+        <!-- Toolbar -->
+        <div
+            class="p-4 border-b border-slate-100 flex flex-col md:flex-row gap-3 justify-between items-center bg-white rounded-t-xl">
+            <div class="relative w-full md:w-96 group">
+                <input type="text" id="obraInputSearch"
+                    class="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-lg bg-slate-50 text-sm focus:bg-white focus:ring-2 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all placeholder:text-slate-400"
+                    placeholder="Buscar por Nome, CNPJ ou Cidade...">
+            </div>
+
+            <div class="flex w-full md:w-auto gap-2">
+                <button onclick="window.location.reload()"
+                    class="inline-flex justify-center items-center w-10 h-10 border border-slate-200 rounded-lg text-slate-500 bg-white hover:bg-slate-50 hover:text-blue-600 transition-all shadow-sm"
+                    title="Recarregar">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Tabela -->
+        <div class="w-full px-0 overflow-x-hidden">
+            <table id="dataTableObras" class="w-full text-left border-collapse">
+                <thead class="bg-slate-50/80 border-b border-slate-200 backdrop-blur">
+                    <tr>
+                        <!-- Definindo larguras fixas para Desktop -->
+                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-16">ID</th>
+                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Projeto</th>
+                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-36">CNPJ</th>
+                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-24">Tipo</th>
+                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-32">Progresso
+                        </th>
+                        <th
+                            class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center w-28">
+                            Status</th>
+                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right w-36">
+                            Ações</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 bg-white">
+                    {% for obra in opcoes %}
+                    {% set is_matriz = obra.id_matriz == None or obra.id_matriz == 0 %}
+
+                    <!-- Cálculo de Progresso Simples (Média das Frentes) -->
+                    {% set ns = namespace(total_pct=0, count=0) %}
+                    {% if obra.frentes_trabalho %}
+                    {% for f in obra.frentes_trabalho %}
+                    {% set plan = f.qtd_planejada or 0 %}
+                    {% set real = f.qtd_realizada or 0 %}
+                    {% if plan > 0 %}
+                    {% set pct = (real / plan) * 100 %}
+                    {% if pct > 100 %}{% set pct = 100 %}{% endif %}
+                    {% set ns.total_pct = ns.total_pct + pct %}
+                    {% set ns.count = ns.count + 1 %}
+                    {% endif %}
+                    {% endfor %}
+                    {% endif %}
+                    {% set progress_val = (ns.total_pct / ns.count) if ns.count > 0 else 0 %}
+
+                    <tr id="row-{{ obra.id }}"
+                        class="hover:bg-slate-50/80 transition-colors group {{ 'opacity-60 grayscale bg-slate-50' if obra.status == 0 else '' }}">
+
+                        <!-- 1. ID (Classe td-id) -->
+                        <td class="td-id px-6 py-4 whitespace-nowrap text-sm font-mono text-slate-400">
+                            #{{ '%03d' % obra.id }}
+                        </td>
+
+                        <!-- 2. Nome & Endereço (Classe td-info) -->
+                        <td class="td-info px-6 py-4">
+                            <!-- Nome -->
+                            <div class="obra-nome flex items-center gap-2">
+                                {% if is_matriz %}
+                                <i class="fas fa-sitemap text-indigo-500 text-xs shrink-0" title="Matriz Principal"></i>
+                                {% else %}
+                                <i class="fas fa-building text-slate-400 text-xs shrink-0" title="Filial"></i>
+                                {% endif %}
+                                <span class="font-bold">{{ obra.nome | truncate(30)}}</span>
+                            </div>
+
+                            <!-- Detalhes (Cliente + Endereço) -->
+                            <div class="mt-1 space-y-1">
+                                {% if obra.cliente %}
+                                <div class="text-xs text-slate-500 flex items-center gap-1 pl-0 md:pl-5">
+                                    <i class="fas fa-user-tie text-slate-300 text-[10px] md:hidden"></i>
+                                    {{ obra.cliente | truncate(30) }}
+                                </div>
+                                {% endif %}
+
+                                <!-- Endereço -->
+                                <div
+                                    class="text-[11px] text-slate-400 flex items-start gap-1.5 leading-tight pl-0 md:pl-5">
+                                    <i class="fas fa-map-marker-alt text-slate-300 mt-0.5 shrink-0"></i>
+                                    <span>
+                                        {{ obra.endereco }}, {{ obra.numero }}
+                                        {% if obra.bairro %} - {{ obra.bairro }}{% endif %}
+                                        <span class="inline">{% if obra.cep %} / {{ obra.cep }}{% endif %}</span>
+                                    </span>
+                                </div>
+                            </div>
+                        </td>
+
+                        <td class="td-cnpj px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                            {% if obra.cnpj %}
+                            {% set c = obra.cnpj | replace('.', '') | replace('/', '') | replace('-', '') %}
+                            {% if c|length == 14 %}
+                            {{ c[:2] }}.{{ c[2:5] }}.{{ c[5:8] }}/{{ c[8:12] }}-{{ c[12:] }}
+                            {% else %}
+                            {{ obra.cnpj }}
+                            {% endif %}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+
+                        <!-- 4. Tipo / Matriz (Classe td-tipo) -->
+                        <td class="td-tipo px-6 py-4 whitespace-nowrap">
+                            {% if is_matriz %}
+                            <span
+                                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
+                                Matriz
+                            </span>
+                            {% else %}
+                            <div class="flex flex-col md:items-start">
+                                <span
+                                    class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200 w-fit">
+                                    Filial
+                                </span>
+                                <span
+                                    class="text-[10px] text-slate-400 mt-1 truncate max-w-[150px] flex items-center gap-1"
+                                    title="{{ obra.nome_matriz }}">
+                                    <i class="fas fa-level-up-alt fa-rotate-90"></i>
+                                    {{ obra.nome_matriz | default('N/A') }}
+                                </span>
+                            </div>
+                            {% endif %}
+                        </td>
+
+                        <!-- 5. Progresso (Nova Coluna) -->
+                        <td class="td-progress px-6 py-4 align-middle">
+                            <span class="mobile-label md:hidden">Progresso:</span>
+                            <div class="w-full md:max-w-[140px]">
+                                <div class="flex justify-between items-end mb-1">
+                                    <span class="text-xs font-bold text-slate-700">{{ progress_val | round(0) | int
+                                        }}%</span>
+                                </div>
+                                <div
+                                    class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden border border-slate-200">
+                                    <div class="h-1.5 rounded-full {{ 'bg-emerald-500' if progress_val >= 100 else 'bg-blue-600' }}"
+                                        style="width: {{ progress_val }}%"></div>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- 6. Status (Classe td-status) -->
+                        <td class="td-status px-6 py-4 whitespace-nowrap text-center">
+                            {% if obra.status == 1 %}
+                            <span
+                                class="status-badge inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <i class="fas fa-check-circle mr-1.5 text-[10px]"></i> <span class="">Ativa</span>
+                            </span>
+                            {% else %}
+                            <span
+                                class="status-badge inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-red-50 text-red-700 border border-red-200">
+                                <i class="fas fa-times-circle mr-1.5 text-[10px]"></i> <span class="">Inativa</span>
+                            </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- 7. Ações (Classe td-actions) -->
+                        <td class="td-actions px-6 py-4 whitespace-nowrap text-right">
+                            <div class="flex justify-end items-center gap-1">
+                                <a href="{{ url_for('auth.visualizar_obra', id=obra.id, view_mode=True) }}"
+                                    class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                                    title="Visualizar">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{{ url_for('auth.editar_obra', id=obra.id) }}"
+                                    class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
+                                    title="Editar">
+                                    <i class="fas fa-pen"></i>
+                                </a>
+                                <button onclick="toggleObraStatus('{{ obra.id }}')"
+                                    class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"
+                                    title="{{ 'Inativar Obra' if obra.status == 1 else 'Ativar Obra' }}">
+                                    <i class="fas {{ 'fa-ban' if obra.status == 1 else 'fa-check' }}"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            {% if not opcoes %}
+            <div class="py-16 text-center">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-50 mb-4">
+                    <i class="fas fa-building text-slate-300 text-2xl"></i>
+                </div>
+                <h3 class="text-slate-800 font-bold">Nenhuma Obra encontrada</h3>
+                <p class="text-sm text-slate-500 mt-1">Registre sua primeira obra ou matriz.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
 </div>
 
-<div class="table-container bg-white rounded-lg shadow border overflow-hidden p-4">
-    <table id="dataTableObras" class="display nowrap" style="width:100%">
-        <thead>
-            <tr class="bg-slate-50">
-                <th>ID</th>
-                <th>Nome da Obra</th>
-                <th>CNPJ</th>
-                <th>Tipo / Matriz</th>
-                <th>Endereço Completo</th>
-                <th>Status</th>
-                <th class="text-right">Ações</th>
-            </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-100">
-            {% for obra in opcoes %}
-
-            {% set is_matriz = obra.id_matriz == None or obra.id_matriz == 0 %}
-
-            <tr id="row-{{ obra.id }}"
-                class="hover:bg-red-50/30 transition {{ 'opacity-50 grayscale' if obra.status == 'Inativa' }} {% if is_matriz %} is-matriz {% endif %}">
-
-                <td class="text-sm font-mono text-slate-500">{{ obra.id }}</td>
-                <td>
-                    <div class="font-bold text-slate-800">
-                        {% if is_matriz %}
-                        <i class="fas fa-sitemap text-red-600 mr-1" title="Matriz Principal"></i>
-                        {% else %}
-                        <i class="fas fa-building text-slate-400 mr-1" title="Filial/Subsidiária"></i>
-                        {% endif %}
-                        {{ obra.nome }}
-                    </div>
-                    <div class="text-[10px] text-slate-500">{% if obra.cliente %} Cliente: {{ obra.cliente }}{% endif
-                        %}</div>
-                </td>
-                <td class="text-sm text-slate-600">{{ obra.cnpj }}</td>
-
-                <td class="text-sm text-slate-600">
-                    {% if is_matriz %}
-                    <span class="status-badge-ui bg-red-100 text-red-700 border border-red-200">
-                        Matriz
-                    </span>
-                    {% else %}
-                    <span class="status-badge-ui bg-blue-100 text-blue-700 border border-blue-200">Filial</span>
-                    <div class="text-[10px] text-slate-500 mt-1">
-                        Matriz: {{ obra.nome_matriz | default('N/A') }}
-                    </div>
-                    {% endif %}
-                </td>
-                <td class="text-sm text-slate-500">
-                    {{ obra.endereco }}, {{ obra.numero }}, {% if obra.complemento %} {{ obra.complemento }}{% endif
-                    %} - {{ obra.bairro }} / {{ obra.cep }}
-
-                </td>
-                <td>
-                    {% if obra.status == 1 %}
-                    <span class="status-badge-ui bg-green-100 text-green-700 border border-green-200">
-                        <i class="fas fa-check-circle mr-1"></i> Ativa
-                    </span>
-                    {% else %}
-                    <span class="status-badge-ui bg-red-100 text-red-700 border border-red-200">
-                        <i class="fas fa-times-circle mr-1"></i> Inativa
-                    </span>
-                    {% endif %}
-                </td>
-                <td class="text-right">
-                    <div class="flex justify-end gap-1">
-                        <a href="{{ url_for('auth.visualizar_obra', id=obra.id, view_mode=True) }}"
-                            class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition"
-                            title="Visualizar">
-                            <i class="fas fa-eye text-sm"></i>
-                        </a>
-                        <a href="{{ url_for('auth.editar_obra', id=obra.id) }}"
-                            class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 rounded transition"
-                            title="Editar">
-                            <i class="fas fa-edit text-sm"></i>
-                        </a>
-                        <button onclick="toggleObraStatus('{{ obra.id }}')"
-                            class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-orange-600 hover:bg-orange-50 rounded transition"
-                            title="{{ 'Ativar Obra' if obra.status == 0 else 'Inativar Obra' }}">
-                            <i
-                                class="fas {{ 'fa-house-circle-check' if obra.status == 'Inativa' else 'fa-house-circle-xmark' }} text-sm"></i>
-                        </button>
-                    </div>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-
-<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<!-- Scripts -->
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 
 <script>
     $(document).ready(function () {
-        $('#dataTableObras').DataTable({
-            responsive: true,
+        var table = $('#dataTableObras').DataTable({
+            responsive: false, // Usamos nosso CSS customizado
             paging: true,
             searching: true,
             pageLength: 10,
             lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "Todos"]],
-            order: [[0, 'asc']],
+            order: [[0, 'desc']], // ID Recente primeiro
             language: {
-                url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json"
+                url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json",
+                search: "",
+                searchPlaceholder: "Filtrar...",
+                paginate: {
+                    previous: '<i class="fas fa-chevron-left"></i>',
+                    next: '<i class="fas fa-chevron-right"></i>'
+                }
             },
-            dom: 'lrtip' // Mantém o search interno oculto para usar o customizado
+            dom: 'rt<"px-4 py-4 border-t border-slate-200 bg-slate-50 rounded-b-xl flex flex-col sm:flex-row justify-between items-center gap-4"li p>',
+            initComplete: function () {
+                $(this.api().table().container()).removeClass('dt-container');
+            }
+        });
+
+        $('#obraInputSearch').on('keyup', function () {
+            table.search(this.value).draw();
         });
     });
 
-    // Função para alterar o status da Obra (Simulação de toggleStatus do usuário)
+    // Função Segura para Parsear JSON
     function parseJsonSafe(res) {
         return res.text().then(text => {
             if (!text) return { status: res.status, ok: res.ok, data: null };
@@ -248,67 +544,54 @@
         });
     }
 
+    // Toggle Status
     function toggleObraStatus(obraId) {
+        const row = document.getElementById(`row-${obraId}`);
+        if (!row) return;
+
+        row.classList.add('animate-pulse');
+
         fetch(`/auth/obra/toggle-status/${obraId}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' }
         })
             .then(res => parseJsonSafe(res))
             .then(({ status, ok, data }) => {
+                row.classList.remove('animate-pulse');
+
                 if (!ok || status !== 200) {
-                    alert('Erro: ' + (data.message || 'Erro desconhecido'));
+                    alert('Erro: ' + (data && data.message ? data.message : 'Falha na operação'));
                     return;
                 }
 
-                // Encontra o botão com onclick correspondente
-                const button = document.querySelector(`button[onclick="toggleObraStatus('${obraId}')"]`);
-                if (!button) {
-                    console.error('Botão não encontrado para obraId:', obraId);
-                    return;
-                }
+                const statusCell = row.querySelector('.td-status .status-badge');
+                const buttonIcon = row.querySelector('button[onclick*="toggleObraStatus"] i');
+                const button = row.querySelector('button[onclick*="toggleObraStatus"]');
 
-                const row = button.closest('tr');
-                if (!row) {
-                    console.error('Linha não encontrada para obraId:', obraId);
-                    return;
-                }
+                const wasActive = statusCell.classList.contains('bg-emerald-50');
 
-                // Coluna de status é a 6ª
-                const statusCell = row.querySelector('td:nth-child(6)');
-                if (!statusCell) {
-                    console.error('Célula de status não encontrada');
-                    return;
-                }
+                if (wasActive) {
+                    statusCell.className = 'status-badge inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-red-50 text-red-700 border border-red-200';
+                    statusCell.innerHTML = '<i class="fas fa-times-circle mr-1.5 text-[10px]"></i> <span class="">Inativa</span>';
 
-                const badge = statusCell.querySelector('span');
-                const isActive = badge && badge.classList.contains('bg-green-100');
-
-                if (isActive) {
-                    // Tornar Inativa
-                    if (badge) {
-                        badge.className = 'status-badge-ui bg-red-100 text-red-700 border border-red-200';
-                        badge.innerHTML = '<i class="fas fa-times-circle mr-1"></i> Inativa';
-                    }
                     button.title = 'Ativar Obra';
-                    const icon = button.querySelector('i');
-                    if (icon) icon.className = 'fas fa-house-circle-check text-sm';
-                    row.classList.add('opacity-50', 'grayscale');
-                } else {
-                    // Tornar Ativa
-                    if (badge) {
-                        badge.className = 'status-badge-ui bg-green-100 text-green-700 border border-green-200';
-                        badge.innerHTML = '<i class="fas fa-check-circle mr-1"></i> Ativa';
-                    }
-                    button.title = 'Inativar Obra';
-                    const icon = button.querySelector('i');
-                    if (icon) icon.className = 'fas fa-house-circle-xmark text-sm';
-                    row.classList.remove('opacity-50', 'grayscale');
-                }
+                    buttonIcon.className = 'fas fa-check';
 
+                    row.classList.add('opacity-60', 'grayscale', 'bg-slate-50');
+                } else {
+                    statusCell.className = 'status-badge inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200';
+                    statusCell.innerHTML = '<i class="fas fa-check-circle mr-1.5 text-[10px]"></i> <span class="">Ativa</span>';
+
+                    button.title = 'Inativar Obra';
+                    buttonIcon.className = 'fas fa-ban';
+
+                    row.classList.remove('opacity-60', 'grayscale', 'bg-slate-50');
+                }
             })
             .catch(err => {
-                console.error('Erro na requisição:', err);
-                alert('Erro de comunicação: ' + err.message);
+                row.classList.remove('animate-pulse');
+                console.error(err);
+                alert('Erro de conexão ao alterar status.');
             });
     }
 </script>
