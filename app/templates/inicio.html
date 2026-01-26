@@ -1,145 +1,388 @@
 {% extends "base.html" %}
-{% block title %}Dashboard Operacional RDO{% endblock %}
+
+{% block title %}Resumo Operacional{% endblock %}
 
 {% block content %}
+<!-- Container Principal com padding responsivo -->
+<div class="max-w-[1600px] mx-auto pb-12 space-y-6 sm:space-y-8 px-2 sm:px-0">
 
-<div class="w-full">
+    <!-- 1. HEADER & DATA -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 md:gap-6 animate-fade-in-down">
+        <div class="w-full md:w-auto">
+            <!-- Data Dinâmica -->
+            <div class="flex items-center gap-2 text-slate-400 text-xs sm:text-sm font-medium mb-1">
+                <i class="far fa-calendar"></i>
+                <span id="displayDataHoje" class="capitalize">Carregando data...</span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-bold text-slate-800 tracking-tight leading-tight">
+                Olá, {{ session['user_name'].split()[0] if session['user_name'] else 'Usuário' }}
+            </h1>
+            <p class="text-slate-500 text-sm mt-1">Visão geral da operação.</p>
+        </div>
 
-    <div class="mb-6">
-        <h1 class="text-2xl font-bold text-slate-800">Dashboard Operacional RDO</h1>
-        <p class="text-sm text-slate-500">Visão consolidada com dados operacionais.</p>
+        <!-- Botões de Ação (Empilhados no Mobile, Linha no Desktop) -->
+        <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+            <a href="{{ url_for('auth.lista_rdo') }}"
+                class="group bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 font-bold py-2.5 px-5 rounded-xl shadow-sm transition-all active:scale-95 flex items-center justify-center gap-2 text-sm w-full sm:w-auto">
+                <i class="fas fa-chart-line text-slate-400 group-hover:text-blue-600 transition-colors"></i>
+                <span class="whitespace-nowrap">Dashboard Detalhado</span>
+            </a>
+
+        </div>
     </div>
 
-    <!-- Actions -->
-    <section class="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 mb-6">
-        <a href="{{ url_for('auth.criar_rdo') }}" class="block bg-white rounded-lg p-4 border hover:shadow transition">
-            <div class="flex gap-4 items-center">
-                <div class="w-12 h-12 rounded-lg bg-blue-600 text-white flex items-center justify-center">
-                    <i class="fas fa-edit"></i>
-                </div>
-                <div>
-                    <h3 class="font-semibold text-slate-800">Gerar Novo RDO</h3>
-                    <p class="text-xs text-slate-500">Criar relatório diário.</p>
-                </div>
+    <!-- 2. CARDS DE KPI -->
+    <!-- Grid: 1 col (Mobile), 2 cols (Tablet), 4 cols (Desktop) -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 animate-fade-in">
+
+        <!-- Obras -->
+        <div
+            class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
+            <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <i class="fas fa-building text-3xl sm:text-4xl text-blue-600"></i>
             </div>
-        </a>
-
-        <a href="{{ url_for('auth.lista_rdo') }}" class="block bg-white rounded-lg p-4 border hover:shadow transition">
-            <div class="flex gap-4 items-center">
-                <div class="w-12 h-12 rounded-lg bg-cyan-600 text-white flex items-center justify-center">
-                    <i class="fas fa-list-alt"></i>
-                </div>
-                <div>
-                    <h3 class="font-semibold text-slate-800">Listagem de RDOs</h3>
-                    <p class="text-xs text-slate-500">Pesquisar e filtrar.</p>
-                </div>
-            </div>
-        </a>
-
-        <a href="{{ url_for('auth.lista_obras') }}"
-            class="block bg-white rounded-lg p-4 border hover:shadow transition">
-            <div class="flex gap-4 items-center">
-                <div class="w-12 h-12 rounded-lg bg-gray-700 text-white flex items-center justify-center">
-                    <i class="fas fa-building"></i>
-                </div>
-                <div>
-                    <h3 class="font-semibold text-slate-800">Cadastros Gerais</h3>
-                    <p class="text-xs text-slate-500">Obras, clima, usuários.</p>
-                </div>
-            </div>
-        </a>
-    </section>
-
-    <!-- KPIs -->
-    <section class="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-6">
-        <div class="bg-white rounded-lg p-4 border">
-            <p class="text-xs text-slate-500 uppercase">RDOs no Mês</p>
-            <h2 class="text-2xl font-bold text-slate-800">124</h2>
-            <p class="text-xs text-emerald-600">+15.5%</p>
-        </div>
-
-        <div class="bg-white rounded-lg p-4 border">
-            <p class="text-xs text-slate-500 uppercase">Obras Ativas</p>
-            <h2 class="text-2xl font-bold text-slate-800">18</h2>
-            <p class="text-xs text-slate-400">9 em execução</p>
-        </div>
-
-        <div class="bg-white rounded-lg p-4 border">
-            <p class="text-xs text-slate-500 uppercase">Pendências</p>
-            <h2 class="text-2xl font-bold text-slate-800">4</h2>
-            <p class="text-xs text-red-600">+72h em aberto</p>
-        </div>
-
-        <div class="bg-white rounded-lg p-4 border">
-            <p class="text-xs text-slate-500 uppercase">Conformidade</p>
-            <h2 class="text-2xl font-bold text-slate-800">98.5%</h2>
-            <p class="text-xs text-slate-400">Mensal</p>
-        </div>
-    </section>
-
-    <!-- CHARTS -->
-    <section class="grid gap-6 grid-cols-1 lg:grid-cols-3">
-        <div class="bg-white rounded-lg p-6 border lg:col-span-2">
-            <h3 class="text-lg font-semibold text-slate-800 mb-4">Evolução (7 dias)</h3>
-            <canvas id="lineChart" height="140"></canvas>
-        </div>
-
-        <div class="space-y-6">
-            <div class="bg-white rounded-lg p-4 border">
-                <h4 class="text-sm font-semibold text-slate-800 mb-3">Mão de Obra</h4>
-                <canvas id="barChart" height="120"></canvas>
-            </div>
-
-            <div class="bg-white rounded-lg p-4 border">
-                <h4 class="text-sm font-semibold text-slate-800 mb-3">Status</h4>
-                <canvas id="doughnutChart" height="120"></canvas>
+            <p class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">Obras Ativas</p>
+            <div class="flex items-baseline gap-2 mt-2">
+                <h3 class="text-2xl sm:text-3xl font-bold text-slate-800">{{ kpi_obras }}</h3>
+                <span
+                    class="text-[10px] sm:text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Em
+                    andamento</span>
             </div>
         </div>
-    </section>
 
+        <!-- Pendências -->
+        <div
+            class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
+            <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <i class="fas fa-file-signature text-3xl sm:text-4xl text-amber-500"></i>
+            </div>
+            <p class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">Pendências</p>
+            <div class="flex items-baseline gap-2 mt-2">
+                <h3
+                    class="text-2xl sm:text-3xl font-bold {{ 'text-amber-600' if kpi_pendentes > 0 else 'text-slate-800' }}">
+                    {{ kpi_pendentes }}</h3>
+                <span class="text-[10px] sm:text-xs font-medium text-slate-400">Aguardando</span>
+            </div>
+        </div>
+
+        <!-- Efetivo -->
+        <div
+            class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
+            <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <i class="fas fa-users text-3xl sm:text-4xl text-emerald-600"></i>
+            </div>
+            <p class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">Efetivo Hoje</p>
+            <div class="flex items-baseline gap-2 mt-2">
+                <h3 class="text-2xl sm:text-3xl font-bold text-slate-800">{{ kpi_efetivo }}</h3>
+                <span class="text-[10px] sm:text-xs font-medium text-slate-400">Colaboradores</span>
+            </div>
+        </div>
+
+        <!-- Ocorrências -->
+        <div
+            class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
+            <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <i class="fas fa-exclamation-triangle text-3xl sm:text-4xl text-red-500"></i>
+            </div>
+            <p class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">Ocorrências (Mês)</p>
+            <div class="flex items-baseline gap-2 mt-2">
+                <h3
+                    class="text-2xl sm:text-3xl font-bold {{ 'text-red-600' if kpi_ocorrencias > 0 else 'text-slate-800' }}">
+                    {{ kpi_ocorrencias }}</h3>
+                <span class="text-[10px] sm:text-xs font-medium text-slate-400">Registradas</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. ÁREA ANALÍTICA INTERATIVA -->
+    <!-- Grid: 1 col (Mobile/Tablet), 3 cols (Desktop) -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 animate-fade-in" style="animation-delay: 100ms;">
+
+        <!-- Coluna Esquerda: Gráfico Mensal + Filtros -->
+        <div class="lg:col-span-2 space-y-4 sm:space-y-6">
+
+            <!-- Gráfico Card -->
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-6 relative">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-2">
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-base sm:text-lg">Volume de RDOs</h3>
+                        <p class="text-xs text-slate-400">Interaja com os gráficos para filtrar.</p>
+                    </div>
+                    <!-- Badge de Filtro Ativo -->
+                    <div id="activeFilterBadge"
+                        class="hidden w-full sm:w-auto bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center justify-between sm:justify-start gap-2 cursor-pointer hover:bg-blue-100 transition"
+                        onclick="resetFilters()">
+                        <span id="filterText">Filtro Ativo</span>
+                        <i class="fas fa-times"></i>
+                    </div>
+                </div>
+                <!-- Altura ajustável para mobile -->
+                <div class="h-56 sm:h-64 w-full">
+                    <canvas id="monthlyChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Tabela Recentes -->
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                <div
+                    class="px-4 sm:px-6 py-4 border-b border-slate-50 flex justify-between items-center bg-slate-50/30">
+                    <h3 class="font-bold text-slate-800 text-sm">Registros Recentes</h3>
+                    <a href="{{ url_for('auth.lista_rdo') }}"
+                        class="text-xs font-bold text-slate-400 hover:text-blue-600 transition-colors flex items-center gap-1">
+                        Ver todos <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+
+                <!-- Wrapper com scroll horizontal para tabelas no mobile -->
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm whitespace-nowrap">
+                        <tbody class="divide-y divide-slate-50">
+                            {% for rdo in ultimos_rdos %}
+                            <tr class="hover:bg-slate-50 transition-colors cursor-pointer"
+                                onclick="window.location='{{ url_for('auth.visualizar_rdo', rdo_id=rdo.id) }}'">
+                                <td class="px-4 sm:px-6 py-4">
+                                    <div
+                                        class="font-bold text-slate-700 text-xs sm:text-sm truncate max-w-[150px] sm:max-w-none">
+                                        {{ rdo.obra.nome }}</div>
+                                    <div class="text-[10px] sm:text-xs text-slate-400">SEQ: {{ rdo.id_sequencial }}
+                                    </div>
+                                </td>
+                                <td class="px-4 sm:px-6 py-4 text-right">
+                                    <span class="text-xs text-slate-500 font-mono">{{ rdo.data.strftime('%d/%m')
+                                        }}</span>
+                                </td>
+                                <td class="px-4 sm:px-6 py-4 text-right w-10">
+                                    <div class="w-2.5 h-2.5 rounded-full 
+                                        {% if rdo.status == 'Aprovado' %}bg-emerald-500 shadow-sm shadow-emerald-200
+                                        {% elif rdo.status == 'Rejeitado' %}bg-red-500 shadow-sm shadow-red-200
+                                        {% else %}bg-amber-500 shadow-sm shadow-amber-200{% endif %}"
+                                        title="{{ rdo.status }}"></div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="3" class="p-6 text-center text-slate-400 text-xs">Sem atividade recente.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Coluna Direita: Status (Rosca) -->
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-6 flex flex-col justify-center">
+            <h3 class="font-bold text-slate-800 text-sm mb-6 text-center">Status Geral (Ano)</h3>
+            <div class="h-48 sm:h-56 relative">
+                <canvas id="statusChart"></canvas>
+                <!-- Texto Central do Gráfico -->
+                <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <span class="text-2xl sm:text-3xl font-bold text-slate-800" id="totalCount">0</span>
+                    <span class="text-[10px] text-slate-400 uppercase tracking-widest">Total</span>
+                </div>
+            </div>
+
+            <!-- Legenda Customizada -->
+            <div class="mt-6 sm:mt-8 space-y-3">
+                <div class="flex justify-between items-center text-xs sm:text-sm">
+                    <span class="flex items-center gap-2 text-slate-600"><span
+                            class="w-3 h-3 rounded bg-emerald-500"></span> Aprovado</span>
+                    <span class="font-bold text-slate-800 bg-slate-50 px-2 py-0.5 rounded" id="legendAprovado">0</span>
+                </div>
+                <div class="flex justify-between items-center text-xs sm:text-sm">
+                    <span class="flex items-center gap-2 text-slate-600"><span
+                            class="w-3 h-3 rounded bg-amber-500"></span> Pendente</span>
+                    <span class="font-bold text-slate-800 bg-slate-50 px-2 py-0.5 rounded" id="legendPendente">0</span>
+                </div>
+                <div class="flex justify-between items-center text-xs sm:text-sm">
+                    <span class="flex items-center gap-2 text-slate-600"><span
+                            class="w-3 h-3 rounded bg-red-500"></span> Rejeitado</span>
+                    <span class="font-bold text-slate-800 bg-slate-50 px-2 py-0.5 rounded" id="legendRejeitado">0</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
 </div>
 
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <script>
-    new Chart(document.getElementById("lineChart"), {
-        type: "line",
-        data: {
-            labels: ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"],
-            datasets: [{
-                data: [18, 22, 25, 21, 30, 28, 32],
-                borderColor: "#2563eb",
-                backgroundColor: "rgba(37,99,235,0.15)",
-                tension: 0.35,
-                borderWidth: 2,
-                pointRadius: 3
-            }]
-        },
-        options: { plugins: { legend: { display: false } } }
-    });
+    // 1. Mostrar Data de Hoje
+    const dataOptions = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+    const hojeStr = new Date().toLocaleDateString('pt-BR', dataOptions);
+    document.getElementById('displayDataHoje').textContent = hojeStr.charAt(0).toUpperCase() + hojeStr.slice(1);
 
-    new Chart(document.getElementById("barChart"), {
-        type: "bar",
-        data: {
-            labels: ["Eng./Téc.", "Geral", "Admin"],
-            datasets: [{
-                data: [26, 150, 39],
-                backgroundColor: ["#2563eb", "#6b7280", "#0ea5e9"],
-                borderRadius: 6
-            }]
-        },
-        options: { plugins: { legend: { display: false } } }
-    });
+    // 2. Lógica de Interatividade dos Gráficos
+    const rawData = {{ dados_graficos_json | tojson }};
 
-    new Chart(document.getElementById("doughnutChart"), {
-        type: "doughnut",
-        data: {
-            labels: ["Aprovados", "Revisão", "Reprov.", "Rascunho"],
-            datasets: [{
-                data: [75, 10, 5, 10],
-                backgroundColor: ["#10b981", "#0ea5e9", "#ef4444", "#d1d5db"]
-            }]
-        },
-        options: { cutout: "60%" }
-    });
+    let filterStatus = null;
+    let filterMonth = null;
+
+    let monthlyChart = null;
+    let statusChart = null;
+
+    const colors = {
+        aprovado: '#10b981',
+        pendente: '#f59e0b',
+        rejeitado: '#ef4444',
+        barras: '#3b82f6',
+        barrasFiltro: '#6366f1'
+    };
+
+    function initCharts() {
+        const ctxMonth = document.getElementById('monthlyChart').getContext('2d');
+        monthlyChart = new Chart(ctxMonth, {
+            type: 'bar',
+            data: {
+                labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
+                datasets: [{
+                    label: 'RDOs',
+                    data: [],
+                    backgroundColor: colors.barras,
+                    borderRadius: 4,
+                    barThickness: 'flex',
+                    maxBarThickness: 30, // Limita largura em telas grandes
+                    hoverBackgroundColor: colors.barrasFiltro
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: '#f8fafc', drawBorder: false }, ticks: { font: { size: 10 }, color: '#94a3b8' } },
+                    x: { grid: { display: false }, ticks: { font: { size: 10 }, color: '#94a3b8' } }
+                },
+                onClick: (e, elements) => {
+                    if (elements.length > 0) {
+                        const index = elements[0].index;
+                        setFilterMonth(index + 1);
+                    } else {
+                        setFilterMonth(null);
+                    }
+                }
+            }
+        });
+
+        const ctxStatus = document.getElementById('statusChart').getContext('2d');
+        statusChart = new Chart(ctxStatus, {
+            type: 'doughnut',
+            data: {
+                labels: ['Aprovado', 'Pendente', 'Rejeitado'],
+                datasets: [{
+                    data: [],
+                    backgroundColor: [colors.aprovado, colors.pendente, colors.rejeitado],
+                    borderWidth: 0,
+                    hoverOffset: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '75%',
+                plugins: { legend: { display: false } },
+                onClick: (e, elements) => {
+                    if (elements.length > 0) {
+                        const index = elements[0].index;
+                        const labels = ['Aprovado', 'Pendente', 'Rejeitado'];
+                        setFilterStatus(labels[index]);
+                    } else {
+                        setFilterStatus(null);
+                    }
+                }
+            }
+        });
+
+        updateCharts();
+    }
+
+    function updateCharts() {
+        // Filtragem para o Gráfico Mensal
+        const dataForMonthly = filterStatus
+            ? rawData.filter(d => d.status === filterStatus)
+            : rawData;
+
+        const monthlyCounts = Array(12).fill(0);
+        dataForMonthly.forEach(d => monthlyCounts[d.mes - 1]++);
+
+        // Filtragem para o Gráfico de Status
+        const dataForStatus = filterMonth
+            ? rawData.filter(d => d.mes === filterMonth)
+            : rawData;
+
+        const statusCounts = { 'Aprovado': 0, 'Pendente': 0, 'Rejeitado': 0 };
+        dataForStatus.forEach(d => {
+            if (statusCounts[d.status] !== undefined) statusCounts[d.status]++;
+        });
+
+        // Atualização Visual
+        monthlyChart.data.datasets[0].data = monthlyCounts;
+        monthlyChart.data.datasets[0].backgroundColor = filterStatus ? colors.barrasFiltro : colors.barras;
+
+        if (filterMonth) {
+            const bgColors = Array(12).fill('#f1f5f9');
+            bgColors[filterMonth - 1] = colors.barrasFiltro;
+            monthlyChart.data.datasets[0].backgroundColor = bgColors;
+        }
+
+        statusChart.data.datasets[0].data = [
+            statusCounts['Aprovado'],
+            statusCounts['Pendente'],
+            statusCounts['Rejeitado']
+        ];
+
+        const total = Object.values(statusCounts).reduce((a, b) => a + b, 0);
+        document.getElementById('totalCount').innerText = total;
+
+        document.getElementById('legendAprovado').innerText = statusCounts['Aprovado'];
+        document.getElementById('legendPendente').innerText = statusCounts['Pendente'];
+        document.getElementById('legendRejeitado').innerText = statusCounts['Rejeitado'];
+
+        monthlyChart.update();
+        statusChart.update();
+        updateFilterBadge();
+    }
+
+    function setFilterStatus(status) {
+        if (filterStatus === status) filterStatus = null;
+        else filterStatus = status;
+        updateCharts();
+    }
+
+    function setFilterMonth(month) {
+        if (filterMonth === month) filterMonth = null;
+        else filterMonth = month;
+        updateCharts();
+    }
+
+    function resetFilters() {
+        filterStatus = null;
+        filterMonth = null;
+        updateCharts();
+    }
+
+    function updateFilterBadge() {
+        const badge = document.getElementById('activeFilterBadge');
+        const text = document.getElementById('filterText');
+
+        const labels = [];
+        if (filterMonth) {
+            const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+            labels.push(months[filterMonth - 1]);
+        }
+        if (filterStatus) labels.push(filterStatus);
+
+        if (labels.length > 0) {
+            text.innerText = labels.join(' + ');
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', initCharts);
 </script>
-
 {% endblock %}

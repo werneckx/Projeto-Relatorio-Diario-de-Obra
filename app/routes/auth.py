@@ -16,7 +16,7 @@ from app.models.obra import Frente_Trabalho, Obra
 from app.models.rdo import RDO, Assinatura, Equipamentos
 from app.utils.rdo_pdf import regenerar_pdf_rdo
 from app.utils.qrcode_utils import gerar_qrcode_b64
-from sqlalchemy import func, or_
+from sqlalchemy import extract, func, or_
 from datetime import date, datetime, timedelta, timezone
 from functools import wraps
 from sqlalchemy.orm import aliased
@@ -107,8 +107,67 @@ def logout():
 @auth_bp.get("/inicio")
 @login_required
 def inicio():
-    return render_template("inicio.html")
+    from app.models.obra import Obra
+    from app.models.rdo import RDO, RDOMaoObra, TagsOcorrencias
+    
+    # Data de referência
+    hoje = date.today()
+    ano_atual = hoje.year
+    mes_atual = hoje.month
 
+    # --- 1. KPIs PRINCIPAIS ---
+    
+    # KPI 1: Obras Ativas (Status 1)
+    kpi_obras = Obra.query.filter_by(status=1).count()
+    
+    # KPI 2: RDOs Pendentes (Geral)
+    kpi_pendentes = RDO.query.filter_by(status='Pendente').count()
+    
+    # KPI 3: Efetivo Total (Hoje)
+    # Soma a quantidade própria + terceirizada de todos os RDOs com data de hoje
+    kpi_efetivo = db.session.query(
+        func.sum(RDOMaoObra.quantidade_propria + RDOMaoObra.quantidade_terceirizada)
+    ).join(RDO).filter(RDO.data == hoje).scalar() or 0
+    
+    # KPI 4: Ocorrências (No Mês Atual)
+    # Conta quantos registros de ocorrências existem em RDOs deste mês/ano
+    kpi_ocorrencias = db.session.query(func.count(TagsOcorrencias.id_tag_rdo))\
+        .join(RDO)\
+        .filter(extract('year', RDO.data) == ano_atual)\
+        .filter(extract('month', RDO.data) == mes_atual)\
+        .scalar() or 0
+
+    # --- 2. DADOS PARA INTERATIVIDADE (POWER BI STYLE) ---
+    # Buscamos metadados de todos os RDOs do ano para enviar ao Frontend (Chart.js).
+    # O JavaScript fará a filtragem dinâmica (clique no mês filtra status, clique no status filtra mês).
+    raw_rdos = db.session.query(RDO.id, RDO.status, RDO.data).filter(extract('year', RDO.data) == ano_atual).all()
+    
+    # Serializa para JSON (Lista de dicionários simples)
+    dados_graficos_json = [
+        {
+            'status': rdo.status,
+            'mes': rdo.data.month, # Inteiro 1 a 12
+            'data_iso': rdo.data.isoformat()
+        } 
+        for rdo in raw_rdos
+    ]
+
+    # --- 3. TABELA DE RESUMO (Últimos Registros) ---
+    ultimos_rdos = RDO.query.order_by(RDO.data.desc(), RDO.id.desc()).limit(5).all()
+
+    return render_template(
+        "inicio.html",
+        # KPIs
+        kpi_obras=kpi_obras,
+        kpi_pendentes=kpi_pendentes,
+        kpi_efetivo=int(kpi_efetivo),
+        kpi_ocorrencias=kpi_ocorrencias,
+        
+        # Tabelas e Gráficos
+        ultimos_rdos=ultimos_rdos,
+        dados_graficos_json=dados_graficos_json # Dados brutos para o Chart.js manipular
+    )
+    
 #######################################################################################################
 ####################################################################################################### Empresa
 #######################################################################################################
