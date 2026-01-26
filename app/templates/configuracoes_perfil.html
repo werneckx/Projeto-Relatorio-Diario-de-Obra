@@ -1,0 +1,351 @@
+{% extends "base.html" %}
+
+{% block title %}Meu Perfil{% endblock %}
+
+{% block content %}
+<div>
+
+    <!-- CABEÇALHO -->
+    <div class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 animate-fade-in-down">
+        <div class="flex items-center gap-4">
+            <!-- Avatar Grande -->
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-slate-800 tracking-tight">Meu Perfil</h1>
+                <p class="text-slate-500 text-sm md:text-base">Gerencie suas informações pessoais e credenciais.</p>
+            </div>
+        </div>
+
+        <div class="hidden md:block">
+            <span
+                class="inline-flex items-center px-4 py-1.5 rounded-full text-sm font-bold bg-blue-50 text-blue-700 border border-blue-100 shadow-sm">
+                {{ current_user.papel }}
+            </span>
+        </div>
+    </div>
+
+    <!-- MENSAGENS FLASH -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="mb-8 space-y-3">
+        {% for category, message in messages %}
+        <div
+            class="p-4 rounded-xl flex items-center gap-4 border shadow-sm transition-all animate-fade-in {{ 'bg-red-50 text-red-700 border-red-100' if category == 'danger' else 'bg-emerald-50 text-emerald-700 border-emerald-100' }}">
+            <div class="font-bold text-sm">{{ message }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+        <!-- COLUNA DA ESQUERDA: NAVEGAÇÃO -->
+        <div class="lg:col-span-1 space-y-6">
+            <!-- Menu Lateral -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden sticky top-24">
+                <div class="p-2 space-y-1">
+                    <button onclick="switchTab('pessoal')" id="tab-btn-pessoal"
+                        class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-sm font-medium transition-all bg-blue-50 text-blue-700 ring-1 ring-blue-100 shadow-sm">
+                        <i class="fas fa-user-circle"></i> Dados Pessoais
+                    </button>
+                    <button onclick="switchTab('seguranca')" id="tab-btn-seguranca"
+                        class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-sm font-medium text-slate-600 hover:bg-slate-50 transition-all">
+                        <i class="fas fa-lock"></i> Segurança e Senha
+                    </button>
+                </div>
+
+                <div class="px-6 py-4 bg-slate-50 border-t border-slate-100">
+                    <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Resumo da Conta</h3>
+                    <ul class="space-y-2 text-xs">
+                        <li class="flex justify-between">
+                            <span class="text-slate-500">ID Usuário</span>
+                            <span class="font-mono font-bold text-slate-700">#{{ current_user.id }}</span>
+                        </li>
+                        <li class="flex justify-between">
+                            <span class="text-slate-500">Membro desde</span>
+                            <span class="font-medium text-slate-700">{{ current_user.data_cadastro.strftime('%d/%m/%Y')
+                                }}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- COLUNA DA DIREITA: CONTEÚDO -->
+        <div class="lg:col-span-2">
+
+            <!-- ABA 1: DADOS PESSOAIS -->
+            <div id="tab-content-pessoal" class="space-y-6 animate-fade-in">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden relative">
+
+                    <div class="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-white">
+                        <div>
+                            <h2 class="font-bold text-slate-800 text-lg">Informações Básicas</h2>
+                            <p class="text-xs text-slate-500 mt-0.5">Visualize ou edite seus dados de contato.</p>
+                        </div>
+                        <!-- Botão de Editar (Topo) -->
+                        <button type="button" id="btn-enable-edit" onclick="toggleEditMode(true)"
+                            class="text-blue-600 hover:text-blue-800 text-sm font-bold flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-all">
+                            <i class="fas fa-pen"></i> Editar
+                        </button>
+                    </div>
+
+                    <form action="{{ url_for('auth.atualizar_perfil') }}" method="POST" class="p-6 md:p-8 space-y-6"
+                        id="form-pessoal">
+
+                        <!-- Grid de Inputs -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                            <!-- Nome -->
+                            <div class="md:col-span-2 space-y-1.5">
+                                <label class="text-xs font-bold text-slate-500 uppercase tracking-wide ml-1">Nome
+                                    Completo</label>
+                                <input type="text" name="nome" value="{{ current_user.nome }}" required disabled
+                                    class="input-editable block w-full px-4 py-2.5 rounded-xl text-slate-800 text-sm font-medium transition-all border border-transparent bg-slate-50 disabled:cursor-default">
+                            </div>
+
+                            <!-- Telefone -->
+                            <div class="space-y-1.5">
+                                <label class="text-xs font-bold text-slate-500 uppercase tracking-wide ml-1">Telefone /
+                                    WhatsApp</label>
+                                <input type="text" name="telefone" id="telefone"
+                                    value="{{ current_user.telefone if current_user.telefone else '' }}"
+                                    placeholder="(00) 00000-0000" disabled
+                                    class="input-editable block w-full px-4 py-2.5 rounded-xl text-slate-800 text-sm font-medium transition-all border border-transparent bg-slate-50 disabled:cursor-default">
+                            </div>
+
+                            <!-- Departamento -->
+                            <div class="space-y-1.5">
+                                <label
+                                    class="text-xs font-bold text-slate-500 uppercase tracking-wide ml-1">Departamento /
+                                    Setor</label>
+                                <input type="text" name="departamento"
+                                    value="{{ current_user.departamento if current_user.departamento else '' }}"
+                                    placeholder="Não informado" disabled
+                                    class="input-editable block w-full px-4 py-2.5 rounded-xl text-slate-800 text-sm font-medium transition-all border border-transparent bg-slate-50 disabled:cursor-default">
+                            </div>
+
+                            <!-- Tema (Preferência Movida) -->
+                            <div class="space-y-1.5">
+                                <label class="text-xs font-bold text-slate-500 uppercase tracking-wide ml-1">Tema da
+                                    Interface</label>
+                                <div class="relative">
+                                    <select name="tema" disabled
+                                        class="input-editable block w-full px-4 py-2.5 rounded-xl text-slate-800 text-sm font-medium transition-all border border-transparent bg-slate-50 appearance-none disabled:cursor-default">
+                                        <option value="light" {{ 'selected' if not current_user.tema or
+                                            current_user.tema=='light' }}>Claro (Padrão)</option>
+                                        <option value="dark" {{ 'selected' if current_user.tema=='dark' }}>Escuro
+                                        </option>
+                                    </select>
+                                    <!-- Ícone do select só aparece na edição -->
+                                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500 opacity-0 transition-opacity"
+                                        id="select-arrow">
+                                        <i class="fas fa-chevron-down text-xs"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Grid Somente Leitura (Sempre Bloqueado) -->
+                        <div class="bg-slate-50/80 p-5 rounded-xl border border-slate-200/60 mt-4">
+                            <p class="text-[10px] font-bold text-slate-400 uppercase mb-3 flex items-center gap-2">
+                                <i class="fas fa-lock text-slate-300"></i> Dados de Acesso (Imutáveis)
+                            </p>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <!-- Email -->
+                                <div class="space-y-1">
+                                    <label class="text-[10px] text-slate-400 font-semibold uppercase">E-mail</label>
+                                    <div class="text-sm font-medium text-slate-600 truncate"
+                                        title="{{ current_user.email }}">{{ current_user.email }}</div>
+                                </div>
+                                <!-- CPF -->
+                                <div class="space-y-1">
+                                    <label class="text-[10px] text-slate-400 font-semibold uppercase">CPF</label>
+                                    <div class="text-sm font-medium text-slate-600">{{ current_user.cpf }}</div>
+                                </div>
+                                <!-- Cargo -->
+                                <div class="space-y-1">
+                                    <label class="text-[10px] text-slate-400 font-semibold uppercase">Nível</label>
+                                    <div class="text-sm font-medium text-slate-600">{{ current_user.papel }}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Botões de Ação (Escondidos Inicialmente) -->
+                        <div id="action-buttons"
+                            class="hidden pt-2 flex justify-end gap-3 border-t border-slate-100 mt-4 animate-fade-in">
+                            <button type="button" onclick="toggleEditMode(false)"
+                                class="px-5 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 font-bold text-sm transition-colors">
+                                Cancelar
+                            </button>
+                            <button type="submit"
+                                class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-xl shadow-lg shadow-blue-600/20 transition-all hover:-translate-y-0.5 text-sm flex items-center gap-2">
+                                <i class="fas fa-save"></i> Salvar Alterações
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- ABA 2: SEGURANÇA -->
+            <div id="tab-content-seguranca" class="hidden space-y-6 animate-fade-in">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="px-6 py-5 border-b border-slate-100 flex justify-between items-center">
+                        <div>
+                            <h2 class="font-bold text-slate-800 text-lg">Alterar Senha</h2>
+                            <p class="text-xs text-slate-500 mt-0.5">Recomendamos senhas fortes com letras, números e
+                                símbolos.</p>
+                        </div>
+                    </div>
+
+                    <form action="{{ url_for('auth.alterar_minha_senha') }}" method="POST" class="p-6 md:p-8 space-y-6">
+                        <div class="space-y-5">
+
+                            <div class="space-y-1.5">
+                                <label class="text-xs font-bold text-slate-700 uppercase tracking-wide ml-1">Senha
+                                    Atual</label>
+                                <input type="password" name="senha_atual" required
+                                    class="block w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm">
+                            </div>
+
+                            <div
+                                class="p-4 bg-yellow-50 border border-yellow-100 rounded-xl text-yellow-800 text-xs flex gap-2">
+                                <i class="fas fa-exclamation-triangle mt-0.5"></i>
+                                <p>Sua nova senha deve ter no mínimo 8 caracteres para garantir a segurança da conta.
+                                </p>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                <div class="space-y-1.5">
+                                    <label class="text-xs font-bold text-slate-700 uppercase tracking-wide ml-1">Nova
+                                        Senha</label>
+                                    <input type="password" name="nova_senha" required id="nova_senha"
+                                        class="block w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm">
+                                </div>
+                                <div class="space-y-1.5">
+                                    <label
+                                        class="text-xs font-bold text-slate-700 uppercase tracking-wide ml-1">Confirmar
+                                        Nova Senha</label>
+                                    <input type="password" name="confirmar_senha" required id="confirmar_senha"
+                                        class="block w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pt-4 border-t border-slate-100 flex justify-end">
+                            <button type="submit"
+                                class="bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 px-8 rounded-xl shadow-lg shadow-slate-800/20 transition-all hover:-translate-y-0.5 text-sm flex items-center gap-2">
+                                <i class="fas fa-key"></i> Atualizar Senha
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    // ===== NAVEGAÇÃO DE ABAS =====
+    function switchTab(tabName) {
+        // Esconde todos os conteúdos
+        document.getElementById('tab-content-pessoal').classList.add('hidden');
+        document.getElementById('tab-content-seguranca').classList.add('hidden');
+
+        // Reset de botões
+        ['pessoal', 'seguranca'].forEach(b => {
+            const btn = document.getElementById(`tab-btn-${b}`);
+            btn.className = 'w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-sm font-medium text-slate-600 hover:bg-slate-50 transition-all';
+        });
+
+        // Mostra selecionado
+        document.getElementById(`tab-content-${tabName}`).classList.remove('hidden');
+
+        // Ativa botão visualmente
+        const activeBtn = document.getElementById(`tab-btn-${tabName}`);
+        activeBtn.className = 'w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-sm font-medium transition-all bg-blue-50 text-blue-700 ring-1 ring-blue-100 shadow-sm';
+    }
+
+    // ===== LÓGICA DE EDIÇÃO (TOGGLE) =====
+    function toggleEditMode(enable) {
+        const inputs = document.querySelectorAll('.input-editable');
+        const actionButtons = document.getElementById('action-buttons');
+        const editButton = document.getElementById('btn-enable-edit');
+        const selectArrow = document.getElementById('select-arrow');
+
+        if (enable) {
+            // MODO EDIÇÃO
+            inputs.forEach(input => {
+                input.disabled = false;
+                // Estilo visual de edição (Borda, Fundo Branco)
+                input.classList.remove('bg-slate-50', 'border-transparent');
+                input.classList.add('bg-white', 'border-slate-300', 'focus:ring-2');
+            });
+
+            actionButtons.classList.remove('hidden');
+            editButton.classList.add('hidden'); // Esconde botão "Editar"
+            selectArrow.classList.remove('opacity-0'); // Mostra seta do select
+
+            // Foca no primeiro input
+            inputs[0].focus();
+        } else {
+            // MODO VISUALIZAÇÃO (CANCELAR)
+            inputs.forEach(input => {
+                input.disabled = true;
+                // Estilo visual de leitura (Sem borda, Fundo Cinza Claro)
+                input.classList.add('bg-slate-50', 'border-transparent');
+                input.classList.remove('bg-white', 'border-slate-300', 'focus:ring-2');
+            });
+
+            // Reseta o formulário para os valores originais ao cancelar
+            document.getElementById('form-pessoal').reset();
+
+            actionButtons.classList.add('hidden');
+            editButton.classList.remove('hidden'); // Mostra botão "Editar"
+            selectArrow.classList.add('opacity-0');
+        }
+    }
+
+    // ===== MÁSCARA DE TELEFONE AUTOMÁTICA =====
+    const phoneInput = document.getElementById('telefone');
+    if (phoneInput) {
+        phoneInput.addEventListener('input', function (e) {
+            let value = e.target.value.replace(/\D/g, ''); // Remove tudo que não é dígito
+
+            // Limita a 11 dígitos
+            if (value.length > 11) value = value.slice(0, 11);
+
+            // Formatação progressiva
+            if (value.length > 10) {
+                // (11) 91234-5678
+                value = value.replace(/^(\d{2})(\d{5})(\d{4}).*/, '($1) $2-$3');
+            } else if (value.length > 5) {
+                // (11) 1234-5678
+                value = value.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3');
+            } else if (value.length > 2) {
+                // (11) 123...
+                value = value.replace(/^(\d{2})(\d{0,5})/, '($1) $2');
+            } else {
+                // 11...
+                value = value.replace(/^(\d*)/, '($1');
+            }
+
+            e.target.value = value;
+        });
+    }
+
+    // ===== VALIDAÇÃO DE SENHA =====
+    const passForm = document.querySelector('form[action*="alterar_minha_senha"]');
+    if (passForm) {
+        passForm.addEventListener('submit', function (e) {
+            const n = document.getElementById('nova_senha').value;
+            const c = document.getElementById('confirmar_senha').value;
+            if (n !== c) {
+                e.preventDefault();
+                alert('As novas senhas não conferem.');
+            }
+        });
+    }
+</script>
+{% endblock %}

@@ -2006,3 +2006,75 @@ def toggle_obra_status(id):
         print(f"Erro ao alternar status da obra: {e}")
         return '', 500 # Retorna erro 500
     
+#######################################################################################################
+####################################################################################################### MEU PERFIL
+#######################################################################################################
+
+# Rota para Visualizar o Perfil
+@auth_bp.get("/meu-perfil")
+@login_required
+def meu_perfil():
+    from app.models.usuario import Usuario
+    # current_user já é fornecido pelo Flask-Login, mas recarregar do banco garante dados frescos
+    user = Usuario.query.get(session.get("user_id"))
+    return render_template("configuracoes_perfil.html", current_user=user)
+
+# Rota para Atualizar Dados Pessoais
+@auth_bp.post("/atualizar-meu-perfil")
+@login_required
+def atualizar_perfil():
+    from app.models.usuario import Usuario
+    
+    user = Usuario.query.get(session.get("user_id"))
+    nome = request.form.get("nome")
+    telefone = request.form.get("telefone") # Novo campo sugerido
+    departamento = request.form.get("departamento") # Novo campo sugerido
+    
+    if user:
+        user.nome = nome
+        user.departamento = departamento
+        
+        # Verifica se o atributo existe antes de tentar salvar (segurança contra erro de coluna inexistente)
+        if hasattr(user, 'telefone'): 
+            user.telefone = telefone
+            
+        try:
+            db.session.commit()
+            # Atualiza sessão também
+            session["user_name"] = user.nome
+            flash("Perfil atualizado com sucesso!", "success")
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Erro ao atualizar perfil: {str(e)}", "danger")
+            
+    return redirect(url_for("auth.meu_perfil"))
+
+# Rota para Alterar Senha Logado
+@auth_bp.post("/alterar-minha-senha")
+@login_required
+def alterar_minha_senha():
+    from app.models.usuario import Usuario
+    
+    senha_atual = request.form.get("senha_atual")
+    nova_senha = request.form.get("nova_senha")
+    confirmar_senha = request.form.get("confirmar_senha")
+    
+    if nova_senha != confirmar_senha:
+        flash("A confirmação da nova senha não confere.", "danger")
+        return redirect(url_for("auth.meu_perfil"))
+        
+    user = Usuario.query.get(session.get("user_id"))
+    
+    if not user or not check_password_hash(user.senha, senha_atual):
+        flash("A senha atual está incorreta.", "danger")
+        return redirect(url_for("auth.meu_perfil"))
+        
+    try:
+        user.set_senha(nova_senha)
+        db.session.commit()
+        flash("Senha alterada com sucesso! Use a nova senha no próximo login.", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash("Erro ao alterar senha.", "danger")
+        
+    return redirect(url_for("auth.meu_perfil"))
