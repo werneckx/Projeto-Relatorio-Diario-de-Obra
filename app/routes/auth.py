@@ -1039,7 +1039,7 @@ def criar_usuario():
     # Determina o Admin padrão para uso no template
     from app.models.usuario import Usuario
     admin = Usuario.query.filter_by(papel='Admin').first()
-    default_supervisor = {'id': admin.id, 'nome': admin.nome} if admin else None
+    default_supervisor = {'id': admin.id, 'nome': admin.nome, 'email': admin.email} if admin else None
 
     # Passamos categoria='usuario' para o template saber qual seção renderizar
     return render_template(
@@ -1112,23 +1112,18 @@ def gerar_usuario():
             todas_matrizes = Obra.query.filter(Obra.id_matriz.is_(None), Obra.status == 1).all()
             user.obras_permitidas = todas_matrizes
         else:
-            # Outros papéis: vincula apenas as matrizes selecionadas (não filiais específicas)
-            # Extrai apenas as matrizes das IDs selecionadas
-            matrizes_selecionadas = []
-            for oid in obras_ids:
-                obra = Obra.query.get(int(oid))
-                if obra:
-                    # Se for uma matriz (id_matriz é None ou 0), adiciona
-                    if obra.id_matriz is None or obra.id_matriz == 0:
-                        matrizes_selecionadas.append(obra)
-                    # Se for uma filial, adiciona sua matriz (se não estiver duplicada)
-                    elif obra.id_matriz and obra.id_matriz > 0:
-                        matriz = Obra.query.get(obra.id_matriz)
-                        if matriz and matriz not in matrizes_selecionadas:
-                            matrizes_selecionadas.append(matriz)
+            # Outros papéis: vincula EXATAMENTE o que foi selecionado no formulário
+            # Isso permite granularidade: se marcou filial, salva filial. Se marcou matriz, salva matriz.
+            obras_selecionadas = []
+            if obras_ids:
+                # Filtra IDs vazios e busca no banco
+                for oid in obras_ids:
+                    if oid:
+                        obra = Obra.query.get(int(oid))
+                        if obra:
+                            obras_selecionadas.append(obra)
             
-            # Vincula apenas as matrizes (filiais serão acessadas dinamicamente)
-            user.obras_permitidas = matrizes_selecionadas
+            user.obras_permitidas = obras_selecionadas
 
         # Se id_supervisor está vazio/None, define primeiro Admin como supervisor padrão
         if not getattr(user, 'id_supervisor', None):
@@ -1171,7 +1166,7 @@ def toggle_user_status(userId):
         return jsonify({"message": f"Erro ao atualizar: {str(e)}"}), 500
      
 # Rota de Reset de Senha corrigida
-@auth_bp.post("/usuario-reset/<int:id>")
+@auth_bp.post("/usuario-resetar-senha/<int:id>")
 @login_required
 def reset_senha_usuario(id):
     from app.models.usuario import Usuario
@@ -1179,6 +1174,7 @@ def reset_senha_usuario(id):
     user.set_senha("Usuario123") # Senha padrão solicitada
     db.session.commit()
     return {"message": "Sucesso"}, 200
+    
 
 # Editar Usuário 
 @auth_bp.route("/editar-usuario/<int:id>", methods=['GET', 'POST'])
@@ -1242,7 +1238,8 @@ def visualizar_usuario(id):
     try:
         admin = Usuario.query.filter_by(papel='Admin').first()
         if admin:
-            default_supervisor = {'id': admin.id, 'nome': admin.nome}
+            # Adicionado o campo email aqui
+            default_supervisor = {'id': admin.id, 'nome': admin.nome, 'email': admin.email}
     except Exception:
         default_supervisor = None
 
@@ -1255,7 +1252,8 @@ def lista_supervisores():
     from app.models.usuario import Usuario
     # Retorna todos os usuários (id + nome) ordenados por nome
     users = Usuario.query.order_by(Usuario.nome.asc()).all()
-    result = [{'id': u.id, 'nome': u.nome, 'papel': u.papel} for u in users]
+    # Adicionado o campo email aqui
+    result = [{'id': u.id, 'nome': u.nome, 'papel': u.papel, 'email': u.email} for u in users]
     from flask import jsonify
     return jsonify(result)
 
@@ -1738,7 +1736,8 @@ def get_supervisor_chain_for_user(user):
         sup = Usuario.query.get(sup_id)
         if not sup:
             break
-        chain.append({'id': sup.id, 'nome': sup.nome})
+        # Adicionado o campo email aqui
+        chain.append({'id': sup.id, 'nome': sup.nome, 'email': sup.email})
         visited.add(sup.id)
         current = sup
 
@@ -2006,3 +2005,4 @@ def toggle_obra_status(id):
         db.session.rollback()
         print(f"Erro ao alternar status da obra: {e}")
         return '', 500 # Retorna erro 500
+    
