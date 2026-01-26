@@ -1,178 +1,135 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="h-full bg-slate-900">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login | Enfil</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='styleForm.css') }}">
+    <title>Login | {{ nome_empresa_global }}</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <style>
         body {
-            background: url("{{ url_for('static', filename='image.jpg') }}") no-repeat center center fixed;
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Background com Overlay */
+        .bg-login {
+            background-image: url("{{ url_for('static', filename='image.jpg') }}");
             background-size: cover;
-            margin: 0;
-            padding: 0;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
+            background-position: center;
         }
 
-        body::before {
-            content: "";
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.1);
-            z-index: 0;
-        }
-
-        .login-page {
-            flex: 1;
-            display: flex;
-            justify-content: left;
-            align-items: center;
-            padding-left: 10%;
-            position: relative;
-            z-index: 1;
-        }
-
-        .login-container {
-            max-width: 400px;
-            width: 90%;
-            color: white;
-            background-color: var(--dark-grey);
-            padding: 2.5rem;
-            text-align: left;
-            animation: fadeIn 0.5s ease-out;
-            position: relative;
-            z-index: 2;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .login-header {
-            margin-bottom: 2rem;
-        }
-
-        .login-logo {
-            max-height: 2rem;
-            margin-bottom: 1rem;
-        }
-
-        .form-control {
-            background-color: var(--medium-grey) !important;
-            border-color: var(--dark-grey) !important;
-            color: white !important;
-            margin-top: 10px;
-        }
-
-        .form-group {
-            margin-bottom: 1.2rem;
-            text-align: left;
-        }
-
-        .login-actions {
-            justify-content: center;
-            margin-top: 2rem;
-        }
-
-        .login-actions .button-base {
-            width: 100%;
-            background-color: var(--primary);
-            color: white !important;
-        }
-
-        .alert {
-            padding: 0.75rem 1rem;
-            margin-bottom: 1rem;
-            border-radius: 0.25rem;
-            font-size: 0.9rem;
-        }
-
-        .alert-error {
-            background-color: #f8d7da;
-            color: #721c24;
-        }
-
-        footer {
-            position: relative;
-            z-index: 2;
-            text-align: center;
-            padding: 5px;
-            font-size: 0.70rem;
-            color: #ffffff;
-            background: rgba(0, 0, 0, 0.3);
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
         }
     </style>
-
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo/icone.png') }}">
 </head>
 
-<body>
+<body class="h-full w-full bg-login relative">
 
-    <div class="login-page">
-        <div class="login-container form-card">
+    <!-- Overlay Escuro para melhorar contraste -->
+    <div class="absolute inset-0 bg-slate-900/60 z-0"></div>
 
-            <div class="login-header">
-                <img src="{{ url_for('static', filename='logo/logo.png') }}" alt="Logo da Empresa" class="login-logo">
-                <h2>Fazer login</h2>
+    <div class="relative z-10 flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
+
+        <!-- Container Central -->
+        <div
+            class="sm:mx-auto sm:w-full sm:max-w-md bg-white/95 backdrop-blur-sm p-8 rounded-2xl shadow-2xl border border-white/20">
+
+            <!-- Logo -->
+            <div class="sm:mx-auto sm:w-full sm:max-w-sm flex justify-center mb-8">
+                <img class="h-12 w-auto object-contain" src="{{ url_for('static', filename='logo/logo.png') }}"
+                    alt="Logo">
             </div>
 
-            <!-- EXIBIR MENSAGENS -->
+            <h2 class="text-center text-2xl font-bold leading-9 tracking-tight text-slate-900">
+                Acesso ao Sistema
+            </h2>
+            <p class="mt-2 text-center text-sm text-slate-500">
+                Entre com suas credenciais para continuar
+            </p>
+
+            <!-- Mensagens Flash -->
             {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-            {% for category, message in messages %}
-            <div class="alert alert-{{ category }}">{{ message }}</div>
-            {% endfor %}
+            <div class="mt-6 space-y-2">
+                {% for category, message in messages %}
+                <div
+                    class="p-4 rounded-lg text-sm font-medium flex items-center gap-3
+                                {{ 'bg-red-50 text-red-700 border border-red-200' if category == 'error' or category == 'danger' else 'bg-emerald-50 text-emerald-700 border border-emerald-200' }}">
+                    <i
+                        class="fas {{ 'fa-circle-exclamation' if category in ['error', 'danger'] else 'fa-check-circle' }}"></i>
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
             {% endif %}
             {% endwith %}
 
-            <!-- FORMULÁRIO CORRIGIDO -->
-            <form method="POST" action="{{ url_for('auth.login_post') }}">
+            <div class="mt-8">
+                <form class="space-y-6" action="{{ url_for('auth.login_post') }}" method="POST">
 
-                <div class="form-group">
-                    <label for="email"><i class="fas fa-envelope"></i> E-mail:</label>
-                    <input type="email" id="email" name="email" class="form-control" required
-                        placeholder="seu.email@enfil.com.br" autofocus>
-                </div>
+                    <!-- Email -->
+                    <div>
+                        <label for="email" class="block text-sm font-medium leading-6 text-slate-900">E-mail
+                            Corporativo</label>
+                        <div class="relative mt-2 rounded-md shadow-sm">
+                            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                <i class="fas fa-envelope text-slate-400 sm:text-sm"></i>
+                            </div>
+                            <input id="email" name="email" type="email" autocomplete="email" required
+                                class="block w-full rounded-xl border-0 py-3 pl-10 text-slate-900 ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 transition-all"
+                                placeholder="Digite seu e-mail">
+                        </div>
+                    </div>
 
-                <div class="form-group">
-                    <label for="senha"><i class="fas fa-lock"></i> Senha:</label>
-                    <input type="password" id="senha" name="senha" class="form-control" required placeholder="••••••••">
-                </div>
+                    <!-- Senha -->
+                    <div>
+                        <div class="flex items-center justify-between">
+                            <label for="password"
+                                class="block text-sm font-medium leading-6 text-slate-900">Senha</label>
+                            <div class="text-sm">
+                                <a href="{{ url_for('auth.esqueci_senha') }}"
+                                    class="font-semibold text-blue-600 hover:text-blue-500 transition-colors">Esqueceu a
+                                    senha?</a>
+                            </div>
+                        </div>
+                        <div class="relative mt-2 rounded-md shadow-sm">
+                            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                <i class="fas fa-lock text-slate-400 sm:text-sm"></i>
+                            </div>
+                            <input id="password" name="senha" type="password" autocomplete="current-password" required
+                                class="block w-full rounded-xl border-0 py-3 pl-10 text-slate-900 ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 transition-all"
+                                placeholder="••••••••">
+                        </div>
+                    </div>
 
-                <div class="form-actions login-actions">
-                    <button type="submit" class="button-base button-primary" style="color: white;">
-                        <i class="fas fa-sign-in-alt"></i> Entrar
-                    </button>
-                </div>
-
-                <p class="forgot-password">
-                    <a href="#" style="color: #ffffff; ">Esqueceu sua senha?</a>
-                </p>
-            </form>
-
+                    <!-- Botão Entrar -->
+                    <div>
+                        <button type="submit"
+                            class="flex w-full justify-center rounded-xl bg-blue-700 px-3 py-3 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 transition-all hover:-translate-y-0.5 active:translate-y-0">
+                            Entrar no Sistema <i class="fas fa-arrow-right ml-2 mt-1"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
-    </div>
 
-    <footer>
-        <p>© 2025 Enfil SA Controle Ambiental | Desenvolvido por Edson Rodrigues</p>
-    </footer>
+        <!-- Footer -->
+        <p class="mt-10 text-center text-xs text-slate-300/80">
+            &copy; 2025 {{ nome_empresa_global }}. Todos os direitos reservados.
+        </p>
+    </div>
 
 </body>
 

@@ -3,6 +3,7 @@ import hashlib
 from math import e
 import os
 from flask import Blueprint, Config, abort, json, render_template, request, redirect, url_for, flash, session, send_file
+from itsdangerous import SignatureExpired, URLSafeTimedSerializer
 from werkzeug.security import check_password_hash
 from app import db
 from app import db, login_manager
@@ -97,6 +98,76 @@ def login_post():
 def logout():
     session.clear()
     flash("Você foi desconectado com sucesso.", "info")
+    return redirect(url_for("auth.login"))
+
+# --- ROTAS DE RECUPERAÇÃO DE SENHA ---
+
+@auth_bp.route("/esqueci-senha", methods=["GET", "POST"])
+def esqueci_senha():
+    # Busca o administrador para exibir no template como contato de suporte
+    from app.models.usuario import Usuario
+    admin_contato = Usuario.query.filter_by(papel='Admin').first()
+
+    if request.method == "GET":
+        return render_template("esqueci_senha.html", admin=admin_contato)
+    
+    email = request.form.get("email")
+    user = Usuario.query.filter_by(email=email).first()
+    
+    if user:
+        # Gera token seguro válido por 1 hora
+        s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+        token = s.dumps(email, salt='recuperacao-senha')
+        
+        # Link para resetar
+        link = url_for('auth.redefinir_senha', token=token, _external=True)
+        
+        # AQUI VOCÊ DEVE INTEGRAR SEU SERVIÇO DE EMAIL
+        print(f"========================================")
+        print(f"LINK DE RECUPERAÇÃO PARA {email}:")
+        print(f"{link}")
+        print(f"========================================")
+        
+        flash("Um link de recuperação foi enviado para seu e-mail.", "success")
+    else:
+        # Por segurança, não informamos se o email não existe
+        flash("Se o e-mail estiver cadastrado, você receberá um link.", "success")
+        
+    # Mantém o admin no render mesmo após o POST em caso de redirect ou render
+    return redirect(url_for("auth.login"))
+
+@auth_bp.route("/redefinir-senha/<token>", methods=["GET", "POST"])
+def redefinir_senha(token):
+    s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+    try:
+        email = s.loads(token, salt='recuperacao-senha', max_age=3600) # 1 hora de validade
+    except SignatureExpired:
+        flash("O link de recuperação expirou.", "danger")
+        return redirect(url_for("auth.esqueci_senha"))
+    except Exception:
+        flash("Link de recuperação inválido.", "danger")
+        return redirect(url_for("auth.esqueci_senha"))
+    
+    if request.method == "GET":
+        return render_template("redefinir_senha.html", token=token)
+    
+    nova_senha = request.form.get("nova_senha")
+    confirmar_senha = request.form.get("confirmar_senha")
+    
+    if nova_senha != confirmar_senha:
+        flash("As senhas não conferem.", "danger")
+        return render_template("redefinir_senha.html", token=token)
+        
+    from app.models.usuario import Usuario
+    user = Usuario.query.filter_by(email=email).first()
+    
+    if user:
+        user.set_senha(nova_senha)
+        db.session.commit()
+        flash("Sua senha foi redefinida com sucesso! Faça login.", "success")
+        return redirect(url_for("auth.login"))
+        
+    flash("Erro ao redefinir senha.", "danger")
     return redirect(url_for("auth.login"))
 
 #######################################################################################################
