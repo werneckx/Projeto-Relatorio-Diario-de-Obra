@@ -56,9 +56,7 @@
         <input type="hidden" name="categoria" value="usuario">
 
         <!-- CARD 1: INFORMAÇÕES PESSOAIS -->
-        <!-- Removido overflow-hidden para permitir dropdowns -->
         <section class="bg-white rounded-2xl shadow-sm border border-slate-200 transition-shadow hover:shadow-md">
-            <!-- Adicionado rounded-t-2xl para manter o topo arredondado -->
             <div
                 class="bg-slate-50/50 px-6 py-4 border-b border-slate-100 rounded-t-2xl flex items-center justify-between">
                 <div class="flex items-center gap-3">
@@ -182,7 +180,7 @@
                     </div>
                 </div>
 
-                <!-- Supervisor -->
+                <!-- Supervisor (HIERARQUIA DE USUÁRIOS MANTIDA) -->
                 <div class="md:col-span-2 space-y-1.5">
                     <label class="text-xs font-bold text-slate-500 uppercase tracking-wide ml-1">Supervisor
                         Imediato</label>
@@ -237,18 +235,16 @@
             </div>
         </section>
 
-        <!-- CARD 2: PERMISSÕES DE ACESSO -->
-        <!-- Removido overflow-hidden -->
+        <!-- CARD 2: PERMISSÕES DE ACESSO (SEM HIERARQUIA DE OBRAS) -->
         <section class="bg-white rounded-2xl shadow-sm border border-slate-200 transition-shadow hover:shadow-md">
-            <!-- Adicionado rounded-t-2xl -->
             <div class="bg-slate-50/50 px-6 py-4 border-b border-slate-100 rounded-t-2xl flex items-center gap-3">
                 <div
                     class="w-10 h-10 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center shrink-0 shadow-sm ring-1 ring-orange-50">
                     <i class="fas fa-network-wired text-lg"></i>
                 </div>
                 <div>
-                    <h3 class="font-bold text-slate-800">Permissões de Acesso</h3>
-                    <p class="text-xs text-slate-500">Vínculo com Obras e Centros de Custo</p>
+                    <h3 class="font-bold text-slate-800">Obras Permitidas</h3>
+                    <p class="text-xs text-slate-500">Selecione as obras que este usuário pode acessar</p>
                 </div>
             </div>
 
@@ -259,95 +255,42 @@
                     <div>
                         <h4 class="text-sm font-bold text-blue-800">Acesso Irrestrito</h4>
                         <p class="text-xs text-blue-600 mt-1">Usuários administradores possuem acesso automático a todas
-                            as obras atuais e futuras. A seleção manual abaixo está desabilitada.</p>
+                            as obras atuais e futuras.</p>
                     </div>
                 </div>
                 {% endif %}
 
+                <!-- LISTA PLANA DE OBRAS -->
                 <div
-                    class="space-y-4 {{ 'opacity-60 pointer-events-none grayscale' if item and item.papel == 'Admin' else '' }}">
-                    {% for matriz_id, data in obra_hierarchy.items() %}
-                    {% set matriz = data.matriz %}
-                    {% set filiais = data.filiais %}
-                    {% set matriz_checked = item and (matriz in item.obras_permitidas or item.papel == 'Admin') %}
-                    {% set accordion_id = 'obra-group-' + matriz_id|string %}
+                    class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 {{ 'opacity-60 pointer-events-none grayscale' if item and item.papel == 'Admin' else '' }}">
+                    {% if obras %}
+                    {% for obra in obras %}
+                    {% set obra_checked = item and (obra in item.obras_permitidas or item.papel == 'Admin') %}
 
-                    <div
-                        class="border border-slate-200 rounded-xl overflow-hidden transition-all duration-300 hover:border-slate-300 bg-white group/accordion">
-                        <button type="button"
-                            class="matriz-header w-full flex items-center justify-between p-4 text-left transition-colors hover:bg-slate-50"
-                            data-target="#{{ accordion_id }}" aria-expanded="false">
-
-                            <div class="flex items-center gap-4 w-full">
-                                <div class="relative flex items-center" onclick="event.stopPropagation()">
-                                    <input type="checkbox" name="obras_permitidas" value="{{ matriz.id }}"
-                                        id="matriz-{{ matriz.id }}"
-                                        class="matriz-checkbox w-5 h-5 text-red-600 border-slate-300 rounded focus:ring-red-500 cursor-pointer transition-transform hover:scale-110"
-                                        data-filiais-selector=".filial-{{ matriz.id }}" {{ 'checked' if matriz_checked
-                                        }} {{ 'disabled' if view_mode or (item and item.papel=='Admin' ) }}>
-                                </div>
-
-                                <div class="flex-grow">
-                                    <span class="font-bold text-slate-700 text-sm block">{{ matriz.nome }}</span>
-                                    <span
-                                        class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-50 text-red-700 border border-red-100 uppercase tracking-wide mt-0.5">
-                                        Matriz
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div
-                                class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 group-hover/accordion:bg-white group-hover/accordion:shadow-sm transition-all">
-                                <i class="fas fa-chevron-down text-xs transition-transform duration-300"></i>
-                            </div>
-                        </button>
-
-                        <div id="{{ accordion_id }}"
-                            class="accordion-body hidden border-t border-slate-100 bg-slate-50/50">
-                            <div class="p-4 pl-14 space-y-3">
-                                {% if filiais %}
-                                <div class="flex items-center gap-2 mb-2">
-                                    <div class="h-px bg-slate-200 flex-grow"></div>
-                                    <span class="text-[10px] font-bold text-slate-400 uppercase">Filiais Vinculadas ({{
-                                        filiais|length }})</span>
-                                    <div class="h-px bg-slate-200 flex-grow"></div>
-                                </div>
-
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                    {% for filial in filiais %}
-                                    {% set filial_checked = item and (filial in item.obras_permitidas or matriz in
-                                    item.obras_permitidas or item.papel == 'Admin') %}
-
-                                    <label
-                                        class="flex items-center p-3 rounded-lg bg-white border border-slate-200 shadow-sm hover:border-blue-300 hover:shadow-md cursor-pointer transition-all group/item">
-                                        <input type="checkbox" name="obras_permitidas" value="{{ filial.id }}"
-                                            id="filial-{{ filial.id }}" data-matriz-id="matriz-{{ matriz.id }}"
-                                            class="filial-checkbox filial-{{ matriz.id }} w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 transition-transform group-hover/item:scale-110"
-                                            {{ 'checked' if filial_checked }} {{ 'disabled' if view_mode or (item and
-                                            item.papel=='Admin' ) }}>
-
-                                        <div class="ml-3 flex-grow">
-                                            <span
-                                                class="text-sm font-medium text-slate-600 group-hover/item:text-slate-800 transition-colors block">{{
-                                                filial.nome }}</span>
-                                            <span class="text-[10px] text-blue-600 font-bold uppercase">Filial</span>
-                                        </div>
-                                    </label>
-                                    {% endfor %}
-                                </div>
-                                {% else %}
-                                <div class="text-center py-2">
-                                    <span class="text-xs text-slate-400 italic bg-slate-100 px-3 py-1 rounded-full">Sem
-                                        filiais ativas</span>
-                                </div>
-                                {% endif %}
-                            </div>
+                    <label
+                        class="flex items-start p-3 rounded-xl bg-white border border-slate-200 shadow-sm hover:border-blue-400 hover:shadow-md cursor-pointer transition-all group/item h-full">
+                        <div class="relative flex items-center mt-0.5">
+                            <input type="checkbox" name="obras_permitidas" value="{{ obra.id }}"
+                                class="w-5 h-5 text-blue-600 border-slate-300 rounded focus:ring-blue-500 transition-transform group-hover/item:scale-110"
+                                {{ 'checked' if obra_checked }} {{ 'disabled' if view_mode or (item and
+                                item.papel=='Admin' ) }}>
                         </div>
-                    </div>
+                        <div class="ml-3 flex-grow">
+                            <span
+                                class="text-sm font-semibold text-slate-700 group-hover/item:text-blue-700 transition-colors block leading-tight">
+                                {{ obra.nome }}
+                            </span>
+                            {% if obra.cidade %}
+                            <span class="text-[11px] text-slate-400 mt-0.5 block">
+                                {{ obra.cidade }}{{ '/' + obra.estado if obra.estado else '' }}
+                            </span>
+                            {% endif %}
+                        </div>
+                    </label>
                     {% endfor %}
-
-                    {% if not obra_hierarchy %}
-                    <div class="text-center py-10 bg-slate-50 rounded-xl border border-dashed border-slate-300">
+                    {% else %}
+                    <div
+                        class="col-span-full text-center py-10 bg-slate-50 rounded-xl border border-dashed border-slate-300">
                         <i class="fas fa-building text-slate-300 text-3xl mb-2"></i>
                         <p class="text-slate-500 font-medium">Nenhuma obra cadastrada no sistema.</p>
                     </div>
@@ -358,9 +301,7 @@
 
         <!-- CARD 3: SEGURANÇA (Oculto em View Mode) -->
         {% if not view_mode %}
-        <!-- Removido overflow-hidden -->
         <section class="bg-white rounded-2xl shadow-sm border border-slate-200 transition-shadow hover:shadow-md">
-            <!-- Adicionado rounded-t-2xl -->
             <div
                 class="bg-slate-50/50 px-6 py-4 border-b border-slate-100 rounded-t-2xl flex items-center justify-between">
                 <div class="flex items-center gap-3">
@@ -482,7 +423,6 @@
     function confirmReset(id) {
         if (!confirm("Tem certeza? A senha será resetada para 'Usuario123'.")) return;
 
-        // Feedback visual imediato
         const btn = document.activeElement;
         const originalText = btn.innerHTML;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
@@ -506,65 +446,7 @@
     document.addEventListener("DOMContentLoaded", function () {
         const viewMode = {% if view_mode %}true{% else %}false{% endif %};
 
-    // ===== ACORDEÕES COM ANIMAÇÃO =====
-    const matrizHeaders = document.querySelectorAll('.matriz-header');
-
-    matrizHeaders.forEach(header => {
-        const targetSelector = header.dataset.target;
-        const body = document.querySelector(targetSelector);
-        const chevron = header.querySelector('.fa-chevron-down');
-        const matrizCheckbox = header.querySelector('.matriz-checkbox');
-
-        const hasCheckedFilial = body
-            ? Array.from(body.querySelectorAll('.filial-checkbox')).some(f => f.checked)
-            : false;
-
-        if ((matrizCheckbox && matrizCheckbox.checked) || hasCheckedFilial) {
-            body?.classList.remove('hidden');
-            header.setAttribute('aria-expanded', 'true');
-            chevron?.classList.add('rotate-180');
-            header.closest('.group\\/accordion').classList.add('border-slate-300', 'bg-slate-50/30');
-        }
-
-        header.addEventListener('click', function (e) {
-            if (e.target.closest('input[type="checkbox"]')) return;
-
-            const expanded = header.getAttribute('aria-expanded') === 'true';
-
-            if (expanded) {
-                body.classList.add('hidden');
-                header.closest('.group\\/accordion').classList.remove('border-slate-300', 'bg-slate-50/30');
-            } else {
-                body.classList.remove('hidden');
-                header.closest('.group\\/accordion').classList.add('border-slate-300', 'bg-slate-50/30');
-            }
-
-            header.setAttribute('aria-expanded', String(!expanded));
-            chevron?.classList.toggle('rotate-180', !expanded);
-        });
-    });
-
-    if (viewMode) return;
-
-    // ===== CASCATA DE CHECKBOXES =====
-    document.querySelectorAll('.matriz-checkbox').forEach(matriz => {
-        const filiais = document.querySelectorAll(matriz.dataset.filiaisSelector);
-
-        matriz.addEventListener('change', () => {
-            filiais.forEach(f => f.checked = matriz.checked);
-        });
-
-        filiais.forEach(filial => {
-            filial.addEventListener('change', () => {
-                const all = [...filiais].every(f => f.checked);
-                const any = [...filiais].some(f => f.checked);
-                // Lógica opcional: se todas desmarcadas, desmarca matriz
-                if (!any) matriz.checked = false;
-                // Se todas marcadas, marca matriz (opcional)
-                if (all) matriz.checked = true;
-            });
-        });
-    });
+    // (REMOVIDO: Lógica de Acordeões e Cascata de Checkboxes, pois não há mais hierarquia de obras)
 
     // ===== SWITCH DE STATUS =====
     const statusToggle = document.querySelector('input[name="status"]');
@@ -591,11 +473,9 @@
     if (cpfInput) {
         cpfInput.addEventListener('input', (e) => {
             let v = e.target.value.replace(/\D/g, "");
-            // Máscara visual simples enquanto digita
             if (v.length > 11) v = v.slice(0, 11);
             e.target.value = v;
         });
-        // Formatar ao perder foco (opcional, ou manter só números)
     }
 
     // ===== DROPDOWN PAPEL CUSTOMIZADO =====
@@ -623,7 +503,6 @@
 
         document.querySelectorAll('.role-radio').forEach(radio => {
             radio.addEventListener('change', () => {
-                // Pega o label do texto dentro do span irmão
                 const text = radio.parentElement.querySelector('div span').innerText;
                 selectedRoleText.innerText = text;
                 selectedRoleText.classList.add('text-slate-800');
@@ -672,7 +551,7 @@
         });
     }
 
-    // ===== BUSCA DE SUPERVISOR (AJAX) =====
+    // ===== BUSCA DE SUPERVISOR (AJAX) - MANTIDO =====
     const searchInput = document.getElementById('supervisor_search');
     const resultsList = document.getElementById('supervisor_results');
     const hiddenInput = document.getElementById('id_supervisor_input');
@@ -726,7 +605,7 @@
             const q = e.target.value.toLowerCase();
             if (!q) {
                 resultsList.classList.add('hidden');
-                hiddenInput.value = ""; // Limpa se apagar texto
+                hiddenInput.value = "";
                 return;
             }
             const filtered = supervisors.filter(s =>
@@ -735,7 +614,6 @@
             renderResults(filtered);
         });
 
-        // Mostra alguns ao focar
         searchInput.addEventListener('focus', () => {
             if (!searchInput.value) renderResults(supervisors.slice(0, 5));
         });

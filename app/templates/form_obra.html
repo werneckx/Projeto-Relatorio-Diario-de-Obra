@@ -190,7 +190,7 @@ shadow-sm placeholder:text-slate-400" %}
         </div>
         {% endif %}
 
-        <!-- Informações de Hierarquia -->
+        <!-- Informações de Hierarquia
         {% if item and item.id %}
         {% set is_matriz = item.id_matriz == None or item.id_matriz == 0 %}
         <div
@@ -203,7 +203,7 @@ shadow-sm placeholder:text-slate-400" %}
                 <div>
                     <span
                         class="text-[10px] font-bold uppercase tracking-wider {{ 'text-indigo-600' if is_matriz else 'text-slate-500' }}">
-                        {{ 'Matriz Principal' if is_matriz else 'Filial / Subsidiária' }}
+                        {{ 'Matriz Principal' if is_matriz else 'Subsidiária' }}
                     </span>
                     <h2 class="text-lg font-bold text-slate-800 leading-tight">{{ item.nome }}</h2>
                 </div>
@@ -220,7 +220,7 @@ shadow-sm placeholder:text-slate-400" %}
             {% endif %}
         </div>
         {% endif %}
-
+        -->
         <!-- Formulário Principal -->
         <form action="{{ url_for('auth.gerar_obra') }}" method="POST" id="mainForm" class="space-y-6">
             <input type="hidden" name="id" value="{{ item.id if item and item.id }}">
@@ -317,7 +317,7 @@ shadow-sm placeholder:text-slate-400" %}
                         </div>
                     </div>
 
-                    <!-- Vinculação Matriz -->
+                    <!-- Vinculação Matriz --
                     <div class="lg:col-span-12">
                         <label class="block text-xs font-bold text-slate-500 uppercase mb-2">
                             Vinculação {% if not view_mode %}<i class="fas fa-info-circle ml-1 text-slate-400"
@@ -331,7 +331,7 @@ shadow-sm placeholder:text-slate-400" %}
                                 {% for matriz in opcoes_matriz %}
                                 {% if not item or item.id != matriz.id %}
                                 <option value="{{ matriz.id }}" {% if item and item.id_matriz==matriz.id %}selected{%
-                                    endif %}>Filial de: {{ matriz.nome }} (ID: {{ matriz.id }})</option>
+                                    endif %}>Subsidiária de: {{ matriz.nome }} (ID: {{ matriz.id }})</option>
                                 {% endif %}
                                 {% endfor %}
                             </select>
@@ -343,6 +343,7 @@ shadow-sm placeholder:text-slate-400" %}
                             {% endif %}
                         </div>
                     </div>
+                    -->
                 </div>
             </div>
 

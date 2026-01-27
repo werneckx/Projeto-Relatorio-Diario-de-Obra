@@ -6,7 +6,6 @@ class Obra(db.Model):
     __tablename__ = "obras"
 
     id = db.Column(db.Integer, primary_key=True)
-    id_matriz = db.Column(db.Integer, db.ForeignKey('obras.id'), nullable=True)
     nome = db.Column(db.String(120), nullable=False)
     contratante = db.Column(db.String(255), nullable=False)
     contrato = db.Column(db.String(50), unique=True, nullable=False)

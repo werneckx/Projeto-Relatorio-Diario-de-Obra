@@ -366,7 +366,7 @@
                                 {% if is_matriz %}
                                 <i class="fas fa-sitemap text-indigo-500 text-xs shrink-0" title="Matriz Principal"></i>
                                 {% else %}
-                                <i class="fas fa-building text-slate-400 text-xs shrink-0" title="Filial"></i>
+                                <i class="fas fa-building text-slate-400 text-xs shrink-0" title="Subsidiária"></i>
                                 {% endif %}
                                 <span class="font-bold">{{ obra.nome | truncate(30)}}</span>
                             </div>
@@ -417,13 +417,7 @@
                             <div class="flex flex-col md:items-start">
                                 <span
                                     class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200 w-fit">
-                                    Filial
-                                </span>
-                                <span
-                                    class="text-[10px] text-slate-400 mt-1 truncate max-w-[150px] flex items-center gap-1"
-                                    title="{{ obra.nome_matriz }}">
-                                    <i class="fas fa-level-up-alt fa-rotate-90"></i>
-                                    {{ obra.nome_matriz | default('N/A') }}
+                                    Subsidiária
                                 </span>
                             </div>
                             {% endif %}

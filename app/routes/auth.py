@@ -1143,7 +1143,7 @@ def lista_usuarios():
         supervisors = Usuario.query.filter(Usuario.id.in_(list(sup_ids))).all()
         sup_map = {s.id: s.nome for s in supervisors}
 
-    # Injeta atributo dinâmico 'nome_supervisor' em cada usuário (None se admin/sem supervisor)
+    # Injeta atributo dinâmico 'nome_supervisor' em cada usuário
     for u in usuarios:
         nome_sup = None
         try:
@@ -1154,28 +1154,26 @@ def lista_usuarios():
             nome_sup = None
         setattr(u, 'nome_supervisor', nome_sup)
 
-    # Passamos explicitamente 'opcoes' e 'categoria' para o template
     return render_template("list_usuarios.html", opcoes=usuarios, categoria="usuario")
 
 # Abrir Formulário de Cadastro de Usuario
 @auth_bp.get("/criar-usuario")
 @login_required
 def criar_usuario():
-    # from app.models.obra import Obra # Não é necessário
+    from app.models.obra import Obra
+    from app.models.usuario import Usuario
     
-    # ADICIONADO: Obter a hierarquia das obras
-    obra_hierarchy = get_obra_hierarchy_for_user_form()
+    # [CORREÇÃO] Busca plana de obras ativas (sem hierarquia)
+    obras = Obra.query.filter_by(status=1).order_by(Obra.nome).all()
     
     # Determina o Admin padrão para uso no template
-    from app.models.usuario import Usuario
     admin = Usuario.query.filter_by(papel='Admin').first()
     default_supervisor = {'id': admin.id, 'nome': admin.nome, 'email': admin.email} if admin else None
 
-    # Passamos categoria='usuario' para o template saber qual seção renderizar
     return render_template(
         "form_usuario.html", 
         categoria="usuario", 
-        obra_hierarchy=obra_hierarchy,
+        obras=obras, # Passa lista simples
         default_supervisor=default_supervisor
     )
 
@@ -1188,11 +1186,9 @@ def gerar_usuario():
     
     categoria = request.form.get("categoria")
     user_id = request.form.get("id")
-    # Todas as obras é opcional, mas vamos manter o padrão do seu código
-    todas_obras = Obra.query.all()
     
-    # 1. ADICIONAR: Busca a hierarquia das obras no início da função
-    obra_hierarchy = get_obra_hierarchy_for_user_form()
+    # [CORREÇÃO] Busca obras ativas para repassar ao template em caso de erro
+    obras_ativas = Obra.query.filter_by(status=1).order_by(Obra.nome).all()
 
     if categoria == "usuario":
         nome = request.form.get("nome")
@@ -1200,24 +1196,20 @@ def gerar_usuario():
         papel = request.form.get("papel")
         cpf = request.form.get("cpf") 
         senha = request.form.get("senha")
-        # Captura o status do checkbox (True se marcado, False caso contrário)
         status = True if request.form.get("status") == "on" else False
         obras_ids = request.form.getlist("obras_permitidas")
-        # Supervisor (pode ser vazio) - se vazio, será definido como Admin padrão
         id_supervisor_raw = request.form.get('id_supervisor')
 
         item_form = {'id': user_id, 'nome': nome, 'email': email, 'papel': papel, 'cpf': cpf}
 
         if user_id:
             user = Usuario.query.get_or_404(user_id)
-            # Validação CPF duplicado (exceto o próprio)
+            # Validação CPF duplicado
             if Usuario.query.filter(Usuario.cpf == cpf, Usuario.id != user_id).first():
                 flash("Este CPF já está cadastrado.", "danger")
-                # 2. CORRIGIDO: Passa obra_hierarchy em caso de erro
-                return render_template("form_usuario.html", item=item_form, todas_obras=todas_obras, obra_hierarchy=obra_hierarchy)
+                return render_template("form_usuario.html", item=item_form, obras=obras_ativas)
             
             user.nome, user.email, user.papel, user.cpf, user.status = nome, email, papel, cpf, status
-            # Atualiza id_supervisor se fornecido
             try:
                 user.id_supervisor = int(id_supervisor_raw) if id_supervisor_raw else None
             except Exception:
@@ -1225,28 +1217,24 @@ def gerar_usuario():
         else:
             if Usuario.query.filter_by(cpf=cpf).first():
                 flash("CPF já cadastrado.", "danger")
-                # 3. CORRIGIDO: Passa obra_hierarchy em caso de erro
-                return render_template("form_usuario.html", item=item_form, todas_obras=todas_obras, obra_hierarchy=obra_hierarchy)
+                return render_template("form_usuario.html", item=item_form, obras=obras_ativas)
 
             user = Usuario(nome=nome, email=email, papel=papel, cpf=cpf, status=status)
             try:
                 user.id_supervisor = int(id_supervisor_raw) if id_supervisor_raw else None
             except Exception:
                 user.id_supervisor = None
-            user.set_senha(senha if senha else "EnfilSA@")
+            user.set_senha(senha if senha else "Usuario123")
             db.session.add(user)
 
-        # MODIFICADO: Diferencia entre Admin e outros papéis
+        # [CORREÇÃO] Lógica de vínculo de obras (sem matrizes)
         if papel == 'Admin':
-            # Admin: vincula a todas as matrizes ativas
-            todas_matrizes = Obra.query.filter(Obra.id_matriz.is_(None), Obra.status == 1).all()
-            user.obras_permitidas = todas_matrizes
+            # Admin tem acesso a tudo (pode vincular todas explicitamente ou deixar vazio se a lógica da app permitir)
+            # Aqui vinculamos todas as ativas para garantir acesso visual nos relatórios que dependem dessa tabela
+            user.obras_permitidas = Obra.query.all()
         else:
-            # Outros papéis: vincula EXATAMENTE o que foi selecionado no formulário
-            # Isso permite granularidade: se marcou filial, salva filial. Se marcou matriz, salva matriz.
             obras_selecionadas = []
             if obras_ids:
-                # Filtra IDs vazios e busca no banco
                 for oid in obras_ids:
                     if oid:
                         obra = Obra.query.get(int(oid))
@@ -1255,7 +1243,7 @@ def gerar_usuario():
             
             user.obras_permitidas = obras_selecionadas
 
-        # Se id_supervisor está vazio/None, define primeiro Admin como supervisor padrão
+        # Supervisor padrão
         if not getattr(user, 'id_supervisor', None):
             try:
                 admin = Usuario.query.filter_by(papel='Admin').first()
@@ -1267,25 +1255,19 @@ def gerar_usuario():
         try:
             db.session.commit()
             flash("Usuário salvo com sucesso!", "success")
-            # 4. CORRIGIDO: Passa obra_hierarchy em caso de sucesso
-            return render_template("form_usuario.html", item=user, todas_obras=todas_obras, view_mode=True, obra_hierarchy=obra_hierarchy)
+            return render_template("form_usuario.html", item=user, obras=obras_ativas, view_mode=True)
         except Exception as e:
             db.session.rollback()
             flash(f"Erro: {str(e)}", "danger")
-            # 5. CORRIGIDO: Passa obra_hierarchy em caso de erro de DB
-            return render_template("form_usuario.html", item=item_form, todas_obras=todas_obras, obra_hierarchy=obra_hierarchy)
+            return render_template("form_usuario.html", item=item_form, obras=obras_ativas)
 
 # Mudar Status do Usuário (POST)
 @auth_bp.post("/mudar-status-usuario/<int:userId>")
 @login_required
 def toggle_user_status(userId):
     from app.models.usuario import Usuario
-    from flask import jsonify
     
-    # Busca o usuário no banco
     user = Usuario.query.get_or_404(userId)
-    
-    # Inverte o status booleano (Se era True vira False, se era 1 vira 0)
     user.status = not user.status 
     
     try:
@@ -1295,13 +1277,13 @@ def toggle_user_status(userId):
         db.session.rollback()
         return jsonify({"message": f"Erro ao atualizar: {str(e)}"}), 500
      
-# Rota de Reset de Senha corrigida
+# Rota de Reset de Senha
 @auth_bp.post("/usuario-resetar-senha/<int:id>")
 @login_required
 def reset_senha_usuario(id):
     from app.models.usuario import Usuario
     user = Usuario.query.get_or_404(id)
-    user.set_senha("Usuario123") # Senha padrão solicitada
+    user.set_senha("Usuario123")
     db.session.commit()
     return {"message": "Sucesso"}, 200
     
@@ -1310,49 +1292,39 @@ def reset_senha_usuario(id):
 @auth_bp.route("/editar-usuario/<int:id>", methods=['GET', 'POST'])
 @login_required
 def editar_usuario(id):
-    # CORREÇÃO 1: Importar a CLASSE Usuario diretamente (se necessário no escopo)
     from app.models.usuario import Usuario 
     from app.models.obra import Obra
     
-    # CORREÇÃO 2: Acessar a classe Usuario e não o módulo 'usuario'
-    # user = usuario.Usuario.query.get_or_404(id) # <-- Linha anterior, que causava problemas
     user = Usuario.query.get_or_404(id)
-    # todas_obras = Obra.query.all() # Não é mais necessário buscar todas as obras aqui
     
-    # CORREÇÃO 3: REMOVER A LÓGICA DE HIERARQUIA MANUAL E CHAMAR O HELPER CORRETO
-    # Todo o bloco de código que criava 'obra_hierarchy' manualmente deve ser removido.
-    obra_hierarchy = get_obra_hierarchy_for_user_form() # <-- CHAMA A FUNÇÃO CORRETA
+    # [CORREÇÃO] Busca apenas a lista simples de obras
+    obras = Obra.query.filter_by(status=1).order_by(Obra.nome).all()
 
     return render_template(
         "form_usuario.html", 
         item=user, 
         categoria="usuario", 
-        # todas_obras=todas_obras, # Não é mais estritamente necessário, mas pode ser mantido
-        obra_hierarchy=obra_hierarchy # Agora passa a estrutura correta
+        obras=obras 
     )
     
 # Visualizar Usuário
 @auth_bp.get("/visualizar-usuario/<int:id>")
+@login_required
 def visualizar_usuario(id):
     from app.models.usuario import Usuario
     from app.models.obra import Obra
     
     user = Usuario.query.get_or_404(id)
-    todas_obras = Obra.query.all()
     
-    obra_hierarchy = get_obra_hierarchy_for_user_form()
-    # Se a rota é '/usuario/visualizar/<id>', view_mode é True.
-    # Verifica a rota da requisição para determinar o modo.
+    # [CORREÇÃO] Busca apenas a lista simples de obras
+    obras = Obra.query.filter_by(status=1).order_by(Obra.nome).all()
+    
     view_mode = True
-    # O item de usuário já deve ter a lista de obras, 
-    # mas se o relacionamento não estiver carregado, você pode forçar aqui:
-    # item.obras_permitidas # Garante que o relacionamento Many-to-Many está carregado
-
+    
     # Monta a cadeia de supervisores para exibição
+    # Função get_supervisor_chain_for_user deve estar importada ou definida neste arquivo
     supervisor_chain = get_supervisor_chain_for_user(user)
 
-    # Se o usuário tiver id_supervisor e ainda não tiver nome_supervisor injetado,
-    # tenta popular nome do supervisor imediato
     nome_supervisor = None
     if getattr(user, 'id_supervisor', None):
         try:
@@ -1363,28 +1335,52 @@ def visualizar_usuario(id):
 
     setattr(user, 'nome_supervisor', nome_supervisor)
 
-    # Default supervisor (Admin) caso não exista
     default_supervisor = None
     try:
         admin = Usuario.query.filter_by(papel='Admin').first()
         if admin:
-            # Adicionado o campo email aqui
             default_supervisor = {'id': admin.id, 'nome': admin.nome, 'email': admin.email}
     except Exception:
         default_supervisor = None
 
-    return render_template("form_usuario.html", item=user, categoria="usuario", todas_obras=todas_obras, view_mode=view_mode, obra_hierarchy=obra_hierarchy, supervisor_chain=supervisor_chain, default_supervisor=default_supervisor)
+    return render_template(
+        "form_usuario.html", 
+        item=user, 
+        categoria="usuario", 
+        obras=obras, 
+        view_mode=view_mode, 
+        supervisor_chain=supervisor_chain, 
+        default_supervisor=default_supervisor
+    )
+
+# Helper function para supervisores (caso não esteja em utils)
+def get_supervisor_chain_for_user(user):
+    from app.models.usuario import Usuario
+    chain = []
+    visited = set()
+    current = user
+    while current and getattr(current, 'id_supervisor', None):
+        try:
+            sup_id = int(getattr(current, 'id_supervisor'))
+        except Exception:
+            break
+        if sup_id in visited:
+            break
+        sup = Usuario.query.get(sup_id)
+        if not sup:
+            break
+        chain.append({'id': sup.id, 'nome': sup.nome, 'email': sup.email})
+        visited.add(sup.id)
+        current = sup
+    return chain
 
 # Endpoint que retorna lista de usuários para selecionar como supervisor
 @auth_bp.get('/supervisores')
 @login_required
 def lista_supervisores():
     from app.models.usuario import Usuario
-    # Retorna todos os usuários (id + nome) ordenados por nome
     users = Usuario.query.order_by(Usuario.nome.asc()).all()
-    # Adicionado o campo email aqui
     result = [{'id': u.id, 'nome': u.nome, 'papel': u.papel, 'email': u.email} for u in users]
-    from flask import jsonify
     return jsonify(result)
 
 #######################################################################################################
@@ -1751,106 +1747,39 @@ def excluir_mao_obra(id):
 def lista_obras():
     from app.models.obra import Obra
     
-    # 1. Cria um alias (t2) para a tabela Obra. Este alias representará a Matriz/Pai.
-    Matriz = aliased(Obra)
-    
-    # 2. Constrói a consulta com o Self-Join (LEFT OUTER JOIN)
-    # Selecionamos a Obra (t1) e o nome da Matriz (t2) com o alias 'nome_matriz'
-    # db.session.query é o método padrão para consultas complexas no SQLAlchemy
-    consulta = db.session.query(
-        Obra,
-        # Seleciona o nome da Matriz, atribuindo o nome de coluna 'nome_matriz'
-        Matriz.nome.label('nome_matriz')
-    ).outerjoin(
-        # Condição de Junção: Obra.id_matriz (da Obra Filha) = Matriz.id (da Obra Pai)
-        Matriz,
-        Obra.id_matriz == Matriz.id
-    ).order_by(Obra.id.asc())
-    
+    # Consulta simplificada sem o JOIN de Matriz
+    consulta = Obra.query.order_by(Obra.id.asc())
     resultados = consulta.all()
     
-    # 3. Formata os resultados para o Template Jinja
+    # Formata os resultados para o Template Jinja
     obras_formatadas = []
-    for obra_obj, nome_matriz in resultados:
+    for obra_obj in resultados:
         # Cria um dicionário com os atributos necessários para o template
-        # Isso é mais seguro do que usar obra_obj.__dict__.copy()
         obra_dict = {
             'id': obra_obj.id,
             'nome': obra_obj.nome,
             'cnpj': obra_obj.cnpj,
             'cliente': obra_obj.contratante,
-            'id_matriz': obra_obj.id_matriz,
+            # 'id_matriz': obra_obj.id_matriz, -> Removido
             'cidade': obra_obj.cidade,
             'estado': obra_obj.estado,
             'endereco': obra_obj.endereco,
             'numero': obra_obj.numero,
-            'complemento': obra_obj.complemento, # Importante: Certifique-se que este campo existe no modelo Obra
+            'complemento': obra_obj.complemento,
             'bairro': obra_obj.bairro,
             'cep': obra_obj.cep,
             'status': obra_obj.status,
-            # 'nome_matriz' é o resultado do JOIN, adicionado ao dicionário
-            'nome_matriz': nome_matriz,
-            'frentes_trabalho': obra_obj.frentes_trabalho  # Inclui as frentes de trabalho relacionadas
+            # 'nome_matriz': nome_matriz, -> Removido
+            'frentes_trabalho': obra_obj.frentes_trabalho
         }
         
         obras_formatadas.append(obra_dict)
     
-    # ... o restante da função fica igual
     return render_template("list_obras.html", opcoes=obras_formatadas, categoria="obra")
-def get_matrix_options():
-    """Busca todas as Obras que são Matrizes (id_matriz é NULL ou 0)"""
-    # Adiciona a importação, caso Obra ainda não esteja no escopo
-    from app.models.obra import Obra
-    
-    # Filtra por id_matriz NULL ou 0 para ser robusto com a lógica do HTML
-    return Obra.query.filter(or_(Obra.id_matriz.is_(None), Obra.id_matriz == 0)).all()
-def fetch_single_obra_with_matriz_name(id_obra):
-    """Busca uma única Obra por ID e injeta o nome da Matriz (se for filial)"""
-    from app.models.obra import Obra # Adiciona a importação
-    
-    Matriz = aliased(Obra)
-    query = Obra.query.outerjoin(Matriz, Obra.id_matriz == Matriz.id)
-    
-    # Busca a Obra e o nome da Matriz associada
-    result = query.with_entities(Obra, Matriz.nome.label('nome_matriz')).filter(Obra.id == id_obra).first()
-    
-    if result:
-        # Se for encontrado, 'result' é uma tupla onde o primeiro elemento é o objeto Obra
-        item = result[0]
-        # Injeta o atributo 'nome_matriz' no objeto Obra para acesso no template
-        setattr(item, 'nome_matriz', result.nome_matriz)
-        return item
-    
-    return None
-def get_obra_hierarchy_for_user_form():
-    """Busca todas as obras e agrupa filiais sob suas matrizes."""
-    from app.models.obra import Obra
-    
-    # Busca todas as obras ativas
-    todas_obras = Obra.query.filter(Obra.status == 1).all()
-    
-    hierarchy = {}
-    
-    # 1. Popula as Matrizes (id_matriz = None ou 0)
-    for obra in todas_obras:
-        if obra.id_matriz is None or obra.id_matriz == 0:
-            hierarchy[obra.id] = {
-                'matriz': obra,
-                'filiais': []
-            }
 
-    # 2. Popula as Filiais
-    for obra in todas_obras:
-        if obra.id_matriz and obra.id_matriz in hierarchy:
-            hierarchy[obra.id_matriz]['filiais'].append(obra)
-        elif obra.id_matriz and obra.id_matriz not in hierarchy:
-            # Caso raro: Filial sem Matriz ativa. Pode ser ignorado ou logado.
-            pass
-
-    return hierarchy
 def get_supervisor_chain_for_user(user):
     """Retorna lista de supervisores ascendentes a partir do usuário.
-    Exemplo: [ {id, nome}, {id, nome}, ... ] onde o primeiro é o supervisor imediato.
+    Mantido pois refere-se a hierarquia de Usuários, não de Obras.
     """
     from app.models.usuario import Usuario
     chain = []
@@ -1866,7 +1795,6 @@ def get_supervisor_chain_for_user(user):
         sup = Usuario.query.get(sup_id)
         if not sup:
             break
-        # Adicionado o campo email aqui
         chain.append({'id': sup.id, 'nome': sup.nome, 'email': sup.email})
         visited.add(sup.id)
         current = sup
@@ -1877,26 +1805,22 @@ def get_supervisor_chain_for_user(user):
 @auth_bp.get("/criar-obra")
 @login_required
 def criar_obra():
-    from app.models.obra import Obra
     from app.models.usuario import Usuario
+    # Removida a busca de opcoes_matriz
     
-    # Busca apenas as obras que são Matrizes para o dropdown
-    opcoes_matriz = get_matrix_options()
     usuarios = Usuario.query.filter_by(status=1).all()
     
-    # Passa opcoes_matriz para o template
-    return render_template("form_obra.html", item=None, opcoes_matriz=opcoes_matriz, usuarios=usuarios)
+    # Removemos 'opcoes_matriz' do retorno
+    return render_template("form_obra.html", item=None, usuarios=usuarios)
 
 # Rota para mudar status da obra (POST)
 @auth_bp.post("/mudar-status-obras/<int:obraid>")
 @login_required
 def toggle_user_obras(obraid):
-    from app.models.usuario import Obra
+    from app.models.obra import Obra # Corrigido import (era app.models.usuario)
     
-    # Busca o usuário no banco
     obra = Obra.query.get_or_404(obraid)
     
-    # Inverte o status booleano (Se era True vira False, se era 1 vira 0)
     obra.status = not obra.status 
     
     try:
@@ -1914,30 +1838,24 @@ def gerar_obra():
     
     # 1. Obter Dados do Formulário
     id_obra = request.form.get("id")
-    # Se id_obra vier vazio, garante que seja None para facilitar checagens
     if not id_obra: id_obra = None
 
     cnpj = request.form.get('cnpj')
 
     # --- VALIDAÇÃO DE DUPLICIDADE DE CNPJ ---
-    # Verifica se já existe alguma obra com este CNPJ no banco
     obra_existente = Obra.query.filter_by(cnpj=cnpj).first()
 
     if obra_existente:
-        # Se estamos criando uma obra nova (id_obra é None) E já achamos um CNPJ igual: ERRO
-        # OU se estamos editando (id_obra existe), mas o ID da obra achada é DIFERENTE do ID que estamos editando: ERRO
         if not id_obra or str(obra_existente.id) != str(id_obra):
             flash(f"Erro: O CNPJ {cnpj} já está cadastrado para a obra '{obra_existente.nome}'.", "danger")
             return redirect(url_for('auth.lista_obras'))
-            # Nota: Idealmente redirecionaríamos de volta para o form com os dados preenchidos,
-            # mas para simplificar e garantir segurança, voltamos para a lista.
 
     # 2. Coleta dos demais dados
     nome = request.form.get('nome')
     contratante = request.form.get('contratante')
     contrato = request.form.get('contrato')
     id_responsavel = request.form.get('id_responsavel')
-    id_matriz = request.form.get('id_matriz')
+    # id_matriz = request.form.get('id_matriz') -> Removido
     inicio_str = request.form.get('inicio')
     termino_str = request.form.get('termino')
     cep = request.form.get('cep')
@@ -1969,7 +1887,7 @@ def gerar_obra():
             obra.contratante = contratante
             obra.contrato = contrato
             obra.id_responsavel = id_responsavel if id_responsavel else None
-            obra.id_matriz = int(id_matriz) if id_matriz else None
+            # obra.id_matriz = int(id_matriz) if id_matriz else None -> Removido
             obra.inicio = inicio
             obra.termino = termino
             obra.cep = cep
@@ -1987,29 +1905,27 @@ def gerar_obra():
             obra = Obra(
                 nome=nome, cnpj=cnpj, contratante=contratante, contrato=contrato,
                 id_responsavel=id_responsavel if id_responsavel else None,
-                id_matriz=int(id_matriz) if id_matriz else None,
+                # id_matriz removido do construtor
                 inicio=inicio, termino=termino,
                 cep=cep, endereco=endereco, numero=numero, complemento=complemento,
                 bairro=bairro, cidade=cidade, estado=estado, status=status
             )
             db.session.add(obra)
             
-            # CRUCIAL: flush() envia o INSERT para o banco e popula obra.id
-            # sem fechar a transação. Isso permite vincular as frentes logo abaixo.
             db.session.flush() 
             
             flash("Obra cadastrada com sucesso!", "success")
 
-        # --- PROCESSAMENTO DAS FRENTES (CORRIGIDO) ---
+        # --- PROCESSAMENTO DAS FRENTES ---
         if frentes_payload:
             data = json.loads(frentes_payload)
             
-            # 1. REMOVIDAS: Exclui frentes marcadas
+            # 1. REMOVIDAS
             for f_id in data.get('removidas', []):
-                if f_id: # Garante que não é nulo
+                if f_id:
                     Frente_Trabalho.query.filter_by(id_frente_trabalho=f_id, id_obra=obra.id).delete()
             
-            # 2. NOVAS: Adiciona frentes criadas no grid
+            # 2. NOVAS
             for f_nova in data.get('novas', []):
                 nova_frente = Frente_Trabalho(
                     id_obra=obra.id,
@@ -2017,25 +1933,20 @@ def gerar_obra():
                     id_responsavel=f_nova['id_responsavel'] if f_nova['id_responsavel'] else None,
                     unidade=f_nova.get('unidade'),
                     qtd_planejada=float(f_nova.get('qtd_planejada')) if f_nova.get('qtd_planejada') else 0,
-                    # [NOVO] Processando Data de Início
                     data_inicio=datetime.strptime(f_nova.get('data_inicio'), '%Y-%m-%d').date() if f_nova.get('data_inicio') else None,
                     data_planejada=datetime.strptime(f_nova.get('data_planejada'), '%Y-%m-%d').date() if f_nova.get('data_planejada') else None
                 )
                 db.session.add(nova_frente)
 
-            # 3. EDITADAS: Atualiza frentes que já existiam e foram alteradas
+            # 3. EDITADAS
             for f_edit in data.get('editadas', []):
-                # Busca a frente existente
                 frente_existente = Frente_Trabalho.query.get(f_edit['id_frente_trabalho'])
                 
-                # Validação de segurança: verifica se a frente pertence mesmo a esta obra
                 if frente_existente and frente_existente.id_obra == obra.id:
                     frente_existente.nome_frente = f_edit['nome_frente']
                     frente_existente.id_responsavel = f_edit['id_responsavel'] if f_edit['id_responsavel'] else None
                     frente_existente.unidade = f_edit.get('unidade')
                     frente_existente.qtd_planejada = float(f_edit.get('qtd_planejada')) if f_edit.get('qtd_planejada') else 0
-                    
-                    # [NOVO] Atualizando Datas (Início e Fim)
                     frente_existente.data_inicio = datetime.strptime(f_edit.get('data_inicio'), '%Y-%m-%d').date() if f_edit.get('data_inicio') else None
                     frente_existente.data_planejada = datetime.strptime(f_edit.get('data_planejada'), '%Y-%m-%d').date() if f_edit.get('data_planejada') else None
 
@@ -2045,7 +1956,6 @@ def gerar_obra():
     except Exception as e:
         db.session.rollback()
         print(f"Erro ao salvar obra: {e}")
-        # Se for erro de integridade que passou pela nossa validação manual
         if "Duplicate entry" in str(e):
              flash(f"Erro: CNPJ já existente no sistema.", "danger")
         else:
@@ -2057,58 +1967,46 @@ def gerar_obra():
 @auth_bp.get("/editar-obra/<int:id>")
 @login_required
 def editar_obra(id):
+    from app.models.obra import Obra, Frente_Trabalho
     from app.models.usuario import Usuario
-    # Usa o helper para buscar a Obra com o nome da Matriz
-    item = fetch_single_obra_with_matriz_name(id)
-    
+
+    # Busca a Obra diretamente, sem lógica de Matriz
     obra = Obra.query.get_or_404(id)
+    
     # Busca todas as frentes vinculadas a essa obra
     frentes = Frente_Trabalho.query.filter_by(id_obra=id).all()
     
-    usuarios = Usuario.query.filter_by(status=1).all() # Apenas usuários ativos
+    usuarios = Usuario.query.filter_by(status=1).all() 
     
-    # Busca outras obras para o select de Matriz
-    opcoes_matriz = Obra.query.all()
+    # Removido busca de opcoes_matriz
     
-    if not item:
-        abort(404) # Not Found
-    
-    # Busca as opções de Matriz
-    opcoes_matriz = get_matrix_options()
-    
-    # Passa as opções de matrizes e o item com nome_matriz para o template
-    return render_template("form_obra.html", item=item, opcoes_matriz=opcoes_matriz, frentes=frentes, usuarios=usuarios)
+    return render_template("form_obra.html", item=obra, frentes=frentes, usuarios=usuarios)
 
 # Rota para visualizar obra
 @auth_bp.get("/visualizar-obra/<int:id>")
 @login_required
 def visualizar_obra(id):
-    from app.models.obra import Obra
+    from app.models.obra import Obra, Frente_Trabalho
     from app.models.usuario import Usuario
     
-    # Busca o item de Obra
+    # Busca o item de Obra diretamente
     item = Obra.query.get_or_404(id) 
-    item = fetch_single_obra_with_matriz_name(id)
 
-    # Define view_mode como True para bloquear os campos no template
     view_mode = True
-    if not item:
-        abort(404)
         
-    opcoes_matriz = get_matrix_options()
-    usuarios = Usuario.query.filter_by(status=1).all() # Apenas usuários ativos
+    # Removido busca de opcoes_matriz
+    usuarios = Usuario.query.filter_by(status=1).all()
     
     frentes = Frente_Trabalho.query.filter_by(id_obra=id).all()
 
     usuario = Usuario.query.order_by(Usuario.nome).all()
     
-    # Renderiza o template passando o item e o view_mode
     return render_template(
         "form_obra.html", 
         item=item, 
         view_mode=view_mode, 
         categoria="obra",
-        opcoes_matriz=opcoes_matriz, # Importante passar isso para o <select> funcionar
+        # opcoes_matriz removido
         frentes=frentes,
         usuario=usuario,
         usuarios=usuarios
@@ -2130,12 +2028,12 @@ def toggle_obra_status(id):
         
     try:
         db.session.commit()
-        return '', 200 # Retorna 200 OK para o JavaScript
+        return '', 200 
     except Exception as e:
         db.session.rollback()
         print(f"Erro ao alternar status da obra: {e}")
-        return '', 500 # Retorna erro 500
-    
+        return '', 500
+      
 #######################################################################################################
 ####################################################################################################### MEU PERFIL
 #######################################################################################################
