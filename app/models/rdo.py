@@ -11,7 +11,7 @@ class RDO(db.Model):
     # Chaves Estrangeiras
     id_obra = db.Column(db.Integer, db.ForeignKey("obras.id"), nullable=False)
     id_frente_trabalho = db.Column(db.Integer, db.ForeignKey("obras_frente_trabalho.id_frente_trabalho"), nullable=True)
-    id_usuario = db.Column(db.Integer, db.ForeignKey("usuarios.id"), nullable=True)
+    id_criado_por = db.Column(db.Integer, db.ForeignKey("usuarios.id"), nullable=True)
     
     # Climas
     id_climas_manha = db.Column(db.Integer, db.ForeignKey('lista_opcoes.id'), nullable=True) 
@@ -44,8 +44,10 @@ class RDO(db.Model):
     criado = db.Column(db.DateTime, default=datetime.utcnow)
     modificado = db.Column(db.DateTime, default=datetime.utcnow) # Remove onupdate
     
+    id_modificado_por = db.Column(db.Integer, db.ForeignKey("usuarios.id"), nullable=True)
+    
     obra = db.relationship("Obra")
-    usuario = db.relationship("Usuario", foreign_keys=[id_usuario])
+    usuario = db.relationship("Usuario", foreign_keys=[id_criado_por])
     frente_trabalho = db.relationship("Frente_Trabalho", foreign_keys=[id_frente_trabalho])
 
     @property

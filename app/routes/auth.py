@@ -445,8 +445,8 @@ def get_obra_api(id):
 
     # 6. Retorno do JSON com os nomes de campos corretos
     return jsonify({
-        "num_contrato": obra.contrato,       # Correção: usa 'contrato' e não 'num_contrato'
-        "cliente": obra.contratante,         # Correção: usa 'contratante'
+        "num_contrato": obra.contrato,
+        "cliente": obra.contratante,         
         "data_inicio": data_inicio_fmt,
         "data_inicio_iso": data_inicio_iso,
         "data_fim": data_fim_fmt,
@@ -528,6 +528,8 @@ def gerar_rdo():
                 ass.motivo_rejeicao = None
                 ass.status = 'Pendente'
                 ass.criado = None # Limpa a data de assinatura
+                ass.ip_endereco = None # Limpa o IP
+                ass.validacao = None # Limpa a validacao
 
         else:
             # ==============================
@@ -546,15 +548,16 @@ def gerar_rdo():
                 id_revisao=0
             )
             item_rdo.criado = now_br
+            item_rdo.id_criado_por = current_user_id
             item_rdo.status = "Pendente"
 
         # Popular campos comuns
         item_rdo.id_frente_trabalho = _get_int("frente_trabalho_id")
-        item_rdo.id_usuario = current_user_id
         item_rdo.id_climas_manha = _get_int("climas_manha")
         item_rdo.id_climas_tarde = _get_int("climas_tarde")
         item_rdo.data = data_rdo
         item_rdo.modificado = now_br
+        item_rdo.id_modificado_por = current_user_id
         item_rdo.comentarios_gerais = request.form.get("comentarios_gerais")
         # ALTERAÇÃO AQUI: Usando _get_float para converter corretamente
         item_rdo.qtd_produzida = _get_float("qtd_produzida")
@@ -832,7 +835,7 @@ def editar_rdo(rdo_id):
     for u in usuarios_obra:
         ass_obj = next((a for a in assinaturas_realizadas if a.id_usuario == u.id), None)
         # Exibe no grid o emitente, quem já assinou ou perfis de gestão
-        if u.id == item.id_usuario or u.id in ids_usuarios_que_assinaram or u.papel in ['Admin', 'Engenheiro', 'Supervisor']:
+        if u.id == item.id_criado_por or u.id in ids_usuarios_que_assinaram or u.papel in ['Admin', 'Engenheiro', 'Supervisor']:
             lista_assinaturas_status.append({
                 "usuario": u,
                 "assinado": True if ass_obj else False,
