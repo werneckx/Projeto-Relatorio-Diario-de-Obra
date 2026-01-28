@@ -88,8 +88,9 @@ def login_post():
     session["user_name"] = user.nome
     session["user_email"] = user.email
     session["user_role"] = user.papel
-
-    flash("Bem vindo " + user.nome, "success")
+    
+    if getattr(user, 'primeiro_acesso', False):
+        return redirect(url_for("auth.alterar_senha_obrigatoria"))
 
     return redirect(url_for("auth.inicio"))
 
@@ -1222,7 +1223,7 @@ def gerar_usuario():
                 flash("CPF já cadastrado.", "danger")
                 return render_template("form_usuario.html", item=item_form, obras=obras_ativas)
 
-            user = Usuario(nome=nome, email=email, papel=papel, cpf=cpf, status=status)
+            user = Usuario(nome=nome, email=email, papel=papel, cpf=cpf, status=status, primeiro_acesso=True)
             try:
                 user.id_supervisor = int(id_supervisor_raw) if id_supervisor_raw else None
             except Exception:
@@ -1287,6 +1288,7 @@ def reset_senha_usuario(id):
     from app.models.usuario import Usuario
     user = Usuario.query.get_or_404(id)
     user.set_senha("Usuario123")
+    user.primeiro_acesso = True
     db.session.commit()
     return {"message": "Sucesso"}, 200
     
@@ -1385,6 +1387,75 @@ def lista_supervisores():
     users = Usuario.query.order_by(Usuario.nome.asc()).all()
     result = [{'id': u.id, 'nome': u.nome, 'papel': u.papel, 'email': u.email} for u in users]
     return jsonify(result)
+
+# Middleware para verificar primeiro acesso
+
+@auth_bp.before_app_request
+def check_primeiro_acesso():
+    """
+    Verifica se o usuário logado está no primeiro acesso.
+    Se estiver, força o redirecionamento para a troca de senha.
+    """
+    # Verifica se existe um usuário na sessão manual
+    user_id = session.get("user_id")
+    
+    if user_id:
+        # Importação aqui para evitar erro circular
+        from app.models.usuario import Usuario
+        
+        # Busca o usuário no banco para ver o status atualizado do primeiro_acesso
+        user = Usuario.query.get(user_id)
+        
+        # Se o usuário existe E a flag primeiro_acesso é True
+        if user and getattr(user, 'primeiro_acesso', False):
+            # Rotas que ele PODE acessar (Login, Logout, Static, e a própria troca)
+            rotas_permitidas = ['auth.alterar_senha_obrigatoria', 'auth.logout', 'static', 'auth.login']
+            
+            # Se ele tentar ir para qualquer outra rota (como 'auth.inicio'), redireciona
+            if request.endpoint not in rotas_permitidas:
+                flash("Por segurança, você deve alterar sua senha no primeiro acesso.", "warning")
+                return redirect(url_for('auth.alterar_senha_obrigatoria'))
+        
+# Rota para alterar senha obrigatória
+
+@auth_bp.route("/alterar-senha-obrigatoria", methods=["GET", "POST"])
+@login_required
+def alterar_senha_obrigatoria():
+    if request.method == "POST":
+        nova_senha = request.form.get("nova_senha")
+        confirmar_senha = request.form.get("confirmar_senha")
+
+        if not nova_senha or not confirmar_senha:
+            flash("Preencha todos os campos.", "danger")
+            return render_template("alterar_senha_obrigatoria.html")
+
+        if nova_senha != confirmar_senha:
+            flash("As senhas não conferem.", "danger")
+            return render_template("alterar_senha_obrigatoria.html")
+            
+        # Opcional: Adicionar validação de complexidade de senha aqui
+        if len(nova_senha) < 6:
+             flash("A senha deve ter no mínimo 6 caracteres.", "danger")
+             return render_template("alterar_senha_obrigatoria.html")
+
+        from app.models.usuario import Usuario
+        user = Usuario.query.get(session.get("user_id"))
+        
+        # Atualiza a senha
+        user.set_senha(nova_senha)
+        
+        # REMOVE a trava de primeiro acesso
+        user.primeiro_acesso = False 
+        
+        try:
+            db.session.commit()
+            flash("Senha alterada com sucesso! Bem-vindo.", "success")
+            return redirect(url_for("auth.inicio"))
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Erro ao salvar senha: {str(e)}", "danger")
+
+    return render_template("alterar_senha_obrigatoria.html")
 
 #######################################################################################################
 ####################################################################################################### CLIMAS

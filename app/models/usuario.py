@@ -26,6 +26,7 @@ class Usuario(db.Model, UserMixin):
     id_supervisor = db.Column(db.String(120), nullable=True, default=1)
     telefone = db.Column(db.String(20), nullable=True)
     departamento = db.Column(db.String(100), nullable=True)
+    primeiro_acesso = db.Column(db.Boolean, default=True, nullable=False)
 
     # RELACIONAMENTO: Lista de obras/matrizes que este usuário pode acessar
     # Para matrizes: armazena a matriz (id_matriz = None)
