@@ -129,8 +129,10 @@ class Assinatura(db.Model):
     
     # Nullable fields (filled only upon action)
     img_assinatura = db.Column(db.Text, nullable=True) 
-    ip_endereco = db.Column(db.String(50), nullable=True)
-    validacao = db.Column(db.String(255)) # Hash ou token de validação
+    ip_endereco = db.Column(db.String(16), nullable=True)
+    hash_documento = db.Column(db.String(255), nullable=True)
+    latitude = db.Column(db.Float, nullable=True)
+    longitude = db.Column(db.Float, nullable=True)
     criado = db.Column(db.DateTime, default=datetime.utcnow)
     motivo_rejeicao = db.Column(db.String(255), nullable=True)
 

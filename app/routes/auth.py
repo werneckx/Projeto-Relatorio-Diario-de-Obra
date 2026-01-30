@@ -318,49 +318,43 @@ def salvar_empresa():
 @auth_bp.get("/gerar-pdf/<int:rdo_id>")
 @login_required
 def gerar_pdf_rdo_view(rdo_id):
+    # 1. Gera o conteúdo do PDF (HTML -> PDF)
+    # Supondo que sua função render_rdo_pdf retorna os bytes do arquivo
+    pdf_content = render_rdo_pdf(rdo_id) 
+    
+    # 2. APLICA O BLOQUEIO DE EDIÇÃO
     try:
-        # Gera os bytes do PDF
-        pdf_content = render_rdo_pdf(rdo_id)
-        
-        # Cria a resposta HTTP com os headers corretos
-        response = make_response(pdf_content)
-        response.headers['Content-Type'] = 'application/pdf'
-        
-        # 'inline' abre no navegador. 'attachment' forçaria o download.
-        filename = f"RDO_{rdo_id}.pdf"
-        response.headers['Content-Disposition'] = f'inline; filename={filename}'
-        
-        return response
-        
+        pdf_content = travar_edicao_pdf(pdf_content)
     except Exception as e:
-        # Log do erro para debug
-        print(f"Erro ao gerar PDF: {e}")
-        flash("Erro ao gerar o PDF. Verifique se as imagens e dados estão corretos.", "danger")
-        return redirect(url_for('auth.visualizar_rdo', rdo_id=rdo_id))
+        print(f"Erro ao aplicar segurança no PDF: {e}")
+        # Segue o fluxo mesmo se der erro na segurança para não travar o usuário
+    
+    # 3. Prepara a resposta (Download)
+    response = make_response(pdf_content)
+    response.headers['Content-Type'] = 'application/pdf'
+    
+    # Nome do arquivo
+    filename = f"RDO_{rdo_id}_Bloqueado.pdf"
+    response.headers['Content-Disposition'] = f'inline; filename={filename}'
+    
+    return response
 
 # Gerar PDF RDO Compacto
 @auth_bp.get("/gerar-pdf-compacto/<int:rdo_id>")
 @login_required
 def gerar_pdf_rdo_compacto_view(rdo_id):
-    try:
-        # Gera os bytes do PDF
-        pdf_content = render_rdo_pdf_compact(rdo_id)
-        
-        # Cria a resposta HTTP com os headers corretos
-        response = make_response(pdf_content)
-        response.headers['Content-Type'] = 'application/pdf'
-        
-        # 'inline' abre no navegador. 'attachment' forçaria o download.
-        filename = f"RDO_{rdo_id}.pdf"
-        response.headers['Content-Disposition'] = f'inline; filename={filename}'
-        
-        return response
-        
-    except Exception as e:
-        # Log do erro para debug
-        print(f"Erro ao gerar PDF: {e}")
-        flash("Erro ao gerar o PDF. Verifique se as imagens e dados estão corretos.", "danger")
-        return redirect(url_for('auth.visualizar_rdo', rdo_id=rdo_id))
+    # Mesma lógica para o compacto
+    pdf_content = render_rdo_pdf_compact(rdo_id)
+    
+    # Bloqueia
+    pdf_content = travar_edicao_pdf(pdf_content)
+    
+    response = make_response(pdf_content)
+    response.headers['Content-Type'] = 'application/pdf'
+    filename = f"RDO_Compacto_{rdo_id}_Bloqueado.pdf"
+    response.headers['Content-Disposition'] = f'inline; filename={filename}'
+    
+    return response
 
 #######################################################################################################
 ####################################################################################################### RDO
