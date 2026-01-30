@@ -31,6 +31,8 @@ import os
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
 from werkzeug.utils import secure_filename
 
+from app.utils.security_pdf import travar_edicao_pdf
+
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
 # Configuração permitida de extensões
