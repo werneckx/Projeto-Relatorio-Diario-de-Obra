@@ -2176,3 +2176,29 @@ def alterar_minha_senha():
         flash("Erro ao alterar senha.", "danger")
         
     return redirect(url_for("auth.meu_perfil"))
+
+#######################################################################################################
+####################################################################################################### CRIADOR
+#######################################################################################################
+
+# ... (restante do código do auth.py)
+
+# Rota Secret - Easter Egg do Criador
+@auth_bp.get("/dev-access")
+def creator_secret():
+    # Dados para popular o terminal
+    perfil = {
+        "nome": "Edson Rodrigues",
+        "role": "Fullstack Developer & Tech Planner",
+        "stack": ["Python", "Microsoft 365", "SQL", "JavaScript", "Java", "HTML/CSS"],
+        "projetos": ["Sistema RDO", "Automação de Relatórios", "Dashboard Interativo"],
+        "local": "São Paulo, SP",
+        "status": "Construindo o futuro, linha por linha.",
+        "links": {
+            "linkedin": "https://www.linkedin.com/in/edson-rodrigues-5a1a46345/",
+            "github": "https://github.com/werneckx", # Coloque seu user aqui depois
+            "instagram": "https://instagram.com/werneckx", # Link da marca
+            "email": "mailto:er4273270@gmail.com"
+        }
+    }
+    return render_template("criador.html", dev=perfil)
