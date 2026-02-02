@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System::Root::Access</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;600&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Fira Code', monospace;
+            background-color: #0f172a;
+            /* Slate 900 */
+            color: #10b981;
+            /* Emerald 500 */
+            overflow: hidden;
+        }
+
+        /* Cursor piscando */
+        .blink-cursor:after {
+            content: '█';
+            animation: blink 1s step-end infinite;
+            margin-left: 4px;
+            color: #10b981;
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0;
+            }
+        }
+
+        /* Efeito de Scanline (TV antiga) */
+        .scanline {
+            width: 100%;
+            height: 100px;
+            z-index: 10;
+            background: linear-gradient(0deg, rgba(0, 0, 0, 0) 0%, rgba(16, 185, 129, 0.1) 50%, rgba(0, 0, 0, 0) 100%);
+            opacity: 0.1;
+            position: absolute;
+            bottom: 100%;
+            animation: scanline 10s linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes scanline {
+            0% {
+                bottom: 100%;
+            }
+
+            100% {
+                bottom: -100px;
+            }
+        }
+
+        /* Glitch Effect no titulo */
+        .glitch {
+            position: relative;
+        }
+
+        .glitch::before,
+        .glitch::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .glitch::before {
+            left: 2px;
+            text-shadow: -1px 0 #ff00c1;
+            clip: rect(44px, 450px, 56px, 0);
+            animation: glitch-anim 5s infinite linear alternate-reverse;
+        }
+
+        .glitch::after {
+            left: -2px;
+            text-shadow: -1px 0 #00fff9;
+            clip: rect(44px, 450px, 56px, 0);
+            animation: glitch-anim2 5s infinite linear alternate-reverse;
+        }
+
+        @keyframes glitch-anim {
+            0% {
+                clip: rect(10px, 9999px, 30px, 0);
+            }
+
+            20% {
+                clip: rect(80px, 9999px, 90px, 0);
+            }
+
+            40% {
+                clip: rect(30px, 9999px, 40px, 0);
+            }
+
+            60% {
+                clip: rect(60px, 9999px, 70px, 0);
+            }
+
+            80% {
+                clip: rect(10px, 9999px, 50px, 0);
+            }
+
+            100% {
+                clip: rect(90px, 9999px, 100px, 0);
+            }
+        }
+
+        @keyframes glitch-anim2 {
+            0% {
+                clip: rect(50px, 9999px, 60px, 0);
+            }
+
+            20% {
+                clip: rect(10px, 9999px, 20px, 0);
+            }
+
+            40% {
+                clip: rect(40px, 9999px, 50px, 0);
+            }
+
+            60% {
+                clip: rect(20px, 9999px, 30px, 0);
+            }
+
+            80% {
+                clip: rect(70px, 9999px, 80px, 0);
+            }
+
+            100% {
+                clip: rect(30px, 9999px, 40px, 0);
+            }
+        }
+
+        /* Hover Link Effect */
+        .hacker-link:hover {
+            background-color: #10b981;
+            color: #0f172a;
+            box-shadow: 0 0 10px #10b981;
+        }
+    </style>
+</head>
+
+<body class="h-screen w-full flex items-center justify-center p-4 relative">
+
+    <div class="scanline"></div>
+
+    <div
+        class="w-full max-w-3xl bg-slate-950 border border-slate-800 rounded-lg shadow-2xl shadow-emerald-900/20 overflow-hidden z-20">
+
+        <div class="bg-slate-900 px-4 py-2 flex items-center gap-2 border-b border-slate-800">
+            <div class="flex gap-2">
+                <div class="w-3 h-3 rounded-full bg-red-500 hover:bg-red-600 cursor-pointer"
+                    onclick="window.history.back()" title="Fechar conexão"></div>
+                <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                <div class="w-3 h-3 rounded-full bg-green-500"></div>
+            </div>
+            <div class="flex-1 text-center text-xs text-slate-500 font-mono">
+                root@edson-dev:~
+            </div>
+        </div>
+
+        <div class="p-6 h-[500px] overflow-y-auto" id="terminal-body">
+
+            <div id="output" class="space-y-4 text-sm md:text-base"></div>
+
+            <div class="mt-4 flex items-center hidden" id="input-line">
+                <span class="text-blue-400 mr-2">➜</span>
+                <span class="text-purple-400 mr-2">~</span>
+                <span id="typing-effect" class="blink-cursor text-slate-200"></span>
+            </div>
+
+            <div id="cta-container" class="mt-8 hidden opacity-0 transition-opacity duration-1000 flex gap-4">
+                <a href="{{ url_for('auth.inicio') }}"
+                    class="hacker-link inline-block px-4 py-2 border border-emerald-500 text-emerald-500 transition-all duration-300 text-xs tracking-widest uppercase font-bold">
+                    <i class="fas fa-undo mr-2"></i>REBOOT SYSTEM
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="absolute bottom-10 right-10 opacity-5 pointer-events-none select-none">
+        <h1 class="text-9xl font-black text-slate-700">DEV</h1>
+    </div>
+
+    <script>
+        const devData = {{ dev | tojson }};
+        const outputDiv = document.getElementById('output');
+        const inputLine = document.getElementById('input-line');
+        const typingSpan = document.getElementById('typing-effect');
+        const ctaContainer = document.getElementById('cta-container');
+
+        // Sequência do roteiro
+        const sequence = [
+            { text: "Iniciando conexão segura (SSH-2.0)...", delay: 500, type: 'system' },
+            { text: "Bypass firewall... Sucesso.", delay: 800, type: 'success' },
+
+            // Passo 1: Quem sou eu
+            { text: "whoami", delay: 1500, type: 'command' },
+            {
+                html: `<span class="glitch font-bold text-xl text-white block mb-2" data-text="${devData.nome}">${devData.nome}</span>
+                     <span class="text-slate-400 block"><i class="fas fa-code mr-2"></i>${devData.role}</span>
+                     <span class="text-slate-500 text-xs block mt-1"><i class="fas fa-map-marker-alt mr-2"></i>${devData.local}</span>`, delay: 2000, type: 'response'
+            },
+
+            // Passo 2: Skills
+            { text: "cat skills.txt", delay: 3000, type: 'command' },
+            {
+                html: `<div class="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+                        ${devData.stack.map(s => `<span class="text-blue-400 hover:text-white transition-colors cursor-default">[✔] ${s}</span>`).join('')}
+                     </div>`, delay: 3500, type: 'response'
+            },
+
+            // Passo 3: Projetos
+            { text: "ls -la ./projects", delay: 4500, type: 'command' },
+            {
+                html: `<div class="space-y-1">
+                        ${devData.projetos.map(p => {
+                    if (p.includes('Edson')) return `<span class="text-purple-400 font-bold">drwxr-xr-x  <i class="fas fa-tshirt mx-1"></i> ${p}</span>`;
+                    return `<span class="text-slate-300">-rw-r--r--  ${p}</span>`;
+                }).join('')}
+                     </div>`, delay: 5000, type: 'response'
+            },
+
+            // Passo 4: Links / Conectar (NOVO)
+            { text: "./connect_world.sh", delay: 6500, type: 'command' },
+            {
+                html: `
+                <div class="flex flex-wrap gap-3">
+                    <a href="${devData.links.linkedin}" target="_blank" class="hacker-link border border-blue-500 text-blue-400 px-3 py-1 rounded text-sm transition-all flex items-center gap-2">
+                        <i class="fab fa-linkedin"></i> LinkedIn
+                    </a>
+                    <a href="${devData.links.github}" target="_blank" class="hacker-link border border-slate-500 text-slate-300 px-3 py-1 rounded text-sm transition-all flex items-center gap-2">
+                        <i class="fab fa-github"></i> GitHub
+                    </a>
+                    <a href="${devData.links.instagram}" target="_blank" class="hacker-link border border-pink-500 text-pink-400 px-3 py-1 rounded text-sm transition-all flex items-center gap-2">
+                        <i class="fab fa-instagram"></i> Instagram
+                    </a>
+                    <a href="${devData.links.email}" class="hacker-link border border-yellow-500 text-yellow-400 px-3 py-1 rounded text-sm transition-all flex items-center gap-2">
+                        <i class="fas fa-envelope"></i> Email
+                    </a>
+                </div>
+            `, delay: 7000, type: 'response'
+            },
+
+            // Finalização
+            { text: "echo $STATUS", delay: 8500, type: 'command' },
+            { html: `<span class="text-yellow-400 italic">"${devData.status}"</span>`, delay: 9000, type: 'response' }
+        ];
+
+        let currentStep = 0;
+
+        function runSequence() {
+            if (currentStep >= sequence.length) {
+                inputLine.classList.remove('hidden');
+                ctaContainer.classList.remove('hidden');
+                setTimeout(() => ctaContainer.classList.remove('opacity-0'), 100);
+                typeWriter("aguardando_input...", typingSpan);
+                return;
+            }
+
+            const step = sequence[currentStep];
+
+            setTimeout(() => {
+                const line = document.createElement('div');
+
+                if (step.type === 'command') {
+                    line.innerHTML = `<span class="text-blue-400 mr-2">➜</span><span class="text-white">${step.text}</span>`;
+                    line.className = "mb-2 border-l-2 border-transparent pl-2 opacity-0 animate-fade-in";
+                    // Pequena animação de fade in via CSS inline para simplicidade
+                    line.style.animation = "fadeIn 0.2s forwards";
+                } else if (step.type === 'system') {
+                    line.innerHTML = `> ${step.text}`;
+                    line.className = "text-slate-500 text-xs";
+                } else if (step.type === 'success') {
+                    line.innerHTML = `> ${step.text}`;
+                    line.className = "text-emerald-400 text-xs font-bold mb-4";
+                } else if (step.type === 'response') {
+                    line.innerHTML = step.html || step.text;
+                    line.className = "mb-4 ml-6 border-l border-slate-800 pl-4";
+                }
+
+                outputDiv.appendChild(line);
+
+                // Scroll para o fim
+                const termBody = document.getElementById('terminal-body');
+                termBody.scrollTop = termBody.scrollHeight;
+
+                currentStep++;
+                runSequence();
+
+            }, step.delay - (currentStep > 0 ? sequence[currentStep - 1].delay : 0));
+        }
+
+        // Styles for simple animations inside JS
+        const styleSheet = document.createElement("style");
+        styleSheet.innerText = `
+            @keyframes fadeIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+        `;
+        document.head.appendChild(styleSheet);
+
+        // Função simples de máquina de escrever
+        function typeWriter(text, element, i = 0) {
+            if (i < text.length) {
+                element.innerHTML += text.charAt(i);
+                setTimeout(() => typeWriter(text, element, i + 1), 100);
+            }
+        }
+
+        // Iniciar
+        window.onload = runSequence;
+
+    </script>
+</body>
+
+</html>

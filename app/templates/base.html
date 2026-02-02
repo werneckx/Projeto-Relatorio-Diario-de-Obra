@@ -385,8 +385,10 @@
                 <div class="text-center md:text-left">
                     <p class="text-sm font-medium text-slate-700">{{ nome_empresa_global }} • Versão 01.00</p>
                     <p class="text-xs text-slate-400">© 2026 Todos os direitos reservados.</p>
-                    <a class="text-xs text-slate-400" href="https://www.linkedin.com/in/edson-rodrigues-5a1a46345/">Made
-                        by Edson Rodrigues</a>
+                    <a class="text-xs text-slate-400 select-none cursor-help" onclick="countClicks()"
+                        title="Quem criou isso?">
+                        Made by Edson Rodrigues
+                    </a>
                 </div>
             </div>
 
@@ -400,6 +402,20 @@
 
     <!-- Scripts de Interação (Apenas Mobile e Flash) -->
     <script>
+        let clicks = 0;
+        function countClicks() {
+            clicks++;
+            if (clicks === 5) {
+                // Efeito visual antes de redirecionar
+                document.body.style.filter = 'invert(1)';
+                setTimeout(() => {
+                    window.location.href = "{{ url_for('auth.creator_secret') }}";
+                }, 300);
+            }
+            // Reseta o contador se demorar muito
+            setTimeout(() => clicks = 0, 2000);
+        }
+
         // --- 1. Lógica Menu Mobile ---
         function toggleMobileMenu() {
             const menu = document.getElementById('mobile-menu');
