@@ -10,3 +10,5 @@ qrcode[pil]
 pdfkit
 weasyprint
 qrcode[pil]
+pypdf
+pymupdf
