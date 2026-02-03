@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Comparação Forense de Documentos{% endblock %}
+{% block title %}Validação Forense{% endblock %}
 
 {% block content %}
 <!-- Carregar PDF.js via CDN -->
@@ -9,246 +9,218 @@
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 </script>
 
-<div class="flex flex-col items-center min-h-[90vh] bg-slate-50">
+<div class="space-y-6">
 
-    <!-- Cabeçalho / Status -->
-    <div
-        class="w-full max-w-[98%] mb-6 bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4 transition-all hover:shadow-md">
-        <div class="flex items-center gap-4">
-            <div class="w-12 h-12 rounded-full bg-slate-900 flex items-center justify-center text-white text-xl shadow">
-                <i class="fas fa-search-plus"></i>
-            </div>
-            <div>
-                <h1 class="text-xl font-bold text-slate-800">Validação Visual de Documentos</h1>
-                <p class="text-xs text-slate-500">Comparação Original (Sistema) vs. Enviado (Upload)</p>
-            </div>
+    <!-- Cabeçalho da Página -->
+    <div class="md:flex md:items-center md:justify-between">
+        <div class="min-w-0 flex-1">
+            <h2 class="text-2xl font-bold leading-7 text-slate-900 sm:truncate sm:text-3xl sm:tracking-tight">
+                Validação de Documentos
+            </h2>
+            <p class="mt-1 text-sm text-slate-500">
+                Auditoria visual e textual: Sistema vs. Arquivo Externo.
+            </p>
         </div>
-
         {% if resultado %}
-        <div class="flex flex-col md:flex-row items-center gap-3">
-            <div class="flex items-center gap-3 bg-slate-50 px-4 py-2 rounded-lg border border-slate-200">
-                <div class="text-right mr-2">
-                    <p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Status da Análise</p>
-                    <p
-                        class="text-sm font-extrabold uppercase {{ 'text-emerald-600' if resultado.status_auditoria == 'aprovado' else 'text-amber-600' }}">
-                        {{ 'CONTEÚDO ÍNTEGRO' if resultado.status_auditoria == 'aprovado' else 'DIVERGÊNCIA DETECTADA'
-                        }}
-                    </p>
-                </div>
-                <div
-                    class="w-10 h-10 rounded-full flex items-center justify-center text-white text-lg shadow-sm {{ 'bg-emerald-500' if resultado.status_auditoria == 'aprovado' else 'bg-amber-500' }}">
-                    <i
-                        class="fas {{ 'fa-check' if resultado.status_auditoria == 'aprovado' else 'fa-exclamation' }}"></i>
-                </div>
-            </div>
+        <div class="mt-4 flex md:ml-4 md:mt-0">
             <a href="{{ url_for('auth.validar_documento_publico') }}"
-                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold transition-colors shadow-sm whitespace-nowrap">
-                Nova Validação
+                class="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50 transition-all">
+                <i class="fas fa-redo mr-2 text-slate-400"></i> Nova Validação
             </a>
         </div>
         {% endif %}
     </div>
 
-    {% if not resultado and not erro %}
-    <!-- Upload Card -->
-    <div class="w-full max-w-lg bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200 mt-10">
-        <div class="p-10 text-center">
-            <div class="inline-flex items-center justify-center w-24 h-24 rounded-full bg-blue-50 mb-6 animate-pulse">
-                <i class="fas fa-file-pdf text-blue-600 text-5xl"></i>
+    <!-- Card de Status (Só aparece se houver resultado) -->
+    {% if resultado %}
+    <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-4">
+                <div
+                    class="flex h-12 w-12 items-center justify-center rounded-full {{ 'bg-emerald-100 text-emerald-600' if resultado.status_auditoria == 'aprovado' else 'bg-amber-100 text-amber-600' }}">
+                    <i
+                        class="fas {{ 'fa-check-circle' if resultado.status_auditoria == 'aprovado' else 'fa-exclamation-triangle' }} text-xl"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold text-slate-900">
+                        {{ 'Documento Íntegro' if resultado.status_auditoria == 'aprovado' else 'Divergências
+                        Detectadas' }}
+                    </h3>
+                    <p class="text-sm text-slate-500">
+                        {{ 'O conteúdo confere integralmente com o registro original.' if resultado.status_auditoria ==
+                        'aprovado' else 'Foram encontradas alterações no conteúdo textual.' }}
+                    </p>
+                </div>
             </div>
-            <h2 class="text-2xl font-bold text-slate-800 mb-2">Upload para Comparação</h2>
-            <p class="text-slate-500 text-sm mb-8 leading-relaxed">
-                Envie o arquivo PDF questionado. O sistema irá regenerar o original a partir do banco de dados e
-                exibi-los lado a lado para auditoria visual.
-            </p>
 
-            <form method="POST" action="{{ url_for('auth.validar_documento_publico') }}" enctype="multipart/form-data">
-                <label class="block w-full cursor-pointer group">
-                    <div
-                        class="flex flex-col items-center justify-center w-full h-48 border-2 border-slate-300 border-dashed rounded-xl bg-slate-50 hover:bg-blue-50 hover:border-blue-500 transition-all">
-                        <i
-                            class="fas fa-cloud-upload-alt text-4xl text-slate-400 group-hover:text-blue-500 mb-3 transition-colors"></i>
-                        <span class="text-base font-semibold text-slate-600 group-hover:text-blue-600">Clique para
-                            selecionar o PDF</span>
-                        <span class="text-xs text-slate-400 mt-1">Suporta arquivos até 10MB</span>
-                    </div>
-                    <input type="file" name="pdf_file" class="hidden" accept=".pdf" onchange="this.form.submit()">
-                </label>
-            </form>
+            <div class="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
+                <span class="text-xs font-medium text-slate-500">Hash de Referência:</span>
+                <code
+                    class="text-xs font-mono text-slate-700 bg-white px-1.5 py-0.5 rounded border border-slate-200 truncate max-w-[150px] sm:max-w-xs"
+                    title="{{ resultado.hash_completo }}">
+                    {{ resultado.hash_completo[:20] }}...
+                </code>
+            </div>
         </div>
+    </div>
+    {% endif %}
+
+    <!-- Área de Upload (Se não houver resultado) -->
+    {% if not resultado and not erro %}
+    <div
+        class="rounded-2xl border border-dashed border-slate-300 bg-slate-50/50 p-12 text-center hover:bg-slate-50 transition-colors">
+        <form method="POST" action="{{ url_for('auth.validar_documento_publico') }}" enctype="multipart/form-data"
+            class="relative cursor-pointer">
+            <div class="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-blue-50">
+                <i class="fas fa-file-pdf text-4xl text-blue-600"></i>
+            </div>
+            <h3 class="mt-4 text-lg font-semibold text-slate-900">Upload de Arquivo PDF</h3>
+            <p class="mt-2 text-sm text-slate-500 max-w-sm mx-auto">
+                Envie o arquivo questionado. O sistema irá regenerar o original automaticamente para comparação.
+            </p>
+            <label
+                class="mt-6 inline-flex items-center rounded-md bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 cursor-pointer transition-all">
+                <span>Selecionar PDF</span>
+                <input type="file" name="pdf_file" class="sr-only" accept=".pdf" onchange="this.form.submit()">
+            </label>
+        </form>
     </div>
     {% endif %}
 
     {% if resultado %}
 
-    <!-- Alerta de Arquivo Achatado (Hidden by default, toggled by JS) -->
-    <div id="alerta-achatado"
-        class="hidden w-full max-w-[98%] mb-4 bg-orange-50 border-l-4 border-orange-500 p-4 rounded shadow-sm">
-        <div class="flex items-center">
+    <!-- Alerta de Arquivo Achatado -->
+    <div id="alerta-achatado" class="hidden rounded-md bg-orange-50 p-4 border-l-4 border-orange-500">
+        <div class="flex">
             <div class="flex-shrink-0">
-                <i class="fas fa-camera text-orange-500 text-xl"></i>
+                <i class="fas fa-camera text-orange-400"></i>
             </div>
             <div class="ml-3">
-                <p class="text-sm font-bold text-orange-700">Arquivo "Achatado" (Imagem) Detectado</p>
-                <p class="text-xs text-orange-600 mt-1">
-                    O PDF enviado parece ser uma imagem digitalizada ou achatada.
-                    <strong>Não é possível verificar a autenticidade textual</strong> automaticamente, pois não há texto
-                    selecionável.
-                    A comparação visual abaixo deve ser feita manualmente com atenção redobrada.
-                </p>
+                <h3 class="text-sm font-medium text-orange-800">Arquivo "Achatado" (Imagem) Detectado</h3>
+                <div class="mt-2 text-sm text-orange-700">
+                    <p>O PDF enviado parece ser uma digitalização (imagem). A comparação textual automática não é
+                        possível. Utilize a comparação visual abaixo com atenção redobrada.</p>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Controles de Zoom e Legenda -->
+    <!-- Controles e Legenda -->
     <div
-        class="w-full max-w-[98%] mb-4 flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-2 rounded-lg border border-slate-200 shadow-sm">
-
+        class="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
         <!-- Legenda -->
-        <div class="flex items-center gap-4 px-2">
-            {% if resultado.diff_data %}
+        <div class="flex items-center gap-4">
             <div class="flex items-center gap-2">
-                <div class="w-3 h-3 bg-red-500 opacity-50 border border-red-600 rounded-sm"></div>
-                <span class="text-[10px] font-bold text-slate-600 uppercase">Removido</span>
+                <span class="flex h-3 w-3 rounded-full bg-red-500 opacity-75 ring-1 ring-inset ring-red-600/20"></span>
+                <span class="text-xs font-medium text-slate-600">Removido (Original)</span>
             </div>
             <div class="flex items-center gap-2">
-                <!-- Alterado para Verde (Emerald) -->
-                <div class="w-3 h-3 bg-emerald-500 opacity-50 border border-emerald-600 rounded-sm"></div>
-                <span class="text-[10px] font-bold text-slate-600 uppercase">Inserido</span>
+                <span
+                    class="flex h-3 w-3 rounded-full bg-emerald-500 opacity-75 ring-1 ring-inset ring-emerald-600/20"></span>
+                <span class="text-xs font-medium text-slate-600">Inserido (Enviado)</span>
             </div>
-            {% else %}
-            <span class="text-xs text-slate-400">Documentos idênticos visualmente.</span>
-            {% endif %}
         </div>
 
-        <!-- Toolbar de Zoom -->
-        <div class="flex items-center gap-2 bg-slate-100 rounded-lg p-1">
+        <!-- Toolbar Zoom -->
+        <div class="flex items-center rounded-lg bg-slate-100 p-1">
             <button onclick="mudarZoom(-0.25)"
-                class="w-8 h-8 flex items-center justify-center bg-white rounded shadow-sm text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition-all"
-                title="Diminuir Zoom">
-                <i class="fas fa-minus"></i>
+                class="p-1.5 text-slate-500 hover:bg-white hover:text-slate-700 hover:shadow-sm rounded-md transition-all"
+                title="Diminuir">
+                <i class="fas fa-minus text-xs"></i>
             </button>
-            <span id="label-zoom" class="w-16 text-center text-sm font-mono font-bold text-slate-700">100%</span>
+            <span id="label-zoom" class="w-12 text-center text-xs font-bold text-slate-700 tabular-nums">100%</span>
             <button onclick="mudarZoom(0.25)"
-                class="w-8 h-8 flex items-center justify-center bg-white rounded shadow-sm text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition-all"
-                title="Aumentar Zoom">
-                <i class="fas fa-plus"></i>
+                class="p-1.5 text-slate-500 hover:bg-white hover:text-slate-700 hover:shadow-sm rounded-md transition-all"
+                title="Aumentar">
+                <i class="fas fa-plus text-xs"></i>
             </button>
-            <div class="w-px h-6 bg-slate-300 mx-1"></div>
+            <div class="mx-2 h-4 w-px bg-slate-300"></div>
             <button onclick="sincronizarReset()"
-                class="px-3 h-8 flex items-center gap-2 bg-white rounded shadow-sm text-slate-600 text-xs font-bold hover:text-blue-600 hover:bg-blue-50 transition-all"
-                title="Resetar Visualização">
-                <i class="fas fa-sync-alt"></i> Reset
+                class="px-2 py-1 text-xs font-medium text-slate-600 hover:bg-white hover:shadow-sm rounded-md transition-all">
+                Resetar
             </button>
         </div>
     </div>
 
-    <!-- ÁREA DE COMPARAÇÃO VISUAL LADO A LADO -->
-    <div class="w-full max-w-[98%] grid grid-cols-1 lg:grid-cols-2 gap-6 h-[80vh] mb-8">
+    <!-- Visualizadores Lado a Lado -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[75vh]">
 
-        <!-- COLUNA ESQUERDA: ORIGINAL -->
+        <!-- Original -->
         <div
-            class="flex flex-col h-full bg-white rounded-xl shadow-lg border border-slate-300 overflow-hidden relative group">
-            <div
-                class="bg-slate-100 border-b border-slate-300 px-4 py-2 flex justify-between items-center sticky top-0 z-10 h-10 shadow-sm">
+            class="flex flex-col overflow-hidden rounded-xl border border-slate-300 bg-slate-100 shadow-inner group relative">
+            <div class="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-2 shadow-sm z-10">
                 <div class="flex items-center gap-2">
-                    <span class="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-sm"></span>
-                    <h3 class="font-bold text-slate-700 text-xs uppercase tracking-wide">Original (Sistema)</h3>
+                    <span class="h-2 w-2 rounded-full bg-blue-500"></span>
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-600">Original (Sistema)</span>
                 </div>
-                <span class="text-[10px] bg-white border border-slate-300 px-2 rounded text-slate-500 font-mono">
-                    Gabarito
-                </span>
+                <span
+                    class="inline-flex items-center rounded-md bg-slate-50 px-2 py-1 text-xs font-medium text-slate-600 ring-1 ring-inset ring-slate-500/10">Gabarito</span>
             </div>
-
-            <!-- Container Scrollavel Original -->
-            <!-- REMOVIDO 'scroll-smooth' para garantir sincronização instantânea -->
-            <div id="scroll-original" class="flex-1 bg-slate-200 relative overflow-auto custom-scrollbar">
-                <!-- Alterado de items-center para items-start para corrigir bug de corte na esquerda -->
-                <div id="viewer-original" class="flex flex-col items-start py-8 min-h-full w-full">
-                    <div class="animate-pulse text-slate-400 mt-10 w-full text-center">Carregando PDF Original...</div>
+            <!-- Container Scroll -->
+            <div id="scroll-original" class="flex-1 overflow-auto custom-scrollbar bg-slate-200/50 p-4">
+                <div id="viewer-original" class="flex flex-col items-start min-h-full w-full">
+                    <div class="w-full text-center mt-10 text-slate-400 text-sm animate-pulse">Carregando
+                        visualização...</div>
                 </div>
             </div>
         </div>
 
-        <!-- COLUNA DIREITA: ENVIADO -->
+        <!-- Enviado -->
         <div
-            class="flex flex-col h-full bg-white rounded-xl shadow-lg border border-slate-300 overflow-hidden relative group">
-            <div
-                class="bg-slate-100 border-b border-slate-300 px-4 py-2 flex justify-between items-center sticky top-0 z-10 h-10 shadow-sm">
+            class="flex flex-col overflow-hidden rounded-xl border border-slate-300 bg-slate-100 shadow-inner group relative">
+            <div class="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-2 shadow-sm z-10">
                 <div class="flex items-center gap-2">
                     <span
-                        class="w-2.5 h-2.5 rounded-full {{ 'bg-emerald-500' if resultado.status_auditoria == 'aprovado' else 'bg-amber-500' }} shadow-sm"></span>
-                    <h3 class="font-bold text-slate-700 text-xs uppercase tracking-wide">Enviado (Análise)</h3>
+                        class="h-2 w-2 rounded-full {{ 'bg-emerald-500' if resultado.status_auditoria == 'aprovado' else 'bg-amber-500' }}"></span>
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-600">Enviado (Análise)</span>
                 </div>
-                <span class="text-[10px] bg-white border border-slate-300 px-2 rounded text-slate-500 font-mono">
-                    Upload
-                </span>
+                <span
+                    class="inline-flex items-center rounded-md bg-slate-50 px-2 py-1 text-xs font-medium text-slate-600 ring-1 ring-inset ring-slate-500/10">Upload</span>
             </div>
-
-            <!-- Container Scrollavel Enviado -->
-            <!-- REMOVIDO 'scroll-smooth' para garantir sincronização instantânea -->
-            <div id="scroll-enviado" class="flex-1 bg-slate-200 relative overflow-auto custom-scrollbar">
-                <!-- Alterado de items-center para items-start para corrigir bug de corte na esquerda -->
-                <div id="viewer-enviado" class="flex flex-col items-start py-8 min-h-full w-full">
-                    <div class="animate-pulse text-slate-400 mt-10 w-full text-center">Carregando PDF Enviado...</div>
+            <!-- Container Scroll -->
+            <div id="scroll-enviado" class="flex-1 overflow-auto custom-scrollbar bg-slate-200/50 p-4">
+                <div id="viewer-enviado" class="flex flex-col items-start min-h-full w-full">
+                    <div class="w-full text-center mt-10 text-slate-400 text-sm animate-pulse">Carregando
+                        visualização...</div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- RELATÓRIO DE ALTERAÇÕES -->
+    <!-- Lista de Divergências -->
     {% if resultado.diff_data %}
-    <div
-        class="w-full max-w-[98%] mb-6 bg-white border border-amber-200 rounded-xl shadow-md overflow-hidden animate-fade-in">
-        <div class="bg-amber-50 px-5 py-3 border-b border-amber-200 flex items-center gap-2">
-            <i class="fas fa-exclamation-triangle text-amber-600"></i>
-            <h3 class="text-sm font-bold text-amber-900 uppercase">Guia de Divergências Encontradas</h3>
+    <div class="rounded-xl border border-amber-200 bg-white shadow-sm overflow-hidden">
+        <div class="border-b border-amber-100 bg-amber-50/50 px-4 py-3 flex items-center gap-2">
+            <i class="fas fa-list-ul text-amber-600 text-sm"></i>
+            <h3 class="text-sm font-semibold text-amber-900">Detalhamento das Alterações</h3>
         </div>
-        <div class="p-3 bg-white">
-            <p class="text-xs text-slate-500 mb-3 ml-2">
-                O sistema detectou diferenças textuais. Os itens abaixo mostram o que foi <strong>removido
-                    (vermelho)</strong> e o que foi <strong>inserido (verde)</strong> no lugar.
-            </p>
-
-            <!-- Layout Compacto: Grid de 3 colunas em telas grandes -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div class="p-4 bg-white">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                 {% for diff in resultado.diff_data %}
                 <div
-                    class="border border-slate-100 rounded-lg p-2 bg-white shadow-sm flex flex-col gap-1 relative group hover:border-slate-300 transition-colors">
+                    class="group relative flex flex-col gap-2 rounded-lg border border-slate-100 bg-slate-50/30 p-3 hover:border-slate-300 hover:shadow-sm transition-all">
 
-                    <div class="flex items-center justify-between mb-1">
+                    <div class="flex items-center justify-between">
                         <span
-                            class="text-[9px] font-bold uppercase tracking-wide text-slate-400 flex items-center gap-1">
-                            <i class="fas fa-exchange-alt text-slate-300"></i> Alteração
+                            class="inline-flex items-center rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500 ring-1 ring-inset ring-slate-500/10">
+                            Divergência #{{ loop.index }}
                         </span>
                     </div>
 
-                    <div class="flex flex-col gap-1.5">
+                    <div class="flex flex-col gap-2 mt-1">
                         {% if diff.original %}
-                        <!-- Antigo / Removido -->
-                        <div
-                            class="flex items-center justify-between bg-red-50 border border-red-100 rounded px-2 py-1">
-                            <div class="flex flex-col">
-                                <span class="text-[8px] font-bold text-red-400 uppercase leading-none">Original</span>
-                                <span class="text-xs text-red-700 font-medium break-all leading-tight">"{{ diff.original
-                                    }}"</span>
-                            </div>
-                            <!-- <i class="fas fa-minus text-red-300 text-[10px]"></i> -->
+                        <div class="rounded bg-red-50 px-2 py-1.5 ring-1 ring-inset ring-red-600/10">
+                            <p class="text-[9px] font-bold uppercase text-red-500 mb-0.5">Original</p>
+                            <p class="text-xs font-medium text-red-700 break-words leading-snug">"{{ diff.original }}"
+                            </p>
                         </div>
                         {% endif %}
 
                         {% if diff.enviado %}
-                        <!-- Novo / Adicionado (Alterado para Verde) -->
-                        <div
-                            class="flex items-center justify-between bg-emerald-50 border border-emerald-100 rounded px-2 py-1">
-                            <div class="flex flex-col">
-                                <span
-                                    class="text-[8px] font-bold text-emerald-600 uppercase leading-none">Enviado</span>
-                                <span class="text-xs text-emerald-800 font-medium break-all leading-tight">"{{
-                                    diff.enviado
-                                    }}"</span>
-                            </div>
-                            <!-- <i class="fas fa-plus text-emerald-600 text-[10px]"></i> -->
+                        <div class="rounded bg-emerald-50 px-2 py-1.5 ring-1 ring-inset ring-emerald-600/10">
+                            <p class="text-[9px] font-bold uppercase text-emerald-600 mb-0.5">Enviado</p>
+                            <p class="text-xs font-medium text-emerald-800 break-words leading-snug">"{{ diff.enviado
+                                }}"</p>
                         </div>
                         {% endif %}
                     </div>
@@ -257,263 +229,217 @@
             </div>
         </div>
     </div>
-    {% elif resultado.status_auditoria == 'aprovado' %}
-    <div
-        class="w-full max-w-[98%] mb-6 bg-emerald-50 border border-emerald-200 rounded-xl shadow-sm p-4 flex items-center gap-3">
-        <i class="fas fa-check-circle text-emerald-500 text-2xl"></i>
-        <div>
-            <h3 class="font-bold text-emerald-800">Nenhuma divergência textual encontrada</h3>
-            <p class="text-xs text-emerald-600">O conteúdo do PDF enviado confere integralmente com o registro do
-                sistema.</p>
-        </div>
-    </div>
     {% endif %}
-
-    <!-- Hash Removido conforme solicitado -->
 
     {% endif %}
 
+    <!-- Erros -->
     {% if erro %}
-    <div class="mt-10 w-full max-w-lg bg-white rounded-2xl border-t-4 border-red-500 shadow-xl p-8 text-center">
-        <div
-            class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl shadow-sm">
-            <i class="fas fa-times"></i>
+    <div class="mx-auto max-w-lg rounded-xl border border-red-200 bg-white p-8 text-center shadow-lg">
+        <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-100">
+            <i class="fas fa-times text-xl text-red-600"></i>
         </div>
-        <h3 class="text-xl font-bold text-slate-800 mb-2">Validação Falhou</h3>
-        <p class="text-sm text-slate-600 mb-6 leading-relaxed">{{ erro }}</p>
-        <a href="{{ url_for('auth.validar_documento_publico') }}"
-            class="text-blue-600 hover:underline font-bold text-sm">Tentar Novamente</a>
+        <h3 class="mt-4 text-lg font-semibold text-slate-900">Validação Falhou</h3>
+        <p class="mt-2 text-sm text-slate-500">{{ erro }}</p>
+        <div class="mt-6">
+            <a href="{{ url_for('auth.validar_documento_publico') }}"
+                class="text-sm font-semibold text-blue-600 hover:text-blue-500 hover:underline">
+                Tentar Novamente <span aria-hidden="true">&rarr;</span>
+            </a>
+        </div>
     </div>
-    {% endif %}
-
-    {% if resultado %}
-    <!-- SCRIPT DE RENDERIZAÇÃO E SINCRONIZAÇÃO -->
-    <script>
-        // Dados vindos do Backend (Base64)
-        const pdfDataOriginal = "{{ resultado.pdf_original_b64 }}";
-        const pdfDataEnviado = "{{ resultado.pdf_enviado_b64 }}";
-
-        let currentZoom = 1.0;
-        let pdfDocOriginal = null;
-        let pdfDocEnviado = null;
-        let globalRenderId = 0; // Controle de versão da renderização
-
-        // Elementos DOM
-        const containerOriginal = document.getElementById('scroll-original');
-        const containerEnviado = document.getElementById('scroll-enviado');
-        const viewerOriginal = document.getElementById('viewer-original');
-        const viewerEnviado = document.getElementById('viewer-enviado');
-        const labelZoom = document.getElementById('label-zoom');
-        const alertaAchatado = document.getElementById('alerta-achatado');
-
-        // Função utilitária para converter Base64 em Uint8Array
-        function base64ToUint8Array(base64) {
-            const binary_string = window.atob(base64);
-            const len = binary_string.length;
-            const bytes = new Uint8Array(len);
-            for (let i = 0; i < len; i++) {
-                bytes[i] = binary_string.charCodeAt(i);
-            }
-            return bytes;
-        }
-
-        // Renderiza uma página em um container
-        async function renderPage(pdfDoc, pageNum, container) {
-            const page = await pdfDoc.getPage(pageNum);
-
-            // Ajusta escala baseada no Zoom e resolução
-            // Scale 1.5 padrão para ficar nítido, multiplicado pelo Zoom do usuário
-            const viewport = page.getViewport({ scale: 1.5 * currentZoom });
-
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
-            canvas.height = viewport.height;
-            canvas.width = viewport.width;
-
-            // Estilo para centralizar via margem quando menor, e alinhar à esquerda quando maior
-            canvas.style.width = `${viewport.width / 1.5}px`;
-            canvas.style.height = `${viewport.height / 1.5}px`;
-            canvas.style.marginBottom = "20px";
-            canvas.style.display = "block";
-            canvas.style.margin = "0 auto 20px auto"; // Centraliza horizontalmente
-            canvas.style.boxShadow = "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)";
-
-            container.appendChild(canvas);
-
-            const renderContext = {
-                canvasContext: context,
-                viewport: viewport
-            };
-            await page.render(renderContext).promise;
-        }
-
-        // Renderiza o PDF completo com controle de concorrência
-        async function renderPDF(pdfDataB64, viewerElement, renderId) {
-            if (!pdfDataB64 || pdfDataB64 === "None") {
-                throw new Error("Dados do PDF inexistentes");
-            }
-
-            // Verifica se esta renderização ainda é a atual
-            if (renderId !== globalRenderId) return;
-
-            viewerElement.innerHTML = ''; // Limpa
-            try {
-                const data = base64ToUint8Array(pdfDataB64);
-                const pdfDoc = await pdfjsLib.getDocument({ data: data }).promise;
-
-                for (let num = 1; num <= pdfDoc.numPages; num++) {
-                    // Verifica a cada página se a renderização foi cancelada/substituída
-                    if (renderId !== globalRenderId) return;
-                    await renderPage(pdfDoc, num, viewerElement);
-                }
-                return pdfDoc;
-            } catch (error) {
-                // Se a renderização foi cancelada, não loga erro
-                if (renderId !== globalRenderId) return;
-                console.error("Erro na renderização:", error);
-                throw error;
-            }
-        }
-
-        // Função para detectar se o PDF é "achatado" (apenas imagem, sem texto selecionável)
-        async function detectarAchatamento(pdfDoc) {
-            if (!pdfDoc) return;
-            try {
-                // Verifica a primeira página
-                const page = await pdfDoc.getPage(1);
-                const textContent = await page.getTextContent();
-
-                // Se não houver itens de texto, é provável que seja uma imagem/scan
-                if (textContent.items.length === 0) {
-                    alertaAchatado.classList.remove('hidden');
-                }
-            } catch (e) {
-                console.log("Erro ao detectar achatamento:", e);
-            }
-        }
-
-        // Inicialização: Retorna Promise.all para aguardar AMBOS os renders
-        function initViewers() {
-            // Incrementa ID global para invalidar renderizações anteriores
-            globalRenderId++;
-            const myRenderId = globalRenderId;
-
-            // Carrega Original
-            const p1 = renderPDF(pdfDataOriginal, viewerOriginal, myRenderId)
-                .then(pdf => {
-                    if (myRenderId === globalRenderId) pdfDocOriginal = pdf;
-                })
-                .catch(err => {
-                    if (myRenderId === globalRenderId) {
-                        console.error("Erro Original:", err);
-                        viewerOriginal.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-red-500 p-8"><i class="fas fa-file-excel text-4xl mb-3"></i><p class="font-bold text-center">Erro ao carregar PDF Original</p><p class="text-xs text-center">Arquivo não encontrado ou corrompido.</p></div>';
-                    }
-                });
-
-            // Carrega Enviado e verifica achatamento
-            const p2 = renderPDF(pdfDataEnviado, viewerEnviado, myRenderId)
-                .then(pdf => {
-                    if (myRenderId === globalRenderId) {
-                        pdfDocEnviado = pdf;
-                        detectarAchatamento(pdf);
-                    }
-                })
-                .catch(err => {
-                    if (myRenderId === globalRenderId) {
-                        console.error("Erro Enviado:", err);
-                        viewerEnviado.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-red-500 p-8"><i class="fas fa-file-excel text-4xl mb-3"></i><p class="font-bold text-center">Erro ao carregar PDF Enviado</p><p class="text-xs text-center">Arquivo achatado, corrompido ou inválido.</p></div>';
-                    }
-                });
-
-            return Promise.all([p1, p2]);
-        }
-
-        // --- LÓGICA DE SINCRONIZAÇÃO DE SCROLL ---
-        let isSyncingLeft = false;
-        let isSyncingRight = false;
-
-        containerOriginal.addEventListener('scroll', function (e) {
-            if (!isSyncingLeft) {
-                isSyncingRight = true;
-                containerEnviado.scrollTop = this.scrollTop;
-                containerEnviado.scrollLeft = this.scrollLeft;
-            }
-            isSyncingLeft = false;
-        });
-
-        containerEnviado.addEventListener('scroll', function (e) {
-            if (!isSyncingRight) {
-                isSyncingLeft = true;
-                containerOriginal.scrollTop = this.scrollTop;
-                containerOriginal.scrollLeft = this.scrollLeft;
-            }
-            isSyncingRight = false;
-        });
-
-        // --- CONTROLE DE ZOOM ---
-
-        // Função auxiliar para processar o zoom via CTRL+Scroll
-        function handleWheelZoom(event) {
-            // Verifica se a tecla Ctrl está pressionada
-            if (event.ctrlKey) {
-                event.preventDefault(); // Impede o zoom padrão do navegador
-                const delta = event.deltaY < 0 ? 0.1 : -0.1;
-                mudarZoom(delta);
-            }
-        }
-
-        // Adiciona os ouvintes de evento 'wheel' aos containers
-        containerOriginal.addEventListener('wheel', handleWheelZoom, { passive: false });
-        containerEnviado.addEventListener('wheel', handleWheelZoom, { passive: false });
-
-        window.mudarZoom = async function (delta) {
-            const novoZoom = currentZoom + delta;
-            // Limites de Zoom (25% a 300%)
-            if (novoZoom < 0.25 || novoZoom > 3.0) return;
-
-            // Salva posição relativa do scroll (Vertical e Horizontal) ANTES de limpar
-            const scrollRatioY = containerOriginal.scrollHeight > 0 ? containerOriginal.scrollTop / containerOriginal.scrollHeight : 0;
-            const scrollRatioX = containerOriginal.scrollWidth > 0 ? containerOriginal.scrollLeft / containerOriginal.scrollWidth : 0;
-
-            currentZoom = novoZoom;
-            labelZoom.innerText = `${Math.round(currentZoom * 100)}%`;
-
-            // Re-renderiza e aguarda o FIM do processo
-            await initViewers();
-
-            // Restaura posição do scroll (ajustado para nova altura/largura)
-            // Timeout pequeno para garantir que o layout atualizou
-            setTimeout(() => {
-                if (containerOriginal.scrollHeight > 0) {
-                    // Restaura Y
-                    const novoScrollY = scrollRatioY * containerOriginal.scrollHeight;
-                    containerOriginal.scrollTop = novoScrollY;
-                    containerEnviado.scrollTop = novoScrollY;
-
-                    // Restaura X
-                    const novoScrollX = scrollRatioX * containerOriginal.scrollWidth;
-                    containerOriginal.scrollLeft = novoScrollX;
-                    containerEnviado.scrollLeft = novoScrollX;
-                }
-            }, 50);
-        };
-
-        window.sincronizarReset = function () {
-            currentZoom = 1.0;
-            labelZoom.innerText = "100%";
-            initViewers().then(() => {
-                containerOriginal.scrollTop = 0;
-                containerEnviado.scrollTop = 0;
-                containerOriginal.scrollLeft = 0;
-                containerEnviado.scrollLeft = 0;
-            });
-        };
-
-        // Inicia ao carregar a página
-        document.addEventListener('DOMContentLoaded', initViewers);
-
-    </script>
     {% endif %}
 
 </div>
+
+{% if resultado %}
+<script>
+    // Dados vindos do Backend (Base64)
+    const pdfDataOriginal = "{{ resultado.pdf_original_b64 }}";
+    const pdfDataEnviado = "{{ resultado.pdf_enviado_b64 }}";
+
+    let currentZoom = 1.0;
+    let pdfDocOriginal = null;
+    let pdfDocEnviado = null;
+    let globalRenderId = 0;
+
+    const containerOriginal = document.getElementById('scroll-original');
+    const containerEnviado = document.getElementById('scroll-enviado');
+    const viewerOriginal = document.getElementById('viewer-original');
+    const viewerEnviado = document.getElementById('viewer-enviado');
+    const labelZoom = document.getElementById('label-zoom');
+    const alertaAchatado = document.getElementById('alerta-achatado');
+
+    function base64ToUint8Array(base64) {
+        const binary_string = window.atob(base64);
+        const len = binary_string.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+            bytes[i] = binary_string.charCodeAt(i);
+        }
+        return bytes;
+    }
+
+    async function renderPage(pdfDoc, pageNum, container) {
+        const page = await pdfDoc.getPage(pageNum);
+        const viewport = page.getViewport({ scale: 1.5 * currentZoom });
+
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+
+        // Estilização responsiva do canvas
+        canvas.style.width = `${viewport.width / 1.5}px`;
+        canvas.style.height = `${viewport.height / 1.5}px`;
+        canvas.style.marginBottom = "20px";
+        canvas.style.display = "block";
+        canvas.style.margin = "0 auto 20px auto";
+        canvas.style.boxShadow = "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)";
+        canvas.style.borderRadius = "4px";
+
+        container.appendChild(canvas);
+
+        const renderContext = {
+            canvasContext: context,
+            viewport: viewport
+        };
+        await page.render(renderContext).promise;
+    }
+
+    async function renderPDF(pdfDataB64, viewerElement, renderId) {
+        if (!pdfDataB64 || pdfDataB64 === "None") throw new Error("Dados do PDF inexistentes");
+        if (renderId !== globalRenderId) return;
+
+        viewerElement.innerHTML = '';
+        try {
+            const data = base64ToUint8Array(pdfDataB64);
+            const pdfDoc = await pdfjsLib.getDocument({ data: data }).promise;
+
+            for (let num = 1; num <= pdfDoc.numPages; num++) {
+                if (renderId !== globalRenderId) return;
+                await renderPage(pdfDoc, num, viewerElement);
+            }
+            return pdfDoc;
+        } catch (error) {
+            if (renderId !== globalRenderId) return;
+            console.error("Erro na renderização:", error);
+            throw error;
+        }
+    }
+
+    async function detectarAchatamento(pdfDoc) {
+        if (!pdfDoc) return;
+        try {
+            const page = await pdfDoc.getPage(1);
+            const textContent = await page.getTextContent();
+            if (textContent.items.length === 0) {
+                alertaAchatado.classList.remove('hidden');
+            }
+        } catch (e) {
+            console.log("Erro ao detectar achatamento:", e);
+        }
+    }
+
+    function initViewers() {
+        globalRenderId++;
+        const myRenderId = globalRenderId;
+
+        const p1 = renderPDF(pdfDataOriginal, viewerOriginal, myRenderId)
+            .then(pdf => { if (myRenderId === globalRenderId) pdfDocOriginal = pdf; })
+            .catch(err => {
+                if (myRenderId === globalRenderId) {
+                    viewerOriginal.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-red-500 p-8 text-sm"><i class="fas fa-exclamation-circle text-2xl mb-2"></i>Erro ao carregar Original</div>';
+                }
+            });
+
+        const p2 = renderPDF(pdfDataEnviado, viewerEnviado, myRenderId)
+            .then(pdf => {
+                if (myRenderId === globalRenderId) {
+                    pdfDocEnviado = pdf;
+                    detectarAchatamento(pdf);
+                }
+            })
+            .catch(err => {
+                if (myRenderId === globalRenderId) {
+                    viewerEnviado.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-red-500 p-8 text-sm"><i class="fas fa-exclamation-circle text-2xl mb-2"></i>Erro ao carregar Enviado</div>';
+                }
+            });
+
+        return Promise.all([p1, p2]);
+    }
+
+    // Scroll Sync
+    let isSyncingLeft = false;
+    let isSyncingRight = false;
+
+    containerOriginal.addEventListener('scroll', function (e) {
+        if (!isSyncingLeft) {
+            isSyncingRight = true;
+            containerEnviado.scrollTop = this.scrollTop;
+            containerEnviado.scrollLeft = this.scrollLeft;
+        }
+        isSyncingLeft = false;
+    });
+
+    containerEnviado.addEventListener('scroll', function (e) {
+        if (!isSyncingRight) {
+            isSyncingLeft = true;
+            containerOriginal.scrollTop = this.scrollTop;
+            containerOriginal.scrollLeft = this.scrollLeft;
+        }
+        isSyncingRight = false;
+    });
+
+    // Zoom
+    function handleWheelZoom(event) {
+        if (event.ctrlKey) {
+            event.preventDefault();
+            const delta = event.deltaY < 0 ? 0.1 : -0.1;
+            mudarZoom(delta);
+        }
+    }
+
+    containerOriginal.addEventListener('wheel', handleWheelZoom, { passive: false });
+    containerEnviado.addEventListener('wheel', handleWheelZoom, { passive: false });
+
+    window.mudarZoom = async function (delta) {
+        const novoZoom = currentZoom + delta;
+        if (novoZoom < 0.25 || novoZoom > 3.0) return;
+
+        const scrollRatioY = containerOriginal.scrollHeight > 0 ? containerOriginal.scrollTop / containerOriginal.scrollHeight : 0;
+        const scrollRatioX = containerOriginal.scrollWidth > 0 ? containerOriginal.scrollLeft / containerOriginal.scrollWidth : 0;
+
+        currentZoom = novoZoom;
+        labelZoom.innerText = `${Math.round(currentZoom * 100)}%`;
+
+        await initViewers();
+
+        setTimeout(() => {
+            if (containerOriginal.scrollHeight > 0) {
+                const novoScrollY = scrollRatioY * containerOriginal.scrollHeight;
+                containerOriginal.scrollTop = novoScrollY;
+                containerEnviado.scrollTop = novoScrollY;
+
+                const novoScrollX = scrollRatioX * containerOriginal.scrollWidth;
+                containerOriginal.scrollLeft = novoScrollX;
+                containerEnviado.scrollLeft = novoScrollX;
+            }
+        }, 50);
+    };
+
+    window.sincronizarReset = function () {
+        currentZoom = 1.0;
+        labelZoom.innerText = "100%";
+        initViewers().then(() => {
+            containerOriginal.scrollTop = 0;
+            containerEnviado.scrollTop = 0;
+            containerOriginal.scrollLeft = 0;
+            containerEnviado.scrollLeft = 0;
+        });
+    };
+
+    document.addEventListener('DOMContentLoaded', initViewers);
+</script>
+{% endif %}
 {% endblock %}
