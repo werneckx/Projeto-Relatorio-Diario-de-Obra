@@ -393,9 +393,9 @@
             </div>
 
             <div class="flex items-center gap-6 text-sm font-medium text-slate-500">
-                <a href="#" class="hover:text-blue-600 transition">Termos</a>
-                <a href="#" class="hover:text-blue-600 transition">Privacidade</a>
-                <a href="#" class="hover:text-blue-600 transition">Suporte</a>
+                <a href="{{ url_for('auth.termos') }}" class="hover:text-blue-600 transition">Termos</a>
+                <a href="{{ url_for('auth.privacidade') }}" class="hover:text-blue-600 transition">Privacidade</a>
+                <a href="{{ url_for('auth.suporte') }}" class="hover:text-blue-600 transition">Suporte</a>
             </div>
         </div>
     </footer>

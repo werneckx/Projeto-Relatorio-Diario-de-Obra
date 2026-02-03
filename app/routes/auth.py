@@ -59,6 +59,24 @@ def index():
     return redirect(url_for("auth.login"))
 
 #######################################################################################################
+####################################################################################################### Rotas Institucionais
+#######################################################################################################
+
+@auth_bp.get("/termos")
+def termos():
+    return render_template("termos.html")
+
+@auth_bp.get("/privacidade")
+def privacidade():
+    return render_template("privacidade.html")
+
+@auth_bp.get("/suporte")
+def suporte():
+    # Se quiser pré-preencher o e-mail do usuário logado no formulário
+    email_usuario = session.get("user_email", "")
+    return render_template("suporte.html", email_usuario=email_usuario)
+
+#######################################################################################################
 ####################################################################################################### Login e Logout
 #######################################################################################################
 
