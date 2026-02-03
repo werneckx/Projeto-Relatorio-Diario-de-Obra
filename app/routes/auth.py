@@ -346,7 +346,8 @@ def gerar_pdf_rdo_view(rdo_id):
     response.headers['Content-Type'] = 'application/pdf'
     
     # Nome do arquivo
-    filename = f"RDO_{rdo_id}_Bloqueado.pdf"
+    rdo = RDO.query.get_or_404(rdo_id)
+    filename = f"{rdo.data.strftime('%d-%m-%Y')} - RDO#{rdo_id} - {rdo.obra.nome if rdo.obra else 'Obra'}.pdf"
     response.headers['Content-Disposition'] = f'inline; filename={filename}'
     
     return response
@@ -795,9 +796,24 @@ def visualizar_rdo(rdo_id):
             usuarios_obra = Usuario.query.filter_by(status=True).all()
     else:
         usuarios_obra = Usuario.query.filter_by(status=True).all()
-        
-    url_rdo = url_for('auth.visualizar_rdo', rdo_id=rdo_id, _external=True)
-    qr_code_img = gerar_qrcode_b64(url_rdo)
+    
+    # GERAÇÃO DO QR CODE APONTANDO PARA A ROTA PÚBLICA DE VALIDAÇÃO
+    # Alterado para apontar para validar_documento_publico em vez de visualizar_rdo
+    # Assim, quem ler o QR Code vai para a tela de autenticação, não login.
+    # Se o documento tiver alguma assinatura assinada, usamos o hash da primeira assinatura válida, 
+    # senão, usamos o ID. (O ideal é usar o hash da última assinatura).
+    
+    # Tenta achar uma assinatura válida para gerar o link pelo Hash
+    ass_valida = Assinatura.query.filter_by(id_rdo=rdo_id, status='Aprovado').order_by(Assinatura.ordem.desc()).first()
+    
+    if ass_valida and ass_valida.hash_documento:
+        # Link público com Hash
+        url_validacao = url_for('auth.validar_documento_publico', h=ass_valida.hash_documento, _external=True)
+    else:
+        # Link interno se ainda não assinado (exige login)
+        url_validacao = url_for('auth.visualizar_rdo', rdo_id=rdo_id, _external=True)
+
+    qr_code_img = gerar_qrcode_b64(url_validacao)
 
     return render_template(
         "form_rdo.html",
@@ -986,7 +1002,7 @@ def salvar_workflow_assinaturas(rdo_id):
     # IDs vindo do checkbox (ex: [5, 9])
     novos_assinantes_ids = [int(uid) for uid in data.get('usuarios_ids', [])] 
     
-    creator_id = rdo.id_usuario
+    creator_id = rdo.id_criado_por
 
     # REGRA DE OURO: O criador DEVE estar na lista e DEVE ser o primeiro.
     # 1. Se o criador já estiver na lista vinda do front, removemos para evitar duplicidade
@@ -1029,7 +1045,7 @@ def assinar_rdo(rdo_id):
     user_id = session.get("user_id")
     rdo = RDO.query.get_or_404(rdo_id)
 
-    # 1. Localiza a assinatura PENDENTE deste usuário neste RDO
+    # 1. Localiza a assinatura PENDENTE
     assinatura_pendente = Assinatura.query.filter_by(
         id_rdo=rdo_id, 
         id_usuario=user_id, 
@@ -1039,7 +1055,7 @@ def assinar_rdo(rdo_id):
     if not assinatura_pendente:
         return jsonify({"success": False, "message": "Você não tem assinaturas pendentes para este RDO."}), 400
 
-    # 2. CHECK DE SEQUÊNCIA: Verifica se existe alguém com ordem MENOR que ainda não aprovou
+    # 2. CHECK DE SEQUÊNCIA
     passo_anterior_pendente = Assinatura.query.filter(
         Assinatura.id_rdo == rdo_id,
         Assinatura.ordem < assinatura_pendente.ordem,
@@ -1049,15 +1065,17 @@ def assinar_rdo(rdo_id):
     if passo_anterior_pendente > 0:
         return jsonify({"success": False, "message": "Aguarde a aprovação do responsável anterior."}), 403
 
-    # 3. Processa Imagem
+    # 3. Processa Dados da Requisição
     dados = request.get_json()
     img_data = dados.get('assinatura_b64')
+    latitude = dados.get('latitude')
+    longitude = dados.get('longitude')
     
     if not img_data:
         return jsonify({"success": False, "message": "Imagem da assinatura não fornecida."}), 400
 
     try:
-        # Salva o arquivo físico
+        # Salva o arquivo físico da imagem
         header, encoded = img_data.split(",", 1)
         file_data = base64.b64decode(encoded)
         filename = f"sig_{rdo_id}_{user_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}.png"
@@ -1069,12 +1087,29 @@ def assinar_rdo(rdo_id):
         with open(os.path.join(upload_folder, filename), "wb") as f:
             f.write(file_data)
 
-        # 4. Atualiza Registro
+        # 4. CAPTURA DE DADOS DE SEGURANÇA
+        # Captura IP (Considerando Proxy/Nginx)
+        user_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+        if user_ip and ',' in user_ip:
+            user_ip = user_ip.split(',')[0].strip()
+
+        # Gera Hash Único (Impressão digital do documento neste momento)
+        # Combina: ID do RDO + ID Usuário + Timestamp + Secret Key (opcional)
+        hash_string = f"{rdo_id}:{user_id}:{datetime.utcnow()}:{current_app.config['SECRET_KEY']}"
+        document_hash = hashlib.sha256(hash_string.encode()).hexdigest()
+
+        # 5. Atualiza Registro no Banco
         assinatura_pendente.img_assinatura = filename
         assinatura_pendente.criado = datetime.now()
         assinatura_pendente.status = 'Aprovado'
         
-        # 5. Verifica se o RDO foi totalmente aprovado
+        # Novos campos de autenticidade
+        assinatura_pendente.ip_endereco = user_ip
+        assinatura_pendente.latitude = latitude
+        assinatura_pendente.longitude = longitude
+        assinatura_pendente.hash_documento = document_hash # Salva o hash gerado
+        
+        # 6. Verifica finalização do RDO
         restantes = Assinatura.query.filter(
             Assinatura.id_rdo == rdo_id,
             Assinatura.status == 'Pendente',
@@ -1084,8 +1119,6 @@ def assinar_rdo(rdo_id):
         if restantes == 0:
             rdo.status = 'Aprovado'
         else:
-            # Se era Pendente, continua Pendente. Se estava Rejeitado, volta a Pendente? 
-            # Geralmente se assina, o fluxo está ativo.
             rdo.status = 'Pendente'
 
         db.session.commit()

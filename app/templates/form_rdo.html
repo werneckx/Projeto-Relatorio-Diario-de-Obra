@@ -1948,22 +1948,65 @@
 
     async function salvarAssinatura() {
         if (!signaturePad || signaturePad.isEmpty()) return alert("Por favor, assine antes de confirmar.");
+        
         const btn = document.getElementById('btnConfirmarAss');
         const originalText = btn.innerHTML;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+        
+        // Altera texto para dar feedback ao usuário que estamos obtendo localização
+        btn.innerHTML = '<i class="fas fa-map-marker-alt fa-bounce"></i> Obtendo localização...';
         btn.disabled = true;
 
         try {
             const dataUrl = signaturePad.toDataURL("image/png");
+            
+            // 1. Tenta obter Geolocalização
+            let coords = { latitude: null, longitude: null };
+            
+            try {
+                const position = await new Promise((resolve, reject) => {
+                    if (!navigator.geolocation) reject("Geolocalização não suportada");
+                    navigator.geolocation.getCurrentPosition(resolve, reject, {
+                        enableHighAccuracy: true,
+                        timeout: 5000,
+                        maximumAge: 0
+                    });
+                });
+                coords.latitude = position.coords.latitude;
+                coords.longitude = position.coords.longitude;
+            } catch (geoError) {
+                console.warn("Não foi possível obter localização:", geoError);
+                // Não bloqueia o salvamento, apenas avisa no console
+            }
+
+            // Atualiza status para processando envio
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+
+            // 2. Envia para o Backend
             const res = await fetch(`/auth/assinar-rdo/${currentRdoId}/aprovar-rdo`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ assinatura_b64: dataUrl })
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    assinatura_b64: dataUrl,
+                    latitude: coords.latitude,
+                    longitude: coords.longitude
+                })
             });
+            
             const json = await res.json();
-            if (json.success) window.location.reload();
-            else alert(json.message);
-        } catch (e) { alert("Erro de conexão."); }
-        finally { btn.innerHTML = originalText; btn.disabled = false; }
+            if (json.success) {
+                window.location.reload();
+            } else {
+                alert(json.message);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+            
+        } catch (e) { 
+            alert("Erro de conexão ou processamento.");
+            console.error(e);
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
     }
 
     // --- WORKFLOW ---

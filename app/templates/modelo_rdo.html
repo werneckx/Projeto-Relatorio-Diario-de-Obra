@@ -420,78 +420,156 @@
             text-align: left;
         }
 
-        /* --- ASSINATURAS --- */
+        /* --- ASSINATURAS (NOVO ESTILO - CARD LAYOUT) --- */
         .signatures-section {
             margin-top: 20px;
-            /* Reduzido */
             page-break-inside: avoid;
             border-top: 1px solid #e2e8f0;
             padding-top: 10px;
         }
 
+        /* Container do Grid */
+        .signature-wrapper {
+            width: 100%;
+            margin-top: 10px;
+        }
+
         .signature-grid {
             width: 100%;
             border-collapse: separate;
-            border-spacing: 10px 0;
+            border-spacing: 10px;
+            /* Espaço lateral entre os cards */
             table-layout: fixed;
         }
 
         .signature-item {
-            vertical-align: bottom;
-            text-align: center;
+            width: 33.33%;
+            vertical-align: top;
+            padding: 0;
         }
 
-        .sig-line {
-            height: 50px;
-            /* Altura reduzida para assinaturas */
-            border-bottom: 1px solid #334155;
-            margin-bottom: 4px;
-            display: table;
-            width: 100%;
+        /* O Card Visual */
+        .sig-card {
+            border: 1px solid #cbd5e1;
+            background-color: #f8fafc;
+            border-radius: 4px;
+            padding: 8px;
+            height: 100%;
+            box-sizing: border-box;
+            /* Garante que padding não estoure largura */
         }
 
-        .sig-content {
-            display: table-cell;
-            vertical-align: bottom;
-            text-align: center;
+        /* Área da Imagem/Status */
+        .sig-visual-area {
             height: 50px;
-            padding-bottom: 2px;
+            border-bottom: 1px solid #94a3b8;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding-bottom: 4px;
         }
 
         .sig-img {
             max-height: 45px;
-            /* Imagem menor */
-            max-width: 90%;
-            display: inline-block;
+            max-width: 100%;
+            object-fit: contain;
+        }
+
+        .sig-status-text {
+            font-size: 8pt;
+            font-style: italic;
+            font-weight: 600;
+        }
+
+        .text-rejeitado {
+            color: #ef4444;
+        }
+
+        .text-pendente {
+            color: #94a3b8;
+        }
+
+        /* Dados do Usuário */
+        .sig-user-info {
+            text-align: left;
+            /* ALINHADO A ESQUERDA */
+            margin-bottom: 5px;
         }
 
         .sig-name {
-            font-weight: 700;
+            display: block;
             font-size: 8pt;
-            color: #000000;
+            /* Tamanho original mantido */
+            font-weight: 700;
+            color: #1e293b;
             text-transform: uppercase;
-            margin-bottom: 1px;
         }
 
         .sig-role {
+            display: block;
             font-size: 7pt;
-            color: #000000;
-        }
-
-        .sig-meta {
-            font-size: 6.5pt;
-            color: #000000;
+            /* Tamanho original mantido */
+            color: #64748b;
             margin-top: 1px;
         }
 
-        .tag-status-sm {
-            font-size: 6pt;
-            font-weight: 700;
-            padding: 1px 6px;
+        /* Metadados Técnicos (Fonte pequena original) */
+        .sig-meta-box {
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
             border-radius: 3px;
+            padding: 4px;
+            font-size: 6.5pt;
+            /* Tamanho original mantido */
+            color: #64748b;
+            line-height: 1.3;
+            text-align: left;
+        }
+
+        .sig-row {
+            display: block;
+        }
+
+        /* Link do Mapa */
+        .geo-link {
+            color: #2563eb;
+            text-decoration: none;
+            font-weight: bold;
+            display: inline-block;
+            margin-top: 2px;
+        }
+
+        .geo-link:hover {
+            text-decoration: underline;
+        }
+
+        .status-badge-sig {
+            font-size: 6pt;
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-weight: 700;
             text-transform: uppercase;
             display: inline-block;
-            margin-top: 4px;
+            border: 1px solid transparent;
+        }
+
+        .badge-aprovado {
+            background-color: #dcfce7;
+            color: #166534;
+            border-color: #bbf7d0;
+        }
+
+        .badge-rejeitado {
+            background-color: #fee2e2;
+            color: #991b1b;
+            border-color: #fecaca;
+        }
+
+        .badge-pendente {
+            background-color: #f1f5f9;
+            color: #64748b;
+            border-color: #e2e8f0;
         }
     </style>
 </head>
@@ -866,46 +944,88 @@
             Declaração de Responsabilidade e Aprovação
         </div>
 
-        <table class="signature-grid">
-            <tr>
-                {% for ass in rdo.assinaturas %}
-                <td class="signature-item">
-                    <div class="sig-line">
-                        <div class="sig-content">
-                            {% if ass.img_assinatura %}
-                            <img src="{{ assinatura_folder }}/{{ ass.img_assinatura }}" class="sig-img">
-                            {% elif ass.status == 'Rejeitado' %}
-                            <span
-                                style="color:#94a3b8; font-size: 8pt; font-style:italic; font-weight:600;">Rejeitado</span>
-                            {% else %}
-                            <span
-                                style="color:#94a3b8; font-size: 8pt; font-style:italic; font-weight:600;">Pendente</span>
+        <div class="signature-wrapper">
+            <table class="signature-grid">
+                <tr>
+                    {% for ass in rdo.assinaturas %}
+                    <td class="signature-item">
+                        <div class="sig-card">
+
+                            <!-- 1. Assinatura Visual -->
+                            <div class="sig-visual-area">
+                                {% if ass.img_assinatura %}
+                                <img src="{{ assinatura_folder }}/{{ ass.img_assinatura }}" class="sig-img">
+                                {% elif ass.status == 'Rejeitado' %}
+                                <span class="sig-status-text text-rejeitado">Rejeitado</span>
+                                {% else %}
+                                <span class="sig-status-text text-pendente">Pendente</span>
+                                {% endif %}
+                            </div>
+
+                            <!-- 2. Identificação -->
+                            <div class="sig-user-info">
+                                <span class="sig-name">
+                                    {{ ass.usuario.nome }}
+                                    <div>
+                                        {% if ass.status == 'Aprovado' %}
+                                        <span class="status-badge-sig badge-aprovado">Aprovado</span>
+                                        {% elif ass.status == 'Rejeitado' %}
+                                        <span class="status-badge-sig badge-rejeitado">Rejeitado</span>
+                                        {% else %}
+                                        <span class="status-badge-sig badge-pendente">Pendente</span>
+                                        {% endif %}
+                                    </div>
+                                </span>
+                                <span class="sig-role">
+                                    {{ ass.usuario.papel or 'Responsável Técnico' }} | {% if ass.usuario.email %} {{
+                                    ass.usuario.email }} {% endif %}
+                                </span>
+                            </div>
+
+
+
+                            <!-- 3. Metadados e Geolocalização -->
+                            {% if ass.criado %}
+                            <div class="sig-meta-box">
+                                <span class="sig-row"><strong>Data:</strong> {{ ass.criado.strftime('%d/%m/%Y %H:%M')
+                                    }}</span>
+                                <span class="sig-row"><strong>IP:</strong> {{ ass.ip_endereco or '-' }}</span>
+
+                                {% if ass.latitude and ass.longitude %}
+                                <span class="sig-row">
+                                    <a href="https://www.google.com/maps?q={{ass.latitude}},{{ass.longitude}}"
+                                        target="_blank" class="geo-link">
+                                        📍 Ver Localização
+                                    </a>
+                                </span>
+                                {% endif %}
+
+                                {% if ass.hash_documento %}
+                                <span class="sig-row" style="word-break: break-all; margin-top:2px;">
+                                    <strong>ID:</strong> {{ ass.hash_documento }} </span>
+                                {% endif %}
+
+                                {% if ass.status == 'Rejeitado' %}
+                                <div style="margin-top:2px; color:#ef4444; font-weight:bold;">
+                                    Motivo: {{ ass.motivo_rejeicao }}
+                                </div>
+                                {% endif %}
+                            </div>
                             {% endif %}
+
                         </div>
-                    </div>
+                    </td>
 
-                    <div class="sig-name">{{ ass.usuario.nome }}</div>
-                    <div class="sig-role">{{ ass.usuario.papel or 'Responsável Técnico' }} | {{ ass.usuario.email or ''
-                        }}</div>
-
-                    {% if ass.criado %}
-                    <div class="sig-meta">Data de Registro: {{ ass.criado.strftime('%d/%m/%Y às %H:%M') }}</div>
+                    {# Quebra de linha a cada 3 assinaturas para manter o grid #}
+                    {% if loop.index is divisibleby 3 and not loop.last %}
+                </tr>
+                <tr>
                     {% endif %}
 
-                    <div>
-                        {% if ass.status == 'Aprovado' %}
-                        <span class="tag-status-sm status-aprovado">Aprovado</span>
-                        {% elif ass.status == 'Rejeitado' %}
-                        <span class="tag-status-sm status-rejeitado">Rejeitado</span>
-                        <span class="sig-meta">Motivo: {{ ass.motivo_rejeicao }}</span>
-                        {% else %}
-                        <span class="tag-status-sm status-pendente">Pendente</span>
-                        {% endif %}
-                    </div>
-                </td>
-                {% endfor %}
-            </tr>
-        </table>
+                    {% endfor %}
+                </tr>
+            </table>
+        </div>
     </div>
 
 </body>
