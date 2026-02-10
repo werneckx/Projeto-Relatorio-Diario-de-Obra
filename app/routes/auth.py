@@ -1,47 +1,60 @@
-import base64
-import hashlib
-from math import e
+# ==============================================================================
+# 1. BIBLIOTECAS PADRÃO DO PYTHON
+# Ferramentas nativas para manipulação de sistema, data, texto e criptografia.
+# ==============================================================================
 import os
 import re
-import unicodedata 
-import difflib # Biblioteca para comparação de textos
-from io import BytesIO 
-from flask import Blueprint, Config, abort, json, render_template, request, redirect, url_for, flash, session, send_file, current_app
-from itsdangerous import SignatureExpired, URLSafeTimedSerializer
-from werkzeug.security import check_password_hash
-from app import db
-from app import db, login_manager
+import json
+import base64
+import hashlib
+import difflib                 # Biblioteca para comparação de textos
+import unicodedata
+from math import e
+from io import BytesIO
+from functools import wraps
+from datetime import date, datetime, timedelta, timezone
+# ==============================================================================
+# 2. FRAMEWORK FLASK E EXTENSÕES
+# Funcionalidades principais da web, segurança e banco de dados (SQLAlchemy).
+# ==============================================================================
+from flask import (
+    Blueprint, Config, abort, render_template, request, redirect, 
+    url_for, flash, session, send_file, current_app, jsonify, make_response
+)
 from flask_login import UserMixin, current_user
+from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
+from itsdangerous import SignatureExpired, URLSafeTimedSerializer
+from sqlalchemy import extract, func, or_
+from sqlalchemy.orm import aliased
+# ==============================================================================
+# 3. CONFIGURAÇÕES DA APLICAÇÃO
+# Importações do objeto de aplicação principal e extensões iniciadas.
+# ==============================================================================
+from app import db, login_manager
+# ==============================================================================
+# 4. MODELOS DO BANCO DE DADOS (MODELS)
+# Definições das tabelas e objetos do sistema.
+# ==============================================================================
 from app.models import usuario
-from app.models import rdo
 from app.models.empresa import Empresa
 from app.models.lista_opcoes import Clima
 from app.models.obra import Frente_Trabalho, Obra
-from app.models.rdo import RDO, Assinatura, Equipamentos
-from app.utils.rdo_pdf import regenerar_pdf_rdo
+from app.models.rdo import RDO, Assinatura, Equipamentos, RDOMaoObra, Atividades, Fotos, TagsOcorrencias
+# ==============================================================================
+# 5. UTILITÁRIOS E SERVIÇOS
+# Funções auxiliares para geração de PDF, QR Codes e lógica de negócios.
+# ==============================================================================
 from app.utils.qrcode_utils import gerar_qrcode_b64
-from sqlalchemy import extract, func, or_
-from datetime import date, datetime, timedelta, timezone
-from functools import wraps
-from sqlalchemy.orm import aliased
-from flask import request, jsonify
-from app import db
-from app.models.obra import Frente_Trabalho
-from werkzeug.utils import secure_filename
-from flask import make_response
+from app.utils.rdo_pdf import regenerar_pdf_rdo
 from app.utils.pdf_service import render_rdo_pdf, render_rdo_pdf_compact
-import os
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
-from werkzeug.utils import secure_filename
+from app.utils.security_pdf import travar_edicao_pdf
 
 # Tenta importar PyMuPDF para highlighting, caso não tenha, segue sem
 try:
     import fitz  # PyMuPDF
 except ImportError:
     fitz = None
-
-from app.utils.security_pdf import travar_edicao_pdf
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
@@ -51,30 +64,15 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# Página Inicial do Blueprint (Redirecionamento)
+#######################################################################################################
+####################################################################################################### Rota Raiz
+#######################################################################################################
+
 @auth_bp.get("/")
 def index():
     if "user_id" in session:
         return redirect(url_for("auth.inicio"))
     return redirect(url_for("auth.login"))
-
-#######################################################################################################
-####################################################################################################### Rotas Institucionais
-#######################################################################################################
-
-@auth_bp.get("/termos")
-def termos():
-    return render_template("termos.html")
-
-@auth_bp.get("/privacidade")
-def privacidade():
-    return render_template("privacidade.html")
-
-@auth_bp.get("/suporte")
-def suporte():
-    # Se quiser pré-preencher o e-mail do usuário logado no formulário
-    email_usuario = session.get("user_email", "")
-    return render_template("suporte.html", email_usuario=email_usuario)
 
 #######################################################################################################
 ####################################################################################################### Login e Logout
@@ -200,6 +198,24 @@ def redefinir_senha(token):
         
     flash("Erro ao redefinir senha.", "danger")
     return redirect(url_for("auth.login"))
+
+#######################################################################################################
+####################################################################################################### Rotas Institucionais
+#######################################################################################################
+
+@auth_bp.get("/termos")
+def termos():
+    return render_template("termos.html")
+
+@auth_bp.get("/privacidade")
+def privacidade():
+    return render_template("privacidade.html")
+
+@auth_bp.get("/suporte")
+def suporte():
+    # Se quiser pré-preencher o e-mail do usuário logado no formulário
+    email_usuario = session.get("user_email", "")
+    return render_template("suporte.html", email_usuario=email_usuario)
 
 #######################################################################################################
 ####################################################################################################### Inicio
