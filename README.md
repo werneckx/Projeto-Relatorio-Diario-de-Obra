@@ -1,73 +1,104 @@
-Modelo completo:
+﻿# Nosde System RDO
 
-# Projeto RDO - Registro Diário de Obra
+Aplicacao web em Flask para gestao de Relatorios Diarios de Obra (RDO), com recursos de autenticacao, compressao de imagens, geracao de PDF, assinaturas digitais e controle de acesso.
 
-Este projeto é uma aplicação Flask para geração e gerenciamento de RDO (Registro Diário de Obra).
+## Recursos principais
 
-## 📁 Estrutura do Projeto
+- Autenticacao com Flask-Login
+- Formularios com Flask-WTF e protecao CSRF
+- Hash de senha com Werkzeug
+- Upload de fotos com compressao via Pillow
+- Soft delete de RDOs usando campo `ativo`
+- Relatorios em PDF
+- Estrutura modular de modelos, rotas e templates
+- Configuracao por ambiente com `.env`
 
-
-
-app/
-routes/
-models/
-services/
-templates/
-static/
-data/
-storage/
-instance/
-migrations/
-run.py
-requirements.txt
-
-
-## 🚀 Como executar o projeto
+## Como executar
 
 ### 1. Criar ambiente virtual
 
+Windows:
 
-python -m venv venv
-source venv/in/activate # Linux
-venv\Scripts\activate # Windows
+```powershell
+python -m venv .venv
+.\.venv\Scripts\activate
+```
 
+### 2. Instalar dependencias
 
-### 2. Instalar dependências
-
-
+```powershell
 pip install -r requirements.txt
+```
 
+### 3. Criar o arquivo de ambiente
 
-### 3. Configurar variáveis de ambiente
-Criar o arquivo `.env` com:
+Copie `.env.example` para `.env` e preencha os valores:
 
+```text
+SECRET_KEY=uma_chave_super_secreta_aqui
+DB_USER=root
+DB_PASSWORD=senha_do_banco
+DB_NAME=dbrdo
+DB_HOST=localhost
+DB_PORT=3306
+```
 
+### 4. Executar migracoes
 
-SECRET_KEY=sua_chave
-DATABASE_URL=sqlite:///dbrdo.db
-
-
-### 4. Inicializar o banco
-
-
+```powershell
 flask db upgrade
+```
 
+### 5. Iniciar a aplicacao
 
-### 5. Rodar a aplicação
-
-
+```powershell
 python run.py
+```
 
+Acesse `http://localhost:5000` no navegador.
 
-## 🗂 Pastas importantes
+## Estrutura do projeto
 
-`storage/` → arquivos gerados (PDF, imagens)  
-`data/` → banco de dados, backups  
-`app/` → toda a aplicação Flask  
+- `app/`
+  - `__init__.py` - cria a aplicacao e inicializa extensoes
+  - `routes/auth.py` - principais rotas de autenticacao e operacoes RDO
+  - `models/` - entidades de banco de dados (Usuario, Obra, RDO, Empresa, etc.)
+  - `forms.py` - formularios Flask-WTF
+  - `templates/` - paginas HTML Jinja2
+  - `static/` - arquivos publicos, CSS, imagens e uploads
+  - `utils/` - utilitarios para PDF, QR Code e imagens
+- `config.py` - configuracoes de ambiente e banco
+- `.env.example` - modelo de arquivo de ambiente
+- `requirements.txt` - dependencias do Python
+- `run.py` - ponto de entrada da aplicacao
+- `data/` - backups ou dados adicionais
+- `instance/` - arquivos de instancia Flask
+- `migrations/` - migracoes do banco de dados
 
-## 👨‍💻 Tecnologias
+## Notas importantes
 
-- Python + Flask
-- SQLAlchemy
-- Bootstrap
-- MySQL ou SQLite
+- Nunca versionar o arquivo `.env`
+- Use `.env.example` como referencia para configuracao
+- Em producao, garanta que `static/uploads` fique protegido
+
+## Dependencias principais
+
+- Flask
+- Flask-WTF
+- Flask-Login
+- Flask-Migrate
+- Flask-SQLAlchemy
+- python-dotenv
+- Pillow
+- qrcode[pil]
+- pdfkit
+- reportlab
+- pikepdf
+
+## Melhorias futuras
+
+- PWA para modo offline
+- Dashboard de gestao
+- Tema claro/escuro
+- Multi-tenancy mais explicito
+- API REST separada do frontend

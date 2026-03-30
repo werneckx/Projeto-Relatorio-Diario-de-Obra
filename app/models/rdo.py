@@ -9,9 +9,10 @@ class RDO(db.Model):
     id_revisao = db.Column(db.Integer, default=0)
     
     # Chaves Estrangeiras
-    id_obra = db.Column(db.Integer, db.ForeignKey("obras.id"), nullable=False)
+    id_obra = db.Column(db.Integer, db.ForeignKey("obras.id"), nullable=False, index=True)
     id_frente_trabalho = db.Column(db.Integer, db.ForeignKey("obras_frente_trabalho.id_frente_trabalho"), nullable=True)
     id_criado_por = db.Column(db.Integer, db.ForeignKey("usuarios.id"), nullable=True)
+    ativo = db.Column(db.Boolean, nullable=False, default=True, index=True)
     
     # Climas
     id_climas_manha = db.Column(db.Integer, db.ForeignKey('lista_opcoes.id'), nullable=True) 
@@ -22,7 +23,7 @@ class RDO(db.Model):
     clima_tarde_obj = db.relationship('Clima', foreign_keys=[id_climas_tarde])
 
     # Dados Gerais
-    data = db.Column(db.Date, nullable=False)
+    data = db.Column(db.Date, nullable=False, index=True)
     status = db.Column(db.String(100)) # Pendente, Revisado, Aprovado, Rejeitado
     comentarios_gerais = db.Column(db.Text, nullable=True)
     qtd_produzida = db.Column(db.Float, nullable=True)

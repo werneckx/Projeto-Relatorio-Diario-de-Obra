@@ -8,3 +8,4 @@ class Empresa(db.Model):
     nome_empresa = db.Column(db.String(255), nullable=False)
     logo_empresa = db.Column(db.String(255), nullable=True)  # Caminho do arquivo de logo
     icone_empresa = db.Column(db.String(255), nullable=True)  # Caminho do arquivo de ícone
+    ativo = db.Column(db.Boolean, nullable=False, default=True, index=True)

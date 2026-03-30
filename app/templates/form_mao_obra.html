@@ -74,6 +74,28 @@
                         {% endif %}
                     </div>
                 </div>
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <div>
+                        <label for="tipo" class="block text-xs font-bold text-slate-500 uppercase mb-2">
+                            Tipo de Mão de Obra
+                        </label>
+                        <select name="tipo" id="tipo"
+                            class="block w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm shadow-sm bg-white text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all disabled:bg-slate-50 disabled:text-slate-500"
+                            {{ 'disabled' if view_mode }}>
+                            <option value="">Selecione o tipo</option>
+                            <option value="Direta" {% if item and item.tipo=='Direta' %}selected{% endif %}>Direta
+                            </option>
+                            <option value="Indireta" {% if item and item.tipo=='Indireta' %}selected{% endif %}>Indireta
+                            </option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-3 mt-6">
+                        <input type="checkbox" name="ativo" id="ativo" value="1"
+                            class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" {% if item is
+                            none or item.ativo %}checked{% endif %} {{ 'disabled' if view_mode }}>
+                        <label for="ativo" class="text-sm text-slate-600">Ativo</label>
+                    </div>
+                </div>
             </div>
         </div>
 

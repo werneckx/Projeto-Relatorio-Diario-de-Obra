@@ -2,10 +2,12 @@ Flask
 Flask-Cors
 Flask-Migrate
 Flask-SQLAlchemy
+Flask-WTF
 python-dotenv
 PyMySQL
 Werkzeug
 flask-login
+Pillow
 qrcode[pil]
 pdfkit
 weasyprint

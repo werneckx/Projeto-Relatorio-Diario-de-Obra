@@ -2,10 +2,11 @@ from flask import Flask, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_migrate import Migrate
+from flask_wtf import CSRFProtect
 import json
-# Importações de módulos de terceiros
-# from . import db # Se você tivesse o db em outro arquivo
 
+# Extensões
+csrf = CSRFProtect()
 db = SQLAlchemy()
 login_manager = LoginManager()
 
@@ -18,6 +19,7 @@ def create_app():
     # Inicializar extensões
     db.init_app(app)
     login_manager.init_app(app)
+    csrf.init_app(app)
     Migrate(app, db) # A ordem de inicialização está correta
 
     # Onde o usuário será redirecionado ao tentar acessar sem login

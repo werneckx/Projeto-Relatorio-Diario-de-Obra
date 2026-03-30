@@ -1,10 +1,23 @@
 <!DOCTYPE html>
-<html lang="pt-BR" class="h-full bg-slate-50 antialiased">
+<html lang="pt-BR" class="h-full antialiased">
 
 <head>
+    <script>
+        tailwind.config = { darkMode: 'class' };
+        try {
+            const savedTheme = localStorage.getItem('nosde-theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+            }
+        } catch (err) {
+            console.warn('Não foi possível aplicar o tema armazenado.', err);
+        }
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Painel de Controle{% endblock %}</title>
+    <title>{% block title %}Nosde System RDO{% endblock %}</title>
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -25,6 +38,51 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
+        }
+
+        html.dark body {
+            background-color: #0f172a !important;
+            color: #e2e8f0 !important;
+        }
+
+        html.dark .bg-white {
+            background-color: #0f172a !important;
+        }
+
+        html.dark .bg-slate-50 {
+            background-color: #0f172a !important;
+        }
+
+        html.dark .bg-slate-100 {
+            background-color: #111827 !important;
+        }
+
+        html.dark .border-slate-200 {
+            border-color: #334155 !important;
+        }
+
+        html.dark .border-slate-100 {
+            border-color: #334155 !important;
+        }
+
+        html.dark .text-slate-900 {
+            color: #f8fafc !important;
+        }
+
+        html.dark .text-slate-800 {
+            color: #f8fafc !important;
+        }
+
+        html.dark .text-slate-600 {
+            color: #cbd5e1 !important;
+        }
+
+        html.dark .text-slate-500 {
+            color: #94a3b8 !important;
+        }
+
+        html.dark .text-slate-400 {
+            color: #cbd5e1 !important;
         }
 
         /* Suavização de Scroll */
@@ -86,7 +144,8 @@
     </style>
 </head>
 
-<body class="flex flex-col min-h-screen bg-slate-50 text-slate-600 selection:bg-blue-100 selection:text-blue-700">
+<body
+    class="flex flex-col min-h-screen bg-slate-50 text-slate-600 selection:bg-blue-100 selection:text-blue-700 dark:bg-slate-950 dark:text-slate-200">
 
     <!-- FLASH MESSAGES (Notificações Flutuantes) -->
     <div id="flash-container"
@@ -233,6 +292,11 @@
 
                 <!-- Lado Direito: Perfil (Desktop) -->
                 <div class="hidden lg:flex items-center gap-4">
+                    <button id="themeToggleBtn" type="button"
+                        class="inline-flex items-center justify-center w-10 h-10 rounded-full border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition focus:outline-none"
+                        onclick="toggleTheme()" aria-label="Alternar Tema">
+                        <i id="themeToggleIcon" class="fas fa-moon"></i>
+                    </button>
                     <div class="h-8 w-px bg-slate-200 mx-2"></div>
 
                     <!-- User Dropdown (HOVER ONLY) -->
@@ -303,6 +367,14 @@
                     class="flex items-center px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-slate-700 font-bold hover:bg-blue-50 hover:border-blue-100 hover:text-blue-700 transition">
                     <i class="fas fa-home w-8 text-center text-slate-400"></i> Início
                 </a>
+
+                <button onclick="toggleTheme()"
+                    class="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-slate-700 font-bold hover:bg-slate-100 transition">
+                    <span class="flex items-center gap-2">
+                        <i id="mobileThemeIcon" class="fas fa-moon w-5 text-center text-slate-400"></i>
+                        <span id="mobileThemeLabel">Alternar Tema</span>
+                    </span>
+                </button>
 
                 <!-- Acordeão Relatórios -->
                 <div class="border border-slate-100 rounded-xl overflow-hidden">
@@ -454,6 +526,45 @@
             }
         });
 
+        function applyTheme(theme) {
+            const html = document.documentElement;
+            if (theme === 'dark') {
+                html.classList.add('dark');
+            } else {
+                html.classList.remove('dark');
+            }
+            const icon = document.getElementById('themeToggleIcon');
+            const mobileIcon = document.getElementById('mobileThemeIcon');
+            const mobileLabel = document.getElementById('mobileThemeLabel');
+            if (icon) {
+                icon.classList.toggle('fa-sun', theme === 'dark');
+                icon.classList.toggle('fa-moon', theme !== 'dark');
+            }
+            if (mobileIcon) {
+                mobileIcon.classList.toggle('fa-sun', theme === 'dark');
+                mobileIcon.classList.toggle('fa-moon', theme !== 'dark');
+            }
+            if (mobileLabel) {
+                mobileLabel.textContent = theme === 'dark' ? 'Tema Claro' : 'Tema Escuro';
+            }
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const nextTheme = html.classList.contains('dark') ? 'light' : 'dark';
+            applyTheme(nextTheme);
+            localStorage.setItem('nosde-theme', nextTheme);
+        }
+
+        function initThemeToggle() {
+            const savedTheme = localStorage.getItem('nosde-theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+            applyTheme(theme);
+        }
+
+        initThemeToggle();
+
         // --- 2. Auto-Dismiss Flash Messages ---
         document.addEventListener('DOMContentLoaded', function () {
             const toasts = document.querySelectorAll('.toast-message');
@@ -468,6 +579,20 @@
                     toast.style.transition = 'all 0.5s ease';
                     setTimeout(() => { if (toast.parentElement) toast.remove(); }, 500);
                 }, 60000);
+            });
+        });
+
+        // --- 3. Auto inject CSRF token into POST forms ---
+        const _csrfToken = '{{ csrf_token() }}';
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('form[method="POST"]').forEach(form => {
+                if (!form.querySelector('input[name="csrf_token"]')) {
+                    const hidden = document.createElement('input');
+                    hidden.type = 'hidden';
+                    hidden.name = 'csrf_token';
+                    hidden.value = _csrfToken;
+                    form.appendChild(hidden);
+                }
             });
         });
     </script>
