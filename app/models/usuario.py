@@ -27,6 +27,8 @@ class Usuario(db.Model, UserMixin):
     telefone = db.Column(db.String(20), nullable=True)
     departamento = db.Column(db.String(100), nullable=True)
     primeiro_acesso = db.Column(db.Boolean, default=True, nullable=False)
+    ultimo_acesso = db.Column(db.DateTime, nullable=True)
+    ip_ultimo_acesso = db.Column(db.String(45), nullable=True)
 
     # RELACIONAMENTO: Lista de obras/matrizes que este usuário pode acessar
     # Para matrizes: armazena a matriz (id_matriz = None)

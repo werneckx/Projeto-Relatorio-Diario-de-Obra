@@ -189,7 +189,6 @@
                         </div>
 
                         <!-- Dropdown: Cadastros (HOVER ONLY) -->
-                        {% if session.get('user_role') not in ['Cliente', 'Leitor'] %}
                         <div class="relative group">
                             <button type="button"
                                 class="px-4 py-2 rounded-full text-sm font-medium text-slate-500 group-hover:text-slate-900 group-hover:bg-white/60 transition-all flex items-center focus:outline-none">
@@ -229,8 +228,6 @@
                                 </div>
                             </div>
                         </div>
-                        {% endif %}
-
                     </div>
                 </div>
 
