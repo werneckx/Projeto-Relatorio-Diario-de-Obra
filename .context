@@ -1,6 +1,15 @@
+# Visão geral
 Este projeto é um Sistema de Relatório Diário de Obra baseado na plataforma Flask, projetado para gerenciar informações de obras de forma eficiente e profissional. O sistema permite o registro de atividades diárias, equipe, materiais, ocorrências, medições, entre outras funcionalidades essenciais para o acompanhamento de projetos de construção civil.
 
-No nosso model temos as seguintes tabelas:
+# Tecnologias utilizadas:
+- Python (Flask)
+- MySQL
+- SQLAlchemy
+- HTML
+- CSS
+- JavaScript
+
+# No nosso model temos as seguintes tabelas:
 - Model Auxiliares: Clima, Função, Equipamento, Tag de Ocorrência
 - Model Empresa: Empresa
 - Model Fornecedores: Fornecedores
@@ -9,36 +18,53 @@ No nosso model temos as seguintes tabelas:
 - Model Usuario: Colaborador, Usuario
 - Model RBAC: Papel, Permissão, Papel Permissão, Usuário Papel
 
-O sistema está quase pronto, mas temos alguns ajustes a serem feitos:
-- O logo não está aparecendo
-- O ícone não está aparecendo
-- A autenticação não está funcionando
+# Os requisitos do sistema são:
 
-Os requisitos do sistema são:
-- O sistema deve ser capaz de gerenciar informações de obras de forma eficiente e profissional.
-- O sistema deve permitir o registro de atividades diárias, equipe, materiais, ocorrências, medições, entre outras funcionalidades essenciais para o acompanhamento de projetos de construção civil.
-- O sistema deve ser capaz de gerar relatórios diários de obras.
-- O sistema deve ser capaz de gerar relatórios mensais de obras.
-- O sistema deve ser capaz de gerar relatórios anuais de obras.
-- O sistema deve ser capaz de gerar relatórios de obras por período.
-- O sistema deve ser capaz de gerar relatórios de obras por equipe.
-- O sistema deve ser capaz de gerar relatórios de obras por material.
-- O sistema deve ser capaz de gerar relatórios de obras por ocorrência.
-- O sistema deve ser capaz de gerar relatórios de obras por medição.
-- O sistema deve ser capaz de gerar relatórios de obras por orçamento.
-- O sistema deve ser capaz de gerar relatórios de obras por item de orçamento.
-- O sistema deve ser capaz de gerar relatórios de obras por medição.
-- O sistema deve ser capaz de gerar relatórios de obras por orçamento.
-- O sistema deve ser capaz de gerar relatórios de obras por item de orçamento.
-- O sistema deve ser capaz de gerar relatórios de obras por medição.
-- O sistema deve ser capaz de gerar relatórios de obras por orçamento.
-- O sistema deve ser capaz de gerar relatórios de obras por item de orçamento.
-- O sistema deve ser capaz de gerar relatórios de obras por medição.
-- O sistema deve ser capaz de gerar relatórios de obras por orçamento.
-- O sistema deve ser capaz de gerar relatórios de obras por item de orçamento.
-- O sistema deve ser capaz de gerar relatórios de obras por medição.
-- O sistema deve ser capaz de gerar relatórios de obras por orçamento.
-- O sistema deve ser capaz de gerar relatórios de obras por item de orçamento.
-- O sistema deve ser capaz de gerar relatórios de obras por medição.
-- O sistema deve ser capaz de gerar relatórios de obras por orçamento.
-- O sistema deve ser capaz de gerar relatórios de obras por item de orçamento.
+    - Requisitos Gerais:
+        - O sistema deve ser capaz de gerar, exportar e imprimir relatórios de todas as rotas das tabelas presentes no sistema.
+
+    - Requisitos Empresa:
+        - Em empresa, deve ser possível configurar o sistema para personalização da propria empresa
+        - Nome da empresa
+        - Logo da empresa
+        - Ícone da empresa
+        - Cor do tema
+        - Favicon
+        - Deve ser possível logar na plataforma como adminstrador, usando um email e senha, verificação de duas etapas, por e-mail ou por código no whatsapp.
+        - Deve ser possível modelar o RDO de acordo com o que a empresa precisa.
+
+    - Requisitos Obra:
+        - Em cada obra, deve ser possível adicionar os dados da obra, como:
+        - Nome da obra
+        - Código da obra
+        - Endereço da obra
+        - Data de início da obra
+        - Data de término da obra
+        - Data de término da obra planejada
+        - Responsável técnico
+        - Hora Padrão de Entrada
+        - Hora Padrão de Intervalo Entrada
+        - Hora Padrão de Intervalo Saída
+        - Hora Padrão de Saída
+        - Ativo ou Inativo
+        - Frente de Trabalho:
+            - Nome da Frente de Trabalho
+            - Centro de Custo
+            - Data Inicio
+            - Data Fim 
+            - Data Fim Planejada
+            - Ativo ou Inativo
+            - Colaborador: 
+                - Associar os colaboradores cadastrados no sistema, sejam eles de quadro próprio ou de empresa terceirizada.
+            Observações: A ideia é que a obra tenha varias frentes de trabalho e cada frente de trabalho tenha seus colaboradores pré-definidos para que na hora de realizar o RDO, o preenchimento seja mais rapido.
+
+        - Pagina padrão para erro, deve ser personalizada com a logo da empresa e a cor do tema, com uma mensagem amigável.
+
+    - Requisitos RDO:
+
+
+# Ajustes a serem feitos:
+- Devido a alteração nas tabelas e nos models, todos os templates estão desatualizados, devendo ser atualizados de acordo com os novos models.
+
+
+

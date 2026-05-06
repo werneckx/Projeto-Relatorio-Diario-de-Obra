@@ -46,3 +46,8 @@ Thumbs.db
 
 # GitHub Actions
 .github/
+*.pyc
+*.pyc
+*.pyo
+*.pyd
+.context
