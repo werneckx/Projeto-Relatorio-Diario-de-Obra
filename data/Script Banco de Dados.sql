@@ -20,6 +20,7 @@ DROP TABLE IF EXISTS frente_colaborador;
 DROP TABLE IF EXISTS frente_trabalho;
 DROP TABLE IF EXISTS obra_usuario;
 DROP TABLE IF EXISTS obras;
+DROP TABLE IF EXISTS clientes;
 
 DROP TABLE IF EXISTS papel_permissao;
 DROP TABLE IF EXISTS usuario_papel;
@@ -303,6 +304,38 @@ CREATE TABLE usuario_papel (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 /* =========================
+   CLIENTES
+========================= */
+
+CREATE TABLE clientes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    empresa_id INT NOT NULL,
+
+    razao_social VARCHAR(200) NOT NULL,
+    nome_fantasia VARCHAR(200),
+    cnpj VARCHAR(18) NOT NULL,
+
+    contato_nome VARCHAR(150),
+    contato_email VARCHAR(150),
+    contato_telefone VARCHAR(30),
+
+    ativo BOOLEAN DEFAULT TRUE,
+
+    criado_por INT NULL,
+    modificado_por INT NULL,
+    criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+    modificado_em DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    UNIQUE KEY uk_cliente_empresa_cnpj (empresa_id, cnpj),
+    INDEX idx_cliente_empresa (empresa_id),
+    INDEX idx_clientes_cnpj (cnpj),
+
+    CONSTRAINT fk_cliente_empresa
+        FOREIGN KEY (empresa_id) REFERENCES empresa(id)
+        ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+/* =========================
    OBRAS
 ========================= */
 
@@ -320,9 +353,8 @@ CREATE TABLE obras (
     -- Tipo de Obra
     tipo_obra_id INT NULL,
 
-    -- Dados do Cliente
-    cliente_nome VARCHAR(200),
-    cliente_cnpj VARCHAR(20),
+    -- Vínculo com Cliente
+    cliente_id INT NOT NULL,
     cnpj_obra VARCHAR(20),
 
     -- Endereço Normalizado
@@ -349,10 +381,13 @@ CREATE TABLE obras (
     INDEX idx_obras_usuario_responsavel (usuario_responsavel_id),
     INDEX idx_obras_tipo (tipo_obra_id),
     INDEX idx_obras_cidade (cidade),
+    INDEX idx_obras_cliente (cliente_id),
+    INDEX idx_obras_empresa_cliente (empresa_id, cliente_id),
 
     FOREIGN KEY (empresa_id) REFERENCES empresa(id),
     FOREIGN KEY (usuario_responsavel_id) REFERENCES usuarios(id),
-    FOREIGN KEY (tipo_obra_id) REFERENCES aux_tipo_obra(id)
+    FOREIGN KEY (tipo_obra_id) REFERENCES aux_tipo_obra(id),
+    CONSTRAINT fk_obras_cliente FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 /* =========================
@@ -822,12 +857,17 @@ INSERT INTO usuario_papel (empresa_id, usuario_id, papel_id) VALUES
 (1, 1, 1), -- Ricardo é ADMIN (Acesso Total)
 (1, 2, 3); -- Ana é OPERADOR
 
--- 6. Inserir Obras
-INSERT INTO obras (id, empresa_id, nome, data_inicio, data_fim_planejada, tipo_obra_id, usuario_responsavel_id, cliente_nome, cidade, estado, hora_entrada_padrao, hora_saida_padrao) VALUES
-(1, 1, 'Residencial Bella Vista', '2023-10-01', '2025-12-31', 4, 1, 'Incorporadora XYZ', 'São Paulo', 'SP', '07:00:00', '17:00:00'),
-(2, 1, 'Edifício Comercial Sky', '2024-01-15', '2026-06-30', 4, 1, 'Sky Corp', 'Rio de Janeiro', 'RJ', '08:00:00', '18:00:00');
+-- 6. Inserir Clientes
+INSERT INTO clientes (id, empresa_id, razao_social, nome_fantasia, cnpj, contato_nome, contato_email) VALUES
+(1, 1, 'Incorporadora Bella Vista Ltda', 'Bella Vista Inc', '12.345.678/0001-90', 'Marcos Oliveira', 'contato@bellavista.com.br'),
+(2, 1, 'Sky Tower Empreendimentos S.A.', 'Sky Corp', '98.765.432/0001-10', 'Julia Santos', 'vendas@skycorp.com');
 
--- 7. Inserir Frentes de Trabalho
+-- 7. Inserir Obras
+INSERT INTO obras (id, empresa_id, nome, data_inicio, data_fim_planejada, tipo_obra_id, usuario_responsavel_id, cliente_id, cidade, estado, hora_entrada_padrao, hora_saida_padrao) VALUES
+(1, 1, 'Residencial Bella Vista', '2023-10-01', '2025-12-31', 4, 1, 1, 'São Paulo', 'SP', '07:00:00', '17:00:00'),
+(2, 1, 'Edifício Comercial Sky', '2024-01-15', '2026-06-30', 4, 1, 2, 'Rio de Janeiro', 'RJ', '08:00:00', '18:00:00');
+
+-- 8. Inserir Frentes de Trabalho
 INSERT INTO frente_trabalho (id, empresa_id, obra_id, nome, centro_custo) VALUES
 (1, 1, 1, 'Fundação e Estrutura', 'CC-2023-01'),
 (2, 1, 1, 'Instalações Elétricas', 'CC-2023-02'),

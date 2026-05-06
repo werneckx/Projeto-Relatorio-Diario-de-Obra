@@ -17,9 +17,8 @@ class Obra(db.Model):
     # Tipo de Obra
     tipo_obra_id = db.Column(db.Integer, db.ForeignKey('aux_tipo_obra.id'), nullable=True, index=True)
 
-    # Dados do Cliente
-    cliente_nome = db.Column(db.String(200), nullable=True)
-    cliente_cnpj = db.Column(db.String(20), nullable=True)
+    # Vínculo com Cliente
+    cliente_id = db.Column(db.Integer, db.ForeignKey('clientes.id'), nullable=False, index=True)
     cnpj_obra = db.Column(db.String(20), nullable=True)
 
     # Endereço Normalizado
@@ -46,6 +45,7 @@ class Obra(db.Model):
     empresa = db.relationship('Empresa', backref='obras')
     usuario_responsavel = db.relationship('Usuario', foreign_keys=[usuario_responsavel_id], backref='obras_sob_responsabilidade')
     tipo_obra = db.relationship('AuxTipoObra', backref='obras')
+    cliente = db.relationship("Cliente", back_populates="obras")
 
     # Sinônimos e Propriedades Legado
     status = db.synonym("ativo")
