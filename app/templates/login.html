@@ -32,7 +32,26 @@
             backdrop-filter: blur(10px);
         }
     </style>
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo/icone.png') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo/icone_sistema.png') }}">
+    
+    <!-- Design System -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/utilities.css') }}">
+
+    <style>
+        [data-ui-theme="premium"] body {
+            background: radial-gradient(circle at top left, var(--color-primary-soft), transparent 40%),
+                        radial-gradient(circle at bottom right, rgba(16, 185, 129, 0.05), transparent 40%),
+                        #0f172a;
+        }
+        
+        [data-ui-theme="premium"] .login-glass {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(16px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+    </style>
 </head>
 
 <body class="h-full w-full bg-login relative">
@@ -40,35 +59,32 @@
     <!-- Overlay Escuro para melhorar contraste -->
     <div class="absolute inset-0 bg-slate-900/60 z-0"></div>
 
-    <div class="relative z-10 flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
-
-        <!-- Container Central -->
-        <div
-            class="sm:mx-auto sm:w-full sm:max-w-md bg-white/95 backdrop-blur-sm p-8 rounded-2xl shadow-2xl border border-white/20">
-
+    <div class="relative z-10 flex min-h-full flex-col justify-center px-6 py-12 lg:px-8 animate-premium-in">
+        <div class="sm:mx-auto sm:w-full sm:max-w-md premium-card login-glass p-10">
             <!-- Logo -->
-            <div class="sm:mx-auto sm:w-full sm:max-w-sm flex justify-center mb-8">
-                <img class="h-12 w-auto object-contain" src="{{ url_for('static', filename='logo/logo.png') }}"
-                    alt="Logo">
+            <div class="flex justify-center mb-10">
+                <div class="p-3 bg-white rounded-2xl shadow-sm border border-slate-100">
+                    <img class="h-10 w-auto object-contain" src="{{ url_for('static', filename='logo/logo_sistema.png') }}" alt="Logo">
+                </div>
             </div>
 
-            <h2 class="text-center text-2xl font-bold leading-9 tracking-tight text-slate-900">
-                Acesso ao Sistema
-            </h2>
-            <p class="mt-2 text-center text-sm text-slate-500">
-                Entre com suas credenciais para continuar
-            </p>
+            <div class="text-center mb-8">
+                <h2 class="text-2xl font-black tracking-tight text-slate-900">
+                    Acesso ao Sistema
+                </h2>
+                <p class="mt-2 text-sm text-slate-500 font-medium">
+                    Gestão Inteligente de Relatórios de Obra
+                </p>
+            </div>
 
             <!-- Mensagens Flash -->
             {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-            <div class="mt-6 space-y-2">
+            <div class="mb-6 space-y-2">
                 {% for category, message in messages %}
-                <div
-                    class="p-4 rounded-lg text-sm font-medium flex items-center gap-3
-                                {{ 'bg-red-50 text-red-700 border border-red-200' if category == 'error' or category == 'danger' else 'bg-emerald-50 text-emerald-700 border border-emerald-200' }}">
-                    <i
-                        class="fas {{ 'fa-circle-exclamation' if category in ['error', 'danger'] else 'fa-check-circle' }}"></i>
+                <div class="p-4 rounded-xl text-xs font-bold flex items-center gap-3 animate-premium-in
+                            {{ 'bg-red-50 text-red-700 border border-red-100' if category in ['error', 'danger'] else 'bg-emerald-50 text-emerald-700 border border-emerald-100' }}">
+                    <i class="fas {{ 'fa-circle-exclamation' if category in ['error', 'danger'] else 'fa-check-circle' }}"></i>
                     {{ message }}
                 </div>
                 {% endfor %}
@@ -76,59 +92,46 @@
             {% endif %}
             {% endwith %}
 
-            <div class="mt-8">
-                <form class="space-y-6" action="{{ url_for('auth.login_post') }}" method="POST">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <form class="space-y-5" action="{{ url_for('auth.login_post') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-                    <!-- Email -->
-                    <div>
-                        <label for="email" class="block text-sm font-medium leading-6 text-slate-900">E-mail
-                            Corporativo</label>
-                        <div class="relative mt-2 rounded-md shadow-sm">
-                            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                                <i class="fas fa-envelope text-slate-400 sm:text-sm"></i>
-                            </div>
-                            <input id="email" name="email" type="email" autocomplete="email" required
-                                class="block w-full rounded-xl border-0 py-3 pl-10 text-slate-900 ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 transition-all"
-                                placeholder="Digite seu e-mail">
+                <div>
+                    <label for="email" class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 ml-1">E-mail Corporativo</label>
+                    <div class="relative group">
+                        <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none transition-colors group-focus-within:text-blue-600 text-slate-400">
+                            <i class="fas fa-envelope text-sm"></i>
                         </div>
+                        <input id="email" name="email" type="email" autocomplete="email" required
+                            class="premium-input pl-11"
+                            placeholder="exemplo@enfil.com.br">
                     </div>
+                </div>
 
-                    <!-- Senha -->
-                    <div>
-                        <div class="flex items-center justify-between">
-                            <label for="password"
-                                class="block text-sm font-medium leading-6 text-slate-900">Senha</label>
-                            <div class="text-sm">
-                                <a href="{{ url_for('auth.esqueci_senha') }}"
-                                    class="font-semibold text-blue-600 hover:text-blue-500 transition-colors">Esqueceu a
-                                    senha?</a>
-                            </div>
-                        </div>
-                        <div class="relative mt-2 rounded-md shadow-sm">
-                            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                                <i class="fas fa-lock text-slate-400 sm:text-sm"></i>
-                            </div>
-                            <input id="password" name="senha" type="password" autocomplete="current-password" required
-                                class="block w-full rounded-xl border-0 py-3 pl-10 text-slate-900 ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 transition-all"
-                                placeholder="••••••••">
-                        </div>
+                <div>
+                    <div class="flex items-center justify-between mb-2 ml-1">
+                        <label for="password" class="block text-xs font-bold uppercase tracking-wider text-slate-500">Senha</label>
+                        <a href="{{ url_for('auth.esqueci_senha') }}" class="text-[11px] font-bold text-blue-600 hover:text-blue-700 transition-colors">Recuperar acesso</a>
                     </div>
+                    <div class="relative group">
+                        <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none transition-colors group-focus-within:text-blue-600 text-slate-400">
+                            <i class="fas fa-lock text-sm"></i>
+                        </div>
+                        <input id="password" name="senha" type="password" autocomplete="current-password" required
+                            class="premium-input pl-11"
+                            placeholder="••••••••">
+                    </div>
+                </div>
 
-                    <!-- Botão Entrar -->
-                    <div>
-                        <button type="submit"
-                            class="flex w-full justify-center rounded-xl bg-blue-700 px-3 py-3 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 transition-all hover:-translate-y-0.5 active:translate-y-0">
-                            Entrar no Sistema <i class="fas fa-arrow-right ml-2 mt-1"></i>
-                        </button>
-                    </div>
-                </form>
-            </div>
+                <div class="pt-2">
+                    <button type="submit" class="premium-button premium-button-primary w-full py-4 text-base shadow-lg shadow-blue-500/20">
+                        Entrar no Sistema <i class="fas fa-arrow-right text-xs opacity-70"></i>
+                    </button>
+                </div>
+            </form>
         </div>
 
-        <!-- Footer -->
-        <p class="mt-10 text-center text-xs text-slate-300/80">
-            &copy; 2025 {{ nome_empresa_global }}. Todos os direitos reservados.
+        <p class="mt-10 text-center text-xs font-medium text-slate-400/80">
+            &copy; 2026 Nosde System RDO. Todos os direitos reservados.
         </p>
     </div>
 

@@ -9,6 +9,7 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+.context
 
 # Flask instance folder
 instance/
@@ -22,6 +23,13 @@ tmp/
 # Static uploads and generated reports
 static/uploads/
 static/rdo_gerados/
+app/static/uploads/
+app/static/rdo_gerados/
+app/static/temp.html
+
+# Local tool/vendor folders
+openclaude/
+Microsoft/
 
 # IDE settings
 .vs/

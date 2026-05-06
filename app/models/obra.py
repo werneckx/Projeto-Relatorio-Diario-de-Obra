@@ -1,129 +1,212 @@
+from datetime import datetime
 from app import db
-from datetime import date
-from sqlalchemy import func
 
 class Obra(db.Model):
     __tablename__ = "obras"
 
-    id = db.Column(db.Integer, primary_key=True)
-    nome = db.Column(db.String(120), nullable=False)
-    contratante = db.Column(db.String(255), nullable=False)
-    contrato = db.Column(db.String(50), unique=True, nullable=False)
-    id_responsavel = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=True)
-    cnpj = db.Column(db.String(14), unique=True, nullable=False)
-    endereco = db.Column(db.String(255), nullable=False)
-    numero = db.Column(db.String(10), nullable=False)
-    complemento = db.Column(db.String(50))
-    bairro = db.Column(db.String(120), nullable=False)
-    cidade = db.Column(db.String(120), nullable=False)
-    estado = db.Column(db.String(2), nullable=False)
-    cep = db.Column(db.String(8), nullable=False)
-    inicio = db.Column(db.Date, nullable=False)
-    termino = db.Column(db.Date, nullable=False)
-    status = db.Column(db.Integer)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    empresa_id = db.Column(db.Integer, db.ForeignKey('empresa.id'), nullable=False, index=True)
+    pai_id = db.Column(db.Integer, db.ForeignKey('obras.id'), nullable=True, index=True)
+    nome = db.Column(db.String(150), nullable=False)
+    data_inicio = db.Column(db.Date, nullable=True)
+    data_fim_planejada = db.Column(db.Date, nullable=True)
+    data_fim = db.Column(db.Date, nullable=True)
     
-    # Relacionamento para facilitar a exibição do nome do responsável
-    responsavel = db.relationship('Usuario', foreign_keys=[id_responsavel])
-    
+    hora_entrada_padrao = db.Column(db.Time, nullable=True)
+    intervalo_entrada_padrao = db.Column(db.Time, nullable=True)
+    intervalo_saida_padrao = db.Column(db.Time, nullable=True)
+    hora_saida_padrao = db.Column(db.Time, nullable=True)
+    ativo = db.Column(db.Boolean, nullable=False, default=True)
+
+    criado_por = db.Column(db.Integer, nullable=True)
+    modificado_por = db.Column(db.Integer, nullable=True)
+    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
+    modificado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    empresa = db.relationship('Empresa', backref='obras')
+    sub_obras = db.relationship('Obra', backref=db.backref('obra_pai', remote_side=[id]))
+    status = db.synonym("ativo")
+    inicio = db.synonym("data_inicio")
+    termino = db.synonym("data_fim")
+    horario_entrada = db.synonym("hora_entrada_padrao")
+    horario_saida = db.synonym("hora_saida_padrao")
+
+    @property
+    def cnpj(self):
+        return getattr(self, "_cnpj", None)
+
+    @cnpj.setter
+    def cnpj(self, value):
+        self._cnpj = value
+
+    @property
+    def contratante(self):
+        return getattr(self, "_contratante", None)
+
+    @contratante.setter
+    def contratante(self, value):
+        self._contratante = value
+
+    @property
+    def contrato(self):
+        return getattr(self, "_contrato", None)
+
+    @contrato.setter
+    def contrato(self, value):
+        self._contrato = value
+
+    @property
+    def cep(self):
+        return getattr(self, "_cep", None)
+
+    @cep.setter
+    def cep(self, value):
+        self._cep = value
+
+    @property
+    def endereco(self):
+        return getattr(self, "_endereco", None)
+
+    @endereco.setter
+    def endereco(self, value):
+        self._endereco = value
+
+    @property
+    def numero(self):
+        return getattr(self, "_numero", None)
+
+    @numero.setter
+    def numero(self, value):
+        self._numero = value
+
+    @property
+    def complemento(self):
+        return getattr(self, "_complemento", None)
+
+    @complemento.setter
+    def complemento(self, value):
+        self._complemento = value
+
+    @property
+    def bairro(self):
+        return getattr(self, "_bairro", None)
+
+    @bairro.setter
+    def bairro(self, value):
+        self._bairro = value
+
+    @property
+    def cidade(self):
+        return getattr(self, "_cidade", None)
+
+    @cidade.setter
+    def cidade(self, value):
+        self._cidade = value
+
+    @property
+    def estado(self):
+        return getattr(self, "_estado", None)
+
+    @estado.setter
+    def estado(self, value):
+        self._estado = value
+
+    @property
+    def responsavel(self):
+        return None
+
     def __repr__(self):
         return f'<Obra {self.id}: {self.nome}>'
+
+class FrenteTrabalho(db.Model):
+    __tablename__ = "frente_trabalho"
     
-class Frente_Trabalho(db.Model):
-    __tablename__ = "obras_frente_trabalho"
-    
-    id_frente_trabalho = db.Column(db.Integer, primary_key=True)
-    id_obra = db.Column(db.Integer, db.ForeignKey('obras.id'), nullable=False)
-    id_responsavel = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=True)
-    nome_frente = db.Column(db.String(120), nullable=False)
-    unidade = db.Column(db.String(50), nullable=False)
-    qtd_planejada = db.Column(db.Float, nullable=False)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    empresa_id = db.Column(db.Integer, db.ForeignKey('empresa.id'), nullable=False, index=True)
+    obra_id = db.Column(db.Integer, db.ForeignKey('obras.id'), nullable=False, index=True)
+    nome = db.Column(db.String(150), nullable=True)
+    centro_custo = db.Column(db.String(100), nullable=True)
     data_inicio = db.Column(db.Date, nullable=True)
-    data_planejada = db.Column(db.Date, nullable=True)
-    
-    responsavel = db.relationship('Usuario', backref='frentes')
+    data_fim_planejada = db.Column(db.Date, nullable=True)
+    data_fim = db.Column(db.Date, nullable=True)
+    ativo = db.Column(db.Boolean, nullable=False, default=True)
+
+    criado_por = db.Column(db.Integer, nullable=True)
+    modificado_por = db.Column(db.Integer, nullable=True)
+    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
+    modificado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
     obra = db.relationship('Obra', backref='frentes_trabalho')
-    
-    @property
-    def qtd_realizada(self):
-        """Calcula o total realizado somando a qtd_produzida dos RDOs aprovados/pendentes desta frente."""
-        # Importação local para evitar ciclo, pois RDO importa Frente_Trabalho
-        from app.models.rdo import RDO
-        
-        # Filtra RDOs para NÃO somar os Rejeitados
-        # Se o RDO foi rejeitado, o trabalho não conta como realizado oficial
-        total = db.session.query(func.sum(RDO.qtd_produzida)).filter(
-            RDO.id_frente_trabalho == self.id_frente_trabalho,
-            RDO.status != 'Rejeitado'
-        ).scalar()
-        
-        return total if total is not None else 0.0
-    
-    @property
-    def qtd_esperada_curva_s(self):
-        """
-        Calcula quanto deveria estar pronto hoje usando Curva S (Smoothstep).
-        Retorna a QUANTIDADE (na unidade da frente) esperada.
-        """
-        # Se não tiver meta ou data final, expectativa é 0
-        if not self.data_planejada or not self.qtd_planejada:
-            return 0.0
-        
-        # Lógica de Data de Início:
-        # 1. Usa data específica da Frente
-        # 2. Fallback para data da Obra Pai
-        dt_inicio = self.data_inicio
-        if not dt_inicio and self.obra:
-             dt_inicio = self.obra.inicio
+    nome_frente = db.synonym("nome")
+    frente_trabalho_id = db.synonym("id")
+    data_planejada = db.synonym("data_fim_planejada")
 
-        # Se ainda assim não tiver data, não calcula
-        if not dt_inicio:
-            return 0.0
-
-        dt_fim = self.data_planejada
-        dt_hoje = date.today()
-        
-        # Cálculo de dias totais do cronograma
-        total_dias = (dt_fim - dt_inicio).days
-        
-        # Se a data fim é igual ou anterior ao inicio, assume 100% se hoje >= fim
-        if total_dias <= 0: 
-            return self.qtd_planejada if dt_hoje >= dt_fim else 0.0
-            
-        dias_passados = (dt_hoje - dt_inicio).days
-        
-        # Normaliza o tempo (t) entre 0.0 e 1.0
-        t = dias_passados / total_dias
-        
-        # Se ainda não começou
-        if t <= 0: return 0.0             
-        # Se já acabou o prazo
-        if t >= 1: return self.qtd_planejada 
-        
-        # Fórmula Smoothstep (3x² - 2x³) para gerar a Curva S
-        # Isso cria uma progressão mais lenta no início, acelera no meio, e desacelera no fim
-        fator_curva = (3 * (t ** 2)) - (2 * (t ** 3))
-        
-        return self.qtd_planejada * fator_curva
-    
     @property
-    def status_prazo(self):
-        """KPI Farol: Compara Realizado vs Esperado (SPI - Schedule Performance Index)"""
-        realizado = self.qtd_realizada
-        esperado = self.qtd_esperada_curva_s
-        
-        # Evita divisão por zero ou início prematuro
-        if esperado < 0.01:
-            # Se já realizou algo mas 'esperado' é zero (ex: começou antes da data), está adiantado
-            if realizado > 0:
-                return "Adiantado"
-            return "Não Iniciado"
-            
-        # SPI = Índice de Desempenho de Prazo
-        indice = realizado / esperado
-        
-        if indice < 0.90:
-            return "Atrasado"  # Vermelho (< 90% do esperado)
-        elif indice > 1.10:
-            return "Adiantado" # Verde (> 110% do esperado)
-        else:
-            return "No Prazo"  # Azul (Entre 90% e 110%)
+    def responsavel(self):
+        return None
+
+    @property
+    def unidade(self):
+        return getattr(self, "_unidade", None)
+
+    @unidade.setter
+    def unidade(self, value):
+        self._unidade = value
+
+    @property
+    def qtd_planejada(self):
+        return getattr(self, "_qtd_planejada", None)
+
+    @qtd_planejada.setter
+    def qtd_planejada(self, value):
+        self._qtd_planejada = value
+
+    def __repr__(self):
+        return f'<FrenteTrabalho {self.id}: {self.nome}>'
+
+class FrenteColaborador(db.Model):
+    __tablename__ = "frente_colaborador"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    empresa_id = db.Column(db.Integer, db.ForeignKey('empresa.id'), nullable=False, index=True)
+    frente_id = db.Column(db.Integer, db.ForeignKey('frente_trabalho.id'), nullable=False, index=True)
+    colaborador_id = db.Column(db.Integer, db.ForeignKey('colaboradores.id'), nullable=False, index=True)
+    funcao_id = db.Column(db.Integer, db.ForeignKey('aux_funcoes.id'), nullable=True)
+    data_inicio = db.Column(db.Date, nullable=True)
+    data_fim = db.Column(db.Date, nullable=True)
+    ativo = db.Column(db.Boolean, nullable=False, default=True)
+
+    criado_por = db.Column(db.Integer, nullable=True)
+    modificado_por = db.Column(db.Integer, nullable=True)
+    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
+    modificado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    frente = db.relationship('FrenteTrabalho', backref='colaboradores_alocados')
+    colaborador = db.relationship('Colaborador')
+    funcao = db.relationship('AuxFuncoes')
+
+    def __repr__(self):
+        return f'<FrenteColaborador Frente:{self.frente_id} Colab:{self.colaborador_id}>'
+
+class ObraUsuario(db.Model):
+    __tablename__ = "obra_usuario"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    empresa_id = db.Column(db.Integer, db.ForeignKey('empresa.id'), nullable=False, index=True)
+    obra_id = db.Column(db.Integer, db.ForeignKey('obras.id'), nullable=False, index=True)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=False, index=True)
+    papel_id = db.Column(db.Integer, db.ForeignKey('papeis.id'), nullable=True, index=True)
+    ativo = db.Column(db.Boolean, default=True)
+
+    criado_por = db.Column(db.Integer, nullable=True)
+    modificado_por = db.Column(db.Integer, nullable=True)
+    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
+    modificado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    empresa = db.relationship('Empresa')
+    obra = db.relationship('Obra', backref='usuarios_alocados')
+    usuario = db.relationship('Usuario', backref='obras_alocadas')
+    papel = db.relationship('Papel')
+
+    def __repr__(self):
+        return f'<ObraUsuario Obra:{self.obra_id} Usuario:{self.usuario_id}>'

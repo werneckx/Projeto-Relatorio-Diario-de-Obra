@@ -1,0 +1,86 @@
+{% extends "admin/base.html" %}
+{% block title %}Empresas | Admin{% endblock %}
+{% block page_title %}Empresas{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h2>Empresas Cadastradas</h2>
+        <p>Gerencie as empresas da plataforma RDO.</p>
+    </div>
+    <a href="{{ url_for('admin.nova_empresa') }}" class="btn btn-primary" id="btn-nova-empresa">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        Nova Empresa
+    </a>
+</div>
+
+<div class="card">
+    {% if empresas %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Logo</th>
+                    <th>Nome</th>
+                    <th>Status</th>
+                    <th>Criada em</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for emp in empresas %}
+                <tr>
+                    <td style="color:var(--text-muted);font-size:0.8rem;">{{ emp.id }}</td>
+                    <td>
+                        {% if emp.logo_empresa %}
+                            <img src="{{ url_for('static', filename=emp.logo_empresa) }}"
+                                 class="logo-preview" style="width:40px;height:40px;" alt="Logo">
+                        {% else %}
+                            <div style="width:40px;height:40px;border-radius:8px;background:rgba(99,102,241,0.15);
+                                        display:flex;align-items:center;justify-content:center;
+                                        color:var(--primary-light);font-weight:700;font-size:1rem;">
+                                {{ emp.nome[0] | upper }}
+                            </div>
+                        {% endif %}
+                    </td>
+                    <td><strong>{{ emp.nome }}</strong></td>
+                    <td>
+                        {% if emp.ativo %}
+                            <span class="badge badge-success">Ativa</span>
+                        {% else %}
+                            <span class="badge badge-danger">Inativa</span>
+                        {% endif %}
+                    </td>
+                    <td style="color:var(--text-muted);font-size:0.85rem;">
+                        {{ emp.criado_em.strftime('%d/%m/%Y') if emp.criado_em else '—' }}
+                    </td>
+                    <td>
+                        <a href="{{ url_for('admin.editar_empresa', empresa_id=emp.id) }}"
+                           class="btn btn-secondary btn-sm" id="btn-editar-empresa-{{ emp.id }}">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                            </svg>
+                            Editar
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:3rem;color:var(--text-muted);">
+        <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin-bottom:1rem;opacity:0.3;">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+        </svg>
+        <p>Nenhuma empresa cadastrada.</p>
+        <a href="{{ url_for('admin.nova_empresa') }}" class="btn btn-primary" style="margin-top:1rem;">Criar primeira empresa</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

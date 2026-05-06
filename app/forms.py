@@ -1,11 +1,11 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, HiddenField
+from wtforms import StringField, HiddenField, PasswordField
 from wtforms.validators import DataRequired, Optional
 
 
 class LoginForm(FlaskForm):
     email = StringField("E-mail", validators=[DataRequired(message="Informe seu e-mail.")])
-    senha = StringField("Senha", validators=[DataRequired(message="Informe sua senha.")])
+    senha = PasswordField("Senha", validators=[DataRequired(message="Informe sua senha.")])  # Password field
 
 
 class RdoForm(FlaskForm):

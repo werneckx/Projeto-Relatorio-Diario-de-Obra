@@ -28,13 +28,15 @@ def create_app():
 
     # IMPORTAR MODELOS APÓS INIT DO DB (para o Alembic e o DB saberem quais tabelas mapear)
     # A colocação aqui está correta para evitar o import circular com o 'db'
-    from app.models import usuario, rdo, lista_opcoes # <--- Se houver um 'clima' aqui, seria um ponto de análise
+    from app.models import usuario, rdo, auxiliares, obra, fornecedor, empresa
 
     # Registrar blueprints
     from app.routes.auth import auth_bp
+    from app.routes.admin import admin_bp
     
     # Boas Práticas: Sempre registrar Blueprints APÓS os Models e Configs
     app.register_blueprint(auth_bp, url_prefix="/auth")
+    app.register_blueprint(admin_bp)
     app.jinja_env.filters['from_json'] = json.loads
     
     # ---------------------------

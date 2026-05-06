@@ -1,0 +1,120 @@
+{% extends "admin/base.html" %}
+{% set is_edit = empresa is not none %}
+{% block title %}{{ 'Editar Empresa' if is_edit else 'Nova Empresa' }} | Admin{% endblock %}
+{% block page_title %}{{ 'Editar Empresa' if is_edit else 'Nova Empresa' }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h2>{{ 'Editar: ' + empresa.nome if is_edit else 'Cadastrar Nova Empresa' }}</h2>
+        <p>{{ 'Atualize os dados da empresa.' if is_edit else 'Preencha os dados para criar uma nova empresa na plataforma.' }}</p>
+    </div>
+    <a href="{{ url_for('admin.listar_empresas') }}" class="btn btn-secondary">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+        </svg>
+        Voltar
+    </a>
+</div>
+
+<div class="card">
+    <form method="POST"
+          action="{{ url_for('admin.editar_empresa', empresa_id=empresa.id) if is_edit else url_for('admin.nova_empresa') }}"
+          enctype="multipart/form-data"
+          id="form-empresa">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="form-grid">
+
+            <!-- Nome -->
+            <div class="form-group span-2">
+                <label for="nome">Nome da Empresa *</label>
+                <input type="text" id="nome" name="nome" required
+                       value="{{ empresa.nome if is_edit else '' }}"
+                       placeholder="Ex: Enfil S/A Construções">
+            </div>
+
+            <!-- Logo -->
+            <div class="form-group">
+                <label for="logo_empresa">Logo (cabeçalho / relatórios)</label>
+                {% if is_edit and empresa.logo_empresa %}
+                    <div style="margin-bottom:0.5rem;">
+                        <img src="{{ url_for('static', filename=empresa.logo_empresa) }}"
+                             class="logo-preview" alt="Logo atual">
+                        <p style="color:var(--text-muted);font-size:0.78rem;margin-top:4px;">Logo atual (substituída ao enviar novo arquivo)</p>
+                    </div>
+                {% endif %}
+                <input type="file" id="logo_empresa" name="logo_empresa"
+                       accept="image/png,image/jpeg,image/webp,image/gif">
+                <span style="color:var(--text-muted);font-size:0.78rem;">Recomendado: PNG transparente, mín. 300×100 px</span>
+            </div>
+
+            <!-- Ícone -->
+            <div class="form-group">
+                <label for="icone_empresa">Ícone (favicon / menu)</label>
+                {% if is_edit and empresa.icone_empresa %}
+                    <div style="margin-bottom:0.5rem;">
+                        <img src="{{ url_for('static', filename=empresa.icone_empresa) }}"
+                             class="icone-preview" alt="Ícone atual">
+                        <p style="color:var(--text-muted);font-size:0.78rem;margin-top:4px;">Ícone atual</p>
+                    </div>
+                {% endif %}
+                <input type="file" id="icone_empresa" name="icone_empresa"
+                       accept="image/png,image/jpeg,image/webp,image/gif">
+                <span style="color:var(--text-muted);font-size:0.78rem;">Recomendado: PNG quadrado, 128×128 px</span>
+            </div>
+
+        </div>
+
+        <!-- Preview dinâmico -->
+        <div id="preview-container" style="display:none;margin-top:1rem;padding:1rem;
+             background:rgba(99,102,241,0.07);border-radius:10px;border:1px dashed rgba(99,102,241,0.3);">
+            <p style="font-size:0.78rem;color:var(--primary-light);margin-bottom:0.5rem;">Preview dos arquivos selecionados</p>
+            <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;">
+                <div>
+                    <p style="font-size:0.7rem;color:var(--text-muted);">Logo</p>
+                    <img id="preview-logo" style="height:50px;border-radius:8px;border:1px solid var(--card-border);" alt="">
+                </div>
+                <div>
+                    <p style="font-size:0.7rem;color:var(--text-muted);">Ícone</p>
+                    <img id="preview-icone" style="height:40px;width:40px;border-radius:6px;object-fit:cover;
+                                                    border:1px solid var(--card-border);" alt="">
+                </div>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <a href="{{ url_for('admin.listar_empresas') }}" class="btn btn-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-primary" id="btn-salvar-empresa">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M5 13l4 4L19 7"/>
+                </svg>
+                {{ 'Salvar Alterações' if is_edit else 'Criar Empresa' }}
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+    function previewFile(inputEl, imgEl) {
+        inputEl.addEventListener('change', function () {
+            if (this.files && this.files[0]) {
+                const reader = new FileReader();
+                reader.onload = e => { imgEl.src = e.target.result; };
+                reader.readAsDataURL(this.files[0]);
+                document.getElementById('preview-container').style.display = 'block';
+            }
+        });
+    }
+
+    previewFile(
+        document.getElementById('logo_empresa'),
+        document.getElementById('preview-logo')
+    );
+    previewFile(
+        document.getElementById('icone_empresa'),
+        document.getElementById('preview-icone')
+    );
+</script>
+{% endblock %}

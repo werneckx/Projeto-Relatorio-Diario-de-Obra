@@ -3,173 +3,145 @@
 {% block title %}Resumo Operacional{% endblock %}
 
 {% block content %}
-<!-- Container Principal com padding responsivo -->
-<div class="max-w-[1600px] mx-auto pb-12 space-y-6 sm:space-y-8 px-2 sm:px-0">
-
-    <!-- 1. HEADER & DATA -->
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 md:gap-6 animate-fade-in-down">
-        <div class="w-full md:w-auto">
-            <!-- Data Dinâmica -->
-            <div class="flex items-center gap-2 text-slate-400 text-xs sm:text-sm font-medium mb-1">
-                <i class="far fa-calendar"></i>
-                <span id="displayDataHoje" class="capitalize">Carregando data...</span>
+<div class="premium-container py-10 animate-premium-in">
+    {# --- HERO SECTION --- #}
+    <div class="flex flex-col lg:flex-row justify-between items-start gap-10 mb-12">
+        <div class="flex-1">
+            <div class="flex items-center gap-3 text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-4">
+                <i class="fas fa-home text-[8px] opacity-70"></i>
+                <span>Painel de Controle</span>
             </div>
-            <h1 class="text-2xl sm:text-3xl font-bold text-slate-800 tracking-tight leading-tight">
-                Dashboard Executivo
+            <h1 class="text-4xl font-black text-slate-900 tracking-tight leading-tight">
+                Resumo <span class="text-blue-600">Operacional</span>
             </h1>
-            <p class="text-slate-500 text-sm mt-1">Uma visão estratégica dos principais indicadores do seu canteiro.</p>
+            <p class="mt-4 max-w-2xl text-slate-500 font-medium leading-relaxed">
+                Acompanhe o desempenho das suas obras em tempo real. Monitore o ritmo de produção, o status das aprovações e o efetivo de campo em um único lugar.
+            </p>
         </div>
-    </div>
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div class="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p class="text-[11px] uppercase font-semibold tracking-[0.18em] text-slate-400">RDOs no mês</p>
-            <p class="mt-3 text-3xl font-bold text-slate-900">{{ kpi_rdos_mes }}</p>
-            <p class="text-xs text-slate-500 mt-1">Total de relatórios ativos no mês atual.</p>
-        </div>
-        <div class="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p class="text-[11px] uppercase font-semibold tracking-[0.18em] text-slate-400">Aprovados no ano</p>
-            <p class="mt-3 text-3xl font-bold text-slate-900">{{ kpi_aprovados_total }}</p>
-            <p class="text-xs text-slate-500 mt-1">Registros aprovados no ano em curso.</p>
-        </div>
-        <div class="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p class="text-[11px] uppercase font-semibold tracking-[0.18em] text-slate-400">Efetivo por dia</p>
-            <p class="mt-3 text-3xl font-bold text-slate-900">{{ kpi_efetivo }}</p>
-            <p class="text-xs text-slate-500 mt-1">Total de colaboradores no relatório de hoje.</p>
-        </div>
-    </div>
-
-    <!-- 2. CARDS DE KPI -->
-    <!-- Grid: 1 col (Mobile), 2 cols (Tablet), 4 cols (Desktop) -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 animate-fade-in">
-
-        <!-- Obras -->
-        <div
-            class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
-            <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <i class="fas fa-building text-3xl sm:text-4xl text-blue-600"></i>
+        
+        <div class="w-full lg:w-auto flex items-center gap-4 bg-white/50 backdrop-blur-md p-2 rounded-2xl border border-white shadow-soft">
+            <div class="w-12 h-12 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/30">
+                <i class="far fa-calendar-alt text-xl"></i>
             </div>
-            <p class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">Obras Ativas</p>
-            <div class="flex items-baseline gap-2 mt-2">
-                <h3 class="text-2xl sm:text-3xl font-bold text-slate-800">{{ kpi_obras }}</h3>
-                <span
-                    class="text-[10px] sm:text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Em
-                    andamento</span>
-            </div>
-        </div>
-
-        <!-- Pendências -->
-        <div
-            class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
-            <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <i class="fas fa-file-signature text-3xl sm:text-4xl text-amber-500"></i>
-            </div>
-            <p class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">Pendências</p>
-            <div class="flex items-baseline gap-2 mt-2">
-                <h3
-                    class="text-2xl sm:text-3xl font-bold {{ 'text-amber-600' if kpi_pendentes > 0 else 'text-slate-800' }}">
-                    {{ kpi_pendentes }}</h3>
-                <span class="text-[10px] sm:text-xs font-medium text-slate-400">Aguardando</span>
-            </div>
-        </div>
-
-        <!-- Efetivo -->
-        <div
-            class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
-            <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <i class="fas fa-users text-3xl sm:text-4xl text-emerald-600"></i>
-            </div>
-            <p class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">Efetivo Hoje</p>
-            <div class="flex items-baseline gap-2 mt-2">
-                <h3 class="text-2xl sm:text-3xl font-bold text-slate-800">{{ kpi_efetivo }}</h3>
-                <span class="text-[10px] sm:text-xs font-medium text-slate-400">Colaboradores</span>
-            </div>
-        </div>
-
-        <!-- Ocorrências -->
-        <div
-            class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
-            <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <i class="fas fa-exclamation-triangle text-3xl sm:text-4xl text-red-500"></i>
-            </div>
-            <p class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">Ocorrências (Mês)</p>
-            <div class="flex items-baseline gap-2 mt-2">
-                <h3
-                    class="text-2xl sm:text-3xl font-bold {{ 'text-red-600' if kpi_ocorrencias > 0 else 'text-slate-800' }}">
-                    {{ kpi_ocorrencias }}</h3>
-                <span class="text-[10px] sm:text-xs font-medium text-slate-400">Registradas</span>
+            <div class="pr-6">
+                <p class="text-[10px] text-slate-400 font-black uppercase tracking-wider">Data de Hoje</p>
+                <p id="displayDataHoje" class="text-sm font-bold text-slate-800 capitalize">Carregando...</p>
             </div>
         </div>
     </div>
 
-    <!-- 3. ÁREA ANALÍTICA INTERATIVA -->
-    <!-- Grid: 1 col (Mobile/Tablet), 3 cols (Desktop) -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 animate-fade-in" style="animation-delay: 100ms;">
+    {# --- KPI GRID --- #}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+        <div class="premium-card p-6 border-l-4 border-l-blue-500">
+            <div class="flex justify-between items-start mb-4">
+                <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                    <i class="fas fa-file-invoice text-lg"></i>
+                </div>
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Este Mês</span>
+            </div>
+            <p class="text-3xl font-black text-slate-900">{{ kpi_rdos_mes }}</p>
+            <p class="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">RDOs Emitidos</p>
+        </div>
 
-        <!-- Coluna Esquerda: Gráfico Mensal + Filtros -->
-        <div class="lg:col-span-2 space-y-4 sm:space-y-6">
+        <div class="premium-card p-6 border-l-4 border-l-emerald-500">
+            <div class="flex justify-between items-start mb-4">
+                <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                    <i class="fas fa-check-double text-lg"></i>
+                </div>
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Ano</span>
+            </div>
+            <p class="text-3xl font-black text-slate-900">{{ kpi_aprovados_total }}</p>
+            <p class="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">Aprovações Consolidadas</p>
+        </div>
 
-            <!-- Gráfico Card -->
-            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-6 relative">
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-2">
+        <div class="premium-card p-6 border-l-4 border-l-amber-500">
+            <div class="flex justify-between items-start mb-4">
+                <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                    <i class="fas fa-users text-lg"></i>
+                </div>
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Hoje</span>
+            </div>
+            <p class="text-3xl font-black text-slate-900">{{ kpi_efetivo }}</p>
+            <p class="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">Efetivo em Campo</p>
+        </div>
+
+        <div class="premium-card p-6 border-l-4 border-l-purple-500">
+            <div class="flex justify-between items-start mb-4">
+                <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                    <i class="fas fa-hard-hat text-lg"></i>
+                </div>
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ativos</span>
+            </div>
+            <p class="text-3xl font-black text-slate-900">{{ kpi_obras }}</p>
+            <p class="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">Contratos em Execução</p>
+        </div>
+    </div>
+
+    {# --- MAIN CONTENT GRID --- #}
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {# --- LEFT COLUMN: CHART & TABLE --- #}
+        <div class="lg:col-span-2 space-y-8">
+            <div class="premium-card p-8">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10">
                     <div>
-                        <h3 class="font-bold text-slate-800 text-base sm:text-lg">Volume de RDOs</h3>
-                        <p class="text-xs text-slate-400">Interaja com os gráficos para filtrar.</p>
+                        <h3 class="text-xl font-black text-slate-900 tracking-tight">Tendência Mensal</h3>
+                        <p class="text-[10px] text-slate-400 font-black uppercase tracking-[0.15em] mt-1">Volume de registros por período</p>
                     </div>
-                    <!-- Badge de Filtro Ativo -->
                     <div id="activeFilterBadge"
-                        class="hidden w-full sm:w-auto bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center justify-between sm:justify-start gap-2 cursor-pointer hover:bg-blue-100 transition"
+                        class="hidden bg-blue-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-3 cursor-pointer hover:bg-blue-700 transition shadow-lg shadow-blue-500/20"
                         onclick="resetFilters()">
                         <span id="filterText">Filtro Ativo</span>
-                        <i class="fas fa-times"></i>
+                        <i class="fas fa-times text-[8px]"></i>
                     </div>
                 </div>
-                <!-- Altura ajustável para mobile -->
-                <div class="h-56 sm:h-64 w-full">
+                <div class="h-[350px] w-full">
                     <canvas id="monthlyChart"></canvas>
                 </div>
             </div>
 
-            <!-- Tabela Recentes -->
-            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                <div
-                    class="px-4 sm:px-6 py-4 border-b border-slate-50 flex justify-between items-center bg-slate-50/30">
-                    <h3 class="font-bold text-slate-800 text-sm">Registros Recentes</h3>
-                    <a href="{{ url_for('auth.lista_rdo') }}"
-                        class="text-xs font-bold text-slate-400 hover:text-blue-600 transition-colors flex items-center gap-1">
-                        Ver todos <i class="fas fa-arrow-right"></i>
+            <div class="premium-card overflow-hidden">
+                <div class="p-8 border-b border-slate-100 flex justify-between items-center">
+                    <div>
+                        <h3 class="text-lg font-black text-slate-900 tracking-tight">Atividade Recente</h3>
+                        <p class="text-[10px] text-slate-400 font-black uppercase tracking-[0.15em] mt-1">Últimos relatórios submetidos</p>
+                    </div>
+                    <a href="{{ url_for('auth.lista_rdo') }}" class="text-[10px] font-black text-blue-600 hover:text-blue-700 uppercase tracking-widest flex items-center gap-2 transition-colors">
+                        Ver Todos <i class="fas fa-arrow-right"></i>
                     </a>
                 </div>
 
-                <!-- Wrapper com scroll horizontal para tabelas no mobile -->
                 <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm whitespace-nowrap">
-                        <tbody class="divide-y divide-slate-50">
+                    <table class="premium-table">
+                        <thead>
+                            <tr>
+                                <th>Projeto / Obra</th>
+                                <th>Referência</th>
+                                <th class="text-right">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
                             {% for rdo in ultimos_rdos %}
-                            <tr class="hover:bg-slate-50 transition-colors cursor-pointer"
-                                onclick="window.location='{{ url_for('auth.visualizar_rdo', rdo_id=rdo.id) }}'">
-                                <td class="px-4 sm:px-6 py-4">
-                                    <div
-                                        class="font-bold text-slate-700 text-xs sm:text-sm truncate max-w-[150px] sm:max-w-none">
-                                        {{ rdo.obra.nome }}</div>
-                                    <div class="text-[10px] sm:text-xs text-slate-400">SEQ: {{ rdo.id_sequencial }}
-                                    </div>
+                            <tr class="hover:bg-slate-50/50 transition-colors cursor-pointer" onclick="window.location='{{ url_for('auth.visualizar_rdo', rdo_id=rdo.id) }}'">
+                                <td class="py-5">
+                                    <p class="font-bold text-slate-800">{{ rdo.obra.nome }}</p>
+                                    <p class="text-[10px] text-slate-400 font-medium mt-1">Contrato: {{ rdo.obra.contrato or 'N/A' }}</p>
                                 </td>
-                                <td class="px-4 sm:px-6 py-4 text-right">
-                                    <span class="text-xs text-slate-500 font-mono">{{ rdo.data.strftime('%d/%m')
-                                        }}</span>
+                                <td>
+                                    <p class="text-sm font-bold text-slate-600">RDO #{{ rdo.id_sequencial }}</p>
+                                    <p class="text-[10px] text-slate-400 font-medium mt-1">{{ rdo.data.strftime('%d/%m/%Y') }}</p>
                                 </td>
-                                <td class="px-4 sm:px-6 py-4 text-right w-10">
-                                    <div class="w-2.5 h-2.5 rounded-full 
-                                        {% if rdo.status == 'Aprovado' %}bg-emerald-500 shadow-sm shadow-emerald-200
-                                        {% elif rdo.status == 'Rejeitado' %}bg-red-500 shadow-sm shadow-red-200
-                                        {% else %}bg-amber-500 shadow-sm shadow-amber-200{% endif %}"
-                                        title="{{ rdo.status }}"></div>
+                                <td class="text-right">
+                                    <span class="premium-badge 
+                                        {% if rdo.status == 'Aprovado' %} premium-badge-success
+                                        {% elif rdo.status == 'Rejeitado' %} premium-badge-error
+                                        {% else %} premium-badge-warning {% endif %}">
+                                        {{ rdo.status }}
+                                    </span>
                                 </td>
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="3" class="p-6 text-center text-slate-400 text-xs">Sem atividade recente.
-                                </td>
+                                <td colspan="3" class="p-12 text-center text-slate-400 font-medium">Nenhum registro encontrado no período.</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -178,51 +150,94 @@
             </div>
         </div>
 
-        <!-- Coluna Direita: Status (Rosca) -->
-        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-6 flex flex-col justify-center">
-            <h3 class="font-bold text-slate-800 text-sm mb-6 text-center">Status Geral (Ano)</h3>
-            <div class="h-48 sm:h-56 relative">
-                <canvas id="statusChart"></canvas>
-                <!-- Texto Central do Gráfico -->
-                <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span class="text-2xl sm:text-3xl font-bold text-slate-800" id="totalCount">0</span>
-                    <span class="text-[10px] text-slate-400 uppercase tracking-widest">Total</span>
+        {# --- RIGHT COLUMN: STATUS & ALERTS --- #}
+        <div class="space-y-8">
+            <div class="premium-card p-8">
+                <div class="mb-10">
+                    <h3 class="text-lg font-black text-slate-900 tracking-tight">Distribuição de Status</h3>
+                    <p class="text-[10px] text-slate-400 font-black uppercase tracking-[0.15em] mt-1">Performance documental anual</p>
+                </div>
+                
+                <div class="h-64 relative mb-10">
+                    <canvas id="statusChart"></canvas>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                        <span class="text-4xl font-black text-slate-900" id="totalCount">0</span>
+                        <span class="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mt-1">Total</span>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center p-3 rounded-2xl bg-emerald-50 border border-emerald-100">
+                        <div class="flex items-center gap-3">
+                            <div class="w-2 h-2 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/50"></div>
+                            <span class="text-xs font-bold text-emerald-800 uppercase tracking-wider">Aprovados</span>
+                        </div>
+                        <span class="text-sm font-black text-emerald-900" id="legendAprovado">0</span>
+                    </div>
+                    <div class="flex justify-between items-center p-3 rounded-2xl bg-amber-50 border border-amber-100">
+                        <div class="flex items-center gap-3">
+                            <div class="w-2 h-2 rounded-full bg-amber-500 shadow-lg shadow-amber-500/50"></div>
+                            <span class="text-xs font-bold text-amber-800 uppercase tracking-wider">Pendentes</span>
+                        </div>
+                        <span class="text-sm font-black text-amber-900" id="legendPendente">0</span>
+                    </div>
+                    <div class="flex justify-between items-center p-3 rounded-2xl bg-red-50 border border-red-100">
+                        <div class="flex items-center gap-3">
+                            <div class="w-2 h-2 rounded-full bg-red-500 shadow-lg shadow-red-500/50"></div>
+                            <span class="text-xs font-bold text-red-800 uppercase tracking-wider">Rejeitados</span>
+                        </div>
+                        <span class="text-sm font-black text-red-900" id="legendRejeitado">0</span>
+                    </div>
                 </div>
             </div>
 
-            <!-- Legenda Customizada -->
-            <div class="mt-6 sm:mt-8 space-y-3">
-                <div class="flex justify-between items-center text-xs sm:text-sm">
-                    <span class="flex items-center gap-2 text-slate-600"><span
-                            class="w-3 h-3 rounded bg-emerald-500"></span> Aprovado</span>
-                    <span class="font-bold text-slate-800 bg-slate-50 px-2 py-0.5 rounded" id="legendAprovado">0</span>
+            {# --- ALERTS SECTION --- #}
+            <div class="premium-card p-8 bg-slate-900 text-white overflow-hidden relative">
+                <div class="absolute top-0 right-0 p-8 opacity-10">
+                    <i class="fas fa-bell text-6xl rotate-12"></i>
                 </div>
-                <div class="flex justify-between items-center text-xs sm:text-sm">
-                    <span class="flex items-center gap-2 text-slate-600"><span
-                            class="w-3 h-3 rounded bg-amber-500"></span> Pendente</span>
-                    <span class="font-bold text-slate-800 bg-slate-50 px-2 py-0.5 rounded" id="legendPendente">0</span>
+                <h3 class="text-lg font-black tracking-tight mb-2">Atenção Prioritária</h3>
+                <p class="text-[10px] text-slate-400 font-black uppercase tracking-[0.15em] mb-8">Pendências Críticas</p>
+                
+                <div class="space-y-6">
+                    <div class="flex items-start gap-4">
+                        <div class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+                            <i class="fas fa-exclamation-triangle text-amber-400"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-bold">{{ kpi_pendentes }} Pendências</p>
+                            <p class="text-[11px] text-slate-400 font-medium mt-1">Aguardando aprovação para fechamento do ciclo.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-4">
+                        <div class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+                            <i class="fas fa-biohazard text-red-400"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-bold">{{ kpi_ocorrencias }} Ocorrências</p>
+                            <p class="text-[11px] text-slate-400 font-medium mt-1">Eventos críticos registrados nos últimos 30 dias.</p>
+                        </div>
+                    </div>
                 </div>
-                <div class="flex justify-between items-center text-xs sm:text-sm">
-                    <span class="flex items-center gap-2 text-slate-600"><span
-                            class="w-3 h-3 rounded bg-red-500"></span> Rejeitado</span>
-                    <span class="font-bold text-slate-800 bg-slate-50 px-2 py-0.5 rounded" id="legendRejeitado">0</span>
+                
+                <div class="mt-10 pt-8 border-t border-white/10">
+                    <a href="#" class="flex items-center justify-between group">
+                        <span class="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-white transition-colors">Relatório Detalhado</span>
+                        <i class="fas fa-chevron-right text-[10px] text-slate-600 group-hover:translate-x-1 transition-all"></i>
+                    </a>
                 </div>
             </div>
         </div>
-
     </div>
 </div>
 
-<!-- Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // 1. Mostrar Data de Hoje
     const dataOptions = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
     const hojeStr = new Date().toLocaleDateString('pt-BR', dataOptions);
     document.getElementById('displayDataHoje').textContent = hojeStr.charAt(0).toUpperCase() + hojeStr.slice(1);
 
-    // 2. Lógica de Interatividade dos Gráficos
     const rawData = {{ dados_graficos_json | tojson }};
 
     let filterStatus = null;
@@ -236,7 +251,7 @@
         pendente: '#f59e0b',
         rejeitado: '#ef4444',
         barras: '#3b82f6',
-        barrasFiltro: '#6366f1'
+        barrasFiltro: '#2563eb'
     };
 
     function initCharts() {
@@ -249,9 +264,9 @@
                     label: 'RDOs',
                     data: [],
                     backgroundColor: colors.barras,
-                    borderRadius: 4,
+                    borderRadius: 10,
                     barThickness: 'flex',
-                    maxBarThickness: 30, // Limita largura em telas grandes
+                    maxBarThickness: 34,
                     hoverBackgroundColor: colors.barrasFiltro
                 }]
             },
@@ -260,8 +275,15 @@
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: {
-                    y: { beginAtZero: true, grid: { color: '#f8fafc', drawBorder: false }, ticks: { font: { size: 10 }, color: '#94a3b8' } },
-                    x: { grid: { display: false }, ticks: { font: { size: 10 }, color: '#94a3b8' } }
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: '#e2e8f0', drawBorder: false },
+                        ticks: { font: { size: 11 }, color: '#94a3b8', precision: 0 }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { size: 11, weight: '600' }, color: '#94a3b8' }
+                    }
                 },
                 onClick: (e, elements) => {
                     if (elements.length > 0) {
@@ -289,7 +311,7 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                cutout: '75%',
+                cutout: '74%',
                 plugins: { legend: { display: false } },
                 onClick: (e, elements) => {
                     if (elements.length > 0) {
@@ -307,30 +329,21 @@
     }
 
     function updateCharts() {
-        // Filtragem para o Gráfico Mensal
-        const dataForMonthly = filterStatus
-            ? rawData.filter(d => d.status === filterStatus)
-            : rawData;
-
+        const dataForMonthly = filterStatus ? rawData.filter(d => d.status === filterStatus) : rawData;
         const monthlyCounts = Array(12).fill(0);
         dataForMonthly.forEach(d => monthlyCounts[d.mes - 1]++);
 
-        // Filtragem para o Gráfico de Status
-        const dataForStatus = filterMonth
-            ? rawData.filter(d => d.mes === filterMonth)
-            : rawData;
-
+        const dataForStatus = filterMonth ? rawData.filter(d => d.mes === filterMonth) : rawData;
         const statusCounts = { 'Aprovado': 0, 'Pendente': 0, 'Rejeitado': 0 };
         dataForStatus.forEach(d => {
             if (statusCounts[d.status] !== undefined) statusCounts[d.status]++;
         });
 
-        // Atualização Visual
         monthlyChart.data.datasets[0].data = monthlyCounts;
         monthlyChart.data.datasets[0].backgroundColor = filterStatus ? colors.barrasFiltro : colors.barras;
 
         if (filterMonth) {
-            const bgColors = Array(12).fill('#f1f5f9');
+            const bgColors = Array(12).fill('#cbd5e1');
             bgColors[filterMonth - 1] = colors.barrasFiltro;
             monthlyChart.data.datasets[0].backgroundColor = bgColors;
         }
@@ -343,7 +356,6 @@
 
         const total = Object.values(statusCounts).reduce((a, b) => a + b, 0);
         document.getElementById('totalCount').innerText = total;
-
         document.getElementById('legendAprovado').innerText = statusCounts['Aprovado'];
         document.getElementById('legendPendente').innerText = statusCounts['Pendente'];
         document.getElementById('legendRejeitado').innerText = statusCounts['Rejeitado'];
@@ -374,8 +386,8 @@
     function updateFilterBadge() {
         const badge = document.getElementById('activeFilterBadge');
         const text = document.getElementById('filterText');
-
         const labels = [];
+
         if (filterMonth) {
             const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
             labels.push(months[filterMonth - 1]);

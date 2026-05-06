@@ -57,6 +57,31 @@ python run.py
 
 Acesse `http://localhost:5000` no navegador.
 
+## Como executar com Docker
+
+Copie `.env.example` para `.env` e ajuste a senha, se necessario. O `docker-compose.yml` ja troca `DB_HOST` para `db` dentro da rede Docker.
+
+```powershell
+docker compose up --build
+```
+
+A aplicacao fica disponivel em `http://localhost:5000`. O MySQL fica acessivel no Windows em `localhost:3307` e, dentro do Docker, em `db:3306`. O banco usa volume persistente chamado `mysql_data`; uploads e PDFs gerados tambem ficam em volumes Docker.
+
+Para preparar o banco ou criar dados iniciais:
+
+```powershell
+docker compose exec app flask db upgrade
+docker compose exec app python scripts/seed_db.py
+```
+
+Scripts auxiliares:
+
+```powershell
+python scripts/ensure_db.py
+python scripts/diagnostics/import_check.py
+python scripts/diagnostics/db_check.py
+```
+
 ## Estrutura do projeto
 
 - `app/`
@@ -67,13 +92,13 @@ Acesse `http://localhost:5000` no navegador.
   - `templates/` - paginas HTML Jinja2
   - `static/` - arquivos publicos, CSS, imagens e uploads
   - `utils/` - utilitarios para PDF, QR Code e imagens
+- `scripts/` - manutencao, seed e diagnosticos
 - `config.py` - configuracoes de ambiente e banco
 - `.env.example` - modelo de arquivo de ambiente
 - `requirements.txt` - dependencias do Python
 - `run.py` - ponto de entrada da aplicacao
 - `data/` - backups ou dados adicionais
-- `instance/` - arquivos de instancia Flask
-- `migrations/` - migracoes do banco de dados
+- `app/migrations/` - migracoes do banco de dados
 
 ## Notas importantes
 
@@ -92,8 +117,12 @@ Acesse `http://localhost:5000` no navegador.
 - Pillow
 - qrcode[pil]
 - pdfkit
+- weasyprint
 - reportlab
 - pikepdf
+- pypdf
+- pymupdf
+- gunicorn
 
 ## Melhorias futuras
 

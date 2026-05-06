@@ -1,0 +1,123 @@
+{% extends "admin/base.html" %}
+{% block title %}Fornecedores | Admin{% endblock %}
+{% block page_title %}Fornecedores{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h2>Fornecedores Cadastrados</h2>
+        <p>Gerencie os fornecedores vinculados à sua empresa. Colaboradores terceirizados são ligados a um fornecedor.</p>
+    </div>
+    <a href="{{ url_for('admin.novo_fornecedor') }}" class="btn btn-primary" id="btn-novo-fornecedor">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        Novo Fornecedor
+    </a>
+</div>
+
+<!-- Barra de busca -->
+<div style="margin-bottom:1rem;">
+    <input type="text" id="busca-forn" placeholder="Buscar por nome ou CNPJ…"
+           style="background:var(--input-bg);border:1px solid var(--card-border);border-radius:10px;
+                  color:var(--text-main);padding:0.65rem 1rem;width:100%;max-width:360px;
+                  font-family:'Outfit',sans-serif;font-size:0.9rem;outline:none;"
+           oninput="filtrarFornecedores(this.value)">
+</div>
+
+<div class="card">
+    {% if fornecedores %}
+    <div class="table-wrapper">
+        <table id="tabela-fornecedores">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Nome</th>
+                    <th>CNPJ</th>
+                    <th>Endereço</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for forn in fornecedores %}
+                <tr data-nome="{{ forn.nome | lower }}" data-cnpj="{{ forn.cnpj or '' }}">
+                    <td style="color:var(--text-muted);font-size:0.8rem;">{{ forn.id }}</td>
+                    <td>
+                        <strong>{{ forn.nome }}</strong>
+                    </td>
+                    <td style="color:var(--text-muted);font-size:0.875rem;font-family:monospace;">
+                        {{ forn.cnpj or '—' }}
+                    </td>
+                    <td style="color:var(--text-muted);font-size:0.875rem;max-width:200px;
+                               white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
+                        title="{{ forn.endereco or '' }}">
+                        {{ forn.endereco or '—' }}
+                    </td>
+                    <td>
+                        {% if forn.ativo %}
+                            <span class="badge badge-success">Ativo</span>
+                        {% else %}
+                            <span class="badge badge-danger">Inativo</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div style="display:flex;gap:0.5rem;">
+                            <a href="{{ url_for('admin.editar_fornecedor', forn_id=forn.id) }}"
+                               class="btn btn-secondary btn-sm" id="btn-editar-forn-{{ forn.id }}">
+                                <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                </svg>
+                                Editar
+                            </a>
+                            {% if forn.ativo %}
+                            <form method="POST"
+                                  action="{{ url_for('admin.desativar_fornecedor', forn_id=forn.id) }}"
+                                  onsubmit="return confirm('Desativar fornecedor {{ forn.nome }}?')"
+                                  style="display:inline;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-danger btn-sm" id="btn-desativar-forn-{{ forn.id }}">
+                                    <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                              d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                                    </svg>
+                                    Desativar
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:3rem;color:var(--text-muted);">
+        <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+             style="margin-bottom:1rem;opacity:0.3;">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857
+                     M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857
+                     m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+        </svg>
+        <p>Nenhum fornecedor cadastrado ainda.</p>
+        <a href="{{ url_for('admin.novo_fornecedor') }}" class="btn btn-primary" style="margin-top:1rem;">
+            Cadastrar Primeiro Fornecedor
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    function filtrarFornecedores(q) {
+        const termo = q.toLowerCase();
+        document.querySelectorAll('#tabela-fornecedores tbody tr').forEach(tr => {
+            const nome = tr.dataset.nome || '';
+            const cnpj = tr.dataset.cnpj || '';
+            tr.style.display = (nome.includes(termo) || cnpj.includes(termo)) ? '' : 'none';
+        });
+    }
+</script>
+{% endblock %}

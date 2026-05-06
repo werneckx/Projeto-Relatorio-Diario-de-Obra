@@ -1,0 +1,43 @@
+services:
+  app:
+    build: .
+    container_name: rdo_app
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    env_file: .env
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      WKHTMLTOPDF_CMD: /usr/bin/wkhtmltopdf
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - uploads_data:/app/app/static/uploads
+      - generated_pdfs:/app/tmp
+
+  db:
+    image: mysql:8.0
+    container_name: rdo_db
+    restart: unless-stopped
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-rdo_platform_db}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-admin}
+      MYSQL_ROOT_HOST: "%"
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./data/Script Banco de Dados.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+
+volumes:
+  mysql_data:
+  uploads_data:
+  generated_pdfs:

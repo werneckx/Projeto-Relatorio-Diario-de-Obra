@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Admin | RDO Platform{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --primary-light: #818cf8;
+            --bg-dark: #0f172a;
+            --bg-darker: #080d18;
+            --card-bg: #1e293b;
+            --card-border: rgba(255,255,255,0.06);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --input-bg: #334155;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+            --sidebar-w: 240px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
+
+        body {
+            background: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+        }
+
+        /* ── SIDEBAR ── */
+        .sidebar {
+            width: var(--sidebar-w);
+            background: var(--bg-darker);
+            border-right: 1px solid var(--card-border);
+            display: flex;
+            flex-direction: column;
+            padding: 1.5rem 0;
+            position: fixed;
+            top: 0; left: 0; bottom: 0;
+            z-index: 100;
+        }
+
+        .sidebar-logo {
+            padding: 0 1.5rem 1.5rem;
+            border-bottom: 1px solid var(--card-border);
+            margin-bottom: 1.5rem;
+        }
+
+        .sidebar-logo span {
+            font-size: 1.25rem;
+            font-weight: 700;
+            background: linear-gradient(to right, #818cf8, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .sidebar-logo small {
+            display: block;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-top: 2px;
+        }
+
+        .nav-section {
+            padding: 0 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .nav-label {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            padding: 0 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.65rem 0.75rem;
+            border-radius: 10px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            margin-bottom: 2px;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background: rgba(99,102,241,0.15);
+            color: var(--primary-light);
+        }
+
+        .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+        /* ── MAIN ── */
+        .main {
+            margin-left: var(--sidebar-w);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .topbar {
+            background: var(--bg-darker);
+            border-bottom: 1px solid var(--card-border);
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .topbar h1 {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .topbar-actions { display: flex; gap: 0.75rem; align-items: center; }
+
+        .content {
+            padding: 2rem;
+            flex: 1;
+        }
+
+        /* ── CARDS ── */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+        }
+
+        /* ── BUTTONS ── */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.55rem 1.1rem;
+            border: none;
+            border-radius: 10px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            box-shadow: 0 4px 12px rgba(99,102,241,0.3);
+        }
+
+        .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
+
+        .btn-secondary {
+            background: var(--input-bg);
+            color: var(--text-main);
+            border: 1px solid var(--card-border);
+        }
+
+        .btn-secondary:hover { background: #3e526a; }
+
+        .btn-danger {
+            background: rgba(239,68,68,0.15);
+            color: var(--danger);
+            border: 1px solid rgba(239,68,68,0.2);
+        }
+
+        .btn-danger:hover { background: rgba(239,68,68,0.25); }
+
+        .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.8rem; }
+
+        /* ── TABLE ── */
+        .table-wrapper { overflow-x: auto; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead th {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        tbody tr {
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            transition: background 0.15s;
+        }
+
+        tbody tr:hover { background: rgba(99,102,241,0.05); }
+
+        tbody td {
+            padding: 0.85rem 1rem;
+            font-size: 0.9rem;
+        }
+
+        /* ── BADGE ── */
+        .badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .badge-success { background: rgba(16,185,129,0.15); color: var(--success); }
+        .badge-danger  { background: rgba(239,68,68,0.15);  color: var(--danger); }
+        .badge-muted   { background: rgba(148,163,184,0.1); color: var(--text-muted); }
+
+        /* ── FORM ── */
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+        .form-grid.single { grid-template-columns: 1fr; }
+
+        .form-group { display: flex; flex-direction: column; gap: 0.4rem; }
+        .form-group.span-2 { grid-column: span 2; }
+
+        .form-group label {
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            background: var(--input-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            color: var(--text-main);
+            padding: 0.7rem 1rem;
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            outline: none;
+            width: 100%;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99,102,241,0.2);
+        }
+
+        .form-group textarea { min-height: 90px; resize: vertical; }
+
+        .form-group input[type="file"] {
+            padding: 0.5rem;
+            cursor: pointer;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: flex-end;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--card-border);
+        }
+
+        /* ── ALERTS ── */
+        .alert {
+            padding: 0.9rem 1rem;
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .alert-success { background: rgba(16,185,129,0.12); color: var(--success); border: 1px solid rgba(16,185,129,0.2); }
+        .alert-danger  { background: rgba(239,68,68,0.12);  color: var(--danger);  border: 1px solid rgba(239,68,68,0.2); }
+        .alert-warning { background: rgba(245,158,11,0.12); color: var(--warning); border: 1px solid rgba(245,158,11,0.2); }
+        .alert-info    { background: rgba(59,130,246,0.12); color: var(--info);    border: 1px solid rgba(59,130,246,0.2); }
+
+        /* ── PAGE HEADER ── */
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+        }
+
+        .page-header h2 { font-size: 1.4rem; font-weight: 600; }
+        .page-header p { color: var(--text-muted); font-size: 0.9rem; margin-top: 2px; }
+
+        /* ── LOGO PREVIEW ── */
+        .logo-preview {
+            width: 80px;
+            height: 80px;
+            border-radius: 12px;
+            object-fit: cover;
+            border: 1px solid var(--card-border);
+            background: var(--input-bg);
+        }
+
+        .icone-preview {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            object-fit: cover;
+            border: 1px solid var(--card-border);
+        }
+    </style>
+</head>
+<body>
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <span>RDO Platform</span>
+            <small>Painel Administrativo</small>
+        </div>
+
+        <nav class="nav-section">
+            <p class="nav-label">Empresas</p>
+            <a href="{{ url_for('admin.listar_empresas') }}" class="nav-item {% if request.endpoint == 'admin.listar_empresas' or request.endpoint == 'admin.nova_empresa' %}active{% endif %}">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                </svg>
+                Empresas
+            </a>
+        </nav>
+
+        <nav class="nav-section">
+            <p class="nav-label">Cadastros</p>
+            <a href="{{ url_for('admin.listar_fornecedores') }}" class="nav-item {% if 'fornecedor' in request.endpoint %}active{% endif %}">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                Fornecedores
+            </a>
+        </nav>
+
+        <nav class="nav-section" style="margin-top:auto;">
+            <a href="{{ url_for('auth.inicio') }}" class="nav-item">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                </svg>
+                Voltar ao Sistema
+            </a>
+        </nav>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main">
+        <div class="topbar">
+            <h1>{% block page_title %}Admin{% endblock %}</h1>
+            <div class="topbar-actions">
+                <span style="color:var(--text-muted);font-size:0.85rem;">{{ session.get('user_email','') }}</span>
+            </div>
+        </div>
+
+        <div class="content">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                {% for category, message in messages %}
+                  <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+</body>
+</html>

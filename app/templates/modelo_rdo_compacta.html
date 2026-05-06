@@ -351,9 +351,9 @@
                         <th width="15%" class="text-center">P</th>
                         <th width="15%" class="text-center">T</th>
                     </tr>
-                    {% for mo in rdo.maos_obra %}
+                    {% for mo in rdo.maos_obra|sort(attribute='nome_funcao_resolved') %}
                     <tr>
-                        <td>{{ mo.nome_funcao }}</td>
+                        <td>{{ mo.nome_funcao_resolved }}</td>
                         <td class="text-center">{{ mo.quantidade_propria }}</td>
                         <td class="text-center">{{ mo.quantidade_terceirizada }}</td>
                     </tr>
@@ -369,9 +369,9 @@
                         <th>Equipamento</th>
                         <th width="15%" class="text-center">Qtd</th>
                     </tr>
-                    {% for eq in rdo.equipamentos %}
+                    {% for eq in rdo.equipamentos|sort(attribute='nome_equipamento_resolved') %}
                     <tr>
-                        <td>{{ eq.nome_equipamento }}</td>
+                        <td>{{ eq.nome_equipamento_resolved }}</td>
                         <td class="text-center">{{ eq.quantidade }}</td>
                     </tr>
                     {% else %}<tr>

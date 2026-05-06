@@ -1,0 +1,247 @@
+/* ==========================================
+   COMPONENTS - RDO SYSTEM (PREMIUM)
+   Governança de componentes e estados
+   ========================================== */
+
+/* 1. Premium Card */
+.premium-card {
+    background-color: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-premium);
+    transition: var(--transition-base);
+    overflow: hidden;
+}
+
+.surface-card,
+.bg-white.rounded-2xl,
+.bg-white.rounded-3xl {
+    border-radius: var(--radius-lg) !important;
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-premium);
+}
+
+.premium-card-hover:hover {
+    border-color: var(--color-primary-soft);
+    transform: translateY(-2px);
+    box-shadow: 0 25px 30px -5px rgba(0, 0, 0, 0.08);
+}
+
+/* 2. Premium Button */
+.premium-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-sm) var(--spacing-lg);
+    font-weight: 600;
+    font-size: var(--text-sm);
+    border-radius: var(--radius-md);
+    transition: var(--transition-fast);
+    cursor: pointer;
+    gap: var(--spacing-sm);
+    border: 1px solid transparent;
+}
+
+.premium-button-primary {
+    background-color: var(--color-primary);
+    color: var(--color-text-on-primary);
+}
+
+.premium-button-primary:hover {
+    background-color: var(--color-primary-hover);
+    transform: translateY(-1px);
+}
+
+.premium-button-primary:active {
+    transform: translateY(0);
+}
+
+.premium-button-secondary {
+    background-color: var(--color-bg-card);
+    border-color: var(--color-border);
+    color: var(--color-text-main);
+}
+
+.premium-button-secondary:hover {
+    background-color: var(--color-bg-page);
+    border-color: var(--color-border-hover);
+}
+
+/* 3. Premium Input */
+.premium-input {
+    width: 100%;
+    padding: var(--spacing-md);
+    background-color: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    color: var(--color-text-main);
+    font-size: var(--text-sm);
+    transition: var(--transition-fast);
+    outline: none;
+}
+
+.premium-input:focus {
+    border-color: var(--color-primary);
+    box-shadow: var(--shadow-focus);
+}
+
+.premium-input::placeholder {
+    color: var(--color-text-light);
+}
+
+.premium-input:disabled {
+    background-color: var(--color-bg-page);
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+/* 4. Premium Table */
+.premium-table-container {
+    width: 100%;
+    overflow-x: auto;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+}
+
+.premium-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: var(--text-sm);
+}
+
+.premium-table thead th {
+    background-color: var(--color-bg-page);
+    padding: var(--spacing-md);
+    font-weight: 700;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--color-border);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.premium-table tbody td {
+    padding: var(--spacing-md);
+    border-bottom: 1px solid var(--color-border);
+    color: var(--color-text-main);
+    transition: var(--transition-fast);
+}
+
+.premium-table tbody tr:hover td {
+    background-color: var(--color-primary-soft);
+}
+
+.dataTables_wrapper {
+    color: var(--color-text-main);
+    font-size: var(--text-sm);
+}
+
+.dataTables_wrapper .dataTables_filter input,
+.dataTables_wrapper .dataTables_length select {
+    border: 1px solid var(--color-border) !important;
+    border-radius: var(--radius-md) !important;
+    color: var(--color-text-main);
+    outline: none;
+    padding: 0.55rem 0.75rem !important;
+}
+
+.dataTables_wrapper .dataTables_filter input:focus,
+.dataTables_wrapper .dataTables_length select:focus {
+    border-color: var(--color-primary) !important;
+    box-shadow: var(--shadow-focus);
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+    border: 1px solid transparent !important;
+    border-radius: var(--radius-sm) !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.current {
+    background: var(--color-primary) !important;
+    border-color: var(--color-primary) !important;
+    color: white !important;
+}
+
+/* 5. Status Badges */
+.premium-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.premium-badge-success {
+    background-color: #dcfce7;
+    color: #166534;
+}
+
+.premium-badge-error {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.premium-badge-warning {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+.field-block {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.field-block > span {
+    color: var(--color-text-muted);
+    font-size: var(--text-xs);
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.section-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.section-head h2 {
+    color: var(--color-text-main);
+    font-size: var(--text-xl);
+    font-weight: 900;
+}
+
+.section-head p {
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+    margin-top: 0.25rem;
+}
+
+.icon-button {
+    align-items: center;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    display: inline-flex;
+    height: 2.75rem;
+    justify-content: center;
+    transition: var(--transition-fast);
+    width: 2.75rem;
+}
+
+.icon-button.danger {
+    color: var(--color-text-light);
+}
+
+.icon-button.danger:hover {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: var(--color-error);
+}

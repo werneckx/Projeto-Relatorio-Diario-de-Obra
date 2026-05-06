@@ -9,6 +9,9 @@ import base64
 import hashlib
 import difflib                 # Biblioteca para comparação de textos
 import unicodedata
+from urllib.parse import urlencode
+from urllib.request import urlopen
+from urllib.error import URLError, HTTPError
 from math import e
 from io import BytesIO
 from functools import wraps
@@ -41,12 +44,13 @@ from app.forms import LoginForm, RdoForm
 # 4. MODELOS DO BANCO DE DADOS (MODELS)
 # Definições das tabelas e objetos do sistema.
 # ==============================================================================
-from app.models import usuario
-from app.models.usuario import Usuario
+
+from app.models.usuario import Usuario, Colaborador, Papel, UsuarioPapel
 from app.models.empresa import Empresa
-from app.models.lista_opcoes import Clima, MaoObra, Equipamento, TagOcorrencia
-from app.models.obra import Frente_Trabalho, Obra
-from app.models.rdo import RDO, Assinatura, Equipamentos, RDOMaoObra, Atividades, Fotos, TagsOcorrencias
+from app.models.auxiliares import AuxClima, AuxFuncoes, AuxEquipamentos, AuxTagOcorrencia
+from app.models.obra import FrenteTrabalho, Obra, FrenteColaborador
+from app.models.rdo import RDO, RDOAprovacao, RDOEquipamento, RDOMaoObra, RDOAtividade, RDOFoto, RDOOcorrencia
+from app.models.fornecedor import Fornecedor
 
 # ==============================================================================
 # 5. UTILITÁRIOS E SERVIÇOS
@@ -71,10 +75,11 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 # ==============================================================================
 # 6. CONSTANTES DE PERMISSÃO (RBAC) - DEFINIÇÃO DE PAPÉIS
 # ==============================================================================
-ROLE_ADMIN = 'Admin'
-ROLE_GESTOR = 'Gestor'
-ROLE_OPERADOR = 'Operador'
-ROLE_LEITOR = 'Leitor'
+ROLE_ADMIN        = 'ADMIN'
+ROLE_GESTOR       = 'GESTOR'
+ROLE_OPERADOR     = 'OPERADOR'
+ROLE_LEITOR       = 'LEITOR'
+ROLE_CLIENTE_OBRA = 'CLIENTE_OBRA'
 ROLE_CLIENTE = 'Cliente Obra'
 
 # Grupos de Permissão
@@ -128,13 +133,180 @@ def role_required(allowed_roles):
 
 # Helper para verificação de escopo (Scoping)
 def get_user_scope_ids():
-    """Retorna lista de IDs de obras permitidas para o usuário atual"""
-    user_id = session.get("user_id")
-    if not user_id: return []
-    user = Usuario.query.get(user_id)
-    if user.papel == ROLE_ADMIN:
-        return None # None significa "Acesso Total"
-    return [obra.id for obra in user.obras_permitidas]
+    """Retorna None para permitir acesso às obras da empresa"""
+    # A lógica de scope agora é por empresa_id nas queries.
+    return None
+
+
+def _normalize_option_text(value):
+    value = " ".join((value or "").strip().split())
+    ascii_value = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode("ascii")
+    return ascii_value.casefold()
+
+
+def _normalize_option_input(value):
+    return " ".join((value or "").strip().split())
+
+
+def _find_duplicate_option(model, nome, tipo_lista, exclude_id=None, tipo=None):
+    nome_norm = _normalize_option_text(nome)
+    tipo_norm = _normalize_option_text(tipo) if tipo else ""
+
+    query = model.query
+    if exclude_id:
+        query = query.filter(model.id != exclude_id)
+
+    for existing in query.all():
+        existing_nome_norm = _normalize_option_text(existing.nome)
+        existing_tipo_norm = _normalize_option_text(getattr(existing, "tipo", None))
+        if existing_nome_norm == nome_norm and existing_tipo_norm == tipo_norm:
+            return existing
+
+    return None
+
+
+def _normalize_weather_label(label):
+    return _normalize_option_text(label).replace("-", " ")
+
+
+def _classify_weather_code(weather_code):
+    if weather_code is None:
+        return "Indefinido"
+
+    if weather_code in {95, 96, 99}:
+        return "Tempestade"
+    if weather_code in {80, 81, 82}:
+        return "Chuva"
+    if weather_code in {71, 73, 75, 77, 85, 86}:
+        return "Neblina"
+    if weather_code in {51, 53, 55, 56, 57, 61, 63, 65, 66, 67}:
+        return "Chuva Leve"
+    if weather_code in {45, 48}:
+        return "Neblina"
+    if weather_code in {1, 2, 3}:
+        return "Nublado"
+    if weather_code == 0:
+        return "Ensolarado"
+    return "Indefinido"
+
+
+def _match_clima_option_id(climas, suggested_label):
+    if not suggested_label:
+        return None
+
+    suggested_norm = _normalize_weather_label(suggested_label)
+    synonym_groups = {
+        "ensolarado": ["ensolarado", "sol", "aberto", "ceu limpo", "céu limpo", "limpo"],
+        "nublado": ["nublado", "parcialmente nublado", "encoberto", "muitas nuvens", "ublado"],
+        "chuva leve": ["chuva leve", "garoa", "chuvisco", "chuva fraca"],
+        "chuva": ["chuva", "chuvoso", "pancadas", "pancada"],
+        "tempestade": ["tempestade", "trovoada", "temporal"],
+        "neblina": ["neblina", "nevoeiro", "névoa", "fog", "bruma"],
+        "indefinido": ["indefinido", "variavel", "variável"]
+    }
+
+    candidate_terms = synonym_groups.get(suggested_norm, [suggested_norm])
+    for clima in climas:
+        clima_norm = _normalize_weather_label(clima.nome)
+        if clima_norm in candidate_terms:
+            return clima.id
+        if any(term in clima_norm for term in candidate_terms):
+            return clima.id
+
+    return None
+
+
+def _fetch_json(url, params):
+    query_string = urlencode(params)
+    with urlopen(f"{url}?{query_string}", timeout=10) as response:
+        return json.loads(response.read().decode("utf-8"))
+
+
+def _resolve_obra_coordinates(obra):
+    uf_to_state = {
+        "AC": "acre", "AL": "alagoas", "AP": "amapa", "AM": "amazonas", "BA": "bahia",
+        "CE": "ceara", "DF": "distrito federal", "ES": "espirito santo", "GO": "goias",
+        "MA": "maranhao", "MT": "mato grosso", "MS": "mato grosso do sul", "MG": "minas gerais",
+        "PA": "para", "PB": "paraiba", "PR": "parana", "PE": "pernambuco", "PI": "piaui",
+        "RJ": "rio de janeiro", "RN": "rio grande do norte", "RS": "rio grande do sul",
+        "RO": "rondonia", "RR": "roraima", "SC": "santa catarina", "SP": "sao paulo",
+        "SE": "sergipe", "TO": "tocantins"
+    }
+
+    geocode_payload = _fetch_json(
+        "https://geocoding-api.open-meteo.com/v1/search",
+        {
+            "name": obra.cidade,
+            "count": 10,
+            "language": "pt",
+            "format": "json",
+        }
+    )
+
+    results = geocode_payload.get("results") or []
+    obra_estado_norm = _normalize_option_text(obra.estado)
+    obra_estado_nome_norm = uf_to_state.get((obra.estado or "").upper(), "")
+    for result in results:
+        admin1 = _normalize_option_text(result.get("admin1") or "")
+        country_code = (result.get("country_code") or "").upper()
+        if country_code != "BR":
+            continue
+
+        if admin1 == obra_estado_nome_norm or admin1 == obra_estado_norm:
+            return result.get("latitude"), result.get("longitude")
+
+    if results:
+        first = results[0]
+        return first.get("latitude"), first.get("longitude")
+
+    return None, None
+
+
+def _build_clima_automatico_payload(obra, data_referencia, climas_disponiveis):
+    latitude, longitude = _resolve_obra_coordinates(obra)
+    if latitude is None or longitude is None:
+        raise ValueError("Não foi possível localizar a obra para consulta climática.")
+
+    forecast_payload = _fetch_json(
+        "https://api.open-meteo.com/v1/forecast",
+        {
+            "latitude": latitude,
+            "longitude": longitude,
+            "hourly": "weather_code",
+            "timezone": "America/Sao_Paulo",
+            "start_date": data_referencia.isoformat(),
+            "end_date": data_referencia.isoformat(),
+        }
+    )
+
+    hourly = forecast_payload.get("hourly") or {}
+    times = hourly.get("time") or []
+    codes = hourly.get("weather_code") or []
+    if not times or not codes:
+        raise ValueError("A API climática não retornou dados horários.")
+
+    morning_codes = []
+    afternoon_codes = []
+    for time_str, code in zip(times, codes):
+        hour = int(time_str.split("T")[1].split(":")[0])
+        if 6 <= hour <= 11:
+            morning_codes.append(code)
+        elif 12 <= hour <= 17:
+            afternoon_codes.append(code)
+
+    morning_label = _classify_weather_code(max(morning_codes) if morning_codes else None)
+    afternoon_label = _classify_weather_code(max(afternoon_codes) if afternoon_codes else None)
+
+    return {
+        "manha": {
+            "label": morning_label,
+            "id": _match_clima_option_id(climas_disponiveis, morning_label)
+        },
+        "tarde": {
+            "label": afternoon_label,
+            "id": _match_clima_option_id(climas_disponiveis, afternoon_label)
+        }
+    }
 
 #######################################################################################################
 ####################################################################################################### Rota Raiz
@@ -150,9 +322,87 @@ def index():
 ####################################################################################################### Login e Logout
 #######################################################################################################
 
+@auth_bp.route("/setup", methods=["GET", "POST"])
+def setup():
+    from app.routes.admin import seed_system_roles_and_permissions
+
+    # Verifica se já existe algum admin no banco
+    admin_exists = Usuario.query.join(Usuario.papeis).filter(
+        Papel.nome == ROLE_ADMIN,
+        Papel.is_system == True
+    ).first()
+
+    if admin_exists:
+        flash("O sistema já está configurado.", "danger")
+        return redirect(url_for("auth.login"))
+
+    if request.method == "POST":
+        empresa_nome = request.form.get("empresa_nome", "").strip()
+        admin_nome = request.form.get("admin_nome", "").strip()
+        admin_email = request.form.get("admin_email", "").strip()
+        admin_senha = request.form.get("admin_senha", "")
+
+        if not all([empresa_nome, admin_nome, admin_email, admin_senha]):
+            flash("Todos os campos são obrigatórios.", "danger")
+            return render_template("setup.html")
+
+        try:
+            # 1. Garantir que roles e permissões globais existam
+            seed_system_roles_and_permissions()
+
+            # 2. Criar Empresa principal
+            nova_empresa = Empresa(nome=empresa_nome, ativo=True)
+            db.session.add(nova_empresa)
+            db.session.flush()
+
+            # 3. Criar Colaborador admin
+            novo_colab = Colaborador(
+                nome=admin_nome,
+                empresa_id=nova_empresa.id,
+                tipo='PROPRIO',
+                ativo=True
+            )
+            db.session.add(novo_colab)
+            db.session.flush()
+
+            # 4. Criar Usuário admin
+            novo_user = Usuario(
+                email=admin_email,
+                empresa_id=nova_empresa.id,
+                colaborador_id=novo_colab.id,
+                ativo=True,
+            )
+            novo_user.set_senha(admin_senha)
+            db.session.add(novo_user)
+            db.session.flush()
+
+            # 5. Buscar papel global ADMIN e vincular ao usuário
+            papel_admin = Papel.query.filter_by(nome=ROLE_ADMIN, empresa_id=None).first()
+            if papel_admin:
+                db.session.add(UsuarioPapel(
+                    empresa_id=nova_empresa.id,
+                    usuario_id=novo_user.id,
+                    papel_id=papel_admin.id,
+                    ativo=True
+                ))
+
+            db.session.commit()
+            flash("Sistema configurado com sucesso! Faça login.", "success")
+            return redirect(url_for("auth.login"))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Erro ao configurar sistema: {str(e)}", "danger")
+
+    return render_template("setup.html")
+
 @auth_bp.get("/login")
 def login():
+    admin_exists = Usuario.query.join(Usuario.papeis).filter(Papel.nome == ROLE_ADMIN).first()
+    if not admin_exists:
+        return redirect(url_for("auth.setup"))
     return render_template("login.html")
+
 
 @auth_bp.post("/login")
 def login_post():
@@ -167,7 +417,7 @@ def login_post():
     senha = form.senha.data
 
     # 1. Adicionar o filtro 'ativo=1'
-    user = Usuario.query.filter_by(email=email, status=1).first()
+    user = Usuario.query.filter_by(email=email, ativo=True).first()
 
     # 2. Verificar se o usuário existe e se a senha está correta
     if not user or not user.check_senha(senha):
@@ -183,8 +433,8 @@ def login_post():
 
         # Atualiza os campos no objeto usuário
         # IMPORTANTE: Seu model Usuario deve ter as colunas 'ultimo_acesso' e 'ip_ultimo_acesso'
-        user.ultimo_acesso = datetime.now()
-        user.ip_ultimo_acesso = user_ip
+        user.ultimo_login = datetime.now()
+        user.ultimo_login_ip = user_ip
         
         # Salva no banco de dados
         db.session.commit()
@@ -195,9 +445,10 @@ def login_post():
     # -------------------------------------
     
     session["user_id"] = user.id
+    session["empresa_id"] = user.empresa_id
     session["user_name"] = user.nome
     session["user_email"] = user.email
-    session["user_role"] = user.papel
+    session["user_role"] = user.papeis[0].nome if user.papeis else "Leitor"
     
     if getattr(user, 'primeiro_acesso', False):
         return redirect(url_for("auth.alterar_senha_obrigatoria"))
@@ -214,7 +465,7 @@ def logout():
 
 @auth_bp.route("/esqueci-senha", methods=["GET", "POST"])
 def esqueci_senha():
-    admin_contato = Usuario.query.filter_by(papel=ROLE_ADMIN).first()
+    admin_contato = Usuario.query.join(Usuario.papeis).filter(Papel.nome == ROLE_ADMIN).first()
 
     if request.method == "GET":
         return render_template("esqueci_senha.html", admin=admin_contato)
@@ -302,67 +553,68 @@ def inicio():
     # SCOPING: Filtra KPIs baseados nas obras permitidas do usuário
     user_id = session.get("user_id")
     user = Usuario.query.get(user_id)
-    scope_ids = [o.id for o in user.obras_permitidas] if user.papel != ROLE_ADMIN else None
+    scope_ids = [o.id for o in Obra.query.filter_by(empresa_id=session.get('empresa_id')).all()] if user.papel != ROLE_ADMIN else None
 
     # --- 1. KPIs PRINCIPAIS ---
     
     # Query base para Obras
-    q_obras = Obra.query.filter_by(status=1)
+    q_obras = Obra.query.filter_by(empresa_id=session.get('empresa_id'))
     if scope_ids is not None:
         q_obras = q_obras.filter(Obra.id.in_(scope_ids))
     kpi_obras = q_obras.count()
     
     # Query base para RDOs
-    q_rdos = RDO.query.filter_by(ativo=True)
+    q_rdos = RDO.query.filter_by(ativo=True, empresa_id=session.get('empresa_id'))
     if scope_ids is not None:
-        q_rdos = q_rdos.filter(RDO.id_obra.in_(scope_ids))
+        q_rdos = q_rdos.filter(RDO.obra_id.in_(scope_ids))
         
-    kpi_pendentes = q_rdos.filter_by(status='Pendente').count()
+    kpi_pendentes = q_rdos.filter_by(status='PENDENTE').count()
     kpi_rdos_mes = q_rdos.filter(
-        extract('year', RDO.data) == ano_atual,
-        extract('month', RDO.data) == mes_atual
+        extract('year', RDO.data_rdo) == ano_atual,
+        extract('month', RDO.data_rdo) == mes_atual
     ).count()
-    kpi_aprovados_total = q_rdos.filter_by(status='Aprovado').filter(
-        extract('year', RDO.data) == ano_atual
+    kpi_aprovados_total = q_rdos.filter_by(status='APROVADO').filter(
+        extract('year', RDO.data_rdo) == ano_atual
     ).count()
     
     # KPI 3: Efetivo Total (Hoje)
     query_efetivo = db.session.query(
-        func.sum(RDOMaoObra.quantidade_propria + RDOMaoObra.quantidade_terceirizada)
-    ).join(RDO).filter(RDO.data == hoje)
+        func.count(RDOMaoObra.id)
+    ).join(RDO).filter(RDO.data_rdo == hoje)
     
     if scope_ids is not None:
-        query_efetivo = query_efetivo.filter(RDO.id_obra.in_(scope_ids))
+        query_efetivo = query_efetivo.filter(RDO.obra_id.in_(scope_ids))
         
     kpi_efetivo = query_efetivo.scalar() or 0
     
     # KPI 4: Ocorrências (No Mês Atual)
-    query_ocorrencias = db.session.query(func.count(TagsOcorrencias.id_tag_rdo))\
+    query_ocorrencias = db.session.query(func.count(RDOOcorrencia.id))\
         .join(RDO)\
-        .filter(extract('year', RDO.data) == ano_atual)\
-        .filter(extract('month', RDO.data) == mes_atual)
+        .filter(extract('year', RDO.data_rdo) == ano_atual)\
+        .filter(extract('month', RDO.data_rdo) == mes_atual)
         
     if scope_ids is not None:
-        query_ocorrencias = query_ocorrencias.filter(RDO.id_obra.in_(scope_ids))
+        query_ocorrencias = query_ocorrencias.filter(RDO.obra_id.in_(scope_ids))
 
     kpi_ocorrencias = query_ocorrencias.scalar() or 0
 
     # --- 2. DADOS PARA INTERATIVIDADE ---
-    q_raw = db.session.query(RDO.id, RDO.status, RDO.data).filter(
+    q_raw = db.session.query(RDO.id, RDO.status, RDO.data_rdo).filter(
         RDO.ativo == True,
-        extract('year', RDO.data) == ano_atual
+        extract('year', RDO.data_rdo) == ano_atual
     )
     if scope_ids is not None:
-        q_raw = q_raw.filter(RDO.id_obra.in_(scope_ids))
+        q_raw = q_raw.filter(RDO.obra_id.in_(scope_ids))
     raw_rdos = q_raw.all()
     
     dados_graficos_json = [
-        {'status': rdo.status, 'mes': rdo.data.month, 'data_iso': rdo.data.isoformat()} 
+        {'status': rdo.status, 'mes': rdo.data_rdo.month, 'data_iso': rdo.data_rdo.isoformat()} 
         for rdo in raw_rdos
+        if rdo.data_rdo
     ]
 
     # --- 3. TABELA DE RESUMO (Últimos Registros) ---
-    ultimos_rdos = q_rdos.order_by(RDO.data.desc(), RDO.id.desc()).limit(5).all()
+    ultimos_rdos = q_rdos.order_by(RDO.data_rdo.desc(), RDO.id.desc()).limit(5).all()
 
     return render_template(
         "inicio.html",
@@ -382,17 +634,31 @@ def inicio():
 
 @auth_bp.app_context_processor
 def inject_company_info():
-    nome_empresa = Empresa.query.first().nome_empresa if Empresa.query.first() else "Não definido" 
-    return dict(nome_empresa_global=nome_empresa)
+    if current_user.is_authenticated:
+        empresa = getattr(current_user, 'empresa', None)
+        nome = empresa.nome if empresa else "Não definida"
+        
+        # Logos da empresa (fallback para o sistema)
+        logo_empresa = empresa.logo_empresa if empresa and empresa.logo_empresa else 'logo/logo_sistema.png'
+        icone_empresa = empresa.icone_empresa if empresa and empresa.icone_empresa else 'logo/icone_sistema.png'
+        
+        return dict(
+            nome_empresa=nome,
+            logo_empresa=logo_empresa,
+            icone_empresa=icone_empresa,
+            usuario_atual=current_user
+        )
+    return dict(nome_empresa="Não logado", logo_empresa="logo/logo_sistema.png", icone_empresa="logo/icone_sistema.png", usuario_atual=None)
 
 @auth_bp.get("/empresa")
 @login_required
 @role_required([ROLE_ADMIN]) # SECURITY: Apenas Admin acessa configs da empresa
 def empresa():
+    empresa_db = Empresa.query.filter_by(id=session.get('empresa_id')).first()
     config_data = {
-        'nome_empresa': Empresa.query.first().nome_empresa if Empresa.query.first() else '',
-        'logo_path': 'logo/logo.png',
-        'icone_path': 'logo/icone.png'
+        'nome': empresa_db.nome if empresa_db else '',
+        'logo_path': empresa_db.logo_empresa if empresa_db and empresa_db.logo_empresa else 'logo/logo_sistema.png',
+        'icone_path': empresa_db.icone_empresa if empresa_db and empresa_db.icone_empresa else 'logo/icone_sistema.png'
     } 
     return render_template('empresa.html', config_data=config_data, view_mode=True)
 
@@ -403,26 +669,34 @@ def salvar_empresa():
     nome_empresa = request.form.get('nome_empresa')
     logo_file = request.files.get('logo_empresa')
     icone_file = request.files.get('icone_empresa')
+    empresa_id = session.get('empresa_id')
 
     try:
-        empresa_db = Empresa.query.first()
+        empresa_db = Empresa.query.get(empresa_id)
         if not empresa_db:
-            empresa_db = Empresa(nome_empresa=nome_empresa)
+            empresa_db = Empresa(nome=nome_empresa)
             db.session.add(empresa_db)
+            db.session.flush()
         else:
-            db.session.query(Empresa).update({'nome_empresa': nome_empresa})
+            empresa_db.nome = nome_empresa
         
-        upload_folder = os.path.join(current_app.root_path, 'static', 'logo')
+        upload_folder = os.path.join(current_app.root_path, 'static', 'uploads', 'logos')
         if not os.path.exists(upload_folder):
             os.makedirs(upload_folder)
 
         if logo_file and logo_file.filename != '':
             if allowed_file(logo_file.filename):
-                logo_file.save(os.path.join(upload_folder, "logo.png"))
+                ext = logo_file.filename.rsplit('.', 1)[1].lower()
+                logo_filename = f"logo_empresa_{empresa_db.id}.{ext}"
+                logo_file.save(os.path.join(upload_folder, logo_filename))
+                empresa_db.logo_empresa = f"uploads/logos/{logo_filename}"
 
         if icone_file and icone_file.filename != '':
             if allowed_file(icone_file.filename):
-                icone_file.save(os.path.join(upload_folder, "icone.png"))
+                ext = icone_file.filename.rsplit('.', 1)[1].lower()
+                icone_filename = f"icone_empresa_{empresa_db.id}.{ext}"
+                icone_file.save(os.path.join(upload_folder, icone_filename))
+                empresa_db.icone_empresa = f"uploads/logos/{icone_filename}"
 
         db.session.commit()
         flash('Configurações da empresa atualizadas com sucesso!', 'success')
@@ -443,7 +717,7 @@ def gerar_pdf_rdo_view(rdo_id):
     # SECURITY: Verificar se usuário tem acesso a este RDO
     rdo = RDO.query.get_or_404(rdo_id)
     scope_ids = get_user_scope_ids()
-    if scope_ids is not None and rdo.id_obra not in scope_ids:
+    if scope_ids is not None and rdo.obra_id not in scope_ids:
         abort(403) # Forbidden
 
     pdf_content = render_rdo_pdf(rdo_id) 
@@ -465,7 +739,7 @@ def gerar_pdf_rdo_compacto_view(rdo_id):
     # SECURITY: Verificar scope
     rdo = RDO.query.get_or_404(rdo_id)
     scope_ids = get_user_scope_ids()
-    if scope_ids is not None and rdo.id_obra not in scope_ids:
+    if scope_ids is not None and rdo.obra_id not in scope_ids:
         abort(403)
 
     pdf_content = render_rdo_pdf_compact(rdo_id)
@@ -492,14 +766,14 @@ def criar_rdo():
         obras = Obra.query.filter_by(status=1).all()
     else:
         # Filtra na memória as obras ativas do usuário
-        obras = [o for o in user.obras_permitidas if o.status == 1]
+        obras = [o for o in Obra.query.filter_by(empresa_id=session.get('empresa_id')).all() if o.status == 1]
     
-    mao_de_obra_options = [{"id": m.id, "nome": m.nome} for m in MaoObra.query.filter_by(ativo=True).all()]
-    equipamentos_options = [{"id": e.id, "nome": e.nome} for e in Equipamento.query.filter_by(ativo=True).all()]
-    tags_options = [{"id": t.id, "nome": t.nome} for t in TagOcorrencia.query.filter_by(ativo=True).all()]
+    mao_de_obra_options = [{"id": m.id, "nome": m.nome, "tipo": m.tipo} for m in AuxFuncoes.query.filter_by(ativo=True).order_by(AuxFuncoes.nome.asc()).all()]
+    equipamentos_options = [{"id": e.id, "nome": e.nome} for e in AuxEquipamentos.query.filter_by(ativo=True).order_by(AuxEquipamentos.nome.asc()).all()]
+    tags_options = [{"id": t.id, "nome": t.nome} for t in AuxTagOcorrencia.query.filter_by(ativo=True).order_by(AuxTagOcorrencia.nome.asc()).all()]
 
-    clima = Clima.query.filter_by(ativo=True).all()
-    frente_trabalho = Frente_Trabalho.query.all() 
+    clima = AuxClima.query.filter_by(ativo=True).order_by(AuxClima.nome.asc()).all()
+    frente_trabalho = FrenteTrabalho.query.all() 
     usuarios_obra = Usuario.query.all()
 
     return render_template(
@@ -515,6 +789,27 @@ def criar_rdo():
         tags_options=tags_options 
     )
 
+
+def _get_equipe_obra_payload(obra_id):
+    equipe = (
+        db.session.query(EquipeObraMaoObra, MaoObra)
+        .join(MaoObra, AuxFuncoes.id == EquipeObraAuxFuncoes.id_lista_opcoes)
+        .filter(EquipeObraAuxFuncoes.obra_id == obra_id, AuxFuncoes.ativo == True)
+        .order_by(AuxFuncoes.nome.asc())
+        .all()
+    )
+
+    return [
+        {
+            "id_equipe_obra": equipe_item.id_equipe_obra,
+            "id_lista_opcoes": mao_item.id,
+            "nome": mao_item.nome,
+            "tipo": mao_item.tipo,
+            "quantidade": equipe_item.quantidade_mao_obra,
+        }
+        for equipe_item, mao_item in equipe
+    ]
+
 @auth_bp.get("/api/obra/<int:id>")
 @login_required
 def get_obra_api(id):
@@ -524,52 +819,75 @@ def get_obra_api(id):
         return jsonify({"error": "Acesso não autorizado a esta obra"}), 403
 
     obra = Obra.query.get_or_404(id)
-    frentes = Frente_Trabalho.query.filter_by(id_obra=id).all()
+    frentes = FrenteTrabalho.query.filter_by(obra_id=id).all()
     
-    data_inicio_fmt = obra.inicio.strftime('%d/%m/%Y') if obra.inicio else "-"
-    data_inicio_iso = obra.inicio.isoformat() if obra.inicio else ""
-    data_fim_fmt = obra.termino.strftime('%d/%m/%Y') if obra.termino else "-"
-    data_fim_iso = obra.termino.isoformat() if obra.termino else ""
+    data_inicio_fmt = obra.data_inicio.strftime('%d/%m/%Y') if obra.data_inicio else "-"
+    data_inicio_iso = obra.data_inicio.isoformat() if obra.data_inicio else ""
+    data_fim_fmt = obra.data_fim.strftime('%d/%m/%Y') if obra.data_fim else "-"
+    data_fim_iso = obra.data_fim.isoformat() if obra.data_fim else ""
     nome_responsavel = obra.responsavel.nome if obra.responsavel else "Não definido"
 
     lista_frentes = []
     for f in frentes:
         nome_resp_frente = f.responsavel.nome if f.responsavel else "Sem responsável"
-        id_resp_frente = f.id_responsavel if f.id_responsavel else ""
+        id_resp_frente = f.criado_por if f.criado_por else ""
         lista_frentes.append({
-            "id": f.id_frente_trabalho, 
-            "nome": f.nome_frente,
-            "responsavel_nome": nome_resp_frente,
-            "responsavel_id": id_resp_frente,
-            "unidade": f.unidade or "",
-            "qtd_planejada": f.qtd_planejada or 0,
-            "data_planejada": f.data_planejada or 0,
-            "qtd_realizada": f.qtd_realizada or 0
+            "id": f.id,
+            "nome": f.nome,
+            "centro_custo": f.centro_custo or "",
         })
 
     return jsonify({
-        "num_contrato": obra.contrato,
-        "cliente": obra.contratante,         
         "data_inicio": data_inicio_fmt,
         "data_inicio_iso": data_inicio_iso,
         "data_fim": data_fim_fmt,
         "data_fim_iso": data_fim_iso,
-        "responsavel": nome_responsavel,
-        "frentes": lista_frentes
+        "horario_entrada": obra.hora_entrada_padrao.strftime('%H:%M') if obra.hora_entrada_padrao else "",
+        "horario_saida": obra.hora_saida_padrao.strftime('%H:%M') if obra.hora_saida_padrao else "",
+        "responsavel_id": obra.criado_por,
+        "frentes": lista_frentes,
     })
+
+
+@auth_bp.get("/api/obra/<int:id>/clima")
+@login_required
+def get_obra_clima_api(id):
+    scope_ids = get_user_scope_ids()
+    if scope_ids is not None and id not in scope_ids:
+        return jsonify({"error": "Acesso não autorizado a esta obra"}), 403
+
+    obra = Obra.query.get_or_404(id)
+    data_str = request.args.get("data")
+    try:
+        data_referencia = datetime.strptime(data_str, "%Y-%m-%d").date() if data_str else date.today()
+    except ValueError:
+        return jsonify({"error": "Data inválida. Use o formato YYYY-MM-DD."}), 400
+
+    climas_disponiveis = AuxClima.query.filter_by(ativo=True).order_by(AuxClima.nome.asc()).all()
+
+    try:
+        payload = _build_clima_automatico_payload(obra, data_referencia, climas_disponiveis)
+        payload["obra"] = {"nome": obra.nome}
+        payload["data"] = data_referencia.isoformat()
+        payload["matched"] = bool(payload["manha"]["id"] or payload["tarde"]["id"])
+        return jsonify(payload)
+    except (URLError, HTTPError, TimeoutError, ValueError) as exc:
+        current_app.logger.warning(f"Falha ao consultar clima automático da obra {id}: {exc}")
+        return jsonify({"error": str(exc)}), 502
 
 @auth_bp.get("/api/frente/<int:id>")
 @login_required
 def get_frente_api(id):
     # SECURITY: Validação básica
-    frente = Frente_Trabalho.query.get_or_404(id)
+    frente = FrenteTrabalho.query.get_or_404(id)
     # Verifica scope da obra pai da frente
     scope_ids = get_user_scope_ids()
-    if scope_ids is not None and frente.id_obra not in scope_ids:
+    if scope_ids is not None and frente.obra_id not in scope_ids:
         return jsonify({"error": "Forbidden"}), 403
 
     return jsonify({
-        "responsavel": frente.responsavel_tecnico.nome if frente.responsavel_tecnico else None
+        "nome": frente.nome,
+        "centro_custo": frente.centro_custo or ""
     })
 
 @auth_bp.post("/gerar-rdo")
@@ -605,14 +923,22 @@ def gerar_rdo():
             try: return float(v.replace(',', '.'))
             except: return None
 
+        def _get_float_from_list(values, index):
+            if index >= len(values) or not values[index]:
+                return None
+            try:
+                return float(values[index].replace(',', '.'))
+            except Exception:
+                return None
+
         rdo_id_original = _get_int("rdo_id")
-        id_obra = _get_int("obra_id")
+        obra_id = _get_int("obra_id")
 
         # SECURITY: Validação de Escopo (Data Scoping)
         # Verifica se o usuário tem permissão na Obra alvo
         scope_ids = get_user_scope_ids()
         if scope_ids is not None:
-            if id_obra not in scope_ids:
+            if obra_id not in scope_ids:
                 flash("Você não tem permissão para criar/editar RDO nesta obra.", "danger")
                 abort(403)
 
@@ -623,49 +949,40 @@ def gerar_rdo():
                 abort(404)
             
             # Se já aprovado, apenas Admin/Gestor podem revisar (Operador não revisa aprovado, cria novo geralmente)
-            if item_rdo.status == 'Aprovado' and session.get("user_role") == ROLE_OPERADOR:
+            if item_rdo.status == 'APROVADO' and session.get("user_role") == ROLE_OPERADOR:
                  flash("Operadores não podem alterar RDOs já aprovados. Solicite ao Gestor.", "danger")
                  return redirect(url_for('auth.visualizar_rdo', rdo_id=rdo_id_original))
 
             # UPDATE (EDIÇÃO / NOVA REVISÃO)
-            rev_atual = item_rdo.id_revisao if item_rdo.id_revisao is not None else 0
-            item_rdo.id_revisao = rev_atual + 1
-            item_rdo.status = "Pendente"
+            item_rdo.status = 'PENDENTE'
 
             # Reset workflow
-            assinaturas_existentes = Assinatura.query.filter_by(id_rdo=item_rdo.id).all()
+            assinaturas_existentes = RDOAprovacao.query.filter_by(rdo_id=item_rdo.id).all()
             for ass in assinaturas_existentes:
-                ass.img_assinatura = None
-                ass.motivo_rejeicao = None
-                ass.status = 'Pendente'
-                ass.criado = None
-                ass.ip_endereco = None
-                ass.validacao = None
+                ass.imagem_assinatura = None
+                ass.comentario = None
+                ass.status = 'PENDENTE'
+                ass.data_aprovacao = None
+                ass.endereco_ip = None
+                ass.hash = None
 
         else:
             # INSERT (NOVO RDO)
-            max_seq = db.session.query(func.max(RDO.id_sequencial)).filter_by(id_obra=id_obra).scalar()
-            proximo_seq = (max_seq if max_seq is not None else 0) + 1
-            
             item_rdo = RDO(
-                id_obra=id_obra,
-                id_sequencial=proximo_seq,
-                id_revisao=0
+                empresa_id=session.get('empresa_id'),
+                obra_id=obra_id,
             )
-            item_rdo.criado = now_br
-            item_rdo.id_criado_por = current_user_id
-            item_rdo.status = "Pendente"
+            item_rdo.criado_por = current_user_id
+            item_rdo.status = 'PENDENTE'
 
         # Popular campos comuns
-        item_rdo.id_frente_trabalho = _get_int("frente_trabalho_id")
-        item_rdo.id_climas_manha = _get_int("climas_manha")
-        item_rdo.id_climas_tarde = _get_int("climas_tarde")
+        item_rdo.frente_trabalho_id = _get_int("frente_trabalho_id")
+        item_rdo.clima_manha_id = _get_int("climas_manha")
+        item_rdo.clima_tarde_id = _get_int("climas_tarde")
         data_rdo_str = request.form.get("data_rdo")
-        item_rdo.data = datetime.strptime(data_rdo_str, '%Y-%m-%d').date() if data_rdo_str else date.today()
-        item_rdo.modificado = now_br
-        item_rdo.id_modificado_por = current_user_id
-        item_rdo.comentarios_gerais = request.form.get("comentarios_gerais")
-        item_rdo.qtd_produzida = _get_float("qtd_produzida")
+        item_rdo.data_rdo = datetime.strptime(data_rdo_str, '%Y-%m-%d').date() if data_rdo_str else date.today()
+        item_rdo.modificado_por = current_user_id
+        item_rdo.observacoes = request.form.get("comentarios_gerais")
         item_rdo.hora_entrada = _get_time("hora_entrada")
         item_rdo.hora_saida = _get_time("hora_saida")
         item_rdo.intervalo_entrada = _get_time("intervalo_entrada")
@@ -677,25 +994,27 @@ def gerar_rdo():
         db.session.flush()
 
         # [Criação] Assinatura do criador
-        if not rdo_id_original: 
-            existe_ass = Assinatura.query.filter_by(id_rdo=item_rdo.id, id_usuario=current_user_id).first()
+        if not rdo_id_original:
+            obra_rdo = Obra.query.get(obra_id) if obra_id else None
+            aprovador_padrao_id = obra_rdo.criado_por if obra_rdo and obra_rdo.criado_por else current_user_id
+            existe_ass = RDOAprovacao.query.filter_by(rdo_id=item_rdo.id, aprovador_id=aprovador_padrao_id).first()
             if not existe_ass:
-                assinatura_criador = Assinatura(
-                    id_rdo=item_rdo.id,
-                    id_usuario=current_user_id,
-                    ordem=1,
-                    status='Pendente',
-                    criado=now_br,
-                    ip_endereco=request.remote_addr
+                assinatura_criador = RDOAprovacao(
+                    empresa_id=session.get('empresa_id'),
+                    rdo_id=item_rdo.id,
+                    aprovador_id=aprovador_padrao_id,
+                    nivel=1,
+                    status='PENDENTE',
+                    ativo=True
                 )
                 db.session.add(assinatura_criador)
 
         # Limpeza de filhos para recriação
         if rdo_id_original:
-            Atividades.query.filter_by(id_rdo=item_rdo.id).delete()
-            RDOMaoObra.query.filter_by(id_rdo=item_rdo.id).delete()
-            Equipamentos.query.filter_by(id_rdo=item_rdo.id).delete()
-            TagsOcorrencias.query.filter_by(id_rdo=item_rdo.id).delete()
+            RDOAtividade.query.filter_by(rdo_id=item_rdo.id).delete()
+            RDOMaoObra.query.filter_by(rdo_id=item_rdo.id).delete()
+            RDOEquipamento.query.filter_by(rdo_id=item_rdo.id).delete()
+            RDOOcorrencia.query.filter_by(rdo_id=item_rdo.id).delete()
 
         # 1. Atividades
         descricoes = request.form.getlist("atividade_descricao[]")
@@ -703,43 +1022,72 @@ def gerar_rdo():
         for i, desc in enumerate(descricoes):
             if desc and desc.strip():
                 st = status_list[i] if i < len(status_list) else "Não iniciada"
-                db.session.add(Atividades(id_rdo=item_rdo.id, descricao=desc, status=st))
+                db.session.add(RDOAtividade(
+                    empresa_id=session.get('empresa_id'),
+                    rdo_id=item_rdo.id,
+                    descricao=desc,
+                    status=st,
+                    ativo=True,
+                ))
 
-        # 2. Mão de Obra
-        funcoes = request.form.getlist("mo_funcao[]")
-        qtd_prop = request.form.getlist("mo_qtd_propria[]")
-        qtd_terc = request.form.getlist("mo_qtd_terceirizada[]")
-        tempos = request.form.getlist("mo_tempo[]")
-        for i, mo_func in enumerate(funcoes):
-            if mo_func and mo_func.strip():
-                qp = int(qtd_prop[i]) if i < len(qtd_prop) and qtd_prop[i] else 0
-                qt = int(qtd_terc[i]) if i < len(qtd_terc) and qtd_terc[i] else 0
-                tempo_str = tempos[i] if i < len(tempos) else None
-                tempo_obj = datetime.strptime(tempo_str, '%H:%M').time() if tempo_str else None
-                db.session.add(RDOMaoObra(id_rdo=item_rdo.id, nome_funcao=mo_func, quantidade_propria=qp, quantidade_terceirizada=qt, tempo=tempo_obj))
+        mo_colaborador_ids = request.form.getlist("mo_colaborador_id[]")
+        mo_funcoes = request.form.getlist("mo_funcao[]")
+        mo_horas = request.form.getlist("mo_horas[]")
+        mo_tipos = request.form.getlist("mo_tipo[]")
+        for i, col_id in enumerate(mo_colaborador_ids):
+            if col_id and col_id.isdigit():
+                db.session.add(
+                    RDOMaoObra(
+                        empresa_id=session.get('empresa_id'),
+                        rdo_id=item_rdo.id,
+                        colaborador_id=int(col_id),
+                        funcao=mo_funcoes[i] if i < len(mo_funcoes) else None,
+                        quantidade_horas=_get_float_from_list(mo_horas, i),
+                        tipo_mao_obra=mo_tipos[i] if i < len(mo_tipos) else 'PROPRIA',
+                        ativo=True
+                    )
+                )
 
         # 3. Equipamentos
         eq_ids = request.form.getlist("eq_id[]")
         eq_qts = request.form.getlist("eq_qtd[]")
+        eq_status_list = request.form.getlist("eq_status[]")
         for i, eid in enumerate(eq_ids):
-            if eid:
+            if eid and eid.isdigit():
                 qtd = int(eq_qts[i]) if i < len(eq_qts) and eq_qts[i] else 0
-                eq_obj = Equipamento.query.get(eid)
-                db.session.add(Equipamentos(id_rdo=item_rdo.id, id_equipamento_lista=eid, nome_equipamento=eq_obj.nome if eq_obj else "", quantidade=qtd))
+                eq_status = eq_status_list[i] if i < len(eq_status_list) else 'OPERANDO'
+                db.session.add(RDOEquipamento(
+                    empresa_id=session.get('empresa_id'),
+                    rdo_id=item_rdo.id,
+                    equipamento_id=int(eid),
+                    quantidade=qtd,
+                    status=eq_status,
+                    ativo=True
+                ))
 
         # 4. Ocorrências
         oc_tags = request.form.getlist("oc_tag[]")
         oc_descs = request.form.getlist("oc_desc[]")
+        oc_impactos = request.form.getlist("oc_impacto[]")
         oc_tempos = request.form.getlist("oc_tempo_parado[]")
         for i, tid in enumerate(oc_tags):
             if not tid: continue
-            tempo_obj = None
+            tempo_par = None
             tempo_str = oc_tempos[i] if i < len(oc_tempos) else None
             if tempo_str and tempo_str.strip():
-                try: tempo_obj = datetime.strptime(tempo_str, '%H:%M').time()
-                except ValueError: tempo_obj = None
+                try: tempo_par = float(tempo_str.replace(',','.'))
+                except ValueError: tempo_par = None
             desc = oc_descs[i] if i < len(oc_descs) else ""
-            db.session.add(TagsOcorrencias(id_rdo=item_rdo.id, id_tag_lista=tid, descricao=desc, tempo_parado=tempo_obj))
+            impacto = oc_impactos[i] if i < len(oc_impactos) else None
+            db.session.add(RDOOcorrencia(
+                empresa_id=session.get('empresa_id'),
+                rdo_id=item_rdo.id,
+                tipo_ocorrencia=int(tid) if tid.isdigit() else None,
+                descricao=desc,
+                impacto=impacto,
+                tempo_paralisacao=tempo_par,
+                ativo=True
+            ))
 
         # 5. Fotos
         UPLOAD_FOLDER = os.path.join(current_app.root_path, 'static', 'uploads', 'rdo')
@@ -750,8 +1098,8 @@ def gerar_rdo():
             for id_rem in ids_remover:
                 try:
                     if not id_rem: continue
-                    foto_del = Fotos.query.get(int(id_rem))
-                    if foto_del and foto_del.id_rdo == item_rdo.id:
+                    foto_del = RDOFoto.query.get(int(id_rem))
+                    if foto_del and foto_del.rdo_id == item_rdo.id:
                         try:
                             caminho_arquivo = os.path.join(UPLOAD_FOLDER, foto_del.arquivo)
                             if os.path.exists(caminho_arquivo): os.remove(caminho_arquivo)
@@ -765,8 +1113,8 @@ def gerar_rdo():
             try:
                 if not foto_id_str: continue
                 foto_id = int(foto_id_str)
-                foto_obj = Fotos.query.get(foto_id)
-                if foto_obj and foto_obj.id_rdo == item_rdo.id:
+                foto_obj = RDOFoto.query.get(foto_id)
+                if foto_obj and foto_obj.rdo_id == item_rdo.id:
                     if foto_obj.comentario != nova_legenda:
                         foto_obj.comentario = nova_legenda
                         db.session.add(foto_obj)
@@ -795,12 +1143,18 @@ def gerar_rdo():
                         arquivo.save(caminho_salvar)
 
                     comentario = legendas[idx_file] if idx_file < len(legendas) else ""
-                    db.session.add(Fotos(id_rdo=item_rdo.id, arquivo=novo_nome, comentario=comentario))
+                    db.session.add(RDOFoto(
+                        empresa_id=session.get('empresa_id'),
+                        rdo_id=item_rdo.id,
+                        arquivo=novo_nome,
+                        comentario=comentario,
+                        ativo=True,
+                    ))
                     idx_file += 1
 
         db.session.commit()
         msg_acao = "revisado" if rdo_id_original else "salvo"
-        flash(f"RDO Nº {item_rdo.id_sequencial} (Rev {item_rdo.id_revisao}) {msg_acao} com sucesso!", "success")
+        flash(f"RDO #{item_rdo.id} {msg_acao} com sucesso!", "success")
         return redirect(url_for('auth.visualizar_rdo', rdo_id=item_rdo.id))
 
     except Exception as e:
@@ -818,39 +1172,38 @@ def visualizar_rdo(rdo_id):
 
     # SECURITY: Verifica permissão na obra para leitura
     scope_ids = get_user_scope_ids()
-    if scope_ids is not None and item.id_obra not in scope_ids:
+    if scope_ids is not None and item.obra_id not in scope_ids:
         flash("Você não tem permissão para visualizar este RDO.", "danger")
         return redirect(url_for("auth.inicio"))
 
-    selected_equip_ids = [eq.id_equipamento_lista for eq in item.equipamentos if eq.id_equipamento_lista]
-    selected_tag_ids = [oc.id_tag_lista for oc in item.ocorrencias if oc.id_tag_lista]
-    selected_clima_ids = [cid for cid in [item.id_climas_manha, item.id_climas_tarde] if cid]
+    selected_equip_ids = [eq.equipamento_id for eq in item.equipamentos if eq.equipamento_id]
+    selected_tag_ids = [oc.tipo_ocorrencia for oc in item.ocorrencias if oc.tipo_ocorrencia]
+    selected_clima_ids = [cid for cid in [item.clima_manha_id, item.clima_tarde_id] if cid]
 
-    mao_de_obra_options = [{"id": m.id, "nome": m.nome} for m in MaoObra.query.filter_by(ativo=True).all()]
-    equipamentos_options = [{"id": e.id, "nome": e.nome} for e in Equipamento.query.filter(
-        or_(Equipamento.ativo == True, Equipamento.id.in_(selected_equip_ids))
-    ).order_by(Equipamento.nome.asc()).all()]
-    tags_options = [{"id": t.id, "nome": t.nome} for t in TagOcorrencia.query.filter(
-        or_(TagOcorrencia.ativo == True, TagOcorrencia.id.in_(selected_tag_ids))
-    ).order_by(TagOcorrencia.nome.asc()).all()]
-    clima = Clima.query.filter(
-        or_(Clima.ativo == True, Clima.id.in_(selected_clima_ids))
-    ).order_by(Clima.nome.asc()).all()
-    assinaturas = Assinatura.query.filter_by(id_rdo=rdo_id).order_by(Assinatura.ordem).all()
+    mao_de_obra_options = [{"id": m.id, "nome": m.descricao, "tipo": m.tipo} for m in AuxFuncoes.query.filter_by(ativo=True).order_by(AuxFuncoes.descricao.asc()).all()]
+    equipamentos_options = [{"id": e.id, "nome": e.descricao} for e in AuxEquipamentos.query.filter(
+        or_(AuxEquipamentos.ativo == True, AuxEquipamentos.id.in_(selected_equip_ids))
+    ).order_by(AuxEquipamentos.descricao.asc()).all()]
+    tags_options = [{"id": t.id, "nome": t.descricao} for t in AuxTagOcorrencia.query.filter(
+        or_(AuxTagOcorrencia.ativo == True, AuxTagOcorrencia.id.in_(selected_tag_ids))
+    ).order_by(AuxTagOcorrencia.descricao.asc()).all()]
+    clima = AuxClima.query.filter(
+        or_(AuxClima.ativo == True, AuxClima.id.in_(selected_clima_ids))
+    ).order_by(AuxClima.nome.asc()).all()
+    assinaturas = RDOAprovacao.query.filter_by(rdo_id=rdo_id).order_by(RDOAprovacao.nivel).all()
     
-    if item.id_obra:
-        usuarios_obra = Usuario.query.filter(
-            Usuario.obras_permitidas.any(id=item.id_obra),
-            Usuario.status == True 
+    if item.obra_id:
+        usuarios_obra = Usuario.query.filter_by(
+            empresa_id=session.get('empresa_id'), ativo=True
         ).all()
-        if not usuarios_obra:
-            usuarios_obra = Usuario.query.filter_by(status=True).all()
     else:
-        usuarios_obra = Usuario.query.filter_by(status=True).all()
+        usuarios_obra = Usuario.query.filter_by(
+            empresa_id=session.get('empresa_id'), ativo=True
+        ).all()
     
-    ass_valida = Assinatura.query.filter_by(id_rdo=rdo_id, status='Aprovado').order_by(Assinatura.ordem.desc()).first()
-    if ass_valida and ass_valida.hash_documento:
-        url_validacao = url_for('auth.validar_documento_publico', h=ass_valida.hash_documento, _external=True)
+    ass_valida = RDOAprovacao.query.filter_by(rdo_id=rdo_id, status='APROVADO').order_by(RDOAprovacao.nivel.desc()).first()
+    if ass_valida and ass_valida.hash:
+        url_validacao = url_for('auth.validar_documento_publico', h=ass_valida.hash, _external=True)
     else:
         url_validacao = url_for('auth.visualizar_rdo', rdo_id=rdo_id, _external=True)
 
@@ -861,9 +1214,9 @@ def visualizar_rdo(rdo_id):
         item=item,
         view_mode=True,
         obras=Obra.query.all(),
-        clima=Clima.query.filter_by(ativo=True).all(),
-        frente_trabalho=Frente_Trabalho.query.all(),
-        equipamentos=Equipamentos.query.all(),
+        clima=AuxClima.query.filter_by(ativo=True).order_by(AuxClima.nome.asc()).all(),
+        frente_trabalho=FrenteTrabalho.query.filter_by(empresa_id=session.get('empresa_id')).all(),
+        equipamentos=AuxEquipamentos.query.filter_by(ativo=True).all(),
         assinaturas=assinaturas,
         mao_obra=RDOMaoObra.query.all(),
         usuarios=Usuario.query.all(),
@@ -882,17 +1235,19 @@ def editar_rdo(rdo_id):
 
     # SECURITY: Verifica se usuario tem acesso à obra deste RDO
     scope_ids = get_user_scope_ids()
-    if scope_ids is not None and item.id_obra not in scope_ids:
+    if scope_ids is not None and item.obra_id not in scope_ids:
         abort(403)
 
-    usuarios_obra = Usuario.query.filter(Usuario.obras_permitidas.any(id=item.id_obra)).all()
-    assinaturas_realizadas = Assinatura.query.filter_by(id_rdo=rdo_id).all()
-    ids_usuarios_que_assinaram = [a.id_usuario for a in assinaturas_realizadas]
+    usuarios_obra = Usuario.query.filter_by(
+        empresa_id=session.get('empresa_id'), ativo=True
+    ).all()
+    assinaturas_realizadas = RDOAprovacao.query.filter_by(rdo_id=rdo_id).all()
+    ids_usuarios_que_assinaram = [a.aprovador_id for a in assinaturas_realizadas]
 
     lista_assinaturas_status = []
     for u in usuarios_obra:
-        ass_obj = next((a for a in assinaturas_realizadas if a.id_usuario == u.id), None)
-        if u.id == item.id_criado_por or u.id in ids_usuarios_que_assinaram or u.papel in [ROLE_ADMIN, 'Engenheiro', 'Supervisor']:
+        ass_obj = next((a for a in assinaturas_realizadas if a.aprovador_id == u.id), None)
+        if u.id == item.criado_por or u.id in ids_usuarios_que_assinaram or (u.papeis and any(p.nome in [ROLE_ADMIN, ROLE_GESTOR] for p in u.papeis)):
             lista_assinaturas_status.append({
                 "usuario": u,
                 "assinado": True if ass_obj else False,
@@ -904,37 +1259,32 @@ def editar_rdo(rdo_id):
     atividades_salvas = item.atividades.all()
     ocorrencias_salvas = item.ocorrencias.all()
     fotos_salvas = item.fotos.all()
-    frente_trabalho=Frente_Trabalho.query.all()
+    frente_trabalho=FrenteTrabalho.query.all()
 
     return render_template(
         "form_rdo.html",
         item=item,
         view_mode=False,
-        obras=Obra.query.filter_by(status=1).all(),
+        obras=Obra.query.filter_by(empresa_id=session.get('empresa_id'), ativo=True).all(),
         frente_trabalho=frente_trabalho,
-        clima=Clima.query.filter(
-            or_(Clima.ativo == True, Clima.id.in_([cid for cid in [item.id_climas_manha, item.id_climas_tarde] if cid]))
-        ).order_by(Clima.nome.asc()).all(),
+        clima=AuxClima.query.filter(
+            or_(AuxClima.ativo == True, AuxClima.id.in_([cid for cid in [item.clima_manha_id, item.clima_tarde_id] if cid]))
+        ).order_by(AuxClima.nome.asc()).all(),
         maos_obra_salvas=maos_obra_salvas,
         equipamentos_salvos=equipamentos_salvos,
         atividades_salvas=atividades_salvas,
         ocorrencias_salvas=ocorrencias_salvas,
         fotos_salvas=fotos_salvas,
-        mao_de_obra_options=[{"id": m.id, "nome": m.nome} for m in MaoObra.query.filter_by(ativo=True).all()],
-        equipamentos_options=[{"id": e.id, "nome": e.nome} for e in Equipamento.query.filter(
-            or_(Equipamento.ativo == True, Equipamento.id.in_([eq.id_equipamento_lista for eq in equipamentos_salvos if eq.id_equipamento_lista]))
-        ).order_by(Equipamento.nome.asc()).all()],
-        tags_options=[{"id": t.id, "nome": t.nome} for t in TagOcorrencia.query.filter(
-            or_(TagOcorrencia.ativo == True, TagOcorrencia.id.in_([oc.id_tag_lista for oc in ocorrencias_salvas if oc.id_tag_lista]))
-        ).order_by(TagOcorrencia.nome.asc()).all()],
+        mao_de_obra_options=[{"id": m.id, "nome": m.nome, "tipo": m.tipo} for m in AuxFuncoes.query.filter_by(ativo=True).order_by(AuxFuncoes.nome.asc()).all()],
+        equipamentos_options=[{"id": e.id, "nome": e.descricao} for e in AuxEquipamentos.query.filter(
+            or_(AuxEquipamentos.ativo == True, AuxEquipamentos.id.in_([eq.equipamento_id for eq in equipamentos_salvos if eq.equipamento_id]))
+        ).order_by(AuxEquipamentos.descricao.asc()).all()],
+        tags_options=[{"id": t.id, "nome": t.descricao} for t in AuxTagOcorrencia.query.filter(
+            or_(AuxTagOcorrencia.ativo == True, AuxTagOcorrencia.id.in_([oc.tipo_ocorrencia for oc in ocorrencias_salvas if oc.tipo_ocorrencia]))
+        ).order_by(AuxTagOcorrencia.descricao.asc()).all()],
         usuarios_obra=usuarios_obra,
         lista_assinaturas_status=lista_assinaturas_status,
-        assinaturas=assinaturas_realizadas,
-        Atividades=Atividades,
-        RDOMaoObra=RDOMaoObra,
-        Equipamentos=Equipamentos,
-        Fotos=Fotos,
-        TagsOcorrencias=TagsOcorrencias
+        assinaturas=assinaturas_realizadas
     )
 
 @auth_bp.post("/excluir-rdo/<int:rdo_id>")
@@ -946,14 +1296,14 @@ def excluir_rdo(rdo_id):
         
         # SECURITY: Scoping Check
         scope_ids = get_user_scope_ids()
-        if scope_ids is not None and item_rdo.id_obra not in scope_ids:
+        if scope_ids is not None and item_rdo.obra_id not in scope_ids:
             abort(403)
 
         item_rdo.ativo = False
-        item_rdo.modificado = datetime.now(timezone(timedelta(hours=-3))).replace(tzinfo=None)
+        item_rdo.modificado_por = session.get('user_id')
         db.session.commit()
 
-        flash(f"RDO Nº {item_rdo.id_sequencial} enviado para lixeira com sucesso!", "success")
+        flash(f"RDO #{item_rdo.id} enviado para lixeira com sucesso!", "success")
         return redirect(url_for('auth.inicio'))
     except Exception as e:
         db.session.rollback()
@@ -969,21 +1319,23 @@ def lista_rdo():
     # SCOPING: Filtra RDOs ativos
     if user:
         if user.papel == ROLE_ADMIN:
-             rdos = RDO.query.filter_by(ativo=True).order_by(RDO.data.desc()).all()
+             rdos = RDO.query.filter_by(ativo=True).order_by(RDO.data_rdo.desc()).all()
         else:
             ids_obras_permitidas = [obra.id for obra in user.obras_permitidas]
-            rdos = RDO.query.filter(RDO.id_obra.in_(ids_obras_permitidas), RDO.ativo == True).order_by(RDO.data.desc()).all()
+            rdos = RDO.query.filter(RDO.obra_id.in_(ids_obras_permitidas), RDO.ativo == True).order_by(RDO.data_rdo.desc()).all()
     else:
         rdos = []
     
-    lista_pendencias = Assinatura.query.filter_by(
-        id_usuario=current_user_id, 
-        status='Pendencia'
+    lista_pendencias = RDOAprovacao.query.filter_by(
+        aprovador_id=current_user_id, 
+        status='PENDENTE',
+        ativo=True
     ).all()
     
-    minhas_pendencias = Assinatura.query.filter_by(
-        id_usuario=current_user_id,
-        status='Pendente'
+    minhas_pendencias = RDOAprovacao.query.filter_by(
+        aprovador_id=current_user_id,
+        status='PENDENTE',
+        ativo=True
     ).count()
 
     return render_template("list_rdo.html", rdos=rdos, count_minhas_pendencias=minhas_pendencias, lista_pendencias=lista_pendencias)
@@ -1000,31 +1352,34 @@ def salvar_workflow_assinaturas(rdo_id):
     
     # Scoping
     scope_ids = get_user_scope_ids()
-    if scope_ids is not None and rdo.id_obra not in scope_ids:
+    if scope_ids is not None and rdo.obra_id not in scope_ids:
         return jsonify({"success": False, "message": "Sem permissão na obra."}), 403
     
-    if rdo.status in ['Aprovado', 'Rejeitado']:
+    if rdo.status in ['APROVADO', 'REJEITADO']:
          return jsonify({"success": False, "message": "RDO finalizado, não é possível alterar aprovadores."}), 403
 
     data = request.get_json()
     novos_assinantes_ids = [int(uid) for uid in data.get('usuarios_ids', [])] 
     
-    creator_id = rdo.id_criado_por
-    if creator_id in novos_assinantes_ids:
-        novos_assinantes_ids.remove(creator_id)
-    novos_assinantes_ids.insert(0, creator_id)
+    owner_id = rdo.obra.criado_por if rdo.obra and rdo.obra.criado_por else rdo.id_criado_por
+    if owner_id in novos_assinantes_ids:
+        novos_assinantes_ids.remove(owner_id)
+    if owner_id:
+        novos_assinantes_ids.insert(0, owner_id)
 
     try:
-        Assinatura.query.filter_by(id_rdo=rdo_id).delete()
+        RDOAprovacao.query.filter_by(rdo_id=rdo_id).delete()
         for index, user_id in enumerate(novos_assinantes_ids):
-            nova_ass = Assinatura(
-                id_rdo=rdo_id,
-                id_usuario=user_id,
-                ordem=index + 1,
-                status='Pendente'
+            nova_ass = RDOAprovacao(
+                empresa_id=session.get('empresa_id'),
+                rdo_id=rdo_id,
+                aprovador_id=user_id,
+                nivel=index + 1,
+                status='PENDENTE',
+                ativo=True
             )
             db.session.add(nova_ass)
-        rdo.status = 'Pendente'
+        rdo.status = 'PENDENTE'
         db.session.commit()
         return jsonify({"success": True})
         
@@ -1041,22 +1396,24 @@ def assinar_rdo(rdo_id):
 
     # Scoping check: Tem que ter acesso à obra pra assinar
     scope_ids = get_user_scope_ids()
-    if scope_ids is not None and rdo.id_obra not in scope_ids:
+    if scope_ids is not None and rdo.obra_id not in scope_ids:
          return jsonify({"success": False, "message": "Sem permissão na obra."}), 403
 
-    assinatura_pendente = Assinatura.query.filter_by(
-        id_rdo=rdo_id, 
-        id_usuario=user_id, 
-        status='Pendente'
+    assinatura_pendente = RDOAprovacao.query.filter_by(
+        rdo_id=rdo_id, 
+        aprovador_id=user_id, 
+        status='PENDENTE',
+        ativo=True
     ).first()
 
     if not assinatura_pendente:
         return jsonify({"success": False, "message": "Você não tem assinaturas pendentes para este RDO."}), 400
 
-    passo_anterior_pendente = Assinatura.query.filter(
-        Assinatura.id_rdo == rdo_id,
-        Assinatura.ordem < assinatura_pendente.ordem,
-        Assinatura.status != 'Aprovado'
+    passo_anterior_pendente = RDOAprovacao.query.filter(
+        RDOAprovacao.rdo_id == rdo_id,
+        RDOAprovacao.nivel < assinatura_pendente.nivel,
+        RDOAprovacao.status != 'APROVADO',
+        RDOAprovacao.ativo == True
     ).count()
 
     if passo_anterior_pendente > 0:
@@ -1089,24 +1446,26 @@ def assinar_rdo(rdo_id):
         hash_string = f"{rdo_id}:{user_id}:{datetime.utcnow()}:{current_app.config['SECRET_KEY']}"
         document_hash = hashlib.sha256(hash_string.encode()).hexdigest()
 
-        assinatura_pendente.img_assinatura = filename
-        assinatura_pendente.criado = datetime.now()
-        assinatura_pendente.status = 'Aprovado'
-        assinatura_pendente.ip_endereco = user_ip
-        assinatura_pendente.latitude = latitude
-        assinatura_pendente.longitude = longitude
-        assinatura_pendente.hash_documento = document_hash 
+        assinatura_pendente.imagem_assinatura = filename
+        assinatura_pendente.data_aprovacao = datetime.now()
+        assinatura_pendente.status = 'APROVADO'
+        assinatura_pendente.endereco_ip = user_ip
+        # RDOAprovacao não possui latitude e longitude
+        # assinatura_pendente.latitude = latitude
+        # assinatura_pendente.longitude = longitude
+        assinatura_pendente.hash = document_hash 
         
-        restantes = Assinatura.query.filter(
-            Assinatura.id_rdo == rdo_id,
-            Assinatura.status == 'Pendente',
-            Assinatura.id_assinatura != assinatura_pendente.id_assinatura
+        restantes = RDOAprovacao.query.filter(
+            RDOAprovacao.rdo_id == rdo_id,
+            RDOAprovacao.status == 'PENDENTE',
+            RDOAprovacao.id != assinatura_pendente.id,
+            RDOAprovacao.ativo == True
         ).count()
         
         if restantes == 0:
-            rdo.status = 'Aprovado'
+            rdo.status = 'APROVADO'
         else:
-            rdo.status = 'Pendente'
+            rdo.status = 'PENDENTE'
 
         db.session.commit()
         return jsonify({"success": True})
@@ -1121,17 +1480,17 @@ def assinar_rdo(rdo_id):
 def rejeitar_assinatura(id_assinatura):
     dados = request.get_json()
     motivo = dados.get('motivo')
-    ass = Assinatura.query.get_or_404(id_assinatura)
+    ass = RDOAprovacao.query.get_or_404(id_assinatura)
     
-    if ass.id_usuario != session.get('user_id'):
+    if ass.aprovador_id != session.get('user_id'):
         return jsonify({"success": False, "message": "Não autorizado."}), 403
 
     try:
-        ass.status = 'Rejeitado'
-        ass.motivo_rejeicao = motivo
-        ass.criado = datetime.now()
-        rdo = RDO.query.get(ass.id_rdo)
-        rdo.status = 'Rejeitado'
+        ass.status = 'REJEITADO'
+        ass.comentario = motivo
+        ass.data_aprovacao = datetime.now()
+        rdo = RDO.query.get(ass.rdo_id)
+        rdo.status = 'REJEITADO'
         db.session.commit()
         return jsonify({"success": True})
     except Exception as e:
@@ -1150,7 +1509,7 @@ def lista_usuarios():
     query = Usuario.query
     if session.get("user_role") != ROLE_ADMIN:
         user = Usuario.query.get(session.get("user_id"))
-        ids_permitidos = [o.id for o in user.obras_permitidas]
+        ids_permitidos = [o.id for o in Obra.query.filter_by(empresa_id=session.get('empresa_id')).all()]
         # Filtra usuários que tenham intersecção de obras (usuários da mesma obra)
         query = query.filter(Usuario.obras_permitidas.any(Obra.id.in_(ids_permitidos)))
 
@@ -1189,7 +1548,7 @@ def criar_usuario():
     if user.papel == ROLE_ADMIN:
         obras = Obra.query.filter_by(status=1).order_by(Obra.nome).all()
     else:
-        obras = [o for o in user.obras_permitidas if o.status == 1]
+        obras = [o for o in Obra.query.filter_by(empresa_id=session.get('empresa_id')).all() if o.status == 1]
     
     admin = Usuario.query.filter_by(papel='Admin').first()
     default_supervisor = {'id': admin.id, 'nome': admin.nome, 'email': admin.email} if admin else None
@@ -1459,7 +1818,7 @@ def alterar_senha_obrigatoria():
 @auth_bp.get("/lista-climas")
 @login_required
 def lista_climas():
-    climas = Clima.query.filter_by(ativo=True).order_by(Clima.nome.asc()).all()
+    climas = AuxClima.query.filter_by(ativo=True).order_by(AuxClima.nome.asc()).all()
     return render_template("list_climas.html", opcoes=climas, categoria="clima")
 
 @auth_bp.get('/criar-clima')
@@ -1474,20 +1833,14 @@ def criar_clima():
 def gerar_clima():
     clima_id = request.form.get('id')
     tipo_lista = "Climas"
-    nome = request.form.get('nome', '').strip()
+    nome = _normalize_option_input(request.form.get('nome', ''))
     ativo = request.form.get('ativo') == '1'
     if not nome:
         flash('Nome do clima é obrigatório.', 'danger')
         if clima_id: return redirect(url_for('auth.editar_clima', id=clima_id))
         return redirect(url_for('auth.criar_clima'))
 
-    clima_existente = Clima.query.filter(
-        func.lower(Clima.nome) == nome.lower(),
-        Clima.tipo_lista == tipo_lista
-    )
-    if clima_id:
-        clima_existente = clima_existente.filter(Clima.id != clima_id)
-    clima_existente = clima_existente.first()
+    clima_existente = _find_duplicate_option(AuxClima, nome, tipo_lista, exclude_id=clima_id)
 
     if clima_existente:
         flash('Já existe um clima cadastrado com esse nome.', 'danger')
@@ -1495,7 +1848,7 @@ def gerar_clima():
         return redirect(url_for('auth.criar_clima'))
 
     if clima_id:
-        clima = Clima.query.get(clima_id)
+        clima = AuxClima.query.get(clima_id)
         if not clima: return redirect(url_for('auth.lista_climas'))
         clima.nome = nome
         clima.ativo = ativo
@@ -1503,7 +1856,7 @@ def gerar_clima():
         db.session.commit()
         return redirect(url_for('auth.lista_climas'))
 
-    novo = Clima(nome=nome, tipo_lista=tipo_lista, ativo=ativo)
+    novo = AuxClima(nome=nome, tipo_lista=tipo_lista, ativo=ativo)
     db.session.add(novo)
     db.session.commit()
     return redirect(url_for('auth.lista_climas'))
@@ -1511,21 +1864,21 @@ def gerar_clima():
 @auth_bp.get('/visualizar-clima/<int:id>')
 @login_required
 def visualizar_clima(id):
-    clima = Clima.query.get_or_404(id)
+    clima = AuxClima.query.get_or_404(id)
     return render_template('form_clima.html', item=clima, view_mode=True)
 
 @auth_bp.get('/editar-clima/<int:id>')
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def editar_clima(id):
-    clima = Clima.query.get_or_404(id)
+    clima = AuxClima.query.get_or_404(id)
     return render_template('form_clima.html', item=clima, view_mode=False)
 
 @auth_bp.post('/excluir-clima/<int:id>')
 @login_required
 @role_required(PERM_MANAGEMENT)
 def excluir_clima(id):
-    clima = Clima.query.get(id)
+    clima = AuxClima.query.get(id)
     if clima:
         db.session.delete(clima)
         db.session.commit()
@@ -1535,7 +1888,7 @@ def excluir_clima(id):
 @auth_bp.get("/lista-equipamentos")
 @login_required
 def lista_equipamentos():
-    equipamentos = Equipamento.query.filter_by(ativo=True).order_by(Equipamento.nome.asc()).all()
+    equipamentos = AuxEquipamentos.query.filter_by(ativo=True).order_by(AuxEquipamentos.nome.asc()).all()
     return render_template("list_equipamentos.html", opcoes=equipamentos, categoria="equipamento")
 
 @auth_bp.get('/criar-equipamento')
@@ -1550,19 +1903,13 @@ def criar_equipamento():
 def gerar_equipamento():
     equipamento_id = request.form.get('id')
     tipo_lista = "Equipamentos"
-    nome = request.form.get('nome', '').strip()
+    nome = _normalize_option_input(request.form.get('nome', ''))
     ativo = request.form.get('ativo') == '1'
     if not nome:
         flash('Nome do equipamento é obrigatório.', 'danger')
         return redirect(url_for('auth.lista_equipamentos'))
 
-    equipamento_existente = Equipamento.query.filter(
-        func.lower(Equipamento.nome) == nome.lower(),
-        Equipamento.tipo_lista == tipo_lista
-    )
-    if equipamento_id:
-        equipamento_existente = equipamento_existente.filter(Equipamento.id != equipamento_id)
-    equipamento_existente = equipamento_existente.first()
+    equipamento_existente = _find_duplicate_option(AuxEquipamentos, nome, tipo_lista, exclude_id=equipamento_id)
 
     if equipamento_existente:
         flash('Já existe um equipamento cadastrado com esse nome.', 'danger')
@@ -1570,12 +1917,12 @@ def gerar_equipamento():
         return redirect(url_for('auth.criar_equipamento'))
 
     if equipamento_id:
-        equipamento = Equipamento.query.get(equipamento_id)
+        equipamento = AuxEquipamentos.query.get(equipamento_id)
         equipamento.nome = nome
         equipamento.ativo = ativo
         db.session.add(equipamento)
     else:
-        novo = Equipamento(nome=nome, tipo_lista=tipo_lista, ativo=ativo)
+        novo = AuxEquipamentos(nome=nome, tipo_lista=tipo_lista, ativo=ativo)
         db.session.add(novo)
     db.session.commit()
     return redirect(url_for('auth.lista_equipamentos'))
@@ -1583,21 +1930,21 @@ def gerar_equipamento():
 @auth_bp.get('/visualizar-equipamento/<int:id>')
 @login_required
 def visualizar_equipamento(id):
-    equipamento = Equipamento.query.get_or_404(id)
+    equipamento = AuxEquipamentos.query.get_or_404(id)
     return render_template('form_equipamento.html', item=equipamento, view_mode=True)
 
 @auth_bp.get('/editar-equipamento/<int:id>')
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def editar_equipamento(id):
-    equipamento = Equipamento.query.get_or_404(id)
+    equipamento = AuxEquipamentos.query.get_or_404(id)
     return render_template('form_equipamento.html', item=equipamento, view_mode=False)
 
 @auth_bp.post('/excluir-equipamento/<int:id>')
 @login_required
 @role_required(PERM_MANAGEMENT)
 def excluir_equipamento(id):
-    equipamento = Equipamento.query.get(id)
+    equipamento = AuxEquipamentos.query.get(id)
     if equipamento:
         db.session.delete(equipamento)
         db.session.commit()
@@ -1607,7 +1954,7 @@ def excluir_equipamento(id):
 @auth_bp.get("/lista-tags-ocorrencias")
 @login_required
 def lista_tags_ocorrencias():
-    tagsOcorrencias = TagOcorrencia.query.filter_by(ativo=True).order_by(TagOcorrencia.nome.asc()).all()
+    tagsOcorrencias = AuxTagOcorrencia.query.filter_by(ativo=True).order_by(AuxTagOcorrencia.nome.asc()).all()
     return render_template("list_tags_ocorrencias.html", opcoes=tagsOcorrencias, categoria="tagsOcorrencias")
 
 @auth_bp.get('/criar-tags-ocorrencias')
@@ -1621,19 +1968,13 @@ def criar_tags_ocorrencias():
 @role_required(PERM_WRITE_BASIC)
 def gerar_tags_ocorrencias():
     tag_id = request.form.get('id')
-    nome = request.form.get('nome', '').strip()
+    nome = _normalize_option_input(request.form.get('nome', ''))
     ativo = request.form.get('ativo') == '1'
     if not nome:
         flash('Nome da tag é obrigatório.', 'danger')
         return redirect(url_for('auth.lista_tags_ocorrencias'))
 
-    tag_existente = TagOcorrencia.query.filter(
-        func.lower(TagOcorrencia.nome) == nome.lower(),
-        TagOcorrencia.tipo_lista == "Tags Ocorrencias"
-    )
-    if tag_id:
-        tag_existente = tag_existente.filter(TagOcorrencia.id != tag_id)
-    tag_existente = tag_existente.first()
+    tag_existente = _find_duplicate_option(AuxTagOcorrencia, nome, "Tags Ocorrencias", exclude_id=tag_id)
 
     if tag_existente:
         flash('Já existe uma tag de ocorrência cadastrada com esse nome.', 'danger')
@@ -1641,33 +1982,33 @@ def gerar_tags_ocorrencias():
         return redirect(url_for('auth.criar_tags_ocorrencias'))
 
     if tag_id:
-        tag = TagOcorrencia.query.get(tag_id)
+        tag = AuxTagOcorrencia.query.get(tag_id)
         tag.nome = nome
         tag.ativo = ativo
         db.session.add(tag)
     else:
-        db.session.add(TagOcorrencia(nome=nome, tipo_lista="Tags Ocorrencias", ativo=ativo))
+        db.session.add(AuxTagOcorrencia(nome=nome, tipo_lista="Tags Ocorrencias", ativo=ativo))
     db.session.commit()
     return redirect(url_for('auth.lista_tags_ocorrencias'))
 
 @auth_bp.get('/visualizar-tags-ocorrencias/<int:id>')
 @login_required
 def visualizar_tags_ocorrencias(id):
-    tag = TagOcorrencia.query.get_or_404(id)
+    tag = AuxTagOcorrencia.query.get_or_404(id)
     return render_template('form_tags_ocorrencias.html', item=tag, view_mode=True)
 
 @auth_bp.get('/editar-tags-ocorrencias/<int:id>')
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def editar_tags_ocorrencias(id):
-    tag = TagOcorrencia.query.get_or_404(id)
+    tag = AuxTagOcorrencia.query.get_or_404(id)
     return render_template('form_tags_ocorrencias.html', item=tag, view_mode=False)
 
 @auth_bp.post('/excluir-tags-ocorrencias/<int:id>')
 @login_required
 @role_required(PERM_MANAGEMENT)
 def excluir_tags_ocorrencias(id):
-    tag = TagOcorrencia.query.get(id)
+    tag = AuxTagOcorrencia.query.get(id)
     if tag:
         db.session.delete(tag)
         db.session.commit()
@@ -1677,7 +2018,7 @@ def excluir_tags_ocorrencias(id):
 @auth_bp.get("/lista-mao-obra")
 @login_required
 def lista_mao_obra():
-    mao_obra = MaoObra.query.filter_by(ativo=True).order_by(MaoObra.nome.asc()).all()
+    mao_obra = AuxFuncoes.query.filter_by(ativo=True).order_by(AuxFuncoes.nome.asc()).all()
     return render_template("list_mao_obra.html", opcoes=mao_obra, categoria="mao_obra")
 
 @auth_bp.get('/criar-mao-obra')
@@ -1691,24 +2032,14 @@ def criar_mao_obra():
 @role_required(PERM_WRITE_BASIC)
 def gerar_mao_obra():
     mo_id = request.form.get('id')
-    nome = request.form.get('nome', '').strip()
-    tipo = request.form.get('tipo', '').strip() or None
+    nome = _normalize_option_input(request.form.get('nome', ''))
+    tipo = _normalize_option_input(request.form.get('tipo', '')) or None
     ativo = request.form.get('ativo') == '1'
     if not nome:
         flash('Nome da mão de obra é obrigatório.', 'danger')
         return redirect(url_for('auth.lista_mao_obra'))
 
-    mo_existente = MaoObra.query.filter(
-        func.lower(MaoObra.nome) == nome.lower(),
-        MaoObra.tipo_lista == "Mao de Obra"
-    )
-    if tipo is None:
-        mo_existente = mo_existente.filter(MaoObra.tipo.is_(None))
-    else:
-        mo_existente = mo_existente.filter(func.lower(MaoObra.tipo) == tipo.lower())
-    if mo_id:
-        mo_existente = mo_existente.filter(MaoObra.id != mo_id)
-    mo_existente = mo_existente.first()
+    mo_existente = _find_duplicate_option(AuxFuncoes, nome, "Mao de Obra", exclude_id=mo_id, tipo=tipo)
 
     if mo_existente:
         flash('Já existe uma mão de obra cadastrada com esse nome e tipo.', 'danger')
@@ -1716,34 +2047,34 @@ def gerar_mao_obra():
         return redirect(url_for('auth.criar_mao_obra'))
 
     if mo_id:
-        mo = MaoObra.query.get(mo_id)
+        mo = AuxFuncoes.query.get(mo_id)
         mo.nome = nome
         mo.tipo = tipo
         mo.ativo = ativo
         db.session.add(mo)
     else:
-        db.session.add(MaoObra(nome=nome, tipo_lista="Mao de Obra", tipo=tipo, ativo=ativo))
+        db.session.add(AuxFuncoes(nome=nome, tipo_lista="Mao de Obra", tipo=tipo, ativo=ativo))
     db.session.commit()
     return redirect(url_for('auth.lista_mao_obra'))
 
 @auth_bp.get('/visualizar-mao-obra/<int:id>')
 @login_required
 def visualizar_mao_obra(id):
-    mo = MaoObra.query.get_or_404(id)
+    mo = AuxFuncoes.query.get_or_404(id)
     return render_template('form_mao_obra.html', item=mo, view_mode=True)
 
 @auth_bp.get('/editar-mao-obra/<int:id>')
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def editar_mao_obra(id):
-    mo = MaoObra.query.get_or_404(id)
+    mo = AuxFuncoes.query.get_or_404(id)
     return render_template('form_mao_obra.html', item=mo, view_mode=False)
 
 @auth_bp.post('/excluir-mao-obra/<int:id>')
 @login_required
 @role_required(PERM_MANAGEMENT)
 def excluir_mao_obra(id):
-    mo = MaoObra.query.get(id)
+    mo = AuxFuncoes.query.get(id)
     if mo:
         db.session.delete(mo)
         db.session.commit()
@@ -1761,7 +2092,7 @@ def lista_obras():
     query = Obra.query.order_by(Obra.id.asc())
     
     if user.papel != ROLE_ADMIN:
-        meus_ids = [o.id for o in user.obras_permitidas]
+        meus_ids = [o.id for o in Obra.query.filter_by(empresa_id=session.get('empresa_id')).all()]
         query = query.filter(Obra.id.in_(meus_ids))
         
     resultados = query.all()
@@ -1791,7 +2122,8 @@ def lista_obras():
 @role_required(PERM_MANAGEMENT) # Apenas Admin e Gestor
 def criar_obra():
     usuarios = Usuario.query.filter_by(status=1).all()
-    return render_template("form_obra.html", item=None, usuarios=usuarios)
+    mao_de_obra_options = AuxFuncoes.query.filter_by(ativo=True).order_by(AuxFuncoes.nome.asc()).all()
+    return render_template("form_obra.html", item=None, usuarios=usuarios, mao_de_obra_options=mao_de_obra_options, equipe_obra=[])
 
 @auth_bp.post("/mudar-status-obras/<int:obraid>")
 @login_required
@@ -1815,27 +2147,29 @@ def toggle_user_obras(obraid):
 @login_required
 @role_required(PERM_MANAGEMENT)
 def gerar_obra():
-    id_obra = request.form.get("id")
-    if id_obra:
+    obra_id = request.form.get("id")
+    if obra_id:
         # Security scope
         scope_ids = get_user_scope_ids()
-        if scope_ids is not None and int(id_obra) not in scope_ids:
+        if scope_ids is not None and int(obra_id) not in scope_ids:
              flash("Sem permissão para editar esta obra", "danger")
              return redirect(url_for('auth.lista_obras'))
 
     cnpj = request.form.get('cnpj')
     obra_existente = Obra.query.filter_by(cnpj=cnpj).first()
     if obra_existente:
-        if not id_obra or str(obra_existente.id) != str(id_obra):
+        if not obra_id or str(obra_existente.id) != str(obra_id):
             flash(f"Erro: O CNPJ {cnpj} já está cadastrado.", "danger")
             return redirect(url_for('auth.lista_obras'))
 
     nome = request.form.get('nome')
     contratante = request.form.get('contratante')
     contrato = request.form.get('contrato')
-    id_responsavel = request.form.get('id_responsavel')
+    criado_por = request.form.get('criado_por')
     inicio_str = request.form.get('inicio')
     termino_str = request.form.get('termino')
+    horario_entrada_str = request.form.get('horario_entrada')
+    horario_saida_str = request.form.get('horario_saida')
     cep = request.form.get('cep')
     endereco = request.form.get('endereco')
     numero = request.form.get('numero')
@@ -1845,20 +2179,25 @@ def gerar_obra():
     estado = request.form.get('estado')
     status = 1 if request.form.get('status') == 'on' else 0
     frentes_payload = request.form.get('frentes_json')
+    equipe_payload = request.form.get('equipe_obra_json')
 
     try:
         inicio = datetime.strptime(inicio_str, '%Y-%m-%d').date() if inicio_str else None
         termino = datetime.strptime(termino_str, '%Y-%m-%d').date() if termino_str else None
+        horario_entrada = datetime.strptime(horario_entrada_str, '%H:%M').time() if horario_entrada_str else None
+        horario_saida = datetime.strptime(horario_saida_str, '%H:%M').time() if horario_saida_str else None
 
-        if id_obra:
-            obra = Obra.query.get(id_obra)
+        if obra_id:
+            obra = Obra.query.get(obra_id)
             obra.nome = nome
             obra.cnpj = cnpj
             obra.contratante = contratante
             obra.contrato = contrato
-            obra.id_responsavel = id_responsavel if id_responsavel else None
-            obra.inicio = inicio
-            obra.termino = termino
+            obra.criado_por = criado_por if criado_por else None
+            obra.data_inicio = inicio
+            obra.data_fim = termino
+            obra.horario_entrada = horario_entrada
+            obra.horario_saida = horario_saida
             obra.cep = cep
             obra.endereco = endereco
             obra.numero = numero
@@ -1871,8 +2210,9 @@ def gerar_obra():
         else:
             obra = Obra(
                 nome=nome, cnpj=cnpj, contratante=contratante, contrato=contrato,
-                id_responsavel=id_responsavel if id_responsavel else None,
+                criado_por=criado_por if criado_por else None,
                 inicio=inicio, termino=termino,
+                horario_entrada=horario_entrada, horario_saida=horario_saida,
                 cep=cep, endereco=endereco, numero=numero, complemento=complemento,
                 bairro=bairro, cidade=cidade, estado=estado, status=status
             )
@@ -1888,13 +2228,13 @@ def gerar_obra():
         if frentes_payload:
             data = json.loads(frentes_payload)
             for f_id in data.get('removidas', []):
-                if f_id: Frente_Trabalho.query.filter_by(id_frente_trabalho=f_id, id_obra=obra.id).delete()
+                if f_id: FrenteTrabalho.query.filter_by(frente_trabalho_id=f_id, obra_id=obra.id).delete()
             
             for f_nova in data.get('novas', []):
-                nova_frente = Frente_Trabalho(
-                    id_obra=obra.id,
+                nova_frente = FrenteTrabalho(
+                    obra_id=obra.id,
                     nome_frente=f_nova['nome_frente'],
-                    id_responsavel=f_nova['id_responsavel'] if f_nova['id_responsavel'] else None,
+                    criado_por=f_nova['criado_por'] if f_nova['criado_por'] else None,
                     unidade=f_nova.get('unidade'),
                     qtd_planejada=float(f_nova.get('qtd_planejada')) if f_nova.get('qtd_planejada') else 0,
                     data_inicio=datetime.strptime(f_nova.get('data_inicio'), '%Y-%m-%d').date() if f_nova.get('data_inicio') else None,
@@ -1903,14 +2243,41 @@ def gerar_obra():
                 db.session.add(nova_frente)
 
             for f_edit in data.get('editadas', []):
-                frente_existente = Frente_Trabalho.query.get(f_edit['id_frente_trabalho'])
-                if frente_existente and frente_existente.id_obra == obra.id:
+                frente_existente = FrenteTrabalho.query.get(f_edit['frente_trabalho_id'])
+                if frente_existente and frente_existente.obra_id == obra.id:
                     frente_existente.nome_frente = f_edit['nome_frente']
-                    frente_existente.id_responsavel = f_edit['id_responsavel'] if f_edit['id_responsavel'] else None
+                    frente_existente.criado_por = f_edit['criado_por'] if f_edit['criado_por'] else None
                     frente_existente.unidade = f_edit.get('unidade')
                     frente_existente.qtd_planejada = float(f_edit.get('qtd_planejada')) if f_edit.get('qtd_planejada') else 0
                     frente_existente.data_inicio = datetime.strptime(f_edit.get('data_inicio'), '%Y-%m-%d').date() if f_edit.get('data_inicio') else None
                     frente_existente.data_planejada = datetime.strptime(f_edit.get('data_planejada'), '%Y-%m-%d').date() if f_edit.get('data_planejada') else None
+
+        if equipe_payload is not None:
+            EquipeObraAuxFuncoes.query.filter_by(obra_id=obra.id).delete()
+            equipe_rows = json.loads(equipe_payload) if equipe_payload else []
+            equipe_agrupada = {}
+            for equipe_item in equipe_rows:
+                mo_id = equipe_item.get('id_lista_opcoes')
+                quantidade = equipe_item.get('quantidade_mao_obra')
+                try:
+                    mo_id = int(mo_id)
+                    quantidade = int(quantidade)
+                except (TypeError, ValueError):
+                    continue
+
+                if quantidade <= 0:
+                    continue
+
+                equipe_agrupada[mo_id] = equipe_agrupada.get(mo_id, 0) + quantidade
+
+            for mo_id, quantidade in equipe_agrupada.items():
+                db.session.add(
+                    EquipeObraAuxFuncoes(
+                        obra_id=obra.id,
+                        id_lista_opcoes=mo_id,
+                        quantidade_mao_obra=quantidade,
+                    )
+                )
 
         db.session.commit()
         return redirect(url_for('auth.lista_obras'))
@@ -1930,9 +2297,11 @@ def editar_obra(id):
         abort(403)
 
     obra = Obra.query.get_or_404(id)
-    frentes = Frente_Trabalho.query.filter_by(id_obra=id).all()
-    usuarios = Usuario.query.filter_by(status=1).all() 
-    return render_template("form_obra.html", item=obra, frentes=frentes, usuarios=usuarios)
+    frentes = FrenteTrabalho.query.filter_by(obra_id=id).all()
+    usuarios = Usuario.query.filter_by(status=1).all()
+    mao_de_obra_options = AuxFuncoes.query.filter_by(ativo=True).order_by(AuxFuncoes.nome.asc()).all()
+    equipe_obra = _get_equipe_obra_payload(id)
+    return render_template("form_obra.html", item=obra, frentes=frentes, usuarios=usuarios, mao_de_obra_options=mao_de_obra_options, equipe_obra=equipe_obra)
 
 @auth_bp.get("/visualizar-obra/<int:id>")
 @login_required
@@ -1945,8 +2314,10 @@ def visualizar_obra(id):
 
     item = Obra.query.get_or_404(id) 
     usuarios = Usuario.query.filter_by(status=1).all()
-    frentes = Frente_Trabalho.query.filter_by(id_obra=id).all()
+    frentes = FrenteTrabalho.query.filter_by(obra_id=id).all()
     usuario = Usuario.query.order_by(Usuario.nome).all()
+    mao_de_obra_options = AuxFuncoes.query.filter_by(ativo=True).order_by(AuxFuncoes.nome.asc()).all()
+    equipe_obra = _get_equipe_obra_payload(id)
     
     return render_template(
         "form_obra.html", 
@@ -1955,7 +2326,9 @@ def visualizar_obra(id):
         categoria="obra",
         frentes=frentes,
         usuario=usuario,
-        usuarios=usuarios
+        usuarios=usuarios,
+        mao_de_obra_options=mao_de_obra_options,
+        equipe_obra=equipe_obra
     )
 
 @auth_bp.post("/obra/toggle-status/<int:id>")
@@ -2141,7 +2514,7 @@ def aplicar_highlights(pdf_bytes, lista_dados, color):
 
 @auth_bp.route("/validar-documento", methods=["GET", "POST"])
 def validar_documento_publico():
-    from app.models.rdo import RDO, Assinatura
+    from app.models.rdo import RDO, RDOAprovacao
     try:
         from pypdf import PdfReader
         from io import BytesIO
@@ -2180,9 +2553,9 @@ def validar_documento_publico():
                 except Exception as e: erro = f"Erro ao processar arquivo: {str(e)}"
 
     if hash_buscado:
-        assinatura = Assinatura.query.filter_by(hash_documento=hash_buscado).first()
+        assinatura = RDOAprovacao.query.filter_by(hash=hash_buscado).first()
         if assinatura:
-            if assinatura.status == 'Aprovado':
+            if assinatura.status == 'APROVADO':
                 rdo = assinatura.rdo
                 if texto_pdf_enviado:
                     try:
@@ -2207,10 +2580,10 @@ def validar_documento_publico():
                     "revisao": rdo.id_revisao,
                     "obra": rdo.obra.nome,
                     "data_rdo": rdo.data,
-                    "assinante_nome": assinatura.usuario.nome,
-                    "assinante_papel": assinatura.usuario.papel,
-                    "data_assinatura": assinatura.criado,
-                    "hash_completo": assinatura.hash_documento,
+                    "assinante_nome": assinatura.aprovador.nome,
+                    "assinante_papel": assinatura.aprovador.papel,
+                    "data_assinatura": assinatura.data_aprovacao,
+                    "hash_completo": assinatura.hash,
                     "status_auditoria": status_auditoria,
                     "diff_data": diff_data,
                     "pdf_original_b64": pdf_original_b64,

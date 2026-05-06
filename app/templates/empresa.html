@@ -8,15 +8,16 @@
 
     <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="mb-6 p-4 rounded-xl flex items-start gap-3 border shadow-sm transition-all
+    {% if messages %}
+    {% for category, message in messages %}
+    <div
+        class="mb-6 p-4 rounded-xl flex items-start gap-3 border shadow-sm transition-all
                     {{ 'bg-red-50 text-red-700 border-red-100' if category == 'danger' else 'bg-emerald-50 text-emerald-700 border-emerald-100' }}">
-                    <i class="fas {{ 'fa-exclamation-circle' if category == 'danger' else 'fa-check-circle' }} mt-0.5"></i>
-                    <div class="text-sm font-medium leading-tight">{{ message }}</div>
-                </div>
-            {% endfor %}
-        {% endif %}
+        <i class="fas {{ 'fa-exclamation-circle' if category == 'danger' else 'fa-check-circle' }} mt-0.5"></i>
+        <div class="text-sm font-medium leading-tight">{{ message }}</div>
+    </div>
+    {% endfor %}
+    {% endif %}
     {% endwith %}
 
     <div class="mb-8">
@@ -35,7 +36,7 @@
                 <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide flex items-center gap-2">
                     <i class="fas fa-cog text-slate-400"></i> Geral
                 </h3>
-                
+
                 <button @click="editing = !editing"
                     :class="editing ? 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50' : 'bg-blue-600 border-transparent text-white hover:bg-blue-700'"
                     class="px-4 py-2 border rounded-lg text-sm font-medium transition-all flex items-center gap-2 shadow-sm">
@@ -51,19 +52,19 @@
                     <!-- Nome da Empresa -->
                     <div>
                         <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Nome da Empresa</label>
-                        
+
                         <!-- Modo Visualização -->
-                        <div x-show="!editing" class="p-3 bg-slate-50 rounded-lg border border-slate-200 text-slate-700 font-medium">
-                            {{ config_data.nome_empresa if config_data else 'Não definido' }}
+                        <div x-show="!editing"
+                            class="p-3 bg-slate-50 rounded-lg border border-slate-200 text-slate-700 font-medium">
+                            {{ config_data.nome if config_data else 'Não definido' }}
                         </div>
 
                         <!-- Modo Edição -->
                         <div x-show="editing">
-                             <input type="text" name="nome_empresa"
-                                value="{{ config_data.nome_empresa if config_data else '' }}"
+                            <input type="text" name="nome_empresa"
+                                value="{{ config_data.nome if config_data else '' }}"
                                 class="block w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm shadow-sm placeholder-slate-400
-                                       focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
-                                placeholder="Ex: Construtora Exemplo Ltda" required>
+                                       focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all" placeholder="Ex: Construtora Exemplo Ltda" required>
                         </div>
                     </div>
 
@@ -71,7 +72,8 @@
                         <!-- Gerenciar Logo -->
                         <div class="space-y-3">
                             <label class="block text-xs font-bold text-slate-500 uppercase">Logotipo Principal</label>
-                            <div class="flex flex-col p-4 bg-slate-50 rounded-xl border border-slate-200 border-dashed relative">
+                            <div
+                                class="flex flex-col p-4 bg-slate-50 rounded-xl border border-slate-200 border-dashed relative">
                                 <div id="preview-logo"
                                     class="w-full h-32 flex items-center justify-center bg-white rounded-lg shadow-sm border border-slate-100 overflow-hidden mb-3">
                                     {% if config_data.logo_path %}
@@ -92,7 +94,8 @@
                                         class="block w-full py-2.5 bg-white border border-blue-200 text-blue-600 rounded-lg cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-all text-sm font-semibold text-center shadow-sm">
                                         <i class="fas fa-upload mr-2"></i> Escolher Imagem
                                     </label>
-                                    <p class="text-[10px] text-slate-400 mt-2 text-center">Recomendado: PNG Transparente</p>
+                                    <p class="text-[10px] text-slate-400 mt-2 text-center">Recomendado: PNG Transparente
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -100,7 +103,8 @@
                         <!-- Gerenciar Ícone (Favicon) -->
                         <div class="space-y-3">
                             <label class="block text-xs font-bold text-slate-500 uppercase">Ícone do Navegador</label>
-                            <div class="flex flex-col p-4 bg-slate-50 rounded-xl border border-slate-200 border-dashed relative">
+                            <div
+                                class="flex flex-col p-4 bg-slate-50 rounded-xl border border-slate-200 border-dashed relative">
                                 <div id="preview-icon"
                                     class="w-full h-32 flex items-center justify-center bg-white rounded-lg shadow-sm border border-slate-100 overflow-hidden mb-3">
                                     {% if config_data.icone_path %}
@@ -122,7 +126,8 @@
                                         class="block w-full py-2.5 bg-white border border-blue-200 text-blue-600 rounded-lg cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-all text-sm font-semibold text-center shadow-sm">
                                         <i class="fas fa-upload mr-2"></i> Escolher Ícone
                                     </label>
-                                    <p class="text-[10px] text-slate-400 mt-2 text-center">Recomendado: .ICO ou .PNG (32x32)</p>
+                                    <p class="text-[10px] text-slate-400 mt-2 text-center">Recomendado: .ICO ou .PNG
+                                        (32x32)</p>
                                 </div>
                             </div>
                         </div>
@@ -130,7 +135,8 @@
                 </div>
 
                 <!-- Botões de Ação (Apenas em modo edição) -->
-                <div x-show="editing" class="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3" x-transition>
+                <div x-show="editing" class="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3"
+                    x-transition>
                     <button type="button" @click="editing = false"
                         class="px-5 py-2.5 bg-white border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50 font-semibold text-sm transition-colors">
                         Cancelar
@@ -153,11 +159,11 @@
                 const preview = document.getElementById(imgId);
                 // Verifica se é o container vazio ou a imagem
                 if (preview.tagName !== 'IMG') {
-                   // Se não for IMG, recarrega a página ou manipula DOM (simplificação: apenas substitui src se img existir, se não, teria que criar img)
-                   // Para simplificar neste template, assumimos que o preview mostra a imagem.
-                   // Se o preview original era um ícone, teríamos que substituir o innerHTML.
-                   const parent = preview.parentElement;
-                   parent.innerHTML = `<img src="${URL.createObjectURL(file)}" id="${imgId}" class="max-w-full max-h-full object-contain p-2">`;
+                    // Se não for IMG, recarrega a página ou manipula DOM (simplificação: apenas substitui src se img existir, se não, teria que criar img)
+                    // Para simplificar neste template, assumimos que o preview mostra a imagem.
+                    // Se o preview original era um ícone, teríamos que substituir o innerHTML.
+                    const parent = preview.parentElement;
+                    parent.innerHTML = `<img src="${URL.createObjectURL(file)}" id="${imgId}" class="max-w-full max-h-full object-contain p-2">`;
                 } else {
                     preview.src = URL.createObjectURL(file);
                 }
