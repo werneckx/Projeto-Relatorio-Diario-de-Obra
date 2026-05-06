@@ -1,62 +1,174 @@
 <!DOCTYPE html>
-<html lang="pt-BR" class="h-full bg-slate-50 antialiased">
+<html lang="pt-BR" class="h-full antialiased">
 
 <head>
+    <script>
+        // Feature Flag: Premium UI
+        (function () {
+            const urlParams = new URLSearchParams(window.location.search);
+            const uiParam = urlParams.get('ui');
+            const storedUI = localStorage.getItem('rdo_ui_theme');
+
+            if (uiParam === 'premium') {
+                localStorage.setItem('rdo_ui_theme', 'premium');
+                document.documentElement.setAttribute('data-ui-theme', 'premium');
+            } else if (uiParam === 'legacy') {
+                localStorage.setItem('rdo_ui_theme', 'legacy');
+                document.documentElement.removeAttribute('data-ui-theme');
+            } else if (storedUI === 'premium') {
+                document.documentElement.setAttribute('data-ui-theme', 'premium');
+            }
+        })();
+
+        window.tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        premium: {
+                            primary: '#2563eb',
+                            border: '#e2e8f0',
+                        }
+                    },
+                    borderRadius: {
+                        'premium-lg': '24px',
+                        'premium-md': '12px',
+                    }
+                }
+            }
+        };
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Painel de Controle{% endblock %}</title>
+    <title>{% block title %}Nosde System RDO{% endblock %}</title>
 
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-
-    <!-- Google Fonts (Inter) -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
-    <!-- Chart.js -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='styleForm.css') }}">
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo/icone.png') }}">
+
+    <!-- Premium Design System (Sprint 1) -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/utilities.css') }}">
+
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename=icone_empresa) }}">
 
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
+        :root {
+            color-scheme: light;
+            --app-border: rgba(148, 163, 184, 0.22);
+            --app-shadow: 0 10px 24px rgba(15, 23, 42, 0.07);
+            --theme-accent: #2563eb;
+            --theme-accent-soft: rgba(37, 99, 235, 0.12);
+            --cursor-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26' viewBox='0 0 26 26'%3E%3Cpath d='M4 3l12 11-6 1 3.8 6.2-2.5 1.5L7.5 16 4 20V3z' fill='%230f172a' stroke='%23ffffff' stroke-width='1.5' stroke-linejoin='round'/%3E%3C/svg%3E") 4 4, default;
+            --cursor-pointer: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26' viewBox='0 0 26 26'%3E%3Cpath d='M4 3l12 11-6 1 3.8 6.2-2.5 1.5L7.5 16 4 20V3z' fill='%232563eb' stroke='%23ffffff' stroke-width='1.5' stroke-linejoin='round'/%3E%3Ccircle cx='20' cy='7' r='3' fill='%232563eb'/%3E%3C/svg%3E") 6 4, pointer;
         }
 
-        /* Suavização de Scroll */
+        html,
+        body {
+            cursor: var(--cursor-arrow);
+        }
+
+        a,
+        button,
+        input,
+        select,
+        textarea,
+        summary,
+        [role="button"],
+        .cursor-pointer,
+        label[for] {
+            cursor: var(--cursor-pointer) !important;
+        }
+
         html {
             scroll-behavior: smooth;
         }
 
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f8fafc;
+            color: #475569;
         }
 
-        ::-webkit-scrollbar-track {
-            background: #f1f5f9;
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: -1;
+            background:
+                linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 250, 252, 0.98));
         }
 
-        ::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 4px;
+        main {
+            min-height: calc(100vh - 11rem);
         }
 
-        ::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
+        .page-shell {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
         }
 
-        /* Mobile Menu Transition */
-        #mobile-menu {
-            transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out;
+        .page-hero {
+            position: relative;
+            overflow: hidden;
+            border: 1px solid var(--app-border);
+            border-radius: 0.75rem;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(241, 245, 249, 0.92));
+            box-shadow: var(--app-shadow);
         }
 
-        /* Accordion transition for mobile submenus */
+        .surface-card {
+            border: 1px solid var(--app-border);
+            background: rgba(255, 255, 255, 0.96);
+            box-shadow: var(--app-shadow);
+        }
+
+        .kpi-card {
+            position: relative;
+            overflow: hidden;
+            border-radius: 0.75rem;
+        }
+
+        .kpi-card::before {
+            content: "";
+            position: absolute;
+            inset: 0 auto auto 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--theme-accent), transparent);
+            opacity: 0.9;
+        }
+
+        .form-stage-locked {
+            position: relative;
+            opacity: 0.48;
+            filter: saturate(0.72);
+        }
+
+        .form-stage-locked::after {
+            content: attr(data-lock-message);
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 1.25rem;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #475569;
+            background: rgba(248, 250, 252, 0.72);
+            backdrop-filter: blur(2px);
+            border-radius: inherit;
+            pointer-events: none;
+        }
+
         .submenu-mobile {
             transition: max-height 0.3s ease-in-out;
             max-height: 0;
@@ -67,7 +179,10 @@
             max-height: 500px;
         }
 
-        /* Flash Message Animation */
+        #mobile-menu {
+            transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out;
+        }
+
         @keyframes slideInRight {
             from {
                 transform: translateX(100%);
@@ -83,12 +198,42 @@
         .toast-enter {
             animation: slideInRight 0.4s ease-out forwards;
         }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* PREMIUM THEME OVERRIDES */
+        [data-ui-theme="premium"] body {
+            background-color: var(--color-bg-page);
+            font-family: var(--font-main);
+        }
+
+        [data-ui-theme="premium"] body::before {
+            background:
+                radial-gradient(circle at 0% 0%, rgba(37, 99, 235, 0.05), transparent 40%),
+                radial-gradient(circle at 100% 0%, rgba(16, 185, 129, 0.03), transparent 40%),
+                var(--color-bg-page);
+        }
+
+        [data-ui-theme="premium"] #navbar {
+            border-bottom-color: var(--color-border);
+            box-shadow: var(--shadow-soft);
+            background-color: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px) saturate(180%);
+        }
+
+        [data-ui-theme="premium"] .premium-nav-active {
+            background-color: var(--color-primary-soft);
+            color: var(--color-primary) !important;
+            box-shadow: none !important;
+            ring: none !important;
+        }
     </style>
 </head>
 
-<body class="flex flex-col min-h-screen bg-slate-50 text-slate-600 selection:bg-blue-100 selection:text-blue-700">
-
-    <!-- FLASH MESSAGES (Notificações Flutuantes) -->
+<body
+    class="flex flex-col min-h-screen overflow-x-hidden bg-slate-50 text-slate-600 selection:bg-blue-100 selection:text-blue-700">
     <div id="flash-container"
         class="fixed top-24 right-4 z-[60] flex flex-col gap-3 w-full max-w-sm pointer-events-none">
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -118,49 +263,32 @@
         {% endwith %}
     </div>
 
-    <!-- NAVBAR -->
     <nav class="fixed w-full z-50 top-0 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm transition-all duration-300"
         id="navbar">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16 lg:h-20 items-center">
-
-                <!-- Lado Esquerdo: Logo e Menu Desktop -->
                 <div class="flex items-center gap-8">
-                    <!-- Logo -->
                     <div class="flex-shrink-0 flex items-center">
                         <a href="{{ url_for('auth.inicio') }}" class="group flex items-center gap-2">
                             <img class="h-8 w-auto lg:h-10 transition-transform group-hover:scale-105"
-                                src="{{ url_for('static', filename='logo/logo.png') }}" alt="Logo">
+                                src="{{ url_for('static', filename=logo_empresa) }}" alt="Logo">
                         </a>
                     </div>
 
-                    <!-- Menu Desktop (Visível apenas em LG+) -->
-                    <!-- Alterado: Layout com Hover Groups para maior estabilidade -->
                     <div
                         class="hidden lg:flex lg:space-x-1 items-center bg-slate-50/50 p-1 rounded-full border border-slate-100">
-
-                        <!-- Link: Início -->
-                        <a href="{{ url_for('auth.inicio') }}" class="px-4 py-2 rounded-full text-sm font-medium transition-all duration-200
-                           {% if request.endpoint == 'auth.inicio' %} 
-                               bg-white text-blue-600 shadow-sm ring-1 ring-slate-200 
-                           {% else %} 
-                               text-slate-500 hover:text-slate-900 hover:bg-white/60 
-                           {% endif %}">
+                        <a href="{{ url_for('auth.inicio') }}"
+                            class="px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 {% if request.endpoint == 'auth.inicio' %}bg-white text-blue-600 shadow-sm ring-1 ring-slate-200{% else %}text-slate-500 hover:text-slate-900 hover:bg-white/60{% endif %}">
                             <i class="fas fa-home mr-2 text-xs opacity-70"></i> Início
                         </a>
 
-                        <!-- Dropdown: Relatórios (HOVER ONLY) -->
                         <div class="relative group">
-                            <!-- Trigger -->
                             <button type="button"
                                 class="px-4 py-2 rounded-full text-sm font-medium text-slate-500 group-hover:text-slate-900 group-hover:bg-white/60 transition-all flex items-center focus:outline-none">
                                 <i class="fas fa-chart-pie mr-2 text-xs opacity-70"></i> Relatórios
                                 <i
                                     class="fas fa-chevron-down ml-2 text-[10px] opacity-50 group-hover:rotate-180 transition-transform duration-200"></i>
                             </button>
-
-                            <!-- Menu Content (CSS Hover Logic) -->
-                            <!-- invisible + opacity-0 por padrão. group-hover torna visível. pt-2 cria uma ponte invisível para o mouse não perder o foco -->
                             <div
                                 class="absolute left-0 top-full pt-4 w-64 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-200 transform group-hover:-translate-y-1 z-[100]">
                                 <div class="bg-white rounded-xl shadow-xl ring-1 ring-black ring-opacity-5 p-2">
@@ -188,8 +316,6 @@
                             </div>
                         </div>
 
-                        <!-- Dropdown: Cadastros (HOVER ONLY) -->
-                        {% if session.get('user_role') not in ['Cliente', 'Leitor'] %}
                         <div class="relative group">
                             <button type="button"
                                 class="px-4 py-2 rounded-full text-sm font-medium text-slate-500 group-hover:text-slate-900 group-hover:bg-white/60 transition-all flex items-center focus:outline-none">
@@ -197,7 +323,6 @@
                                 <i
                                     class="fas fa-chevron-down ml-2 text-[10px] opacity-50 group-hover:rotate-180 transition-transform duration-200"></i>
                             </button>
-
                             <div
                                 class="absolute left-0 top-full pt-4 w-64 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-200 transform group-hover:-translate-y-1 z-[100]">
                                 <div class="bg-white rounded-xl shadow-xl ring-1 ring-black ring-opacity-5 p-2">
@@ -210,9 +335,7 @@
                                     <a href="{{ url_for('auth.lista_usuarios') }}"
                                         class="block px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">Usuários
                                         e Permissões</a>
-
                                     <div class="border-t border-slate-100 my-2"></div>
-
                                     <div
                                         class="px-3 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                                         Tabelas Auxiliares</div>
@@ -229,16 +352,10 @@
                                 </div>
                             </div>
                         </div>
-                        {% endif %}
-
                     </div>
                 </div>
 
-                <!-- Lado Direito: Perfil (Desktop) -->
                 <div class="hidden lg:flex items-center gap-4">
-                    <div class="h-8 w-px bg-slate-200 mx-2"></div>
-
-                    <!-- User Dropdown (HOVER ONLY) -->
                     <div class="relative group">
                         <button type="button"
                             class="flex items-center gap-3 focus:outline-none p-1 pr-3 rounded-full group-hover:bg-slate-50 transition border border-transparent group-hover:border-slate-100">
@@ -248,8 +365,8 @@
                             </div>
                             <div class="text-left hidden xl:block">
                                 <p class="text-sm font-bold text-slate-800 leading-tight">{{ session['user_name'] }}</p>
-                                <p class="text-xs text-slate-500 tracking-wide font-medium">{{
-                                    session['user_role'] }} | {{session['user_email']}}</p>
+                                <p class="text-xs text-slate-500 tracking-wide font-medium">{{ session['user_role'] }} |
+                                    {{ session['user_email'] }}</p>
                             </div>
                             <i
                                 class="fas fa-chevron-down text-slate-300 text-xs ml-1 group-hover:rotate-180 transition-transform duration-200"></i>
@@ -260,12 +377,15 @@
                             <div class="bg-white rounded-xl shadow-2xl ring-1 ring-black ring-opacity-5 py-2">
                                 <div class="px-5 py-3 bg-slate-50 border-b border-slate-100 mb-2">
                                     <p class="text-xs text-slate-400 uppercase font-bold">Empresa Atual</p>
-                                    <p class="text-sm font-bold text-slate-800 truncate">{{ nome_empresa_global or 'Não
-                                        definida' }}</p>
+                                    <p class="text-sm font-bold text-slate-800 truncate">{{ nome_empresa }}</p>
                                 </div>
                                 <a href="{{ url_for('auth.empresa') }}"
                                     class="flex items-center px-5 py-3 text-sm text-slate-600 hover:bg-slate-50 transition-colors">
                                     <i class="fas fa-building w-5 text-slate-400"></i> Minha Empresa
+                                </a>
+                                <a href="{{ url_for('auth.meu_perfil') }}"
+                                    class="flex items-center px-5 py-3 text-sm text-slate-600 hover:bg-slate-50 transition-colors">
+                                    <i class="fas fa-person w-5 text-slate-400"></i> Meu Perfil
                                 </a>
                                 <div class="border-t border-slate-100 my-2"></div>
                                 <a href="{{ url_for('auth.logout') }}"
@@ -277,13 +397,11 @@
                     </div>
                 </div>
 
-                <!-- Botão Menu Mobile (Tablets e Celulares) -->
                 <div class="flex lg:hidden items-center gap-3">
                     <div
                         class="h-8 w-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold">
                         {{ session['user_name'][:1].upper() if session['user_name'] else 'U' }}
                     </div>
-
                     <button type="button" onclick="toggleMobileMenu()"
                         class="inline-flex items-center justify-center p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 focus:outline-none transition">
                         <i class="fas fa-bars text-xl" id="menu-icon"></i>
@@ -292,18 +410,14 @@
             </div>
         </div>
 
-        <!-- Menu Mobile / Tablet (Mantido com Lógica de Clique JS) -->
         <div class="hidden lg:hidden bg-white border-t border-slate-100 shadow-inner max-h-[85vh] overflow-y-auto"
             id="mobile-menu">
             <div class="px-4 py-6 space-y-4">
-
-                <!-- Início -->
                 <a href="{{ url_for('auth.inicio') }}"
                     class="flex items-center px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-slate-700 font-bold hover:bg-blue-50 hover:border-blue-100 hover:text-blue-700 transition">
                     <i class="fas fa-home w-8 text-center text-slate-400"></i> Início
                 </a>
 
-                <!-- Acordeão Relatórios -->
                 <div class="border border-slate-100 rounded-xl overflow-hidden">
                     <button onclick="toggleMobileSubmenu('mobile-relatorios', this)"
                         class="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-slate-50 transition text-left">
@@ -324,7 +438,6 @@
                     </div>
                 </div>
 
-                <!-- Acordeão Cadastros -->
                 {% if session.get('user_role') not in ['Cliente', 'Leitor'] %}
                 <div class="border border-slate-100 rounded-xl overflow-hidden">
                     <button onclick="toggleMobileSubmenu('mobile-cadastros', this)"
@@ -355,7 +468,6 @@
                 </div>
                 {% endif %}
 
-                <!-- Footer Mobile -->
                 <div class="pt-4 mt-4 border-t border-slate-100">
                     <a href="{{ url_for('auth.logout') }}"
                         class="block w-full text-center py-3 rounded-lg bg-red-50 text-red-600 font-bold text-sm hover:bg-red-100 transition">
@@ -366,69 +478,45 @@
         </div>
     </nav>
 
-    <!-- CONTEÚDO PRINCIPAL -->
     <main class="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:pt-5 pb-5 animate-fade-in relative z-0">
         {% block content %}{% endblock %}
     </main>
 
-    <!-- RODAPÉ -->
     <footer class="bg-white border-t border-slate-200 py-10 mt-auto relative z-10">
         <div
             class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
             <div class="flex items-center gap-3">
-                <img src="{{ url_for('static', filename='logo/icone.png') }}"
+                <img src="{{ url_for('static', filename='logo/icone_sistema.png') }}"
                     class="h-8 opacity-50 grayscale hover:grayscale-0 transition" alt="Icon">
                 <div class="text-center md:text-left">
-                    <p class="text-sm font-medium text-slate-700">{{ nome_empresa_global }} • Versão 01.00</p>
+                    <p class="text-sm font-medium text-slate-700">Nosde System RDO • Versão 01.00.00</p>
                     <p class="text-xs text-slate-400">© 2026 Todos os direitos reservados.</p>
-                    <a class="text-xs text-slate-400" href="https://www.linkedin.com/in/edson-rodrigues-5a1a46345/">Made
-                        by Edson Rodrigues</a>
                 </div>
             </div>
-
-            <div class="flex items-center gap-6 text-sm font-medium text-slate-500">
-                <a href="#" class="hover:text-blue-600 transition">Termos</a>
-                <a href="#" class="hover:text-blue-600 transition">Privacidade</a>
-                <a href="#" class="hover:text-blue-600 transition">Suporte</a>
+            <div class="flex items-center gap-5 text-xs text-slate-400">
+                <a href="{{ url_for('auth.suporte') }}" class="hover:text-slate-600 transition">Suporte</a>
+                <a href="{{ url_for('auth.privacidade') }}" class="hover:text-slate-600 transition">Privacidade</a>
+                <a href="{{ url_for('auth.termos') }}" class="hover:text-slate-600 transition">Termos</a>
             </div>
         </div>
     </footer>
 
-    <!-- Scripts de Interação (Apenas Mobile e Flash) -->
     <script>
-        // --- 1. Lógica Menu Mobile ---
         function toggleMobileMenu() {
             const menu = document.getElementById('mobile-menu');
             const icon = document.getElementById('menu-icon');
-
-            if (menu.classList.contains('hidden')) {
-                menu.classList.remove('hidden');
-                icon.classList.remove('fa-bars');
-                icon.classList.add('fa-times');
-            } else {
-                menu.classList.add('hidden');
-                icon.classList.remove('fa-times');
-                icon.classList.add('fa-bars');
-            }
+            menu.classList.toggle('hidden');
+            icon.classList.toggle('fa-bars');
+            icon.classList.toggle('fa-times');
         }
 
-        function toggleMobileSubmenu(submenuId, button) {
-            const submenu = document.getElementById(submenuId);
-            const icon = button.querySelector('i.fa-chevron-down');
-
-            // Usa maxHeight para verificar estado (Accordion)
-            if (submenu.style.maxHeight && submenu.style.maxHeight !== '0px') {
-                submenu.style.maxHeight = '0px';
-                submenu.classList.remove('open');
-                if (icon) icon.classList.remove('rotate-180');
-            } else {
-                submenu.style.maxHeight = submenu.scrollHeight + "px";
-                submenu.classList.add('open');
-                if (icon) icon.classList.add('rotate-180');
-            }
+        function toggleMobileSubmenu(id, button) {
+            const submenu = document.getElementById(id);
+            const icon = button.querySelector('.chevron-icon');
+            submenu.classList.toggle('open');
+            icon.classList.toggle('rotate-180');
         }
 
-        // Reset ao redimensionar
         window.addEventListener('resize', () => {
             if (window.innerWidth >= 1024) {
                 document.getElementById('mobile-menu').classList.add('hidden');
@@ -437,7 +525,6 @@
             }
         });
 
-        // --- 2. Auto-Dismiss Flash Messages ---
         document.addEventListener('DOMContentLoaded', function () {
             const toasts = document.querySelectorAll('.toast-message');
             toasts.forEach(toast => {
@@ -451,6 +538,19 @@
                     toast.style.transition = 'all 0.5s ease';
                     setTimeout(() => { if (toast.parentElement) toast.remove(); }, 500);
                 }, 60000);
+            });
+        });
+
+        const _csrfToken = '{{ csrf_token() }}';
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('form[method="POST"]').forEach(form => {
+                if (!form.querySelector('input[name="csrf_token"]')) {
+                    const hidden = document.createElement('input');
+                    hidden.type = 'hidden';
+                    hidden.name = 'csrf_token';
+                    hidden.value = _csrfToken;
+                    form.appendChild(hidden);
+                }
             });
         });
     </script>

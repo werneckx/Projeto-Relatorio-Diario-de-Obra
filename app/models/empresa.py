@@ -4,7 +4,16 @@ from app import db
 class Empresa(db.Model):
     __tablename__ = "empresa"
 
-    id = db.Column(db.Integer, primary_key=True)
-    nome_empresa = db.Column(db.String(255), nullable=False)
-    logo_empresa = db.Column(db.String(255), nullable=True)  # Caminho do arquivo de logo
-    icone_empresa = db.Column(db.String(255), nullable=True)  # Caminho do arquivo de ícone
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    nome = db.Column(db.String(150), nullable=False)
+    logo_empresa = db.Column(db.String(255), nullable=True)
+    icone_empresa = db.Column(db.String(255), nullable=True)
+    ativo = db.Column(db.Boolean, nullable=False, default=True)
+
+    criado_por = db.Column(db.Integer, nullable=True)
+    modificado_por = db.Column(db.Integer, nullable=True)
+    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
+    modificado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<Empresa {self.id}: {self.nome}>'

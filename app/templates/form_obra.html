@@ -71,7 +71,7 @@ shadow-sm placeholder:text-slate-400" %}
     {% set global_bg = "bg-emerald-50" %}
     {% endif %}
 
-    <div class="animate-fade-in-up">
+    <div class="page-shell animate-fade-in-up">
 
         <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -88,7 +88,7 @@ shadow-sm placeholder:text-slate-400" %}
         {% endwith %}
 
         <!-- Cabeçalho -->
-        <div class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="page-hero p-6 sm:p-7 mb-2 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
                 <h1 class="text-2xl font-bold text-slate-900 tracking-tight">
                     {% if view_mode %}Visualizar{% elif item and item.id %}Editar{% else %}Nova{% endif %} Obra
@@ -190,7 +190,7 @@ shadow-sm placeholder:text-slate-400" %}
         </div>
         {% endif %}
 
-        <!-- Informações de Hierarquia -->
+        <!-- Informações de Hierarquia
         {% if item and item.id %}
         {% set is_matriz = item.id_matriz == None or item.id_matriz == 0 %}
         <div
@@ -203,7 +203,7 @@ shadow-sm placeholder:text-slate-400" %}
                 <div>
                     <span
                         class="text-[10px] font-bold uppercase tracking-wider {{ 'text-indigo-600' if is_matriz else 'text-slate-500' }}">
-                        {{ 'Matriz Principal' if is_matriz else 'Filial / Subsidiária' }}
+                        {{ 'Matriz Principal' if is_matriz else 'Subsidiária' }}
                     </span>
                     <h2 class="text-lg font-bold text-slate-800 leading-tight">{{ item.nome }}</h2>
                 </div>
@@ -220,13 +220,14 @@ shadow-sm placeholder:text-slate-400" %}
             {% endif %}
         </div>
         {% endif %}
-
+        -->
         <!-- Formulário Principal -->
         <form action="{{ url_for('auth.gerar_obra') }}" method="POST" id="mainForm" class="space-y-6">
             <input type="hidden" name="id" value="{{ item.id if item and item.id }}">
             <input type="hidden" name="categoria" value="obra">
             <!-- Input JSON essencial para o Backend processar as frentes (novas e editadas) -->
             <input type="hidden" name="frentes_json" id="frentes_json">
+            <input type="hidden" name="equipe_obra_json" id="equipe_obra_json">
 
             <!-- 1. Dados Gerais -->
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -317,7 +318,7 @@ shadow-sm placeholder:text-slate-400" %}
                         </div>
                     </div>
 
-                    <!-- Vinculação Matriz -->
+                    <!-- Vinculação Matriz --
                     <div class="lg:col-span-12">
                         <label class="block text-xs font-bold text-slate-500 uppercase mb-2">
                             Vinculação {% if not view_mode %}<i class="fas fa-info-circle ml-1 text-slate-400"
@@ -331,7 +332,7 @@ shadow-sm placeholder:text-slate-400" %}
                                 {% for matriz in opcoes_matriz %}
                                 {% if not item or item.id != matriz.id %}
                                 <option value="{{ matriz.id }}" {% if item and item.id_matriz==matriz.id %}selected{%
-                                    endif %}>Filial de: {{ matriz.nome }} (ID: {{ matriz.id }})</option>
+                                    endif %}>Subsidiária de: {{ matriz.nome }} (ID: {{ matriz.id }})</option>
                                 {% endif %}
                                 {% endfor %}
                             </select>
@@ -342,6 +343,30 @@ shadow-sm placeholder:text-slate-400" %}
                             </div>
                             {% endif %}
                         </div>
+                    </div>
+                    -->
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center shrink-0 text-sm">
+                        <i class="far fa-clock"></i>
+                    </div>
+                    <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">Horarios Padrao da Obra</h3>
+                </div>
+                <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Horario Entrada Padrao</label>
+                        <input type="time" name="horario_entrada"
+                            value="{{ item.horario_entrada.strftime('%H:%M') if item and item.horario_entrada else '' }}"
+                            class="{{ final_input_css }} font-mono" {{ 'readonly disabled' if view_mode }}>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Horario Saida Padrao</label>
+                        <input type="time" name="horario_saida"
+                            value="{{ item.horario_saida.strftime('%H:%M') if item and item.horario_saida else '' }}"
+                            class="{{ final_input_css }} font-mono" {{ 'readonly disabled' if view_mode }}>
                     </div>
                 </div>
             </div>
@@ -690,6 +715,74 @@ shadow-sm placeholder:text-slate-400" %}
             </div>
 
             <!-- Barra de Ações -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div
+                    class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex flex-wrap items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0 text-sm">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">Equipe Padrão da Obra</h3>
+                            <p class="text-[10px] text-slate-500 hidden sm:block">Composição base para ser importada no RDO.</p>
+                        </div>
+                    </div>
+                    {% if not view_mode %}
+                    <button type="button" onclick="addEquipeObraRow()"
+                        class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-2 rounded-lg font-bold text-xs transition flex items-center gap-2">
+                        <i class="fas fa-plus"></i> <span class="hidden sm:inline">Adicionar Mão de Obra</span>
+                    </button>
+                    {% endif %}
+                </div>
+
+                <div class="w-full overflow-hidden">
+                    <table class="w-full text-left mobile-table" id="table-equipe-obra">
+                        <thead>
+                            <tr class="bg-slate-50 text-[10px] uppercase text-slate-500 font-bold border-b border-slate-200">
+                                <th class="p-3 w-[70%]">Mão de Obra</th>
+                                <th class="p-3 w-[20%] text-center">Quantidade</th>
+                                {% if not view_mode %}<th class="p-3 w-[10%] text-center"></th>{% endif %}
+                            </tr>
+                        </thead>
+                        <tbody id="lista-equipe-obra" class="divide-y divide-slate-100 bg-white">
+                            {% if equipe_obra %}
+                            {% for equipe in equipe_obra %}
+                            <tr class="group hover:bg-slate-50 transition-colors">
+                                <td class="p-2 full-width-mobile" data-label="Mão de Obra:">
+                                    <select class="{{ 'w-full h-9 text-sm px-2 rounded-md bg-transparent border-none text-slate-700 appearance-none pointer-events-none' if view_mode else 'form-control-std h-9 text-sm select-equipe-obra bg-white' }}"
+                                        {{ 'disabled' if view_mode }}>
+                                        <option value="">Selecione...</option>
+                                        {% for op in mao_de_obra_options %}
+                                        <option value="{{ op.id }}" {% if op.id == equipe.id_lista_opcoes %}selected{% endif %}>{{ op.nome }}{% if op.tipo %} ({{ op.tipo }}){% endif %}</option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td class="p-2" data-label="Quantidade:">
+                                    <input type="number" min="1" step="1" value="{{ equipe.quantidade }}"
+                                        class="{{ 'w-full h-9 text-sm text-center px-2 rounded-md bg-transparent border-none font-bold text-slate-800' if view_mode else 'form-control-std h-9 text-sm text-center font-bold input-equipe-qtd' }}"
+                                        {{ 'readonly' if view_mode }}>
+                                </td>
+                                {% if not view_mode %}
+                                <td class="p-2 text-center action-cell">
+                                    <button type="button" onclick="removeEquipeObraRow(this)"
+                                        class="w-8 h-8 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition flex items-center justify-center">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </td>
+                                {% endif %}
+                            </tr>
+                            {% endfor %}
+                            {% elif view_mode %}
+                            <tr>
+                                <td colspan="3" class="p-8 text-center text-slate-400 italic bg-slate-50">Nenhuma equipe padrão cadastrada nesta obra.</td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <div class="flex flex-col-reverse sm:flex-row gap-3 pt-4 border-t border-slate-200">
                 <a href="{{ url_for('auth.lista_obras') }}"
                     class="flex-1 px-4 py-3 bg-white border border-slate-300 text-slate-700 font-bold rounded-xl shadow-sm hover:bg-slate-50 transition-colors text-center text-sm">
@@ -976,6 +1069,37 @@ shadow-sm placeholder:text-slate-400" %}
             btn.closest('tr').remove();
         }
 
+        function addEquipeObraRow(selectedId = '', quantidade = '1') {
+            const tbody = el('lista-equipe-obra');
+            if (!tbody) return;
+
+            const tr = document.createElement('tr');
+            tr.className = 'group hover:bg-slate-50 transition-colors animate-fade-in-up';
+            tr.innerHTML = `
+                <td class="p-2 full-width-mobile" data-label="Mão de Obra:">
+                    <select class="form-control-std h-9 text-sm select-equipe-obra bg-white">
+                        <option value="">Selecione...</option>
+                        {% for op in mao_de_obra_options %}
+                        <option value="{{ op.id }}" ${String(selectedId) === '{{ op.id }}' ? 'selected' : ''}>{{ op.nome }}{% if op.tipo %} ({{ op.tipo }}){% endif %}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+                <td class="p-2" data-label="Quantidade:">
+                    <input type="number" min="1" step="1" value="${quantidade}" class="form-control-std h-9 text-sm text-center font-bold input-equipe-qtd">
+                </td>
+                <td class="p-2 text-center action-cell">
+                    <button type="button" onclick="removeEquipeObraRow(this)" class="w-8 h-8 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition flex items-center justify-center">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        }
+
+        function removeEquipeObraRow(btn) {
+            btn.closest('tr').remove();
+        }
+
         // --- SUBMISSÃO DO FORM ---
         function submitObraForm() {
             if (!checkDateLogic()) return alert("Verifique as datas globais da obra.");
@@ -1016,6 +1140,20 @@ shadow-sm placeholder:text-slate-400" %}
             };
 
             el('frentes_json').value = JSON.stringify(jsonPayload);
+
+            const equipe = [];
+            document.querySelectorAll('#lista-equipe-obra tr').forEach(row => {
+                const select = row.querySelector('.select-equipe-obra');
+                const quantidadeInput = row.querySelector('.input-equipe-qtd');
+                if (!select || !quantidadeInput || !select.value) return;
+
+                equipe.push({
+                    id_lista_opcoes: select.value,
+                    quantidade_mao_obra: quantidadeInput.value || 0
+                });
+            });
+
+            el('equipe_obra_json').value = JSON.stringify(equipe);
 
             const btn = el("submitBtn");
             el("btnText").classList.add("hidden");

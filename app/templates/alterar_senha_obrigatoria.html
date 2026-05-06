@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full bg-slate-900">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Primeiro Acesso | {{ nome_empresa_global }}</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .bg-login {
+            background-image: url("{{ url_for('static', filename='image.jpg') }}");
+            background-size: cover;
+            background-position: center;
+        }
+    </style>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo/icone.png') }}">
+</head>
+
+<body class="h-full w-full bg-login relative">
+
+    <div class="absolute inset-0 bg-slate-900/60 z-0"></div>
+
+    <div class="relative z-10 flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
+
+        <div
+            class="sm:mx-auto sm:w-full sm:max-w-md bg-white/95 backdrop-blur-sm p-8 rounded-2xl shadow-2xl border border-white/20">
+
+            <div class="flex justify-center mb-6">
+                <div class="bg-blue-100 p-4 rounded-full">
+                    <i class="fas fa-shield-halved text-3xl text-blue-700"></i>
+                </div>
+            </div>
+
+            <h2 class="text-center text-2xl font-bold leading-9 tracking-tight text-slate-900">
+                Segurança Obrigatória
+            </h2>
+            <p class="mt-2 text-center text-sm text-slate-500">
+                Este é seu primeiro acesso. Para sua proteção, crie uma senha forte e pessoal.
+            </p>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="mt-6 space-y-2">
+                {% for category, message in messages %}
+                <div
+                    class="p-4 rounded-lg text-sm font-medium flex items-center gap-3
+                            {{ 'bg-red-50 text-red-700 border border-red-200' if category == 'error' or category == 'danger' else 'bg-emerald-50 text-emerald-700 border border-emerald-200' }}">
+                    <i
+                        class="fas {{ 'fa-circle-exclamation' if category in ['error', 'danger'] else 'fa-check-circle' }}"></i>
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            <div class="mt-8">
+                <form class="space-y-6" action="{{ url_for('auth.alterar_senha_obrigatoria') }}" method="POST">
+
+                    <div>
+                        <label for="nova_senha" class="block text-sm font-medium leading-6 text-slate-900">Nova
+                            Senha</label>
+                        <div class="relative mt-2 rounded-md shadow-sm">
+                            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                <i class="fas fa-key text-slate-400 sm:text-sm"></i>
+                            </div>
+                            <input id="nova_senha" name="nova_senha" type="password" required autofocus
+                                class="block w-full rounded-xl border-0 py-3 pl-10 text-slate-900 ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 transition-all"
+                                placeholder="Crie uma nova senha">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="confirmar_senha"
+                            class="block text-sm font-medium leading-6 text-slate-900">Confirmar Nova Senha</label>
+                        <div class="relative mt-2 rounded-md shadow-sm">
+                            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                <i class="fas fa-check-double text-slate-400 sm:text-sm"></i>
+                            </div>
+                            <input id="confirmar_senha" name="confirmar_senha" type="password" required
+                                class="block w-full rounded-xl border-0 py-3 pl-10 text-slate-900 ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 transition-all"
+                                placeholder="Repita a nova senha">
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <button type="submit"
+                            class="flex w-full justify-center rounded-xl bg-blue-700 px-3 py-3 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 transition-all hover:-translate-y-0.5 active:translate-y-0">
+                            Atualizar e Entrar <i class="fas fa-save ml-2 mt-1"></i>
+                        </button>
+
+                        <a href="{{ url_for('auth.logout') }}"
+                            class="flex w-full justify-center items-center px-3 py-2 text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors">
+                            <i class="fas fa-arrow-left mr-2"></i> Voltar ao login
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <p class="mt-10 text-center text-xs text-slate-300/80">
+            &copy; 2025 {{ nome_empresa_global }}. Segurança de Dados Ativa.
+        </p>
+    </div>
+
+</body>
+
+</html>

@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}Política de Privacidade{% endblock %}
+
+{% block content %}
+<div>
+
+    <div class="mb-8 text-center">
+        <h1 class="text-3xl font-bold text-slate-800">Política de Privacidade</h1>
+        <p class="mt-2 text-slate-500">Compromisso com a proteção dos seus dados</p>
+    </div>
+
+    <div class="bg-white shadow-lg rounded-2xl overflow-hidden border border-slate-100 p-8 md:p-12">
+        <div class="space-y-8 text-slate-600 leading-relaxed">
+
+            <p class="text-lg">
+                Esta Política de Privacidade descreve como coletamos, usamos e protegemos as informações no contexto da
+                geração e gestão de Relatórios Diários de Obra (RDO).
+            </p>
+
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="bg-slate-50 p-6 rounded-xl border border-slate-100">
+                    <h3 class="font-bold text-slate-800 mb-2 flex items-center gap-2">
+                        <i class="fas fa-map-marker-alt text-blue-500"></i> Dados de Localização
+                    </h3>
+                    <p class="text-sm">
+                        Para garantir a autenticidade das assinaturas nos relatórios, coletamos dados de geolocalização
+                        (Latitude e Longitude) e endereço IP no momento exato da assinatura do documento.
+                    </p>
+                </div>
+
+                <div class="bg-slate-50 p-6 rounded-xl border border-slate-100">
+                    <h3 class="font-bold text-slate-800 mb-2 flex items-center gap-2">
+                        <i class="fas fa-camera text-blue-500"></i> Imagens e Mídia
+                    </h3>
+                    <p class="text-sm">
+                        As fotos carregadas nos relatórios são armazenadas de forma segura. Metadados das imagens podem
+                        ser processados para verificar datas e locais de execução da obra.
+                    </p>
+                </div>
+            </div>
+
+            <section>
+                <h2 class="text-xl font-bold text-slate-800 mb-3">Uso das Informações</h2>
+                <p class="mb-2">Utilizamos seus dados estritamente para:</p>
+                <ul class="list-disc pl-5 space-y-1">
+                    <li>Gerar os arquivos PDF dos Relatórios Diários de Obra.</li>
+                    <li>Auditoria e rastreabilidade das ações no sistema (Logs de segurança).</li>
+                    <li>Comunicação sobre o status de aprovação ou rejeição de documentos.</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-bold text-slate-800 mb-3">Segurança</h2>
+                <p>
+                    Adotamos práticas robustas de segurança, incluindo criptografia de senhas (Hashing), tokens seguros
+                    para recuperação de conta e validação de integridade de arquivos (Hash SHA-256) para proteger seus
+                    dados contra acesso não autorizado.
+                </p>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-bold text-slate-800 mb-3">Seus Direitos (LGPD)</h2>
+                <p>
+                    Você tem o direito de solicitar o acesso, a correção ou a exclusão dos seus dados pessoais, exceto
+                    quando a retenção dos dados for exigida por lei ou para fins de auditoria contratual da obra.
+                </p>
+            </section>
+
+        </div>
+
+        <div class="mt-10 pt-6 border-t border-slate-100 flex justify-between items-center flex-wrap gap-4">
+            <span class="text-sm text-slate-400">Dúvidas sobre seus dados? Contate o suporte.</span>
+            <a href="{{ url_for('auth.suporte') }}"
+                class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors shadow-sm shadow-blue-200">
+                Falar com DPO / Suporte
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

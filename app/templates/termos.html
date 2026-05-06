@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Termos de Uso{% endblock %}
+
+{% block content %}
+<div>
+
+    <div class="mb-8 text-center">
+        <h1 class="text-3xl font-bold text-slate-800">Termos de Uso</h1>
+        <p class="mt-2 text-slate-500">Última atualização: Fevereiro de 2026</p>
+    </div>
+
+    <div class="bg-white shadow-lg rounded-2xl overflow-hidden border border-slate-100 p-8 md:p-12">
+        <div class="space-y-8 text-slate-600 leading-relaxed">
+
+            <section>
+                <h2 class="text-xl font-bold text-slate-800 mb-3 flex items-center gap-2">
+                    <i class="fas fa-handshake text-blue-600"></i> 1. Aceitação dos Termos
+                </h2>
+                <p>
+                    Ao acessar e utilizar o Sistema de Relatório Diário de Obra (RDO), você concorda em cumprir e estar
+                    vinculado aos seguintes termos e condições de uso. Se você não concordar com qualquer parte destes
+                    termos, você não deve utilizar nosso serviço.
+                </p>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-bold text-slate-800 mb-3 flex items-center gap-2">
+                    <i class="fas fa-user-shield text-blue-600"></i> 2. Responsabilidades do Usuário
+                </h2>
+                <p>
+                    O usuário é responsável por manter a confidencialidade de suas credenciais de acesso (e-mail e
+                    senha). Todas as atividades, incluindo a assinatura digital de relatórios e o preenchimento de dados
+                    de obra, realizadas sob sua conta são de sua inteira responsabilidade.
+                </p>
+                <ul class="list-disc pl-5 mt-2 space-y-1">
+                    <li>Você garante que as informações fornecidas nos RDOs são verdadeiras e precisas.</li>
+                    <li>É proibido o uso do sistema para fins ilegais ou não autorizados.</li>
+                    <li>Você não deve tentar burlar as medidas de segurança, incluindo a validação de assinaturas via
+                        Hash.</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-bold text-slate-800 mb-3 flex items-center gap-2">
+                    <i class="fas fa-file-signature text-blue-600"></i> 3. Validade Jurídica dos Relatórios
+                </h2>
+                <p>
+                    Os documentos gerados por este sistema possuem mecanismos de autenticidade (Hash SHA-256 e registro
+                    de IP/Geolocalização). O usuário reconhece que a assinatura eletrônica realizada neste sistema
+                    possui validade para comprovação técnica e administrativa do andamento das obras.
+                </p>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-bold text-slate-800 mb-3 flex items-center gap-2">
+                    <i class="fas fa-server text-blue-600"></i> 4. Disponibilidade e Limitações
+                </h2>
+                <p>
+                    Embora nos esforcemos para manter o sistema disponível 24/7, não garantimos que o serviço será
+                    ininterrupto. Manutenções programadas ou falhas técnicas podem ocorrer. A empresa não se
+                    responsabiliza por dados perdidos decorrentes de mau uso ou falhas de conexão do usuário durante o
+                    envio de formulários.
+                </p>
+            </section>
+
+            <hr class="border-slate-100">
+
+            <div class="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                <p class="text-sm text-blue-800">
+                    <strong>Nota:</strong> Estes termos podem ser alterados a qualquer momento. O uso contínuo do
+                    sistema após as alterações constitui aceitação dos novos termos.
+                </p>
+            </div>
+
+        </div>
+
+        <div class="mt-10 flex justify-center">
+            <a href="{{ url_for('auth.inicio') }}"
+                class="px-6 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg transition-colors">
+                Voltar para o Início
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

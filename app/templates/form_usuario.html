@@ -7,106 +7,161 @@
 {% block content %}
 <div>
 
+    <!-- CABEÇALHO DA PÁGINA -->
+    <div class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 animate-fade-in-down">
+        <div>
+            <h1 class="text-3xl font-bold text-slate-800 tracking-tight">
+                {% if view_mode %}Visualizar{% elif item and item.id %}Editar{% else %}Novo{% endif %} Usuário
+            </h1>
+            <p class="text-slate-500 mt-1">Gestão de credenciais, status e acessos operacionais.</p>
+        </div>
+
+        <!-- Status Badge (Visível apenas em visualização/edição) -->
+        {% if item and item.id %}
+        <div class="self-start md:self-center">
+            <span
+                class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border {{ 'bg-blue-50 text-blue-700 border-blue-200' if item.status else 'bg-slate-100 text-slate-500 border-slate-200' }}">
+                <span class="w-2 h-2 rounded-full mr-2 {{ 'bg-blue-600' if item.status else 'bg-slate-400' }}"></span>
+                {{ 'Ativo' if item.status else 'Inativo' }}
+            </span>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- MENSAGENS FLASH -->
     {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
-    {% for category, message in messages %}
-    <div
-        class="mb-6 p-4 rounded-lg flex items-center gap-3 border shadow-sm transition-all
-{{ 'bg-red-100 text-red-700 border-red-200' if category == 'danger' else 'bg-green-100 text-green-700 border-green-200' }}">
-        <i class="fas {{ 'fa-exclamation-circle' if category == 'danger' else 'fa-check-circle' }}"></i>
-        <span class="text-sm font-bold">{{ message }}</span>
+    <div class="mb-8 space-y-3">
+        {% for category, message in messages %}
+        <div
+            class="p-4 rounded-xl flex items-center gap-4 border shadow-sm transition-all animate-fade-in
+            {{ 'bg-red-50 text-red-700 border-red-100' if category == 'danger' else 'bg-emerald-50 text-emerald-700 border-emerald-100' }}">
+            <div
+                class="shrink-0 w-10 h-10 rounded-full flex items-center justify-center {{ 'bg-red-100' if category == 'danger' else 'bg-emerald-100' }}">
+                <i class="fas {{ 'fa-exclamation-triangle' if category == 'danger' else 'fa-check' }}"></i>
+            </div>
+            <div>
+                <h4 class="font-bold text-sm uppercase tracking-wide opacity-80">{{ 'Erro' if category == 'danger' else
+                    'Sucesso' }}</h4>
+                <p class="text-sm font-medium">{{ message }}</p>
+            </div>
+        </div>
+        {% endfor %}
     </div>
-    {% endfor %}
     {% endif %}
     {% endwith %}
 
-    <div class="mb-6">
-        <h1 class="text-2xl font-bold text-slate-800">
-            {% if view_mode %}Visualizar{% elif item and item.id %}Editar{% else %}Novo{% endif %} Usuário
-        </h1>
-        <p class="text-sm text-slate-500">Gestão de credenciais, status e acessos operacionais.</p>
-    </div>
-
-    <form action="{{ url_for('auth.gerar_usuario') }}" method="POST" id="mainForm" class="space-y-6 rdo-form">
+    <form action="{{ url_for('auth.gerar_usuario') }}" method="POST" id="mainForm" class="space-y-8">
         <input type="hidden" name="id" value="{{ item.id if item and item.id }}">
         <input type="hidden" name="categoria" value="usuario">
 
-        <section class="bg-white rounded-lg p-6 border shadow-sm">
-            <div class="flex items-center justify-between mb-6">
+        <!-- CARD 1: INFORMAÇÕES PESSOAIS -->
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-200 transition-shadow hover:shadow-md">
+            <div
+                class="bg-slate-50/50 px-6 py-4 border-b border-slate-100 rounded-t-2xl flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
-                        <i class="fas fa-user"></i>
+                    <div
+                        class="w-10 h-10 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 shadow-sm ring-1 ring-blue-50">
+                        <i class="fas fa-user-circle text-lg"></i>
                     </div>
-                    <h3
-                        class="font-semibold text-slate-800 border-l-2 border-blue-600 pl-3 uppercase text-sm tracking-wide">
-                        Informações Pessoais</h3>
+                    <div>
+                        <h3 class="font-bold text-slate-800">Informações Pessoais</h3>
+                        <p class="text-xs text-slate-500">Dados básicos de identificação</p>
+                    </div>
                 </div>
 
-                <div class="flex items-center h-10 px-4 bg-slate-50 border rounded-lg shadow-inner">
+                <!-- Toggle Switch de Status -->
+                <div class="flex items-center bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-sm">
                     <label id="statusSwitchLabel" data-user-id="{{ item.id if item and item.id }}"
-                        class="relative inline-flex items-center group {{ 'pointer-events-none cursor-not-allowed opacity-70' if view_mode else 'cursor-pointer' }}"
-                        {% if not view_mode %}tabindex="0" role="switch"
-                        aria-checked="{{ 'true' if (item and item.status) or not item else 'false' }}" {% endif %}>
+                        class="relative inline-flex items-center group {{ 'cursor-not-allowed opacity-60' if view_mode else 'cursor-pointer' }}">
                         <input type="checkbox" name="status" class="sr-only peer" {{ 'checked' if (item and item.status)
-                            or not item }}>
-                        <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer 
-  peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] 
-  after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full 
-  after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            or not item }} {{ 'disabled' if view_mode }}>
+                        <div
+                            class="w-9 h-5 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer 
+                            peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] 
+                            after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600">
+                        </div>
                         <span
-                            class="ml-3 text-[10px] font-bold transition-colors {{ 'text-blue-600' if (item and item.status) or not item else 'text-slate-400' }}"
+                            class="ml-2 text-xs font-bold uppercase tracking-wider min-w-[3rem] text-center transition-colors {{ 'text-blue-600' if (item and item.status) or not item else 'text-slate-400' }}"
                             id="statusLabel">
-                            {{ 'Ativo' if (item and item.status) or not item else
-                            'Inativo' }}
+                            {{ 'Ativo' if (item and item.status) or not item else 'Inativo' }}
                         </span>
                     </label>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div class="md:col-span-2 space-y-1">
-                    <label class="text-xs font-bold text-slate-500 uppercase">Nome Completo <span
+            <div class="p-6 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
+
+                <!-- Nome Completo -->
+                <div class="md:col-span-2 space-y-1.5">
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wide ml-1">Nome Completo <span
                             class="text-red-500">*</span></label>
-                    <input type="text" name="nome" value="{{ item.nome if item }}"
-                        class="w-full border rounded-lg px-3 py-2 transition h-10 {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}"
-                        {{ 'readonly' if view_mode }} required>
+                    <div class="relative group">
+                        <input type="text" name="nome" value="{{ item.nome if item }}"
+                            class="block w-full px-3 py-2.5 border border-slate-200 rounded-xl leading-5 bg-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all sm:text-sm {{ 'bg-slate-50 text-slate-500 cursor-not-allowed' if view_mode }}"
+                            {{ 'readonly' if view_mode }} required placeholder="Ex: João da Silva">
+                    </div>
                 </div>
 
-                <div class="space-y-1">
-                    <label class="text-xs font-bold text-slate-500 uppercase">CPF (Somente números)
+                <!-- CPF -->
+                <div class="space-y-1.5">
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wide ml-1">CPF (Somente números)
                         <span class="text-red-500">*</span></label>
-                    <input type="text" id="cpf" name="cpf" value="{{ item.cpf if item }}" placeholder="00000000000"
-                        maxlength="11"
-                        class="w-full border rounded-lg px-3 py-2 h-10 {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}"
-                        {{ 'readonly' if view_mode }} required>
+                    <div class="relative group">
+                        <input type="text" id="cpf" name="cpf" value="{{ item.cpf if item }}"
+                            placeholder="000.000.000-00" maxlength="11"
+                            class="block w-full px-3 py-2.5 border border-slate-200 rounded-xl leading-5 bg-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all sm:text-sm {{ 'bg-slate-50 text-slate-500 cursor-not-allowed' if view_mode }}"
+                            {{ 'readonly' if view_mode }} required>
+                    </div>
                 </div>
 
-                <div class="space-y-1">
-                    <label class="text-xs font-bold text-slate-500 uppercase">Papel / Cargo <span
+                <!-- Papel / Cargo -->
+                <div class="space-y-1.5">
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wide ml-1">Papel / Cargo <span
                             class="text-red-500">*</span></label>
-                    <div class="relative h-10">
+                    <div class="relative h-[42px]">
                         <button type="button" id="roleDropdownBtn" {{ 'disabled' if view_mode }}
-                            class="w-full flex items-center justify-between border rounded-lg px-3 bg-slate-50 h-full transition focus:ring-2 focus:ring-blue-500 outline-none {{ 'cursor-not-allowed' if view_mode }}">
-                            <span id="selectedRoleText" class="truncate">{{ item.papel if
-                                item and item.papel else
-                                'Selecione...' }}</span>
-                            <i class="fas fa-chevron-down text-xs"></i>
+                            class="w-full flex items-center justify-between border border-slate-200 rounded-xl px-3 py-2.5 bg-white text-left transition-all focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none {{ 'bg-slate-50 cursor-not-allowed' if view_mode else 'hover:border-blue-300' }}">
+                            <span class="flex items-center gap-2 text-sm text-slate-700">
+                                <span id="selectedRoleText" class="truncate font-medium">{{ item.papel if item and
+                                    item.papel else 'Selecione uma função...' }}</span>
+                            </span>
+                            <i class="fas fa-chevron-down text-xs text-slate-400 transition-transform duration-200"
+                                id="roleChevron"></i>
                         </button>
+
+                        <!-- Dropdown Menu -->
                         <div id="roleDropdownContent"
-                            class="hidden absolute z-30 w-full mt-1 bg-white border rounded shadow-xl overflow-hidden">
-                            <div class="p-2 space-y-1">
-                                {% set list_papeis = [('Leitor', 'Leitor (Ler
-                                informações)'), ('Operador', "Usuário
-                                (RDOs)"), ('Gestor', "Gestor (Controle)"), ('Admin',
-                                'Admin (Total)'),('Cliente', "Cliente Obra (Ler)")] %}
-                                {% for val, label in list_papeis %}
+                            class="hidden absolute z-30 w-full mt-2 bg-white border border-slate-100 rounded-xl shadow-xl overflow-hidden animate-fade-in-up origin-top">
+                            <div class="p-1.5 space-y-0.5">
+                                {% set list_papeis = [
+                                ('Leitor', 'Leitor', 'bg-green-100 text-green-700', 'Apenas visualização'),
+                                ('Operador', "Operador", 'bg-blue-100 text-blue-700', 'Preenchimento de RDOs'),
+                                ('Gestor', "Gestor", 'bg-indigo-100 text-indigo-700', 'Controle e Aprovação'),
+                                ('Admin', 'Administrador', 'bg-purple-100 text-purple-700', 'Acesso Total'),
+                                ('Cliente', "Cliente Obra", 'bg-orange-100 text-orange-700', 'Visualização restrita')
+                                ] %}
+                                {% for val, label, badge_class, desc in list_papeis %}
                                 <label
-                                    class="flex items-center p-2 rounded hover:bg-slate-50 cursor-pointer transition">
-                                    <input type="radio" name="papel" value="{{ val }}"
-                                        class="role-radio w-4 h-4 text-blue-600" {{ 'checked' if item and
-                                        item.papel==val }} {{ 'disabled' if view_mode }} required>
-                                    <span class="ml-3 text-sm text-slate-700">{{
-                                        label }}</span>
+                                    class="flex items-center justify-between p-2.5 rounded-lg hover:bg-slate-50 cursor-pointer transition group">
+                                    <div class="flex items-center gap-3">
+                                        <input type="radio" name="papel" value="{{ val }}"
+                                            class="role-radio hidden peer" {{ 'checked' if item and item.papel==val }}
+                                            {{ 'disabled' if view_mode }} required>
+                                        <span
+                                            class="w-4 h-4 rounded-full border border-slate-300 peer-checked:border-blue-600 peer-checked:bg-blue-600 flex items-center justify-center transition-all">
+                                            <i
+                                                class="fas fa-check text-white text-[10px] opacity-0 peer-checked:opacity-100"></i>
+                                        </span>
+                                        <div>
+                                            <span
+                                                class="block text-sm font-semibold text-slate-700 group-hover:text-slate-900">{{
+                                                label }}</span>
+                                            <span class="block text-[10px] text-slate-400">{{ desc }}</span>
+                                        </div>
+                                    </div>
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded {{ badge_class }}">{{ val[0]
+                                        }}</span>
                                 </label>
                                 {% endfor %}
                             </div>
@@ -114,240 +169,238 @@
                     </div>
                 </div>
 
-                <!-- Supervisor moved after E-mail (inserido dinamicamente abaixo) -->
-
-                <div class="md:col-span-2 space-y-1">
-                    <label class="text-xs font-bold text-slate-500 uppercase">E-mail Corporativo
+                <!-- E-mail -->
+                <div class="md:col-span-2 space-y-1.5">
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wide ml-1">E-mail Corporativo
                         <span class="text-red-500">*</span></label>
-                    <input type="email" name="email" value="{{ item.email if item }}"
-                        class="w-full border rounded-lg px-3 py-2 h-10 transition {{ 'bg-slate-50 opacity-70 cursor-not-allowed' if view_mode }}"
-                        {{ 'readonly' if view_mode }} required>
+                    <div class="relative group">
+                        <input type="email" name="email" value="{{ item.email if item }}"
+                            class="block w-full px-3 py-2.5 border border-slate-200 rounded-xl leading-5 bg-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all sm:text-sm {{ 'bg-slate-50 text-slate-500 cursor-not-allowed' if view_mode }}"
+                            {{ 'readonly' if view_mode }} required placeholder="usuario@empresa.com.br">
+                    </div>
                 </div>
 
-                <!-- Supervisor: exibido APÓS o e-mail -->
-                <div class="md:col-span-2 space-y-1">
-                    <label class="text-xs font-bold text-slate-500 uppercase">Supervisor</label>
+                <!-- Supervisor (HIERARQUIA DE USUÁRIOS MANTIDA) -->
+                <div class="md:col-span-2 space-y-1.5">
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wide ml-1">Supervisor
+                        Imediato</label>
 
                     {% if view_mode %}
-                    <div
-                        class="w-full border rounded-lg px-3 py-2 h-auto flex items-start text-sm text-slate-700 flex-col">
+                    <div class="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col gap-2">
                         {% if supervisor_chain and supervisor_chain|length > 0 %}
-                        <div class="font-semibold">Supervisor imediato: {{ supervisor_chain[0].nome }} (ID: {{
-                            supervisor_chain[0].id }})</div>
+                        <div class="flex items-center gap-2 text-slate-800 font-medium text-sm">
+                            <i class="fas fa-user-tie text-slate-400"></i>
+                            {{ supervisor_chain[0].nome }} <span class="text-xs text-slate-400">(ID: {{
+                                supervisor_chain[0].id }})</span>
+                        </div>
+
                         {% if supervisor_chain|length > 1 %}
-                        <div class="text-xs text-slate-500 mt-2">Cadeia de aprovação:</div>
-                        <ol class="ml-4 mt-1 text-sm text-slate-700">
-                            {% for s in supervisor_chain %}
-                            <li>{{ s.nome }} (ID: {{ s.id }})</li>
-                            {% endfor %}
-                        </ol>
-                        {% else %}
-                        <div>{{ default_supervisor.nome if default_supervisor else '-' }} <span
-                                class="text-xs text-slate-400">(Admin padrão)</span></div>
+                        <div class="mt-2 pl-2 border-l-2 border-slate-200 ml-1.5">
+                            <p class="text-[10px] uppercase font-bold text-slate-400 mb-1 pl-2">Cadeia de aprovação</p>
+                            <ol class="space-y-1 pl-2">
+                                {% for s in supervisor_chain %}
+                                <li class="text-xs text-slate-600 flex items-center gap-1">
+                                    <i class="fas fa-level-up-alt rotate-90 text-slate-300 text-[10px]"></i>
+                                    {{ s.nome }}
+                                </li>
+                                {% endfor %}
+                            </ol>
+                        </div>
                         {% endif %}
                         {% else %}
-                        <div>{{ default_supervisor.nome if default_supervisor else '-' }} <span
-                                class="text-xs text-slate-400">(Admin padrão)</span></div>
+                        <div class="flex items-center gap-2 text-slate-500 text-sm">
+                            <i class="fas fa-user-shield text-slate-300"></i>
+                            {{ default_supervisor.nome if default_supervisor else 'Administrador Padrão' }}
+                        </div>
                         {% endif %}
                     </div>
                     {% else %}
-                    <div class="relative">
+                    <div class="relative group">
                         <input type="hidden" name="id_supervisor" id="id_supervisor_input"
                             value="{{ item.id_supervisor if item and item.id_supervisor }}">
-                        <input type="text" id="supervisor_search" placeholder="Pesquisar supervisor por nome ou id..."
-                            class="w-full border rounded-lg px-3 py-2 h-10 transition" autocomplete="off">
+                        <input type="text" id="supervisor_search" placeholder="Pesquisar por nome ou ID..."
+                            class="block w-full px-3 py-2.5 border border-slate-200 rounded-xl leading-5 bg-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all sm:text-sm"
+                            autocomplete="off">
+
+                        <!-- Resultados da Busca -->
                         <ul id="supervisor_results"
-                            class="absolute z-40 left-0 right-0 mt-1 bg-white border rounded max-h-48 overflow-auto hidden">
+                            class="hidden absolute z-40 left-0 right-0 mt-2 bg-white border border-slate-100 rounded-xl shadow-xl max-h-60 overflow-auto divide-y divide-slate-50 animate-fade-in-up">
+                            <!-- Injetado via JS -->
                         </ul>
-                        <p class="text-xs text-slate-500 mt-1">Selecione o supervisor (padrão: Admin caso vazio).</p>
+                    </div>
+                    <p class="text-[10px] text-slate-400 mt-1 ml-1">Deixe em branco para usar o Administrador padrão.
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+        </section>
+
+        <!-- CARD 2: PERMISSÕES DE ACESSO (SEM HIERARQUIA DE OBRAS) -->
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-200 transition-shadow hover:shadow-md">
+            <div class="bg-slate-50/50 px-6 py-4 border-b border-slate-100 rounded-t-2xl flex items-center gap-3">
+                <div
+                    class="w-10 h-10 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center shrink-0 shadow-sm ring-1 ring-orange-50">
+                    <i class="fas fa-network-wired text-lg"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-slate-800">Obras Permitidas</h3>
+                    <p class="text-xs text-slate-500">Selecione as obras que este usuário pode acessar</p>
+                </div>
+            </div>
+
+            <div class="p-6 md:p-8">
+                {% if item and item.papel == 'Admin' %}
+                <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-6 flex items-start gap-3">
+                    <i class="fas fa-info-circle text-blue-500 mt-0.5"></i>
+                    <div>
+                        <h4 class="text-sm font-bold text-blue-800">Acesso Irrestrito</h4>
+                        <p class="text-xs text-blue-600 mt-1">Usuários administradores possuem acesso automático a todas
+                            as obras atuais e futuras.</p>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- LISTA PLANA DE OBRAS -->
+                <div
+                    class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 {{ 'opacity-60 pointer-events-none grayscale' if item and item.papel == 'Admin' else '' }}">
+                    {% if obras %}
+                    {% for obra in obras %}
+                    {% set obra_checked = item and (obra in item.obras_permitidas or item.papel == 'Admin') %}
+
+                    <label
+                        class="flex items-start p-3 rounded-xl bg-white border border-slate-200 shadow-sm hover:border-blue-400 hover:shadow-md cursor-pointer transition-all group/item h-full">
+                        <div class="relative flex items-center mt-0.5">
+                            <input type="checkbox" name="obras_permitidas" value="{{ obra.id }}"
+                                class="w-5 h-5 text-blue-600 border-slate-300 rounded focus:ring-blue-500 transition-transform group-hover/item:scale-110"
+                                {{ 'checked' if obra_checked }} {{ 'disabled' if view_mode or (item and
+                                item.papel=='Admin' ) }}>
+                        </div>
+                        <div class="ml-3 flex-grow">
+                            <span
+                                class="text-sm font-semibold text-slate-700 group-hover/item:text-blue-700 transition-colors block leading-tight">
+                                {{ obra.nome }}
+                            </span>
+                            {% if obra.cidade %}
+                            <span class="text-[11px] text-slate-400 mt-0.5 block">
+                                {{ obra.cidade }}{{ '/' + obra.estado if obra.estado else '' }}
+                            </span>
+                            {% endif %}
+                        </div>
+                    </label>
+                    {% endfor %}
+                    {% else %}
+                    <div
+                        class="col-span-full text-center py-10 bg-slate-50 rounded-xl border border-dashed border-slate-300">
+                        <i class="fas fa-building text-slate-300 text-3xl mb-2"></i>
+                        <p class="text-slate-500 font-medium">Nenhuma obra cadastrada no sistema.</p>
                     </div>
                     {% endif %}
                 </div>
             </div>
         </section>
 
-        <section class="bg-white rounded-lg p-6 border shadow-sm mt-6">
-            <div class="flex items-center gap-3 mb-6">
-                <div class="w-10 h-10 rounded bg-orange-100 text-orange-600 flex items-center justify-center shrink-0">
-                    <i class="fas fa-network-wired"></i>
-                </div>
-                <h3
-                    class="font-semibold text-slate-800 border-l-2 border-orange-600 pl-3 uppercase text-sm tracking-wide">
-                    Permissões de Acesso (Obras)
-                </h3>
-            </div>
-
-            {% if item and item.papel == 'Admin' %}
-            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                <p class="text-sm text-blue-700 font-semibold">
-                    <i class="fas fa-info-circle mr-2"></i>Usuários com papel Admin têm acesso automático a TODAS as
-                    obras, incluindo as criadas no futuro.
-                </p>
-            </div>
-            {% endif %}
-
-            <div class="space-y-4 {{ 'opacity-50 pointer-events-none' if item and item.papel == 'Admin' else '' }}">
-                {% for matriz_id, data in obra_hierarchy.items() %}
-                {% set matriz = data.matriz %}
-                {% set filiais = data.filiais %}
-
-                {# Verifica se o usuário já tem a Matriz selecionada #}
-                {% set matriz_checked = item and matriz in item.obras_permitidas %}
-                {# Para Admin, todas as matrizes devem aparecer selecionadas #}
-                {% set matriz_checked = matriz_checked or (item and item.papel == 'Admin') %}
-
-                {# ID único para o cabeçalho e corpo do acordeão #}
-                {% set accordion_id = 'obra-group-' + matriz_id|string %}
-
-                <div class="border rounded-lg shadow-sm">
-                    <button type="button" class="matriz-header w-full flex items-center justify-between p-4 font-bold transition-colors 
-       {% if matriz_checked %}bg-red-50 hover:bg-red-100{% else %}bg-slate-50 hover:bg-slate-100{% endif %}"
-                        data-target="#{{ accordion_id }}" aria-expanded="false" aria-controls="{{ accordion_id }}"
-                        {{ 'disabled' if item and item.papel=='Admin' }}>
-
-                        <div class="flex items-center gap-3 w-full">
-                            <input type="checkbox" name="obras_permitidas" value="{{ matriz.id }}"
-                                id="matriz-{{ matriz.id }}"
-                                class="matriz-checkbox w-4 h-4 text-red-600 border-red-300 rounded focus:ring-red-500"
-                                data-filiais-selector=".filial-{{ matriz.id }}" {{ 'checked' if matriz_checked }}
-                                {{ 'disabled' if view_mode or (item and item.papel=='Admin' ) }}>
-
-                            <span class="cursor-pointer flex-grow text-left">
-                                {{ matriz.nome }}
-                                <span
-                                    class="ml-2 px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 border border-red-200 uppercase tracking-wide">
-                                    Matriz
-                                </span>
-                            </span>
-                        </div>
-
-                        <i class="fas fa-chevron-down text-xs transition-transform duration-300"></i>
-                    </button>
-
-                    <div id="{{ accordion_id }}" class="accordion-body hidden border-t bg-white">
-                        <div class="p-4 space-y-3 pl-12">
-                            <h4 class="text-sm font-semibold text-slate-600 mb-2">Filiais
-                                Vinculadas ({{ filiais|length
-                                }})</h4>
-
-                            {% if filiais %}
-                            {% for filial in filiais %}
-                            {% set filial_checked = item and filial in item.obras_permitidas %}
-                            {# Se a matriz está em obras_permitidas, a filial também está automaticamente #}
-                            {% set filial_checked = filial_checked or (item and matriz in item.obras_permitidas) %}
-                            {# Para Admin, todas as filiais devem aparecer selecionadas #}
-                            {% set filial_checked = filial_checked or (item and item.papel == 'Admin') %}
-
-                            <label class="flex items-start p-2 rounded hover:bg-blue-50 cursor-pointer transition">
-                                <input type="checkbox" name="obras_permitidas" value="{{ filial.id }}"
-                                    id="filial-{{ filial.id }}" data-matriz-id="matriz-{{ matriz.id }}"
-                                    class="filial-checkbox filial-{{ matriz.id }} w-4 h-4 text-blue-600 border-blue-300 rounded focus:ring-blue-500"
-                                    {{ 'checked' if filial_checked }} {{ 'disabled' if view_mode or (item and
-                                    item.papel=='Admin' ) }}>
-
-                                <span class="ml-3 text-sm text-slate-700 flex-grow">
-                                    {{ filial.nome }}
-                                    <span
-                                        class="ml-2 px-2 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700 uppercase tracking-wide">
-                                        Filial
-                                    </span>
-                                </span>
-                            </label>
-                            {% endfor %}
-                            {% else %}
-                            <p class="text-xs text-slate-500 italic">Esta matriz não possui
-                                filiais ativas vinculadas.
-                            </p>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-
-                {% if not obra_hierarchy %}
-                <div class="text-center py-4 text-slate-500 text-sm">
-                    Nenhuma Obra Matriz ativa cadastrada no sistema.
-                </div>
-                {% endif %}
-            </div>
-        </section>
-
-
-        {# INÍCIO DA MODIFICAÇÃO: Oculta a seção de segurança no modo de visualização #}
+        <!-- CARD 3: SEGURANÇA (Oculto em View Mode) -->
         {% if not view_mode %}
-        <section class="bg-white rounded-lg p-6 border shadow-sm">
-            <div class="flex items-center justify-between mb-4">
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-200 transition-shadow hover:shadow-md">
+            <div
+                class="bg-slate-50/50 px-6 py-4 border-b border-slate-100 rounded-t-2xl flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded bg-red-100 text-red-600 flex items-center justify-center shrink-0">
-                        <i class="fas fa-shield-alt"></i>
+                    <div
+                        class="w-10 h-10 rounded-lg bg-red-100 text-red-600 flex items-center justify-center shrink-0 shadow-sm ring-1 ring-red-50">
+                        <i class="fas fa-shield-alt text-lg"></i>
                     </div>
-                    <h3
-                        class="font-semibold text-slate-800 border-l-2 border-red-600 pl-3 uppercase text-sm tracking-wide">
-                        Segurança</h3>
+                    <div>
+                        <h3 class="font-bold text-slate-800">Segurança</h3>
+                        <p class="text-xs text-slate-500">Definição de acesso e senhas</p>
+                    </div>
                 </div>
-                {# Só mostra o botão se NÃO estiver editando um item existente (ou seja, novo usuário) #}
+
                 {% if not (item and item.id) %}
                 <button type="button" onclick="togglePasswords()"
-                    class="text-blue-600 text-xs font-bold hover:underline flex items-center gap-1">
-                    <i class="fas fa-eye" id="eyeIcon"></i> <span id="eyeText">Visualizar
-                        Senhas</span>
+                    class="group flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-blue-600 bg-white border border-slate-200 hover:border-blue-200 px-3 py-1.5 rounded-lg transition-all shadow-sm">
+                    <i class="fas fa-eye group-hover:scale-110 transition-transform" id="eyeIcon"></i>
+                    <span id="eyeText">Visualizar Senhas</span>
                 </button>
                 {% endif %}
             </div>
 
+            <div class="p-6 md:p-8">
+                {% if not (item and item.id) %}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-1.5">
+                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wide ml-1">Senha de
+                            Acesso</label>
+                        <div class="relative group">
+                            <input type="password" name="senha" id="senha" placeholder="Padrão: Usuario123"
+                                pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
+                                class="block w-full px-3 py-2.5 border border-slate-200 rounded-xl leading-5 bg-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all sm:text-sm">
+                        </div>
+                        <p class="text-[10px] text-slate-400 ml-1">Mínimo 8 caracteres, 1 maiúscula, 1 minúscula e 1
+                            número.</p>
+                    </div>
 
-            {% if not (item and item.id) %}
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div class="relative">
-                    <input type="password" name="senha" id="senha"
-                        placeholder="Nova Senha (Opcional, padrão Usuario123) *"
-                        pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
-                        class="w-full border rounded-lg px-3 py-2 h-10 outline-none pr-10 focus:ring-2 focus:ring-red-500 transition">
+                    <div class="space-y-1.5">
+                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wide ml-1">Confirmar
+                            Senha</label>
+                        <div class="relative group">
+                            <input type="password" id="senha_confirm" placeholder="Repita a senha"
+                                class="block w-full px-3 py-2.5 border border-slate-200 rounded-xl leading-5 bg-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all sm:text-sm">
+                        </div>
+                    </div>
                 </div>
-                <div class="relative">
-                    <input type="password" id="senha_confirm" placeholder="Confirmar Senha *"
-                        class="w-full border rounded-lg px-3 py-2 h-10 outline-none focus:ring-2 focus:ring-red-500 transition">
+                {% else %}
+                <div class="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-slate-400 border border-slate-200">
+                            <i class="fas fa-key"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-bold text-slate-700">Redefinição de Senha</p>
+                            <p class="text-xs text-slate-500">Reseta a senha para o padrão do sistema.</p>
+                        </div>
+                    </div>
+                    <button type="button" onclick="confirmReset('{{ item.id }}')"
+                        class="bg-white hover:bg-red-50 text-slate-600 hover:text-red-600 border border-slate-200 hover:border-red-200 font-bold py-2 px-4 rounded-lg text-xs transition-all shadow-sm hover:shadow active:scale-95 flex items-center gap-2">
+                        <i class="fas fa-redo-alt"></i> Resetar Senha
+                    </button>
                 </div>
+                {% endif %}
             </div>
-            {% endif %}
-
-            {% if item and item.id %}
-            <button type="button" onclick="confirmReset('{{ item.id }}')"
-                class="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 px-6 rounded-lg font-bold text-xs uppercase transition tracking-wider">Resetar
-                Senha para Padrão (EnfilSA@)</button>
-            {% endif %}
         </section>
         {% endif %}
-        {# FIM DA MODIFICAÇÃO #}
 
-        <div class="flex flex-col sm:flex-row gap-3 pt-4 border-t">
+        <!-- BOTÕES DE AÇÃO -->
+        <div
+            class="flex flex-col sm:flex-row gap-4 pt-4 border-t border-slate-200 sticky bottom-0 bg-slate-50/95 backdrop-blur py-4 z-10 -mx-4 px-4 sm:mx-0 sm:px-0 sm:relative sm:bg-transparent">
             {% if view_mode %}
-            {# MOSTRA: Botão "Editar" e "Voltar" no modo de visualização #}
             <a href="{{ url_for('auth.editar_usuario', id=item.id) }}"
-                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-sm text-center transition flex items-center justify-center gap-2">
-                Editar Usuário
+                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg shadow-blue-600/20 text-center transition-all hover:-translate-y-0.5 flex items-center justify-center gap-2">
+                <i class="fas fa-pen"></i> Editar Usuário
             </a>
             <a href="{{ url_for('auth.lista_usuarios') }}"
-                class="flex-1 bg-white border border-slate-300 text-slate-500 font-bold py-3 rounded-lg text-center transition hover:bg-slate-50">Voltar
-                para Lista</a>
+                class="flex-1 bg-white border border-slate-300 text-slate-600 hover:text-slate-800 hover:bg-slate-50 font-bold py-3.5 px-6 rounded-xl text-center transition-all flex items-center justify-center gap-2">
+                <i class="fas fa-arrow-left"></i> Voltar
+            </a>
             {% else %}
-            {# MOSTRA: Botões "Salvar" e "Cancelar" no modo de edição/cadastro #}
             <button type="submit" id="submitBtn"
-                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-sm flex items-center justify-center gap-2 transition">
+                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg shadow-blue-600/20 text-center transition-all hover:-translate-y-0.5 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-wait">
                 <span id="btnText">Salvar Cadastro</span>
-                <i class="fas fa-spinner fa-spin hidden" id="spinner"></i>
+                <i class="fas fa-spinner fa-spin hidden animate-spin" id="spinner"></i>
             </button>
             <a href="{{ url_for('auth.lista_usuarios') }}"
-                class="flex-1 flex items-center justify-center bg-white border border-slate-300 text-slate-500 py-3 rounded-lg font-semibold transition hover:bg-slate-50">Cancelar</a>
+                class="flex-1 bg-white border border-slate-300 text-slate-600 hover:text-slate-800 hover:bg-slate-50 font-bold py-3.5 px-6 rounded-xl text-center transition-all flex items-center justify-center gap-2">
+                Cancelar
+            </a>
             {% endif %}
         </div>
     </form>
 </div>
 
+<!-- SCRIPTS -->
 <script>
     /* ======= UTILITÁRIOS GLOBAIS ======= */
 
-    // Toggle de visibilidade das senhas — robusto e idempotente
     function togglePasswords() {
         const p1 = document.getElementById('senha');
         const p2 = document.getElementById('senha_confirm');
@@ -361,85 +414,39 @@
         p1.type = willShow ? 'text' : 'password';
         if (p2) p2.type = willShow ? 'text' : 'password';
 
-        // Alterna classes de ícone de forma determinística
         icon.classList.toggle('fa-eye', !willShow);
         icon.classList.toggle('fa-eye-slash', willShow);
 
-        textSpan.innerText = willShow ? 'Ocultar Senhas' : 'Visualizar Senhas';
+        textSpan.innerText = willShow ? 'Ocultar' : 'Visualizar Senhas';
     }
 
-    // Reset de senha via fetch
     function confirmReset(id) {
-        if (!confirm("Resetar senha deste usuário para 'EnfilSA@'?")) return;
-        fetch(`/auth/usuario/reset/${id}`, { method: 'POST' })
+        if (!confirm("Tem certeza? A senha será resetada para 'Usuario123'.")) return;
+
+        const btn = document.activeElement;
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+        btn.disabled = true;
+
+        fetch(`/auth/usuario-resetar-senha/${id}`, { method: 'POST' })
             .then(res => {
-                if (res.ok) alert("Senha resetada com sucesso!");
-                else alert("Erro ao resetar senha.");
+                if (res.ok) {
+                    alert("Senha resetada com sucesso!");
+                } else {
+                    alert("Erro ao resetar senha.");
+                }
             })
-            .catch(() => alert("Erro ao resetar senha."));
+            .catch(() => alert("Erro ao comunicar com o servidor."))
+            .finally(() => {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            });
     }
 
-    /* ======= LÓGICA DO FORMULÁRIO E ACORDEÕES ======= */
     document.addEventListener("DOMContentLoaded", function () {
-
-        // Flag de modo de visualização — Jinja renderiza boolean JS válido
         const viewMode = {% if view_mode %}true{% else %}false{% endif %};
 
-    // ===== INICIALIZA ACORDEÕES =====
-    const matrizHeaders = document.querySelectorAll('.matriz-header');
-
-    matrizHeaders.forEach(header => {
-        const targetSelector = header.dataset.target;
-        const body = document.querySelector(targetSelector);
-        const chevron = header.querySelector('.fa-chevron-down');
-        const matrizCheckbox = header.querySelector('.matriz-checkbox');
-
-        const hasCheckedFilial = body
-            ? Array.from(body.querySelectorAll('.filial-checkbox')).some(f => f.checked)
-            : false;
-
-        // Auto-open se já está selecionado
-        if ((matrizCheckbox && matrizCheckbox.checked) || hasCheckedFilial) {
-            body?.classList.remove('hidden');
-            header.setAttribute('aria-expanded', 'true');
-            chevron?.classList.add('rotate-180');
-        } else {
-            header.setAttribute('aria-expanded', 'false');
-        }
-
-        // Click handler para expandir/colapsar
-        header.addEventListener('click', function (e) {
-            // Clique em checkbox ou label NÃO expande acordeão
-            if (e.target.closest('input[type="checkbox"]') || e.target.closest('label')) return;
-
-            const expanded = header.getAttribute('aria-expanded') === 'true';
-            body?.classList.toggle('hidden');
-            header.setAttribute('aria-expanded', String(!expanded));
-            chevron?.classList.toggle('rotate-180', !expanded);
-        });
-    });
-
-    // ===== SE MODO VISUALIZAÇÃO, SAIR AQUI =====
-    if (viewMode) return;
-
-    // ===== CASCATA MATRIZ / FILIAL =====
-    document.querySelectorAll('.matriz-checkbox').forEach(matriz => {
-        const filiais = document.querySelectorAll(matriz.dataset.filiaisSelector);
-
-        matriz.addEventListener('change', () => {
-            filiais.forEach(f => f.checked = matriz.checked);
-        });
-
-        filiais.forEach(filial => {
-            filial.addEventListener('change', () => {
-                const all = [...filiais].every(f => f.checked);
-                const any = [...filiais].some(f => f.checked);
-
-                if (all) matriz.checked = true;
-                else if (!any) matriz.checked = false;
-            });
-        });
-    });
+    // (REMOVIDO: Lógica de Acordeões e Cascata de Checkboxes, pois não há mais hierarquia de obras)
 
     // ===== SWITCH DE STATUS =====
     const statusToggle = document.querySelector('input[name="status"]');
@@ -447,84 +454,76 @@
     if (statusToggle && statusLabel) {
         statusToggle.addEventListener('change', function () {
             statusLabel.innerText = this.checked ? "Ativo" : "Inativo";
-            statusLabel.classList.toggle('text-blue-600', this.checked);
-            statusLabel.classList.toggle('text-slate-400', !this.checked);
+            statusLabel.className = `ml-2 text-xs font-bold uppercase tracking-wider min-w-[3rem] text-center transition-colors ${this.checked ? 'text-blue-600' : 'text-slate-400'}`;
 
-            // Salvar automaticamente se for edição (item existente)
             const itemId = document.querySelector('input[name="id"]')?.value;
             if (itemId) {
                 fetch(`/auth/mudar-status-usuario/${itemId}`, { method: 'POST' })
-                    .then(res => {
-                        if (res.ok) {
-                            // Status salvo com sucesso - mostrar feedback visual rápido
-                            const label = document.getElementById('statusLabel');
-                            if (label) {
-                                label.style.opacity = '0.5';
-                                setTimeout(() => label.style.opacity = '1', 300);
-                            }
-                        } else {
-                            alert('Erro ao salvar status');
-                            // Reverter o toggle em caso de erro
-                            statusToggle.checked = !statusToggle.checked;
-                        }
-                    })
                     .catch(() => {
                         alert('Erro ao salvar status');
-                        // Reverter o toggle em caso de erro
                         statusToggle.checked = !statusToggle.checked;
+                        statusLabel.innerText = !this.checked ? "Ativo" : "Inativo";
                     });
             }
         });
     }
 
-    // ===== CPF: APENAS NÚMEROS =====
+    // ===== MÁSCARA CPF =====
     const cpfInput = document.getElementById('cpf');
     if (cpfInput) {
-        cpfInput.addEventListener('input', (e) => e.target.value = e.target.value.replace(/\D/g, ""));
+        cpfInput.addEventListener('input', (e) => {
+            let v = e.target.value.replace(/\D/g, "");
+            if (v.length > 11) v = v.slice(0, 11);
+            e.target.value = v;
+        });
     }
 
-    // ===== DROPDOWN PAPEL / ROLE =====
+    // ===== DROPDOWN PAPEL CUSTOMIZADO =====
     const roleBtn = document.getElementById('roleDropdownBtn');
     const roleContent = document.getElementById('roleDropdownContent');
+    const roleChevron = document.getElementById('roleChevron');
     const selectedRoleText = document.getElementById('selectedRoleText');
 
     if (roleBtn && roleContent) {
+        const closeDropdown = () => {
+            roleContent.classList.add('hidden');
+            roleChevron.classList.remove('rotate-180');
+        };
+
         roleBtn.addEventListener('click', (e) => {
-            if (roleBtn.disabled) return;
-            roleContent.classList.toggle('hidden');
             e.stopPropagation();
+            const isOpen = !roleContent.classList.contains('hidden');
+            if (isOpen) {
+                closeDropdown();
+            } else {
+                roleContent.classList.remove('hidden');
+                roleChevron.classList.add('rotate-180');
+            }
+        });
+
+        document.querySelectorAll('.role-radio').forEach(radio => {
+            radio.addEventListener('change', () => {
+                const text = radio.parentElement.querySelector('div span').innerText;
+                selectedRoleText.innerText = text;
+                selectedRoleText.classList.add('text-slate-800');
+                closeDropdown();
+
+                if (radio.value === 'Admin') {
+                    document.querySelectorAll('input[type="checkbox"]').forEach(c => {
+                        if (!c.disabled) { c.checked = true; c.dispatchEvent(new Event('change')); }
+                    });
+                }
+            });
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!roleBtn.contains(e.target) && !roleContent.contains(e.target)) {
+                closeDropdown();
+            }
         });
     }
 
-    // ===== ROLE CHANGE: ADMIN MARCA TUDO =====
-    document.querySelectorAll('.role-radio').forEach(radio => {
-        radio.addEventListener('change', () => {
-            if (selectedRoleText) {
-                selectedRoleText.innerText = radio.parentElement.innerText.trim();
-            }
-
-            if (radio.value === 'Admin') {
-                // Marca todas as matrizes
-                document.querySelectorAll('.matriz-checkbox').forEach(c => {
-                    c.checked = true;
-                    c.dispatchEvent(new Event('change'));
-                });
-
-                // Marca todas as filiais
-                document.querySelectorAll('.filial-checkbox').forEach(c => {
-                    c.checked = true;
-                    c.dispatchEvent(new Event('change'));
-                });
-            }
-        });
-    });
-
-    // ===== FECHA DROPDOWNS AO CLICAR FORA =====
-    document.addEventListener('click', () => {
-        if (roleContent) roleContent.classList.add('hidden');
-    });
-
-    // ===== SUBMIT: UX DE LOADING E VALIDAÇÃO =====
+    // ===== SUBMIT E VALIDAÇÃO =====
     const mainForm = document.getElementById('mainForm');
     if (mainForm) {
         mainForm.addEventListener('submit', function (e) {
@@ -532,10 +531,10 @@
 
             const s1 = document.getElementById('senha');
             const s2 = document.getElementById('senha_confirm');
-
             if (s1 && s2 && s1.value && s1.value !== s2.value) {
                 e.preventDefault();
-                alert("Senhas não conferem!");
+                alert("As senhas digitadas não conferem.");
+                s2.focus();
                 return;
             }
 
@@ -545,91 +544,86 @@
 
             if (btnText) btnText.innerText = "Salvando...";
             if (spinner) spinner.classList.remove('hidden');
-            if (submitBtn) submitBtn.disabled = true;
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.classList.add('opacity-80', 'cursor-wait');
+            }
         });
     }
 
-    // ===== SUPERVISOR SEARCH (AJAX + FILTRO) =====
-    (function initSupervisorSearch() {
-        const searchInput = document.getElementById('supervisor_search');
-        const resultsList = document.getElementById('supervisor_results');
-        const hiddenInput = document.getElementById('id_supervisor_input');
+    // ===== BUSCA DE SUPERVISOR (AJAX) - MANTIDO =====
+    const searchInput = document.getElementById('supervisor_search');
+    const resultsList = document.getElementById('supervisor_results');
+    const hiddenInput = document.getElementById('id_supervisor_input');
 
-        if (!searchInput || !resultsList || !hiddenInput) return;
-
+    if (searchInput && resultsList && hiddenInput) {
         let supervisors = [];
 
-        function renderResults(items) {
+        const renderResults = (items) => {
             resultsList.innerHTML = '';
             if (!items.length) {
                 resultsList.classList.add('hidden');
                 return;
             }
+
             items.forEach(s => {
                 const li = document.createElement('li');
-                li.className = 'p-2 hover:bg-slate-100 cursor-pointer text-sm';
-                li.textContent = `${s.nome} (ID:${s.id})`;
-                li.dataset.id = s.id;
-                li.dataset.nome = s.nome;
+                li.className = 'px-4 py-3 hover:bg-slate-50 cursor-pointer flex items-center gap-3 transition-colors';
+                li.innerHTML = `
+                        <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold">
+                            ${s.nome.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-slate-700">${s.nome} (${s.email})</p>
+                            <p class="text-[10px] text-slate-400">ID: ${s.id} • ${s.papel}</p>
+                        </div>
+                    `;
                 li.addEventListener('click', () => {
                     hiddenInput.value = s.id;
-                    searchInput.value = `${s.nome} (ID:${s.id})`;
+                    searchInput.value = `${s.nome}`;
                     resultsList.classList.add('hidden');
                 });
                 resultsList.appendChild(li);
             });
             resultsList.classList.remove('hidden');
-        }
+        };
 
-        // Busca lista de supervisores do backend
         fetch('/auth/supervisores')
             .then(r => r.json())
             .then(data => {
                 supervisors = Array.isArray(data) ? data : [];
 
-                // Define admin padrão se existir
-                const admin = supervisors.find(s => s.papel === 'Admin');
-
-                // Se já houver um supervisor selecionado no form (edição), preenche o campo
-                const existing = hiddenInput.value;
-                if (existing) {
-                    const found = supervisors.find(s => String(s.id) === String(existing));
-                    if (found) searchInput.value = `${found.nome} (ID:${found.id})`;
-                } else if (admin) {
-                    // Preenche com Admin padrão visualmente, mas mantém o campo selecionável
-                    hiddenInput.value = admin.id;
-                    searchInput.value = `${admin.nome} (ID:${admin.id})`;
+                const currentId = hiddenInput.value;
+                if (currentId) {
+                    const found = supervisors.find(s => String(s.id) === String(currentId));
+                    if (found) searchInput.value = found.nome;
                 }
             })
-            .catch(err => console.warn('Não foi possível carregar supervisores', err));
+            .catch(console.warn);
 
-        let debounce = null;
-        searchInput.addEventListener('input', () => {
-            clearTimeout(debounce);
-            const q = searchInput.value.trim().toLowerCase();
-            debounce = setTimeout(() => {
-                if (!q) { renderResults([]); return; }
-                const filtered = supervisors.filter(s =>
-                    s.nome.toLowerCase().includes(q) || String(s.id).includes(q)
-                ).slice(0, 50);
-                renderResults(filtered);
-            }, 150);
+        searchInput.addEventListener('input', (e) => {
+            const q = e.target.value.toLowerCase();
+            if (!q) {
+                resultsList.classList.add('hidden');
+                hiddenInput.value = "";
+                return;
+            }
+            const filtered = supervisors.filter(s =>
+                s.nome.toLowerCase().includes(q) || String(s.id).includes(q)
+            ).slice(0, 10);
+            renderResults(filtered);
         });
 
-        // Ao focar no input, mostra algumas opções imediatamente
         searchInput.addEventListener('focus', () => {
-            const q = searchInput.value.trim();
-            if (!q) {
-                const sample = supervisors.slice(0, 10);
-                renderResults(sample);
+            if (!searchInput.value) renderResults(supervisors.slice(0, 5));
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!resultsList.contains(e.target) && e.target !== searchInput) {
+                resultsList.classList.add('hidden');
             }
         });
-
-        // Fecha ao clicar fora
-        document.addEventListener('click', (e) => {
-            if (!resultsList.contains(e.target) && e.target !== searchInput) resultsList.classList.add('hidden');
-        });
-    })();
+    }
     });
 </script>
 {% endblock %}

@@ -1,2194 +1,282 @@
 {% extends "base.html" %}
-
-{% block title %}
-{% if view_mode %}Visualizar{% elif item and item.id %}Editar{% else %}Novo{% endif %} RDO
-{% endblock %}
+{% block title %}{{ 'Visualizar RDO' if view_mode else 'RDO' }}{% endblock %}
 
 {% block content %}
+{% set readonly = 'readonly' if view_mode else '' %}
+{% set disabled = 'disabled' if view_mode else '' %}
 
-<!-- Dependências de UI -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
-
-<style>
-    /* --- Variáveis e Estilos Globais --- */
-    :root {
-        --input-border: #cbd5e1;
-        --input-focus: #3b82f6;
-        --bg-readonly: #f1f5f9;
-        --primary-blue: #2563eb;
-        --success-green: #10b981;
-        --error-red: #ef4444;
-    }
-
-    body.modal-open {
-        overflow: hidden;
-        touch-action: none;
-    }
-
-    /* Custom Scrollbar */
-    .custom-scrollbar::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
-    }
-
-    .custom-scrollbar::-webkit-scrollbar-track {
-        background: #f1f5f9;
-        border-radius: 4px;
-    }
-
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-        background-color: #94a3b8;
-        border-radius: 4px;
-    }
-
-    /* Inputs Padrão */
-    .form-control-std {
-        width: 100%;
-        height: 40px;
-        border: 1px solid var(--input-border);
-        border-radius: 0.5rem;
-        padding: 0 0.75rem;
-        transition: all 0.2s ease-in-out;
-        outline: none;
-        background-color: #fff;
-        font-size: 0.9rem;
-        color: #1e293b;
-    }
-
-    .form-control-std:focus {
-        border-color: var(--input-focus);
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
-    }
-
-    .form-control-std[readonly],
-    .form-control-std:disabled {
-        background-color: var(--bg-readonly);
-        color: #64748b;
-        cursor: not-allowed;
-        border-color: #e2e8f0;
-    }
-
-    textarea.form-control-std {
-        height: auto;
-        min-height: 100px;
-        padding: 0.75rem;
-        resize: vertical;
-        line-height: 1.5;
-    }
-
-    .time-calc {
-        text-align: center;
-        padding-left: 0.5rem;
-        padding-right: 0.5rem;
-    }
-
-    /* --- Select2 --- */
-    .select2-container .select2-search__field {
-        width: 100% !important;
-    }
-
-    .select2-container .select2-selection--single {
-        height: 40px !important;
-        border-color: var(--input-border) !important;
-        border-radius: 0.5rem !important;
-        display: flex;
-        align-items: center;
-        background-color: #fff;
-    }
-
-    .select2-container--default .select2-selection--single .select2-selection__rendered {
-        padding-left: 0.75rem;
-        padding-right: 2rem;
-        color: #1e293b;
-        font-size: 0.9rem;
-        line-height: normal;
-    }
-
-    .select2-container--default .select2-selection--single .select2-selection__arrow {
-        height: 38px !important;
-        right: 8px !important;
-    }
-
-    .select2-dropdown {
-        border-radius: 0.5rem;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-        border-color: var(--input-border);
-        z-index: 10005;
-    }
-
-    /* --- Workflow Styles --- */
-    .workflow-container {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-    }
-
-    .workflow-step {
-        position: relative;
-        display: flex;
-        align-items: flex-start;
-        gap: 1rem;
-        padding: 1rem;
-        border-radius: 0.75rem;
-        border: 1px solid var(--input-border);
-        background: #fff;
-        transition: all 0.2s ease;
-    }
-
-    .workflow-step:not(:last-child)::after {
-        content: '';
-        position: absolute;
-        left: 27px;
-        top: 3.5rem;
-        bottom: -1.2rem;
-        width: 2px;
-        background-color: #e2e8f0;
-        z-index: 0;
-    }
-
-    .workflow-step.active {
-        border-color: var(--primary-blue);
-        box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.1);
-        background-color: #eff6ff;
-    }
-
-    .workflow-step.approved {
-        background-color: #f0fdf4;
-        border-color: #86efac;
-    }
-
-    .workflow-step.rejected {
-        background-color: #fef2f2;
-        border-color: #fecaca;
-    }
-
-    .workflow-step.locked {
-        opacity: 0.7;
-        background-color: #f8fafc;
-        border-style: dashed;
-    }
-
-    .step-number {
-        width: 36px;
-        height: 36px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 700;
-        font-size: 0.875rem;
-        background: #fff;
-        border: 2px solid #cbd5e1;
-        color: #64748b;
-        flex-shrink: 0;
-        z-index: 1;
-    }
-
-    .approved .step-number {
-        background: var(--success-green);
-        border-color: var(--success-green);
-        color: white;
-    }
-
-    .rejected .step-number {
-        background: var(--error-red);
-        border-color: var(--error-red);
-        color: white;
-    }
-
-    .active .step-number {
-        background: var(--primary-blue);
-        border-color: var(--primary-blue);
-        color: white;
-    }
-
-    /* --- Modais --- */
-    .modal-overlay {
-        display: none;
-        position: fixed;
-        inset: 0;
-        background: rgba(15, 23, 42, 0.7);
-        z-index: 9999;
-        align-items: center;
-        justify-content: center;
-        backdrop-filter: blur(4px);
-        padding: 1rem;
-    }
-
-    .modal-overlay.active {
-        display: flex;
-        animation: fadeIn 0.2s ease-out;
-    }
-
-    .modal-content {
-        background: white;
-        border-radius: 1rem;
-        width: 100%;
-        max-width: 600px;
-        max-height: 90vh;
-        display: flex;
-        flex-direction: column;
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-        overflow: hidden;
-        position: relative;
-        animation: scaleUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    @keyframes fadeIn {
-        from {
-            opacity: 0;
-        }
-
-        to {
-            opacity: 1;
-        }
-    }
-
-    @keyframes scaleUp {
-        from {
-            transform: scale(0.95);
-            opacity: 0;
-        }
-
-        to {
-            transform: scale(1);
-            opacity: 1;
-        }
-    }
-
-    .status-badge {
-        padding: 0.25rem 0.75rem;
-        border-radius: 9999px;
-        font-size: 0.75rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        white-space: nowrap;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.375rem;
-    }
-
-    .photo-card {
-        transition: transform 0.2s, box-shadow 0.2s;
-        touch-action: manipulation;
-    }
-
-    .photo-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    }
-
-    /* --- TABELAS RESPONSIVAS (MOBILE CARDS) --- */
-    /* No desktop, tabela normal. No mobile, vira cards */
-    @media (max-width: 768px) {
-
-        /* Esconde cabeçalho da tabela */
-        .mobile-table thead {
-            display: none;
-        }
-
-        /* Transforma linhas em blocos (cards) */
-        .mobile-table tbody tr {
-            display: flex;
-            flex-direction: column;
-            background: #fff;
-            border: 1px solid #e2e8f0;
-            border-radius: 0.75rem;
-            margin-bottom: 1rem;
-            padding: 1rem;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-        }
-
-        /* Ajusta células */
-        .mobile-table tbody td {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.5rem 0;
-            border-bottom: 1px solid #f1f5f9;
-            width: 100% !important;
-            /* Força largura total */
-        }
-
-        .mobile-table tbody td:last-child {
-            border-bottom: none;
-        }
-
-        /* Usa o atributo data-label para mostrar o título do campo à esquerda */
-        .mobile-table tbody td::before {
-            content: attr(data-label);
-            font-weight: 700;
-            font-size: 0.75rem;
-            color: #64748b;
-            text-transform: uppercase;
-            margin-right: 1rem;
-            min-width: 80px;
-            /* Alinhamento visual */
-        }
-
-        /* Ajustes específicos para inputs dentro das células mobile */
-        .mobile-table .form-control-std {
-            text-align: right;
-            border: 1px solid #e2e8f0;
-            /* Borda mais suave no mobile */
-        }
-
-        /* Inputs de texto ou textarea ocupam linha inteira se necessário */
-        .mobile-table td.full-width-mobile {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 0.5rem;
-        }
-
-        .mobile-table td.full-width-mobile::before {
-            margin-bottom: 0.25rem;
-        }
-
-        .mobile-table td.full-width-mobile .form-control-std {
-            text-align: left;
-        }
-
-        /* Botão de excluir centralizado no final do card */
-        .mobile-table td.action-cell {
-            justify-content: center;
-            border-top: 1px dashed #e2e8f0;
-            margin-top: 0.5rem;
-            padding-top: 0.75rem;
-        }
-
-        .mobile-table td.action-cell::before {
-            display: none;
-        }
-
-        /* Sem label para botão delete */
-    }
-</style>
-
-<div class="max-w-7xl mx-auto">
-    {# --- MENSAGENS FLASH --- #}
-    {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-    <div class="mb-6 space-y-3">
-        {% for category, message in messages %}
-        <div
-            class="p-4 rounded-xl flex items-start gap-4 border shadow-sm {{ 'bg-red-50 text-red-800 border-red-200' if category == 'danger' else 'bg-emerald-50 text-emerald-800 border-emerald-200' }}">
-            <i
-                class="fas {{ 'fa-exclamation-circle' if category == 'danger' else 'fa-check-circle' }} mt-1 text-lg"></i>
+<div class="page-shell pt-24 lg:pt-28">
+    <div class="page-hero p-6 md:p-8">
+        <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div>
-                <h4 class="font-bold text-sm">{{ 'Erro' if category == 'danger' else 'Sucesso' }}</h4>
-                <p class="text-sm opacity-90">{{ message }}</p>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-    {% endwith %}
-
-    {# --- CABEÇALHO --- #}
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-5 mb-8">
-        <div class="flex-1 w-full">
-            <div class="flex flex-col sm:flex-row sm:items-center gap-3 mb-2">
-                <h1 class="text-2xl md:text-3xl font-extrabold text-slate-800 tracking-tight">
-                    {% if item %}
-                    {% if view_mode %}Visualizar{% else %}Editar{% endif %} RDO <span class="text-blue-600">#{{
-                        item.id_sequencial }}</span> <span
-                        class="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                        Rev. {{ item.id_revisao }}
-                    </span>
-                    {% else %}
-                    Novo Relatório
-                    {% endif %}
+                <p class="text-xs font-black uppercase tracking-[0.18em] text-blue-600">Relatorio Diario de Obra</p>
+                <h1 class="mt-2 text-2xl md:text-3xl font-black tracking-tight text-slate-950">
+                    {{ 'RDO #' ~ item.id if item else 'Novo RDO' }}
                 </h1>
-
-                {% if item %}
-                <span class="status-badge w-fit
-                    {% if item.status == 'Aprovado' %} bg-emerald-100 text-emerald-700 border border-emerald-200
-                    {% elif item.status == 'Rejeitado' %} bg-red-100 text-red-700 border border-red-200
-                    {% elif item.status == 'Pendente' %} bg-yellow-100 text-yellow-700 border border-yellow-200
-                    {% else %} bg-slate-100 text-slate-600 border border-slate-200 {% endif %}">
-                    <i class="fas fa-circle text-[8px]"></i> {{ item.status or 'Rascunho' }}
-                </span>
+                <p class="mt-2 max-w-2xl text-sm text-slate-500">
+                    Registro operacional com atividades, efetivo, equipamentos, ocorrencias, fotos e fluxo de aprovacao.
+                </p>
+            </div>
+            <div class="flex flex-wrap gap-3">
+                <a href="{{ url_for('auth.lista_rdo') }}" class="premium-button premium-button-secondary">
+                    <i class="fas fa-arrow-left"></i> Voltar
+                </a>
+                {% if item and view_mode %}
+                <a href="{{ url_for('auth.gerar_pdf_rdo_view', rdo_id=item.id) }}" target="_blank" class="premium-button premium-button-secondary">
+                    <i class="fas fa-file-pdf"></i> PDF
+                </a>
+                <a href="{{ url_for('auth.editar_rdo', rdo_id=item.id) }}" class="premium-button premium-button-primary">
+                    <i class="fas fa-pen"></i> Editar
+                </a>
                 {% endif %}
             </div>
-
-            <div class="flex flex-col sm:flex-row sm:gap-6 text-sm text-slate-500">
-                {% if item and (item.criado or item.modificado) %}
-                <div class="flex gap-4 text-xs mt-1 sm:mt-0">
-                    {% if item.criado %}
-                    <span><i class="far fa-calendar mr-1"></i>Criado: {{ item.criado.strftime('%d/%m/%Y %H:%M')
-                        }}</span>
-                    {% endif %}
-                    {% if item.modificado %}
-                    <span><i class="far fa-calendar-alt mr-1"></i>Modificado: {{ item.modificado.strftime('%d/%m/%Y
-                        %H:%M')
-                        }}</span>
-                    {% endif %}
-                </div>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Ações do Topo -->
-        <div class="flex gap-3 w-full md:w-auto">
-            {% if view_mode %}
-            <a href="{{ url_for('auth.lista_rdo') }}"
-                class="flex-1 md:flex-none px-5 py-2.5 text-sm font-bold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 text-center transition shadow-sm">
-                <i class="fas fa-arrow-left mr-2"></i> Voltar
-            </a>
-            <button onclick="openModal('modal_qr_code_viewer')"
-                class="flex-1 md:flex-none px-5 py-2.5 text-sm font-bold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 text-center transition shadow-sm">
-                <i class="fas fa-qrcode mr-2"></i> QR Code
-            </button>
-            {% if item.id %}
-            <div class="relative group">
-                <button type="button" onclick="document.getElementById('dropdown_print').classList.toggle('hidden')"
-                    class="flex-1 md:flex-none bg-slate-800 hover:bg-slate-900 text-white px-5 py-2.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2 shadow-md transition">
-                    <i class="fas fa-print"></i> Imprimir <i
-                        class="fas fa-chevron-down text-[10px] ml-1 opacity-70"></i>
-                </button>
-
-                <!-- Menu Dropdown -->
-                <div id="dropdown_print"
-                    class="hidden absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden transform origin-top-right transition-all">
-                    <div class="p-1">
-                        <a href="{{ url_for('auth.gerar_pdf_rdo_view', rdo_id=item.id) }}" target="_blank"
-                            class="flex items-center px-4 py-3 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition group-print">
-                            <div
-                                class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center mr-3">
-                                <i class="fas fa-file-alt"></i>
-                            </div>
-                            <div>
-                                <span class="font-bold block">Normal</span>
-                                <span class="text-xs text-slate-400 font-normal">Layout detalhado</span>
-                            </div>
-                        </a>
-                        <a href="{{ url_for('auth.gerar_pdf_rdo_compacto_view', rdo_id=item.id) }}" target="_blank"
-                            class="flex items-center px-4 py-3 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition group-print">
-                            <div
-                                class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center mr-3">
-                                <i class="fas fa-compress-alt"></i>
-                            </div>
-                            <div>
-                                <span class="font-bold block">Compacto</span>
-                                <span class="text-xs text-slate-400 font-normal">Economia de papel</span>
-                            </div>
-                        </a>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-            {% else %}
-            <a href="{{ url_for('auth.lista_rdo') }}"
-                class="md:hidden px-4 py-2.5 text-slate-500 hover:text-slate-700 text-sm font-bold">
-                Cancelar
-            </a>
-            <button type="submit" form="rdoForm"
-                class="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white px-8 py-2.5 rounded-lg font-bold text-sm shadow-md hover:shadow-lg transition flex items-center justify-center gap-2">
-                <i class="fas fa-save"></i> Salvar RDO
-            </button>
-            {% endif %}
         </div>
     </div>
 
-    <form id="rdoForm" action="{{ url_for('auth.gerar_rdo') }}" method="POST" enctype="multipart/form-data"
-        class="space-y-6 md:space-y-8">
-        <input type="hidden" name="rdo_id" value="{{ item.id if item }}">
-        <!-- Inputs hidden para exclusão de fotos -->
-        <div id="container_fotos_removidas"></div>
+    <form id="rdoForm" action="{{ url_for('auth.gerar_rdo') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
+        {% if item %}<input type="hidden" name="rdo_id" value="{{ item.id }}">{% endif %}
 
-        {# 1. CONTEXTO E DADOS GERAIS #}
-        <section class="bg-white rounded-2xl p-5 md:p-6 border border-slate-200 shadow-sm">
-            <div class="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
-                <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-sm">
-                    <i class="fas fa-project-diagram text-lg"></i>
-                </div>
-                <div>
-                    <h3 class="font-bold text-slate-800 text-lg leading-tight">Dados Gerais</h3>
-                    <p class="text-xs text-slate-400 font-medium uppercase tracking-wider">Localização e Data</p>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-                <!-- Obra (Full width mobile, 2 cols desktop) -->
-                <div class="md:col-span-2 space-y-1.5">
-                    <label for="select_obra" class="block text-sm font-bold text-slate-700">Obra / Contrato <span
-                            class="text-red-500">*</span></label>
-
-                    {# CORREÇÃO: Input hidden para garantir envio quando disabled #}
-                    {% if item %}
-                    <input type="hidden" name="obra_id" value="{{ item.id_obra }}">
-                    {% endif %}
-
-                    <select name="obra_id" id="select_obra" class="form-control-std select2-enable" {% if item
-                        %}disabled{% endif %} required onchange="fetchObra(this.value)">
-                        <option value="">Selecione...</option>
+        <section class="premium-card p-6 md:p-8">
+            <div class="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+                <label class="field-block">
+                    <span>Obra</span>
+                    <select name="obra_id" class="premium-input" required {{ disabled }}>
+                        <option value="">Selecione</option>
                         {% for obra in obras %}
-                        <option value="{{ obra.id }}" {% if item and item.id_obra==obra.id %}selected{% endif %}>{{
-                            obra.nome }}</option>
+                        <option value="{{ obra.id }}" {% if item and item.obra_id == obra.id %}selected{% endif %}>{{ obra.nome }}</option>
                         {% endfor %}
                     </select>
-                </div>
-
-                <!-- Data -->
-                <div class="space-y-1.5">
-                    <label for="data_rdo" class="block text-sm font-bold text-slate-700">Data do RDO <span
-                            class="text-red-500">*</span></label>
-                    <div class="flex gap-2">
-                        <div class="relative flex-1">
-                            <!-- INPUT OCULTO QUE ENVIA AO SERVIDOR (Formato YYYY-MM-DD) -->
-                            <input type="hidden" name="data_rdo" id="data_rdo_hidden"
-                                value="{{ item.data.strftime('%Y-%m-%d') if item and item.data else '' }}">
-
-                            <!-- INPUT VISUAL PARA O USUÁRIO (Formato DD/MM/AAAA) -->
-                            <input type="text" id="data_rdo_visual"
-                                value="{{ item.data.strftime('%d/%m/%Y') if item and item.data else '' }}"
-                                class="form-control-std cursor-pointer pr-10" required {{ 'disabled' if view_mode }}
-                                placeholder="DD/MM/AAAA" maxlength="10"
-                                oninput="mascaraData(this); syncDateToHidden(this)" onblur="syncDateToHidden(this)">
-
-                            {% if not view_mode %}
-                            <!-- Botão Ícone Calendário (Gatilho) -->
-                            <div class="absolute inset-y-0 right-0 flex items-center pr-3 z-10" title="Selecionar Data">
-                                <!-- Ícone clicável -->
-                                <i class="far fa-calendar-alt text-lg text-slate-400 hover:text-blue-600 cursor-pointer"
-                                    onclick="document.getElementById('hidden_date_picker').showPicker()"></i>
-
-                                <!-- Input Oculto -->
-                                <input type="date" id="hidden_date_picker"
-                                    class="absolute w-0 h-0 opacity-0 pointer-events-none" tabindex="-1"
-                                    onchange="aplicarDataPicker(this)">
-                            </div>
-                            {% endif %}
-                        </div>
-
-                        {% if not view_mode %}
-                        <!-- Botão Hoje -->
-                        <button type="button" onclick="setDataHoje()"
-                            class="px-3 py-2 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold hover:bg-blue-100 transition border border-blue-200 whitespace-nowrap shadow-sm flex items-center"
-                            title="Definir Data de Hoje">
-                            <i class="fas fa-calendar-day mr-1"></i> Hoje
-                        </button>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <!-- Frente de Trabalho -->
-                <div class="space-y-1.5">
-                    <label for="select_frente" class="block text-sm font-bold text-slate-700">Frente de Trabalho <span
-                            class="text-red-500">*</span></label>
-                    <div class="relative">
-
-                        {# CORREÇÃO: Input hidden para garantir envio quando disabled #}
-                        {% if item %}
-                        <input type="hidden" name="frente_trabalho_id" value="{{ item.id_frente_trabalho }}">
-                        {% endif %}
-
-                        <select name="frente_trabalho_id" id="select_frente" class="form-control-std select2-enable"
-                            required {% if not item or not item.id_obra %} disabled {% endif %} {% if view_mode %}
-                            disabled {% endif %} {% if item %}disabled{% endif %}>
-                            <option value="">{% if item and item.id_obra %}Carregando...{% else %}Selecione a Obra...{%
-                                endif %}</option>
-                            {% if item and item.id_frente_trabalho %}
-                            {% for frente in frente_trabalho %}
-                            <!-- AQUI: Injetamos data-meta e data-unidade para funcionar no carregamento inicial -->
-                            <option value="{{ frente.id_frente_trabalho if frente.id_frente_trabalho else frente.id }}"
-                                data-meta="{{ frente.qtd_planejada or 0 }}" data-unidade="{{ frente.unidade or '' }}"
-                                data-realizado="{{ frente.qtd_realizada or 0 }}" {% if
-                                item.id_frente_trabalho==(frente.id_frente_trabalho if frente.id_frente_trabalho else
-                                frente.id) %}selected{% endif %}>
-                                {{ frente.nome_frente }}
-                            </option>
-                            {% endfor %}
-                            {% endif %}
-                        </select>
-                        <div id="loader_frente" class="hidden absolute right-8 top-3 text-blue-500 bg-white"><i
-                                class="fas fa-spinner fa-spin"></i></div>
-                    </div>
-                    <div id="error_frente" class="hidden text-xs text-red-500 mt-1 font-medium"><i
-                            class="fas fa-exclamation-triangle mr-1"></i> Erro ao carregar.</div>
-                </div>
-
-                <!-- BLOCO DE AVANÇO FÍSICO (Atualizado com Visual Bonito + Input Otimizado) -->
-                <div id="block_progresso"
-                    class="{% if not (item and item.frente_trabalho and item.frente_trabalho.unidade) %}hidden{% endif %} md:col-span-4 bg-blue-50/50 rounded-lg p-3 border border-blue-100 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mt-2">
-
-                    <!-- 1. Card Visual de Metas (Lado Esquerdo) -->
-                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 w-full sm:flex-1">
-                        <div class="flex items-start gap-4">
-                            <!-- Ícone -->
-                            <div
-                                class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 text-base">
-                                <i class="fas fa-chart-line"></i>
-                            </div>
-
-                            <!-- Conteúdo de Valores -->
-                            <div class="flex-1 min-w-0">
-                                <div class="flex items-center justify-between mb-2">
-                                    <!-- Meta -->
-                                    <div>
-                                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">
-                                            Meta</p>
-                                        <div class="flex items-baseline gap-1">
-                                            <span id="label_meta_valor"
-                                                class="text-lg font-bold text-slate-800 leading-none">
-                                                {{ item.frente_trabalho.qtd_planejada if item and item.frente_trabalho
-                                                else '0' }}
-                                            </span>
-                                            <span class="label_unidade_dinamica text-[10px] text-slate-500 font-medium">
-                                                {{ item.frente_trabalho.unidade if item and item.frente_trabalho else
-                                                '-' }}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <!-- Acumulado -->
-                                    <div class="text-right">
-                                        <p
-                                            class="text-[10px] text-emerald-600 font-bold uppercase tracking-wider mb-0.5">
-                                            Realizado</p>
-                                        <div class="flex items-baseline gap-1 justify-end">
-                                            <span id="label_realizado_valor"
-                                                class="text-lg font-bold text-slate-900 leading-none">
-                                                {{ item.frente_trabalho.qtd_realizada if item and item.frente_trabalho
-                                                else '0' }}
-                                            </span>
-                                            <span class="label_unidade_dinamica text-[10px] text-slate-500 font-medium">
-                                                {{ item.frente_trabalho.unidade if item and item.frente_trabalho else
-                                                '-' }}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Barra de progresso -->
-                                {% set realizado = item.frente_trabalho.qtd_realizada if item and item.frente_trabalho
-                                else 0 %}
-                                {% set meta = item.frente_trabalho.qtd_planejada if item and item.frente_trabalho else 0
-                                %}
-                                {% set porcentagem = (realizado / meta * 100) if meta > 0 else 0 %}
-
-                                <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                                    <div id="progress_bar_dinamica"
-                                        class="bg-blue-500 h-full rounded-full transition-all duration-500"
-                                        style="width: {{ porcentagem | round }}%"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 2. Área de Input de Produção (Lado Direito - Otimizado) -->
-                    <div class="w-full sm:w-auto sm:max-w-sm shrink-0">
-
-                        <label class="text-xs font-bold text-slate-500 uppercase mb-2 block">
-                            Produção Realizada no Dia
-                        </label>
-
-                        <!-- Box de Instruções Compacto -->
-                        <div
-                            class="mb-2 p-2 bg-white border border-slate-200 rounded text-[11px] leading-tight text-slate-500 shadow-sm">
-                            <p class="mb-1">Informe o que foi <strong>100% finalizado</strong> hoje.</p>
-                            <ul class="list-disc list-inside opacity-80">
-                                <li>Serviço pela metade não conta.</li>
-                                <li>Respeite a unidade ao lado.</li>
-                            </ul>
-                        </div>
-
-                        <div class="flex items-center gap-2">
-                            <input type="number" name="qtd_produzida" step="0.01"
-                                class="form-control-std font-bold text-blue-700 text-center h-10 text-lg w-full border border-slate-300 rounded px-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="0.00"
-                                value="{{ item.qtd_produzida if item and item.qtd_produzida is not none else '' }}"
-                                {{ 'disabled' if view_mode }}>
-
-                            <span
-                                class="label_unidade_dinamica flex items-center justify-center text-xs font-bold text-slate-500 h-10 w-12 bg-slate-100 rounded border border-slate-200 shadow-sm">
-                                {{ item.frente_trabalho.unidade if item and item.frente_trabalho else '-' }}
-                            </span>
-                        </div>
-                    </div>
-
-                </div>
-
-            </div>
-        </section>
-
-        {# 2. JORNADA E CLIMA (Grid Responsivo) #}
-        <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <!-- Jornada -->
-            <div class="bg-white rounded-2xl p-5 md:p-6 border border-slate-200 shadow-sm h-full">
-                <div class="flex items-center gap-3 mb-5">
-                    <div class="w-8 h-8 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center">
-                        <i class="far fa-clock"></i>
-                    </div>
-                    <h3 class="font-bold text-slate-800">Jornada de Trabalho</h3>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="space-y-1">
-                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Entrada</label>
-                        <input type="time" name="hora_entrada"
-                            value="{{ item.hora_entrada.strftime('%H:%M') if item and item.hora_entrada else '08:00' }}"
-                            class="form-control-std time-calc font-mono font-medium" {{ 'readonly' if view_mode }}>
-                    </div>
-                    <div class="space-y-1">
-                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Saída</label>
-                        <input type="time" name="hora_saida"
-                            value="{{ item.hora_saida.strftime('%H:%M') if item and item.hora_saida else '17:00' }}"
-                            class="form-control-std time-calc font-mono font-medium" {{ 'readonly' if view_mode }}>
-                    </div>
-                    <div class="space-y-1">
-                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Início Intervalo</label>
-                        <input type="time" name="intervalo_entrada"
-                            value="{{ item.intervalo_entrada.strftime('%H:%M') if item and item.intervalo_entrada else '12:00' }}"
-                            class="form-control-std time-calc font-mono font-medium" {{ 'readonly' if view_mode }}>
-                    </div>
-                    <div class="space-y-1">
-                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Fim Intervalo</label>
-                        <input type="time" name="intervalo_saida"
-                            value="{{ item.intervalo_saida.strftime('%H:%M') if item and item.intervalo_saida else '13:00' }}"
-                            class="form-control-std time-calc font-mono font-medium" {{ 'readonly' if view_mode }}>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Clima -->
-            <div class="bg-white rounded-2xl p-5 md:p-6 border border-slate-200 shadow-sm h-full">
-                <div class="flex items-center gap-3 mb-5">
-                    <div class="w-8 h-8 rounded-lg bg-yellow-50 text-yellow-600 flex items-center justify-center">
-                        <i class="fas fa-cloud-sun"></i>
-                    </div>
-                    <h3 class="font-bold text-slate-800">Condições Climáticas</h3>
-                </div>
-
-                <div class="space-y-4">
-                    <div class="space-y-1.5">
-                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Manhã <span
-                                class="text-red-500">*</span></label>
-                        <select name="climas_manha" class="form-control-std select2-enable" required {{ 'disabled' if
-                            view_mode }}>
-                            <option value="">Selecione...</option>
-                            {% for c in clima %}
-                            <option value="{{ c.id }}" {% if item and item.id_climas_manha==c.id %}selected{% endif %}>
-                                {{ c.nome }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="space-y-1.5">
-                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Tarde <span
-                                class="text-red-500">*</span></label>
-                        <select name="climas_tarde" class="form-control-std select2-enable" required {{ 'disabled' if
-                            view_mode }}>
-                            <option value="">Selecione...</option>
-                            {% for c in clima %}
-                            <option value="{{ c.id }}" {% if item and item.id_climas_tarde==c.id %}selected{% endif %}>
-                                {{ c.nome }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        {# 3. ATIVIDADES (Responsive Table Pattern) #}
-        <section class="bg-white rounded-2xl p-5 md:p-6 border border-slate-200 shadow-sm">
-            <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
-                <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
-                        <i class="fas fa-list-check"></i>
-                    </div>
-                    <h3 class="font-bold text-slate-800">Atividades Realizadas</h3>
-                </div>
-                {% if not view_mode %}
-                <button type="button" onclick="addAtividadeRow()"
-                    class="bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 px-4 py-2 rounded-lg font-bold text-sm transition flex items-center gap-2">
-                    <i class="fas fa-plus"></i> <span class="hidden sm:inline">Adicionar Linha</span>
-                </button>
-                {% endif %}
-            </div>
-
-            <!-- Wrapper com classe mobile-table -->
-            <div class="w-full">
-                <table class="w-full text-left mobile-table" id="table_atividades">
-                    <thead>
-                        <tr class="bg-slate-100 text-xs uppercase text-slate-500 font-bold border-b border-slate-200">
-                            <th class="p-4 w-3/4">Descrição da Atividade</th>
-                            <th class="p-4 w-[200px]">Status</th>
-                            {% if not view_mode %}<th class="p-4 w-12 text-center"></th>{% endif %}
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100 bg-white">
-                        {% if item and item.atividades %}
-                        {% for atv in item.atividades %}
-                        <tr class="group hover:bg-slate-50 transition-colors">
-                            <td class="p-3 align-top full-width-mobile" data-label="Descrição:">
-                                <textarea name="atividade_descricao[]" class="form-control-std text-sm min-h-[80px]"
-                                    rows="2" placeholder="Descreva a atividade..." required {{ 'readonly' if view_mode
-                                    }}>{{ atv.descricao }}</textarea>
-                            </td>
-                            <td class="p-3 align-top" data-label="Status:">
-                                <select name="atividade_status[]" class="form-control-std text-sm select2-enable"
-                                    {{ 'disabled' if view_mode }}>
-                                    <option value="Em andamento" {{ 'selected' if atv.status=='Em andamento' }}>Em
-                                        andamento</option>
-                                    <option value="Concluída" {{ 'selected' if atv.status=='Concluída' }}>Concluída
-                                    </option>
-                                    <option value="Iniciada" {{ 'selected' if atv.status=='Iniciada' }}>Iniciada
-                                    </option>
-                                    <option value="Paralisada" {{ 'selected' if atv.status=='Paralisada' }}>Paralisada
-                                    </option>
-                                </select>
-                            </td>
-                            {% if not view_mode %}
-                            <td class="p-3 align-middle text-center action-cell">
-                                <button type="button" onclick="removeRow(this)"
-                                    class="w-8 h-8 rounded-full text-slate-400 hover:text-red-500 hover:bg-red-50 transition flex items-center justify-center">
-                                    <i class="fas fa-trash-alt"></i>
-                                </button>
-                            </td>
-                            {% endif %}
-                        </tr>
-                        {% endfor %}
-                        {% else %}
-                        <!-- JS vai popular se vazio -->
-                        {% endif %}
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
-        {# 4. RECURSOS (MÃO DE OBRA E EQUIPAMENTOS) #}
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-            <!-- Mão de Obra -->
-            <section class="bg-white rounded-2xl p-5 md:p-6 border border-slate-200 shadow-sm flex flex-col">
-                <div class="flex items-center justify-between gap-3 mb-4">
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                            <i class="fas fa-users-cog"></i>
-                        </div>
-                        <h3 class="font-bold text-slate-800">Mão de Obra</h3>
-                    </div>
-                    {% if not view_mode %}
-                    <button type="button" onclick="openModal('modal_mo')"
-                        class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-2 rounded-lg font-bold text-xs transition border border-indigo-200">
-                        <i class="fas fa-plus mr-1"></i> Adicionar
-                    </button>
-                    {% endif %}
-                </div>
-
-                <div class="w-full flex-1">
-                    <table class="w-full text-left mobile-table" id="table_mao_obra">
-                        <thead>
-                            <tr
-                                class="bg-slate-100 text-xs uppercase text-slate-500 font-bold border-b border-slate-200">
-                                <th class="p-3">Função</th>
-                                <th class="p-3 text-center w-24">Própria</th>
-                                <th class="p-3 text-center w-24">Terceiro</th>
-                                {% if not view_mode %}<th class="p-3 w-10"></th>{% endif %}
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-100 bg-white">
-                            {% if item and item.maos_obra %}
-                            {% for mo in item.maos_obra %}
-                            <tr>
-                                <td class="p-2" data-label="Função:">
-                                    <select name="mo_funcao[]" class="form-control-std text-sm select2-enable"
-                                        {{ 'disabled' if view_mode }}>
-                                        {% for op in mao_de_obra_options %}
-                                        <option value="{{ op.nome }}" {% if op.nome==mo.nome_funcao %}selected{% endif
-                                            %}>{{ op.nome }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </td>
-                                <td class="p-2" data-label="Qtd Própria:"><input type="number" name="mo_qtd_propria[]"
-                                        value="{{ mo.quantidade_propria }}"
-                                        class="form-control-std text-center font-bold text-slate-700" min="0"
-                                        inputmode="numeric" {{ 'readonly' if view_mode }}></td>
-                                <td class="p-2" data-label="Qtd Terceiro:"><input type="number"
-                                        name="mo_qtd_terceirizada[]" value="{{ mo.quantidade_terceirizada }}"
-                                        class="form-control-std text-center font-bold text-slate-700" min="0"
-                                        inputmode="numeric" {{ 'readonly' if view_mode }}></td>
-                                {% if not view_mode %}<td class="p-2 text-center action-cell"><button type="button"
-                                        onclick="removeRow(this)" class="text-slate-400 hover:text-red-500 p-2"><i
-                                            class="fas fa-trash-alt"></i></button></td>{% endif %}
-                            </tr>
-                            {% endfor %}
-                            {% endif %}
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-
-            <!-- Equipamentos -->
-            <section class="bg-white rounded-2xl p-5 md:p-6 border border-slate-200 shadow-sm flex flex-col">
-                <div class="flex items-center justify-between gap-3 mb-4">
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-lg bg-gray-100 text-gray-600 flex items-center justify-center">
-                            <i class="fas fa-truck-pickup"></i>
-                        </div>
-                        <h3 class="font-bold text-slate-800">Equipamentos</h3>
-                    </div>
-                    {% if not view_mode %}
-                    <button type="button" onclick="openModal('modal_eq')"
-                        class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg font-bold text-xs transition border border-gray-300">
-                        <i class="fas fa-plus mr-1"></i> Adicionar
-                    </button>
-                    {% endif %}
-                </div>
-
-                <div class="w-full flex-1">
-                    <table class="w-full text-left mobile-table" id="table_equipamentos">
-                        <thead>
-                            <tr
-                                class="bg-slate-100 text-xs uppercase text-slate-500 font-bold border-b border-slate-200">
-                                <th class="p-3">Equipamento</th>
-                                <th class="p-3 w-24 text-center">Qtd</th>
-                                {% if not view_mode %}<th class="p-3 w-10"></th>{% endif %}
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-100 bg-white">
-                            {% if item and item.equipamentos %}
-                            {% for eq in item.equipamentos %}
-                            <tr>
-                                <td class="p-2" data-label="Equipamento:">
-                                    <select name="eq_id[]" class="form-control-std text-sm select2-enable" {{ 'disabled'
-                                        if view_mode }}>
-                                        {% for opt in equipamentos_options %}
-                                        <option value="{{ opt.id }}" {% if opt.id==eq.id_equipamento_lista %}selected{%
-                                            endif %}>{{ opt.nome }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </td>
-                                <td class="p-2" data-label="Quantidade:"><input type="number" name="eq_qtd[]"
-                                        value="{{ eq.quantidade }}"
-                                        class="form-control-std text-center font-bold text-slate-700"
-                                        inputmode="numeric" {{ 'readonly' if view_mode }}></td>
-                                {% if not view_mode %}<td class="p-2 text-center action-cell"><button type="button"
-                                        onclick="removeRow(this)" class="text-slate-400 hover:text-red-500 p-2"><i
-                                            class="fas fa-trash-alt"></i></button></td>{% endif %}
-                            </tr>
-                            {% endfor %}
-                            {% endif %}
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-        </div>
-
-        {# 5. OCORRÊNCIAS #}
-        <section class="bg-white rounded-2xl p-5 md:p-6 border border-slate-200 shadow-sm">
-            <div class="flex items-center justify-between gap-3 mb-4">
-                <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center">
-                        <i class="fas fa-exclamation-triangle"></i>
-                    </div>
-                    <h3 class="font-bold text-slate-800">Ocorrências / Imprevistos</h3>
-                </div>
-                {% if not view_mode %}
-                <button type="button" onclick="openModal('modal_oc')"
-                    class="bg-red-50 hover:bg-red-100 text-red-700 px-3 py-2 rounded-lg font-bold text-xs transition border border-red-200">
-                    <i class="fas fa-plus mr-1"></i> Adicionar
-                </button>
-                {% endif %}
-            </div>
-
-            <div class="w-full">
-                <table class="w-full text-left mobile-table" id="table_ocorrencias">
-                    <thead>
-                        <tr class="bg-slate-100 text-xs uppercase text-slate-500 font-bold border-b border-slate-200">
-                            <th class="p-3 w-1/3">Tipo</th>
-                            <th class="p-3">Descrição Detalhada</th>
-                            <th class="p-3">Tempo Parado</th>
-                            {% if not view_mode %}<th class="p-3 w-10"></th>{% endif %}
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100 bg-white">
-                        {% if item and item.ocorrencias %}
-                        {% for oc in item.ocorrencias %}
-                        <tr>
-                            <td class="p-2 align-top" data-label="Tipo:">
-                                <select name="oc_tag[]" class="form-control-std text-sm select2-enable" {{ 'disabled' if
-                                    view_mode }}>
-                                    {% for t in tags_options %}
-                                    <option value="{{ t.id }}" {% if t.id==oc.id_tag_lista %}selected{% endif %}>{{
-                                        t.nome }}</option>
-                                    {% endfor %}
-                                </select>
-                            </td>
-                            <td class="p-2 full-width-mobile" data-label="Detalhes:"><input type="text" name="oc_desc[]"
-                                    value="{{ oc.descricao }}" class="form-control-std"
-                                    placeholder="Detalhe a ocorrência..." {{ 'readonly' if view_mode }}></td>
-                            <td class="p-2 full-width-mobile" data-label="Tempo Parado:">
-                                <input type="time" name="oc_tempo_parado[]"
-                                    value="{{ oc.tempo_parado.strftime('%H:%M') if oc.tempo_parado else '' }}"
-                                    class="form-control-std" {{ 'readonly' if view_mode }}>
-                            </td>
-                            {% if not view_mode %}<td class="p-2 align-middle text-center action-cell"><button
-                                    type="button" onclick="removeRow(this)"
-                                    class="text-slate-400 hover:text-red-500 p-2"><i
-                                        class="fas fa-trash-alt"></i></button></td>{% endif %}
-                        </tr>
-                        {% endfor %}
-                        {% endif %}
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
-        {# 6. FOTOS E COMENTÁRIOS #}
-        <section class="bg-white rounded-2xl p-5 md:p-6 border border-slate-200 shadow-sm space-y-6">
-            <div class="space-y-2">
-                <label for="comentarios_gerais" class="text-sm font-bold text-slate-700 flex items-center gap-2">
-                    <i class="far fa-comment-alt text-slate-400"></i> Comentários Gerais / Observações
                 </label>
-                <textarea name="comentarios_gerais" id="comentarios_gerais" class="form-control-std h-32"
-                    placeholder="Insira informações adicionais relevantes..." {{ 'readonly' if view_mode
-                    }}>{{ item.comentarios_gerais if item else '' }}</textarea>
+                <label class="field-block">
+                    <span>Frente</span>
+                    <select name="frente_trabalho_id" class="premium-input" required {{ disabled }}>
+                        <option value="">Selecione</option>
+                        {% for frente in frente_trabalho %}
+                        <option value="{{ frente.id }}" {% if item and item.frente_trabalho_id == frente.id %}selected{% endif %}>{{ frente.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label class="field-block">
+                    <span>Data</span>
+                    <input type="date" name="data_rdo" value="{{ item.data_rdo.isoformat() if item and item.data_rdo else '' }}" class="premium-input" required {{ readonly }}>
+                </label>
+                <label class="field-block">
+                    <span>Status</span>
+                    <input value="{{ item.status if item else 'PENDENTE' }}" class="premium-input" readonly>
+                </label>
             </div>
 
-            <div class="border-t border-slate-100 pt-6">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="font-bold text-slate-800 flex items-center gap-2">
-                        <i class="fas fa-camera text-blue-500"></i> Galeria de Fotos
-                    </h3>
-                    <div class="bg-slate-100 px-3 py-1 rounded-full text-xs font-bold text-slate-600">
-                        <span id="counter_fotos_total">0</span> / 20
-                    </div>
-                </div>
-
-                <!-- Inputs hidden para inputs de arquivo já processados -->
-                <div id="file-inputs-container" class="hidden"></div>
-
-                {% if not view_mode %}
-                <div
-                    class="mb-6 flex flex-col sm:flex-row gap-4 items-stretch justify-between bg-slate-50 p-4 rounded-xl border border-slate-200">
-                    <div class="text-slate-600 text-sm flex items-center mb-2 sm:mb-0">
-                        <i class="fas fa-info-circle mr-2 text-blue-500"></i>
-                        <span>Adicione fotos:</span>
-                    </div>
-
-                    <div class="flex flex-1 gap-3 sm:gap-4" id="camera-btn-container">
-                        <!-- BOTÃO CÂMERA (Multidevice) -->
-                        <div class="flex-1">
-                            <!-- Input para Mobile (Hidden) -->
-                            <input type="file" id="input-camera-mobile" accept="image/*" capture="environment"
-                                class="hidden" onchange="handleNewPhoto(this)">
-
-                            <!-- Botão Trigger -->
-                            <button type="button" onclick="initCameraCapture()"
-                                class="w-full cursor-pointer bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition-all active:scale-95 flex flex-col sm:flex-row items-center justify-center gap-2 h-full text-center">
-                                <i class="fas fa-camera text-lg"></i>
-                                <span class="text-sm">Tirar Foto</span>
-                            </button>
-                        </div>
-
-                        <!-- BOTÃO UPLOAD/GALERIA -->
-                        <div class="flex-1">
-                            <label for="input-gallery"
-                                class="cursor-pointer bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold py-3 px-4 rounded-lg shadow-sm transition-all active:scale-95 flex flex-col sm:flex-row items-center justify-center gap-2 h-full text-center">
-                                <i class="fas fa-images text-lg text-slate-500"></i>
-                                <span class="text-sm">Upload / Galeria</span>
-                            </label>
-                            <input type="file" id="input-gallery" accept="image/*" class="hidden" multiple
-                                onchange="handleNewPhoto(this)">
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
-
-                <!-- Grid Fotos Responsivo -->
-                <div id="galeria_unificada" class="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {# FOTOS EXISTENTES #}
-                    {% if item and item.fotos %}
-                    {% for foto in item.fotos %}
-                    <div class="photo-card relative bg-white border border-slate-200 rounded-xl overflow-hidden group shadow-sm"
-                        id="card_existente_{{ foto.id_foto }}">
-                        <div class="relative aspect-video bg-slate-100 cursor-zoom-in overflow-hidden"
-                            onclick="openPhotoViewer('{{ url_for('static', filename='uploads/rdo/' ~ foto.arquivo) }}', '{{ foto.comentario }}')">
-                            <img src="{{ url_for('static', filename='uploads/rdo/' ~ foto.arquivo) }}"
-                                class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                                loading="lazy">
-                            <div
-                                class="absolute top-2 right-2 bg-black/60 text-white text-[10px] font-bold px-2 py-1 rounded backdrop-blur-sm">
-                                SALVA
-                            </div>
-                        </div>
-
-                        <div class="p-3 space-y-2">
-                            <input type="hidden" name="fotos_existentes_ids[]" value="{{ foto.id_foto }}">
-                            <div class="relative">
-                                <input type="text" name="comentarios_existentes_list[]" value="{{ foto.comentario }}"
-                                    placeholder="Legenda..." class="form-control-std !h-9 !text-xs !pl-8" {{ 'readonly'
-                                    if view_mode }}>
-                            </div>
-                            {% if not view_mode %}
-                            <button type="button" onclick="marcarExclusao('{{ foto.id_foto }}')"
-                                class="w-full py-2 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors flex items-center justify-center gap-2">
-                                <i class="fas fa-trash-alt"></i> Excluir
-                            </button>
-                            {% endif %}
-                        </div>
-                    </div>
-                    {% endfor %}
-                    {% endif %}
-                </div>
+            <div class="mt-5 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+                <label class="field-block">
+                    <span>Clima manha</span>
+                    <select name="climas_manha" class="premium-input" {{ disabled }}>
+                        <option value="">Selecione</option>
+                        {% for c in clima %}
+                        <option value="{{ c.id }}" {% if item and item.clima_manha_id == c.id %}selected{% endif %}>{{ c.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label class="field-block">
+                    <span>Clima tarde</span>
+                    <select name="climas_tarde" class="premium-input" {{ disabled }}>
+                        <option value="">Selecione</option>
+                        {% for c in clima %}
+                        <option value="{{ c.id }}" {% if item and item.clima_tarde_id == c.id %}selected{% endif %}>{{ c.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label class="field-block">
+                    <span>Entrada</span>
+                    <input type="time" name="hora_entrada" value="{{ item.hora_entrada.strftime('%H:%M') if item and item.hora_entrada else '' }}" class="premium-input" {{ readonly }}>
+                </label>
+                <label class="field-block">
+                    <span>Saida</span>
+                    <input type="time" name="hora_saida" value="{{ item.hora_saida.strftime('%H:%M') if item and item.hora_saida else '' }}" class="premium-input" {{ readonly }}>
+                </label>
+            </div>
         </section>
 
-        {# 7. WORKFLOW E APROVAÇÃO #}
-        {% if view_mode %}
-        <section class="bg-white rounded-2xl p-5 md:p-6 border border-slate-200 shadow-sm mt-6">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                <h3 class="font-bold text-slate-800 uppercase text-xs tracking-widest flex items-center gap-2">
-                    <i class="fas fa-signature text-blue-500"></i> Fluxo de Aprovação
-                </h3>
-
-                {% if item.status not in ['Aprovado', 'Finalizado', 'Rejeitado'] %}
-                <button type="button" onclick="openModal('modal_assinantes')"
-                    class="w-full sm:w-auto text-xs font-bold text-blue-600 bg-blue-50 border border-blue-100 px-4 py-2.5 rounded-lg hover:bg-blue-100 transition flex items-center justify-center gap-2">
-                    <i class="fas fa-cog"></i> Configurar Sequência
-                </button>
-                {% endif %}
-            </div>
-
-            <div class="workflow-container relative pl-2">
-                {% set lista_assinaturas = assinaturas if assinaturas is defined else item.assinaturas %}
-                {% set qtd_assinaturas = lista_assinaturas|length if lista_assinaturas is sequence else
-                lista_assinaturas.count() %}
-
-                {% if qtd_assinaturas == 0 %}
-                <div class="text-center py-8 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50">
-                    <p class="text-slate-500 text-sm font-medium">Nenhum fluxo de aprovação configurado.</p>
+        <section class="premium-card p-6 md:p-8">
+            <div class="section-head">
+                <div>
+                    <h2>Atividades</h2>
+                    <p>Servicos executados e andamento.</p>
                 </div>
-                {% else %}
-
-                {% set assinaturas_ordenadas = lista_assinaturas|sort(attribute='ordem') %}
-                {% set session_uid = session.get('user_id') %}
-
-                {% for ass in assinaturas_ordenadas %}
-                {% set can_sign = (session_uid is not none and session_uid|int == ass.id_usuario and ass.status ==
-                'Pendente') %}
-                {% set prev_step = assinaturas_ordenadas|selectattr("ordem", "equalto", ass.ordem - 1)|first %}
-                {% set is_locked = prev_step and prev_step.status != 'Aprovado' %}
-
-                <div class="workflow-step 
-                            {% if ass.status == 'Aprovado' %}approved
-                            {% elif ass.status == 'Rejeitado' %}rejected
-                            {% elif is_locked %}locked
-                            {% elif can_sign %}active{% endif %}">
-
-                    <div class="step-number">{{ ass.ordem }}</div>
-
-                    <div class="flex-grow min-w-0"> <!-- min-w-0 evita overflow de texto -->
-                        <div class="flex flex-wrap justify-between items-start gap-2">
-                            <div>
-                                <h4 class="font-bold text-slate-800 text-sm truncate">{{ ass.usuario.nome }}</h4>
-                                <p class="text-[11px] text-slate-500">{{ ass.usuario.papel or 'Aprovador' }} | {{
-                                    ass.usuario.email or '' }}</p>
-                            </div>
-                            <span class="status-badge
-                                {% if ass.status == 'Aprovado' %}bg-green-100 text-green-700
-                                {% elif ass.status == 'Rejeitado' %}bg-red-100 text-red-700
-                                {% else %}bg-slate-100 text-slate-500{% endif %}">
-                                {{ ass.status }}
-                            </span>
-                        </div>
-
-                        <div class="mt-3">
-                            {% if ass.status == 'Aprovado' %}
-                            <div class="flex items-center gap-3 bg-white p-2 rounded border border-green-100 shadow-sm">
-                                {% if ass.img_assinatura %}
-                                <img src="{{ url_for('static', filename='uploads/assinaturas/' + ass.img_assinatura) }}"
-                                    class="h-8 md:h-10 object-contain" alt="Assinatura">
-                                {% endif %}
-                                <div class="text-[10px] text-slate-500 leading-tight">
-                                    <p class="font-bold text-green-600 mb-0.5"><i
-                                            class="fas fa-check-circle mr-1"></i>Assinado</p>
-                                    <p>{{ ass.criado.strftime('%d/%m/%Y às %H:%M') if ass.criado else '-' }}</p>
-                                </div>
-                            </div>
-                            {% elif ass.status == 'Rejeitado' %}
-                            <div class="text-xs text-red-700 bg-red-50 p-3 rounded-lg border border-red-100">
-                                <strong>Motivo:</strong> {{ ass.motivo_rejeicao }}
-                                <div class="text-[10px] text-slate-500 mt-1 text-right">{{ ass.criado.strftime('%d/%m/%Y
-                                    %H:%M') if ass.criado else '-' }}</div>
-                            </div>
-                            {% elif can_sign %}
-                            {% if is_locked %}
-                            <p class="text-xs text-slate-500 bg-slate-50 p-2 rounded flex items-center gap-2">
-                                <i class="fas fa-lock text-slate-400"></i> Aguardando: <strong>{{ prev_step.usuario.nome
-                                    }}</strong>
-                            </p>
-                            {% else %}
-                            <div class="flex flex-wrap gap-2 mt-2">
-                                <button type="button" onclick="abrirModalAssinatura({{ item.id }})"
-                                    class="flex-1 bg-blue-600 text-white px-4 py-3 rounded-lg text-xs font-bold shadow hover:bg-blue-700 transition">
-                                    Assinar Digitalmente
-                                </button>
-                                <button type="button" onclick="abrirModalRejeicao({{ ass.id_assinatura }})"
-                                    class="flex-1 bg-white text-red-600 border border-red-200 px-4 py-3 rounded-lg text-xs font-bold hover:bg-red-50 transition">
-                                    Rejeitar
-                                </button>
-                            </div>
-                            {% endif %}
-                            {% else %}
-                            <p class="text-xs text-slate-400 italic mt-1">Aguardando vez...</p>
-                            {% endif %}
-                        </div>
-                    </div>
+                {% if not view_mode %}<button type="button" class="premium-button premium-button-secondary" onclick="addRow('atividades')"><i class="fas fa-plus"></i></button>{% endif %}
+            </div>
+            <div id="atividades" class="space-y-3">
+                {% for atv in item.atividades if item %}
+                <div class="grid gap-3 md:grid-cols-[1fr_220px_auto]">
+                    <input name="atividade_descricao[]" value="{{ atv.descricao }}" class="premium-input" placeholder="Descricao" {{ readonly }}>
+                    <select name="atividade_status[]" class="premium-input" {{ disabled }}>
+                        {% for st in ['Concluido','Em Andamento','Paralisado'] %}
+                        <option value="{{ st }}" {% if atv.status == st %}selected{% endif %}>{{ st }}</option>
+                        {% endfor %}
+                    </select>
+                    {% if not view_mode %}<button type="button" class="icon-button danger" onclick="this.parentElement.remove()"><i class="fas fa-trash"></i></button>{% endif %}
                 </div>
                 {% endfor %}
-                {% endif %}
             </div>
         </section>
-        {% endif %}
+
+        <section class="premium-card p-6 md:p-8">
+            <div class="section-head">
+                <div>
+                    <h2>Equipe</h2>
+                    <p>Colaboradores, funcao e horas trabalhadas.</p>
+                </div>
+                {% if not view_mode %}<button type="button" class="premium-button premium-button-secondary" onclick="addRow('maoObra')"><i class="fas fa-plus"></i></button>{% endif %}
+            </div>
+            <div id="maoObra" class="space-y-3">
+                {% for mo in item.maos_obra if item %}
+                <div class="grid gap-3 md:grid-cols-[1fr_180px_140px_160px_auto]">
+                    <select name="mo_colaborador_id[]" class="premium-input" {{ disabled }}>
+                        {% for u in usuarios_obra %}
+                        <option value="{{ u.colaborador_id }}" {% if mo.colaborador_id == u.colaborador_id %}selected{% endif %}>{{ u.nome }}</option>
+                        {% endfor %}
+                    </select>
+                    <input name="mo_funcao[]" value="{{ mo.funcao or '' }}" class="premium-input" placeholder="Funcao" {{ readonly }}>
+                    <input name="mo_horas[]" value="{{ mo.quantidade_horas or '' }}" class="premium-input" placeholder="Horas" {{ readonly }}>
+                    <select name="mo_tipo[]" class="premium-input" {{ disabled }}>
+                        <option value="PROPRIA" {% if mo.tipo_mao_obra == 'PROPRIA' %}selected{% endif %}>Propria</option>
+                        <option value="TERCEIRO" {% if mo.tipo_mao_obra == 'TERCEIRO' %}selected{% endif %}>Terceiro</option>
+                    </select>
+                    {% if not view_mode %}<button type="button" class="icon-button danger" onclick="this.parentElement.remove()"><i class="fas fa-trash"></i></button>{% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="premium-card p-6 md:p-8">
+            <div class="section-head">
+                <div>
+                    <h2>Equipamentos</h2>
+                    <p>Maquinas utilizadas durante o periodo.</p>
+                </div>
+                {% if not view_mode %}<button type="button" class="premium-button premium-button-secondary" onclick="addRow('equipamentos')"><i class="fas fa-plus"></i></button>{% endif %}
+            </div>
+            <div id="equipamentos" class="space-y-3">
+                {% for eq in item.equipamentos if item %}
+                <div class="grid gap-3 md:grid-cols-[1fr_140px_160px_auto]">
+                    <select name="eq_id[]" class="premium-input" {{ disabled }}>
+                        {% for opt in equipamentos_options %}
+                        <option value="{{ opt.id }}" {% if eq.equipamento_id == opt.id %}selected{% endif %}>{{ opt.nome }}</option>
+                        {% endfor %}
+                    </select>
+                    <input type="number" name="eq_qtd[]" value="{{ eq.quantidade or 1 }}" class="premium-input" min="0" {{ readonly }}>
+                    <select name="eq_status[]" class="premium-input" {{ disabled }}>
+                        <option value="OPERANDO" {% if eq.status == 'OPERANDO' %}selected{% endif %}>Operando</option>
+                        <option value="PARADO" {% if eq.status == 'PARADO' %}selected{% endif %}>Parado</option>
+                    </select>
+                    {% if not view_mode %}<button type="button" class="icon-button danger" onclick="this.parentElement.remove()"><i class="fas fa-trash"></i></button>{% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="premium-card p-6 md:p-8">
+            <div class="section-head">
+                <div>
+                    <h2>Ocorrencias</h2>
+                    <p>Eventos, impactos e tempo de paralisacao.</p>
+                </div>
+                {% if not view_mode %}<button type="button" class="premium-button premium-button-secondary" onclick="addRow('ocorrencias')"><i class="fas fa-plus"></i></button>{% endif %}
+            </div>
+            <div id="ocorrencias" class="space-y-3">
+                {% for oc in item.ocorrencias if item %}
+                <div class="grid gap-3 md:grid-cols-[220px_1fr_160px_150px_auto]">
+                    <select name="oc_tag[]" class="premium-input" {{ disabled }}>
+                        {% for tag in tags_options %}
+                        <option value="{{ tag.id }}" {% if oc.tipo_ocorrencia == tag.id %}selected{% endif %}>{{ tag.nome }}</option>
+                        {% endfor %}
+                    </select>
+                    <input name="oc_desc[]" value="{{ oc.descricao or '' }}" class="premium-input" placeholder="Descricao" {{ readonly }}>
+                    <input name="oc_tempo_parado[]" value="{{ oc.tempo_paralisacao or '' }}" class="premium-input" placeholder="Horas" {{ readonly }}>
+                    <select name="oc_impacto[]" class="premium-input" {{ disabled }}>
+                        {% for imp in ['BAIXO','MEDIO','ALTO'] %}
+                        <option value="{{ imp }}" {% if oc.impacto == imp %}selected{% endif %}>{{ imp }}</option>
+                        {% endfor %}
+                    </select>
+                    {% if not view_mode %}<button type="button" class="icon-button danger" onclick="this.parentElement.remove()"><i class="fas fa-trash"></i></button>{% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="premium-card p-6 md:p-8">
+            <div class="grid gap-5 lg:grid-cols-2">
+                <label class="field-block">
+                    <span>Observacoes gerais</span>
+                    <textarea name="comentarios_gerais" rows="7" class="premium-input" {{ readonly }}>{{ item.observacoes if item else '' }}</textarea>
+                </label>
+                <div class="field-block">
+                    <span>Fotos</span>
+                    {% if not view_mode %}
+                    <input type="file" name="fotos[]" accept="image/*" multiple class="premium-input">
+                    <textarea name="novas_fotos_comentarios[]" rows="3" class="premium-input mt-3" placeholder="Legenda geral das novas fotos"></textarea>
+                    {% endif %}
+                    {% if item and item.fotos %}
+                    <div class="mt-4 grid grid-cols-2 gap-3">
+                        {% for foto in item.fotos %}
+                        <div class="rounded-lg border border-slate-200 bg-slate-50 p-2">
+                            <img src="{{ url_for('static', filename='uploads/rdo/' ~ foto.arquivo) }}" class="aspect-video w-full rounded-md object-cover" alt="Foto RDO">
+                            <p class="mt-2 text-xs text-slate-500">{{ foto.comentario or '' }}</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </section>
 
         {% if not view_mode %}
-        <!-- Botão Flutuante ou Fixo no Fim -->
-        <div class="pt-6 ">
-            <button type="submit"
-                class="w-full h-14 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold text-lg rounded-xl shadow-lg hover:shadow-xl transition transform active:scale-[0.99] flex items-center justify-center gap-3">
-                <i class="fas fa-save"></i> SALVAR RDO
-            </button>
-            <a href="{{ url_for('auth.lista_rdo') }}"
-                class="block w-full text-center mt-4 text-slate-500 font-bold text-sm hover:text-slate-800 py-3">
-                Cancelar e Voltar
-            </a>
+        <div class="sticky bottom-4 z-20 flex justify-end gap-3 rounded-xl border border-slate-200 bg-white/90 p-3 shadow-xl backdrop-blur">
+            <a href="{{ url_for('auth.lista_rdo') }}" class="premium-button premium-button-secondary">Cancelar</a>
+            <button type="submit" class="premium-button premium-button-primary"><i class="fas fa-save"></i> Salvar RDO</button>
         </div>
         {% endif %}
     </form>
 </div>
 
-<!-- ========================================== -->
-<!-- MODAIS (Mobile Optimized) -->
-<!-- ========================================== -->
-<!-- (Os modais permanecem iguais) -->
-<!-- Modal Webcam (Desktop) -->
-<div id="modal_webcam" class="modal-overlay z-[10010]">
-    <div class="modal-content max-w-2xl bg-black border-0">
-        <div class="relative w-full h-[500px] flex flex-col items-center justify-center">
-            <video id="webcam_video" class="w-full h-full object-cover" autoplay playsinline></video>
-            <canvas id="webcam_canvas" class="hidden"></canvas>
-
-            <div
-                class="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/60 to-transparent flex justify-between items-center z-10">
-                <span class="text-white font-bold text-sm shadow-sm"><i class="fas fa-camera mr-2"></i> Captura
-                    Webcam</span>
-                <button type="button" onclick="closeWebcam()" class="text-white hover:text-red-400 transition">
-                    <i class="fas fa-times text-xl"></i>
-                </button>
-            </div>
-
-            <div
-                class="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent flex justify-center items-center gap-4 z-10">
-                <button type="button" onclick="takeSnapshot()"
-                    class="bg-white text-black rounded-full w-16 h-16 flex items-center justify-center border-4 border-gray-300 shadow-lg active:scale-95 transition hover:scale-105">
-                    <div class="w-12 h-12 bg-white rounded-full border-2 border-black"></div>
-                </button>
-            </div>
-
-            <!-- Loading indicator -->
-            <div id="webcam_loading"
-                class="absolute inset-0 flex items-center justify-center bg-black/50 text-white z-0">
-                <i class="fas fa-spinner fa-spin text-3xl"></i>
-            </div>
-        </div>
+<template id="tpl-atividades">
+    <div class="grid gap-3 md:grid-cols-[1fr_220px_auto]">
+        <input name="atividade_descricao[]" class="premium-input" placeholder="Descricao">
+        <select name="atividade_status[]" class="premium-input"><option>Concluido</option><option>Em Andamento</option><option>Paralisado</option></select>
+        <button type="button" class="icon-button danger" onclick="this.parentElement.remove()"><i class="fas fa-trash"></i></button>
     </div>
-</div>
-
-<!-- Modal Mão de Obra -->
-<div id="modal_mo" class="modal-overlay">
-    <div class="modal-content">
-        <div class="px-5 py-4 border-b flex justify-between items-center bg-slate-50">
-            <h3 class="font-bold text-slate-800">Adicionar Mão de Obra</h3>
-            <button onclick="closeModal('modal_mo')"
-                class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-200 text-slate-500 hover:bg-red-100 hover:text-red-500 transition"><i
-                    class="fas fa-times"></i></button>
-        </div>
-        <div class="p-4 border-b bg-white">
-            <div class="relative">
-                <input type="text" id="search_mo" onkeyup="filterModalItems('search_mo', 'list_mo_items')"
-                    class="form-control-std pl-10" placeholder="Buscar função...">
-            </div>
-        </div>
-        <div class="p-4 flex-1 overflow-y-auto custom-scrollbar bg-slate-50/50">
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2" id="list_mo_items">
-                {% for op in mao_de_obra_options %}
-                <label
-                    class="flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-lg cursor-pointer active:bg-blue-50 transition item-filter shadow-sm">
-                    <input type="checkbox" class="chk-mo w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
-                        value="{{ op.nome }}">
-                    <span class="text-sm font-medium text-slate-700 name-filter">{{ op.nome }}</span>
-                </label>
-                {% endfor %}
-            </div>
-        </div>
-        <div class="p-4 border-t bg-white flex gap-3">
-            <button onclick="closeModal('modal_mo')"
-                class="flex-1 py-3 font-bold text-slate-500 hover:bg-slate-50 rounded-lg">Cancelar</button>
-            <button onclick="addSelectedMO()"
-                class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow-md">Adicionar</button>
-        </div>
+</template>
+<template id="tpl-maoObra">
+    <div class="grid gap-3 md:grid-cols-[1fr_180px_140px_160px_auto]">
+        <select name="mo_colaborador_id[]" class="premium-input">{% for u in usuarios_obra %}<option value="{{ u.colaborador_id }}">{{ u.nome }}</option>{% endfor %}</select>
+        <input name="mo_funcao[]" class="premium-input" placeholder="Funcao">
+        <input name="mo_horas[]" class="premium-input" placeholder="Horas">
+        <select name="mo_tipo[]" class="premium-input"><option value="PROPRIA">Propria</option><option value="TERCEIRO">Terceiro</option></select>
+        <button type="button" class="icon-button danger" onclick="this.parentElement.remove()"><i class="fas fa-trash"></i></button>
     </div>
-</div>
-
-<!-- Modal Equipamentos -->
-<div id="modal_eq" class="modal-overlay">
-    <div class="modal-content">
-        <div class="px-5 py-4 border-b flex justify-between items-center bg-slate-50">
-            <h3 class="font-bold text-slate-800">Adicionar Equipamentos</h3>
-            <button onclick="closeModal('modal_eq')"
-                class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-200 text-slate-500 hover:bg-red-100 hover:text-red-500 transition"><i
-                    class="fas fa-times"></i></button>
-        </div>
-        <div class="p-4 border-b bg-white">
-            <div class="relative">
-                <input type="text" id="search_eq" onkeyup="filterModalItems('search_eq', 'list_eq_items')"
-                    class="form-control-std pl-10" placeholder="Buscar equipamento...">
-            </div>
-        </div>
-        <div class="p-4 flex-1 overflow-y-auto custom-scrollbar bg-slate-50/50">
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2" id="list_eq_items">
-                {% for opt in equipamentos_options %}
-                <label
-                    class="flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-lg cursor-pointer active:bg-blue-50 transition item-filter shadow-sm">
-                    <input type="checkbox" class="chk-eq w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
-                        value="{{ opt.id }}" data-nome="{{ opt.nome }}">
-                    <span class="text-sm font-medium text-slate-700 name-filter">{{ opt.nome }}</span>
-                </label>
-                {% endfor %}
-            </div>
-        </div>
-        <div class="p-4 border-t bg-white flex gap-3">
-            <button onclick="closeModal('modal_eq')"
-                class="flex-1 py-3 font-bold text-slate-500 hover:bg-slate-50 rounded-lg">Cancelar</button>
-            <button onclick="addSelectedEq()"
-                class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow-md">Adicionar</button>
-        </div>
+</template>
+<template id="tpl-equipamentos">
+    <div class="grid gap-3 md:grid-cols-[1fr_140px_160px_auto]">
+        <select name="eq_id[]" class="premium-input">{% for opt in equipamentos_options %}<option value="{{ opt.id }}">{{ opt.nome }}</option>{% endfor %}</select>
+        <input type="number" name="eq_qtd[]" value="1" min="0" class="premium-input">
+        <select name="eq_status[]" class="premium-input"><option value="OPERANDO">Operando</option><option value="PARADO">Parado</option></select>
+        <button type="button" class="icon-button danger" onclick="this.parentElement.remove()"><i class="fas fa-trash"></i></button>
     </div>
-</div>
-
-<!-- Modal Ocorrências -->
-<div id="modal_oc" class="modal-overlay">
-    <div class="modal-content">
-        <div class="px-5 py-4 border-b flex justify-between items-center bg-slate-50">
-            <h3 class="font-bold text-slate-800">Tipos de Ocorrência</h3>
-            <button onclick="closeModal('modal_oc')"
-                class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-200 text-slate-500 hover:bg-red-100 hover:text-red-500 transition"><i
-                    class="fas fa-times"></i></button>
-        </div>
-        <div class="p-4 border-b bg-white">
-            <div class="relative">
-                <input type="text" id="search_oc" onkeyup="filterModalItems('search_oc', 'list_oc_items')"
-                    class="form-control-std pl-10" placeholder="Buscar tipo...">
-            </div>
-        </div>
-        <div class="p-4 flex-1 overflow-y-auto custom-scrollbar bg-slate-50/50">
-            <div class="grid grid-cols-1 gap-2" id="list_oc_items">
-                {% for t in tags_options %}
-                <label
-                    class="flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-lg cursor-pointer active:bg-blue-50 transition item-filter shadow-sm">
-                    <input type="checkbox" class="chk-oc w-5 h-5 text-red-600 rounded focus:ring-red-500"
-                        value="{{ t.id }}" data-nome="{{ t.nome }}">
-                    <span class="text-sm font-medium text-slate-700 name-filter">{{ t.nome }}</span>
-                </label>
-                {% endfor %}
-            </div>
-        </div>
-        <div class="p-4 border-t bg-white flex gap-3">
-            <button onclick="closeModal('modal_oc')"
-                class="flex-1 py-3 font-bold text-slate-500 hover:bg-slate-50 rounded-lg">Cancelar</button>
-            <button onclick="addSelectedOc()"
-                class="flex-1 py-3 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 shadow-md">Adicionar</button>
-        </div>
+</template>
+<template id="tpl-ocorrencias">
+    <div class="grid gap-3 md:grid-cols-[220px_1fr_160px_150px_auto]">
+        <select name="oc_tag[]" class="premium-input">{% for tag in tags_options %}<option value="{{ tag.id }}">{{ tag.nome }}</option>{% endfor %}</select>
+        <input name="oc_desc[]" class="premium-input" placeholder="Descricao">
+        <input name="oc_tempo_parado[]" class="premium-input" placeholder="Horas">
+        <select name="oc_impacto[]" class="premium-input"><option value="BAIXO">BAIXO</option><option value="MEDIO">MEDIO</option><option value="ALTO">ALTO</option></select>
+        <button type="button" class="icon-button danger" onclick="this.parentElement.remove()"><i class="fas fa-trash"></i></button>
     </div>
-</div>
-
-<!-- Modal Assinatura (Canvas Responsive) -->
-<div id="modalAssinatura" class="modal-overlay">
-    <div class="modal-content max-w-md">
-        <div class="px-5 py-4 border-b bg-slate-50">
-            <h3 class="font-bold text-slate-800">Assinatura Digital</h3>
-            <p class="text-xs text-slate-500">Desenhe sua assinatura abaixo</p>
-        </div>
-        <div class="p-4 bg-white flex justify-center">
-            <div
-                class="border-2 border-dashed border-slate-300 rounded-xl relative w-full h-[220px] bg-slate-50 overflow-hidden">
-                <canvas id="signature-pad" class="absolute inset-0 w-full h-full touch-none"></canvas>
-                <div
-                    class="absolute bottom-2 left-0 right-0 text-center pointer-events-none opacity-30 text-xs font-bold uppercase">
-                    Área de Assinatura</div>
-            </div>
-        </div>
-        <div class="p-4 border-t bg-white flex justify-between gap-3">
-            <button onclick="limparAssinatura()"
-                class="px-4 py-2 text-slate-600 font-bold text-sm bg-slate-100 rounded-lg">Limpar</button>
-            <div class="flex gap-2">
-                <button onclick="closeModal('modalAssinatura')"
-                    class="px-4 py-2 text-slate-600 font-bold text-sm hover:bg-slate-50 rounded-lg">Cancelar</button>
-                <button onclick="salvarAssinatura()" id="btnConfirmarAss"
-                    class="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 flex items-center gap-2">
-                    <i class="fas fa-check"></i> Assinar
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Foto Viewer -->
-<div id="modal_foto_viewer" class="modal-overlay z-[10000]"
-    onclick="if(event.target === this) closeModal('modal_foto_viewer')">
-    <div class="relative w-full h-full flex flex-col items-center justify-center p-4">
-        <button onclick="closeModal('modal_foto_viewer')"
-            class="absolute top-5 right-5 text-white bg-black/50 rounded-full w-10 h-10 flex items-center justify-center text-xl z-50 backdrop-blur-md">&times;</button>
-        <img id="img_viewer_src" src="" class="max-w-full max-h-[80vh] rounded-lg shadow-2xl object-contain bg-black">
-        <p id="img_viewer_caption"
-            class="text-white text-center mt-4 font-medium bg-black/70 px-6 py-2 rounded-full backdrop-blur-sm text-sm">
-        </p>
-    </div>
-</div>
-
-<!-- Modal QR Code Viewer -->
-<div id="modal_qr_code_viewer" class="modal-overlay z-[10000]"
-    onclick="if(event.target === this) closeModal('modal_qr_code_viewer')">
-    <div class="relative w-full h-full flex flex-col items-center justify-center p-4">
-        <button onclick="closeModal('modal_qr_code_viewer')"
-            class="absolute top-5 right-5 text-white bg-black/50 rounded-full w-10 h-10 flex items-center justify-center text-xl z-50 backdrop-blur-md">&times;</button>
-        <img src="data:image/png;base64,{{ qr_code_b64 }}" class="footer-qr-img" alt="QR Code">
-        <div class="footer-qr-text">Validar Doc.</div>
-    </div>
-</div>
-
-<!-- Modal Rejeição -->
-<div id="modal_rejeicao" class="modal-overlay">
-    <div class="modal-content max-w-md">
-        <div class="p-5 bg-red-50 border-b border-red-100">
-            <h3 class="font-bold text-red-800 text-lg">Rejeitar RDO</h3>
-        </div>
-        <div class="p-6 space-y-3">
-            <input type="hidden" id="id_assinatura_rejeitar">
-            <label class="block text-sm font-bold text-slate-700">Motivo da Rejeição <span
-                    class="text-red-500">*</span></label>
-            <textarea id="texto_motivo" rows="4" class="form-control-std w-full"
-                placeholder="Descreva por que este RDO está sendo rejeitado..."></textarea>
-            <p class="text-xs text-red-500 bg-red-50 p-2 rounded"><i class="fas fa-info-circle mr-1"></i> Esta ação
-                interromperá o fluxo e notificará o criador.</p>
-        </div>
-        <div class="p-5 border-t bg-white flex justify-end gap-3">
-            <button onclick="closeModal('modal_rejeicao')"
-                class="px-4 py-2 text-slate-600 font-bold text-sm hover:bg-slate-50 rounded-lg">Cancelar</button>
-            <button onclick="confirmarRejeicao()"
-                class="px-6 py-2 bg-red-600 text-white rounded-lg font-bold text-sm hover:bg-red-700 shadow-md">Confirmar
-                Rejeição</button>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Workflow Config (Mantido lógica, layout mobile) -->
-<div id="modal_assinantes" class="modal-overlay">
-    <div class="modal-content h-[90vh] flex flex-col">
-        <div class="px-5 py-4 border-b flex justify-between items-center bg-white shadow-sm z-10">
-            <div>
-                <h3 class="font-bold text-slate-800">Configurar Aprovadores</h3>
-                <p class="text-xs text-slate-500">Defina quem deve assinar este RDO</p>
-            </div>
-            <button onclick="closeModal('modal_assinantes')" class="text-slate-400 hover:text-slate-600 text-xl"><i
-                    class="fas fa-times"></i></button>
-        </div>
-
-        <div class="flex-1 overflow-y-auto bg-slate-50 p-4">
-            <!-- Add Area -->
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-4">
-                <label class="text-xs font-bold text-slate-400 uppercase mb-2 block">Adicionar Pessoa</label>
-                <div class="relative">
-                    <input type="text" id="search_workflow"
-                        onkeyup="filterModalList('search_workflow', 'list_workflow_users')"
-                        onfocus="expandUserList(true)" placeholder="Buscar por nome..." class="form-control-std">
-                    <div id="expandable_user_list"
-                        class="absolute top-full left-0 w-full max-h-0 overflow-hidden transition-all duration-200 bg-white border border-t-0 border-slate-200 rounded-b-lg shadow-xl z-50">
-                        <div class="p-2 max-h-[200px] overflow-y-auto" id="list_workflow_users">
-                            {% for u in usuarios_obra %}
-                            <div class="flex items-center justify-between p-3 hover:bg-slate-50 rounded-lg cursor-pointer border-b border-slate-50 last:border-0 item-filter"
-                                onclick="toggleUserCheckbox('{{ u.id }}')">
-                                <div class="flex items-center gap-3">
-                                    <input type="checkbox" name="workflow_users" value="{{ u.id }}"
-                                        id="chk_wf_{{ u.id }}"
-                                        onchange="toggleUserInWorkflow('{{ u.id }}', this.checked); event.stopPropagation();"
-                                        class="w-5 h-5 text-blue-600 rounded">
-                                    <div>
-                                        <p class="text-sm font-bold text-slate-700 name-filter">{{ u.nome }}</p>
-                                        <p class="text-xs text-slate-400">{{ u.papel or 'Colaborador' }} | {{ u.email or
-                                            '' }}</p>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                        <div class="bg-slate-50 p-2 text-center text-xs text-slate-400 cursor-pointer"
-                            onclick="expandUserList(false)"><i class="fas fa-chevron-up"></i> Fechar lista</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- List Area -->
-            <h4 class="text-xs font-bold text-slate-400 uppercase mb-2 pl-2">Sequência Atual (Arraste para reordenar)
-            </h4>
-            <div id="sortable_workflow" class="space-y-2">
-                <!-- Itens via JS -->
-            </div>
-        </div>
-
-        <div class="p-4 border-t bg-white flex justify-end gap-3 z-10">
-            <button onclick="closeModal('modal_assinantes')"
-                class="px-4 py-3 font-bold text-slate-500">Cancelar</button>
-            <button onclick="salvarWorkflow()"
-                class="px-6 py-3 bg-slate-800 text-white font-bold rounded-lg shadow-md w-full sm:w-auto">Salvar
-                Sequência</button>
-        </div>
-    </div>
-</div>
-
-<!-- ========================================== -->
-<!-- SCRIPTS (Lógica Preservada + Aprimorada) -->
-<!-- ========================================== -->
-<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+</template>
 
 <script>
-    const isViewMode = {{ 'true' if view_mode else 'false' }};
-    const currentRdoId = "{{ item.id if item else '' }}";
-    const currentUserId = {{ session.get('user_id') | default (0) }};
-    let signaturePad = null;
-    let selectedOrder = [];
-    let creatorId = null;
-
-    // Dados injetados do backend
-    const usersMap = {};
-    {% for u in usuarios_obra %}
-    usersMap["{{ u.id }}"] = { id: "{{ u.id }}", nome: "{{ u.nome }}", papel: "{{ u.papel or 'Colaborador' }}", email: "{{ u.email }}" };
-    {% endfor %}
-
-    let existingSignatures = [];
-    {% if item and item.assinaturas %}
-    {% for ass in item.assinaturas | sort(attribute = 'ordem') %}
-    existingSignatures.push({ userId: "{{ ass.id_usuario }}", order: {{ ass.ordem }} });
-    {% endfor %}
-    {% endif %}
-
-    $(document).ready(function () {
-        // CORREÇÃO CRÍTICA DE Z-INDEX DO MODAL
-        $('.modal-overlay').appendTo('body');
-
-        if (!isViewMode) {
-            $('.select2-enable').select2({
-                width: '100%',
-                language: { noResults: () => "Nada encontrado" },
-                dropdownAutoWidth: true
-            });
-            if ($('#table_atividades tbody tr').length === 0) addAtividadeRow();
-        } else {
-            $('.select2-enable').prop('disabled', true);
-        }
-
-        window.addEventListener('resize', () => {
-            document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`);
-        });
-
-        initWorkflowModal();
-        updateTotalPhotoCount();
-
-        // --- INICIALIZAR LÓGICA DE FRENTES ---
-        // Se já tiver uma frente selecionada (edição), dispara o evento para mostrar o bloco de progresso
-        if ($('#select_frente').val()) {
-            $('#select_frente').trigger('change');
-        }
-
-        // Listener para mudança na frente
-        $('#select_frente').on('change', function () {
-            const selectedOption = $(this).find(':selected');
-            const meta = selectedOption.data('meta');
-            const unidade = selectedOption.data('unidade');
-            const realizado = selectedOption.data('realizado') || 0; // Se não tiver, assume 0
-
-            const blocoProgresso = document.getElementById('block_progresso');
-            // Elementos de texto
-            const labelMeta = document.getElementById('label_meta_valor');
-            const labelRealizado = document.getElementById('label_realizado_valor');
-            // Elementos de classe (unidade aparece em vários lugares)
-            const labelsUnidade = document.querySelectorAll('.label_unidade_dinamica');
-
-            // Barra de Progresso
-            const progressBar = document.getElementById('progress_bar_dinamica');
-
-            // Se tem meta definida (maior que zero ou unidade definida), mostra o bloco
-            if (unidade && unidade !== '') {
-                blocoProgresso.classList.remove('hidden');
-
-                // Atualiza Textos
-                if (labelMeta) labelMeta.textContent = meta || '0';
-                if (labelRealizado) labelRealizado.textContent = realizado || '0';
-
-                labelsUnidade.forEach(el => {
-                    el.textContent = unidade;
-                });
-
-                // Calcula e anima barra de progresso
-                let porcentagem = 0;
-                if (meta > 0) {
-                    porcentagem = (realizado / meta) * 100;
-                }
-                if (progressBar) progressBar.style.width = Math.round(porcentagem) + '%';
-
-            } else if (selectedOption.val() === '') {
-                // Se desmarcou (selecione...), esconde
-                blocoProgresso.classList.add('hidden');
-            } else {
-                // Caso não tenha meta definida na frente
-                blocoProgresso.classList.add('hidden');
-            }
-        });
-    });
-
-    // --- MASCARA E DATA TOOLS ---
-    function mascaraData(val) {
-        let v = val.value;
-        v = v.replace(/\D/g, ""); // Remove tudo o que não é dígito
-        v = v.replace(/^(\d{2})(\d)/, "$1/$2"); // Coloca barra entre o segundo e o terceiro dígitos
-        v = v.replace(/\/(\d{2})(\d)/, "/$1/$2"); // Coloca barra entre o quinto e o sexto dígitos
-        val.value = v;
-    }
-
-    function syncDateToHidden(input) {
-        const hidden = document.getElementById('data_rdo_hidden');
-        const visualVal = input.value;
-
-        // Regex verify DD/MM/YYYY
-        if (/^\d{2}\/\d{2}\/\d{4}$/.test(visualVal)) {
-            const parts = visualVal.split('/');
-            // YYYY-MM-DD
-            hidden.value = `${parts[2]}-${parts[1]}-${parts[0]}`;
-        } else {
-            hidden.value = ''; // Invalid or incomplete
-        }
-    }
-
-    function setDataHoje() {
-        const now = new Date();
-        const dia = String(now.getDate()).padStart(2, '0');
-        const mes = String(now.getMonth() + 1).padStart(2, '0');
-        const ano = now.getFullYear();
-        document.getElementById('data_rdo_visual').value = `${dia}/${mes}/${ano}`;
-        document.getElementById('data_rdo_hidden').value = `${ano}-${mes}-${dia}`;
-    }
-
-    function aplicarDataPicker(input) {
-        if (!input.value) return;
-        const [ano, mes, dia] = input.value.split('-');
-        document.getElementById('data_rdo_visual').value = `${dia}/${mes}/${ano}`;
-        document.getElementById('data_rdo_hidden').value = `${ano}-${mes}-${dia}`;
-    }
-
-    // --- LÓGICA DE OBRA/FRENTE ---
-    async function fetchObra(obraId) {
-        const selectFrente = $('#select_frente');
-        selectFrente.empty().append('<option value="">Selecione a Frente...</option>');
-        $('#error_frente').addClass('hidden');
-
-        // Esconde o bloco de progresso ao trocar de obra
-        document.getElementById('block_progresso').classList.add('hidden');
-
-        if (!obraId) {
-            selectFrente.prop('disabled', true).trigger('change.select2');
-            return;
-        }
-
-        const loader = document.getElementById('loader_frente');
-        loader.classList.remove('hidden');
-        selectFrente.prop('disabled', true);
-
-        try {
-            const response = await fetch(`/auth/api/obra/${obraId}`);
-            if (!response.ok) throw new Error('Erro API');
-            const data = await response.json();
-            const frentes = data.frentes || [];
-
-            if (frentes.length === 0) {
-                selectFrente.empty().append('<option value="">Nenhuma frente cadastrada</option>');
-            } else {
-                let options = '<option value="">Selecione a Frente...</option>';
-                frentes.forEach(f => {
-                    // ATUALIZAÇÃO: Incluindo data-meta, data-unidade e data-realizado
-                    const meta = f.qtd_planejada || 0;
-                    const unid = f.unidade || '';
-                    // Se a API não retornar qtd_realizada, assumimos 0. Idealmente a API /api/obra deve retornar isso
-                    const realizado = f.qtd_realizada || 0;
-
-                    options += `<option value="${f.id}" data-meta="${meta}" data-unidade="${unid}" data-realizado="${realizado}">${f.nome}</option>`;
-                });
-                selectFrente.html(options);
-            }
-            selectFrente.prop('disabled', false);
-        } catch (error) {
-            console.error(error);
-            selectFrente.html('<option value="">Erro ao carregar</option>');
-            $('#error_frente').removeClass('hidden');
-        } finally {
-            loader.classList.add('hidden');
-            selectFrente.trigger('change');
-        }
-    }
-
-    // --- FOTOS: LÓGICA UNIFICADA (DESKTOP WEBCAM + MOBILE) ---
-
-    function isMobileDevice() {
-        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    }
-
-    // Inicializa captura: se mobile, input file; se desktop, modal webcam
-    function initCameraCapture() {
-        if (isMobileDevice()) {
-            document.getElementById('input-camera-mobile').click();
-        } else {
-            openWebcamModal();
-        }
-    }
-
-    // Lida com fotos selecionadas (Input File normal ou Mobile)
-    function handleNewPhoto(inputElement) {
-        // Se houver múltiplos arquivos (upload/galeria)
-        if (inputElement.files && inputElement.files.length > 0) {
-            Array.from(inputElement.files).forEach(file => {
-                addFileToForm(file);
-            });
-
-            // Limpa o input original para permitir selecionar o mesmo arquivo novamente se necessário
-            inputElement.value = '';
-        }
-    }
-
-    // --- LÓGICA WEBCAM (Desktop) ---
-    let webcamStream = null;
-
-    async function openWebcamModal() {
-        const modal = document.getElementById('modal_webcam');
-        const video = document.getElementById('webcam_video');
-        const loading = document.getElementById('webcam_loading');
-
-        modal.classList.add('active');
-        document.body.classList.add('modal-open');
-        loading.classList.remove('hidden');
-
-        try {
-            webcamStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 } } });
-            video.srcObject = webcamStream;
-            video.onloadedmetadata = () => {
-                loading.classList.add('hidden');
-            };
-        } catch (err) {
-            console.error("Erro webcam:", err);
-            alert("Não foi possível acessar a câmera. Verifique as permissões.");
-            closeWebcam();
-        }
-    }
-
-    function closeWebcam() {
-        const modal = document.getElementById('modal_webcam');
-        const video = document.getElementById('webcam_video');
-
-        if (webcamStream) {
-            webcamStream.getTracks().forEach(track => track.stop());
-            webcamStream = null;
-        }
-        video.srcObject = null;
-        modal.classList.remove('active');
-        document.body.classList.remove('modal-open');
-    }
-
-    function takeSnapshot() {
-        const video = document.getElementById('webcam_video');
-        const canvas = document.getElementById('webcam_canvas');
-
-        if (!video.videoWidth) return;
-
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        const context = canvas.getContext('2d');
-
-        // Espelhar horizontalmente se for desktop (usabilidade padrão) - opcional, mantendo natural aqui
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-        canvas.toBlob(function (blob) {
-            // Cria um arquivo a partir do blob da webcam
-            const filename = "foto_webcam_" + Date.now() + ".jpg";
-            const file = new File([blob], filename, { type: "image/jpeg" });
-
-            addFileToForm(file);
-            closeWebcam();
-        }, 'image/jpeg', 0.90);
-    }
-
-    // --- PROCESSAMENTO CENTRALIZADO DE ARQUIVOS ---
-    function addFileToForm(file) {
-        const uniqueId = Date.now() + Math.floor(Math.random() * 1000);
-
-        // 1. Cria um novo input type="file" escondido para submissão do formulário
-        const container = document.getElementById('file-inputs-container');
-        const newInput = document.createElement('input');
-        newInput.type = 'file';
-        newInput.name = 'fotos[]'; // Nome que o Flask espera
-        newInput.className = 'hidden';
-
-        // Hack: Usa DataTransfer para atribuir o arquivo ao input
-        const dt = new DataTransfer();
-        dt.items.add(file);
-        newInput.files = dt.files;
-
-        // Armazena ID para facilitar remoção futura se necessário (opcional)
-        newInput.dataset.fileId = uniqueId;
-
-        container.appendChild(newInput);
-
-        // 2. Gera Preview
-        const reader = new FileReader();
-        reader.onload = function (e) {
-            createPhotoCard(e.target.result, uniqueId);
-        };
-        reader.readAsDataURL(file);
-    }
-
-    function createPhotoCard(url, id) {
-        const galeria = document.getElementById('galeria_unificada');
-        const cardHtml = `
-            <div class="photo-card relative bg-white border border-blue-200 rounded-xl overflow-hidden group shadow-md animate-fade-in" id="card_nova_${id}">
-                <div class="relative aspect-video bg-slate-100 overflow-hidden">
-                    <img src="${url}" class="w-full h-full object-cover">
-                    <div class="absolute top-2 right-2 bg-blue-600 text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm">
-                        NOVA
-                    </div>
-                </div>
-                <div class="p-3 space-y-2">
-                    <div class="relative">
-                        <input type="text" name="novas_fotos_comentarios[]" 
-                            placeholder="Legenda da nova foto..." 
-                            class="w-full h-9 text-xs pl-8 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
-                    </div>
-                    <button type="button" onclick="removeNewPhoto('${id}')"
-                        class="w-full py-2 text-xs font-bold text-red-600 bg-white border border-red-200 hover:bg-red-50 rounded-lg transition-colors flex items-center justify-center gap-2">
-                        <i class="fas fa-times"></i> Remover
-                    </button>
-                </div>
-            </div>
-        `;
-        galeria.insertAdjacentHTML('beforeend', cardHtml);
-        updateTotalPhotoCount();
-    }
-
-    function removeNewPhoto(id) {
-        // Remove visualmente
-        const card = document.getElementById(`card_nova_${id}`);
-        if (card) card.remove();
-
-        // Remove o input correspondente do DOM (importante para não enviar)
-        const inputToRemove = document.querySelector(`input[data-file-id="${id}"]`);
-        if (inputToRemove) inputToRemove.remove();
-
-        updateTotalPhotoCount();
-    }
-
-    function marcarExclusao(id) {
-        if (!confirm('Remover esta foto?')) return;
-        // CORREÇÃO: Removemos o elemento do DOM em vez de apenas esconder
-        // Isso impede que os inputs ocultos (ID e comentário) sejam enviados, resolvendo o conflito
-        $(`#card_existente_${id}`).remove();
-        $('#container_fotos_removidas').append(`<input type="hidden" name="fotos_remover[]" value="${id}">`);
-        updateTotalPhotoCount();
-    }
-
-    function updateTotalPhotoCount() {
-        // Conta cards visíveis (novos e existentes não ocultos)
-        const count = document.querySelectorAll('.photo-card:not(.hidden)').length;
-        document.getElementById('counter_fotos_total').innerText = count;
-    }
-
-    function openPhotoViewer(src, caption) {
-        document.getElementById('img_viewer_src').src = src;
-        document.getElementById('img_viewer_caption').innerText = caption || '';
-        document.getElementById('img_viewer_caption').style.display = caption ? 'block' : 'none';
-        openModal('modal_foto_viewer');
-    }
-
-    function openQRCodeViewer(src, caption) {
-        document.getElementById('img_viewer_src').src = src;
-        document.getElementById('img_viewer_caption').innerText = caption || '';
-        document.getElementById('img_viewer_caption').style.display = caption ? 'block' : 'none';
-        openModal('modal_qr_code_viewer');
-    }
-
-    // --- ASSINATURA ---
-    function initSignaturePad() {
-        const canvas = document.getElementById('signature-pad');
-        if (canvas) {
-            const ratio = Math.max(window.devicePixelRatio || 1, 1);
-            canvas.width = canvas.offsetWidth * ratio;
-            canvas.height = canvas.offsetHeight * ratio;
-            canvas.getContext("2d").scale(ratio, ratio);
-            signaturePad = new SignaturePad(canvas, { backgroundColor: 'rgba(255,255,255,0)' });
-        }
-    }
-
-    window.addEventListener("resize", function () {
-        if (document.getElementById('modalAssinatura').classList.contains('active')) {
-            initSignaturePad();
-        }
-    });
-
-    function limparAssinatura() { if (signaturePad) signaturePad.clear(); }
-
-    async function salvarAssinatura() {
-        if (!signaturePad || signaturePad.isEmpty()) return alert("Por favor, assine antes de confirmar.");
-        const btn = document.getElementById('btnConfirmarAss');
-        const originalText = btn.innerHTML;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
-        btn.disabled = true;
-
-        try {
-            const dataUrl = signaturePad.toDataURL("image/png");
-            const res = await fetch(`/auth/assinar-rdo/${currentRdoId}/aprovar-rdo`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ assinatura_b64: dataUrl })
-            });
-            const json = await res.json();
-            if (json.success) window.location.reload();
-            else alert(json.message);
-        } catch (e) { alert("Erro de conexão."); }
-        finally { btn.innerHTML = originalText; btn.disabled = false; }
-    }
-
-    // --- WORKFLOW ---
-    function initWorkflowModal() {
-        selectedOrder = [];
-        if (existingSignatures.length > 0) {
-            creatorId = existingSignatures[0].userId;
-            selectedOrder = existingSignatures.map(s => s.userId);
-        } else {
-            creatorId = String(currentUserId);
-            if (usersMap[creatorId]) selectedOrder.push(creatorId);
-        }
-        renderWorkflowList();
-    }
-
-    function renderWorkflowList() {
-        const container = document.getElementById('sortable_workflow');
-        container.innerHTML = '';
-        selectedOrder.forEach((userId, index) => {
-            const user = usersMap[userId];
-            if (!user) return;
-            const isCreator = (userId === creatorId);
-            const div = document.createElement('div');
-            div.className = `flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-lg shadow-sm ${!isCreator ? 'cursor-grab active:cursor-grabbing' : ''}`;
-            div.innerHTML = `
-                <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-xs">${index + 1}</div>
-                <div class="flex-1">
-                    <p class="font-bold text-sm text-slate-800">${user.nome}</p>
-                    <p class="text-xs text-slate-400">${isCreator ? 'Criador' : user.papel}</p>
-                    <p class="text-xs text-slate-400">${user.email}</p>
-                </div>
-                ${!isCreator ? `<button type="button" onclick="removeUserFromWorkflow('${userId}')" class="text-red-400 p-2"><i class="fas fa-trash"></i></button>` : '<i class="fas fa-lock text-slate-300 mr-2"></i>'}
-            `;
-            container.appendChild(div);
-        });
-        document.querySelectorAll('input[name="workflow_users"]').forEach(chk => {
-            chk.checked = selectedOrder.includes(chk.value);
-            if (chk.value === creatorId) chk.disabled = true;
-        });
-    }
-
-    function toggleUserInWorkflow(userId, checked) {
-        if (userId === creatorId) return;
-        if (checked) {
-            if (!selectedOrder.includes(userId)) selectedOrder.push(userId);
-        } else {
-            selectedOrder = selectedOrder.filter(id => id !== userId);
-        }
-        renderWorkflowList();
-    }
-
-    function toggleUserCheckbox(userId) {
-        const chk = document.getElementById('chk_wf_' + userId);
-        if (chk && !chk.disabled) {
-            chk.checked = !chk.checked;
-            toggleUserInWorkflow(userId, chk.checked);
-        }
-    }
-
-    function removeUserFromWorkflow(userId) {
-        if (userId === creatorId) return;
-        selectedOrder = selectedOrder.filter(id => id !== userId);
-        renderWorkflowList();
-    }
-
-    async function salvarWorkflow() {
-        if (selectedOrder.length < 1) return alert("Selecione aprovadores.");
-        try {
-            const res = await fetch(`/auth/assinar-rdo/${currentRdoId}/salvar-workflow`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ usuarios_ids: selectedOrder })
-            });
-            if ((await res.json()).success) window.location.reload();
-        } catch (e) { alert("Erro ao salvar."); }
-    }
-
-    function expandUserList(show) {
-        const list = document.getElementById('expandable_user_list');
-        list.style.maxHeight = show ? '250px' : '0';
-    }
-
-    // --- REJEIÇÃO ---
-    function abrirModalRejeicao(id) { document.getElementById('id_assinatura_rejeitar').value = id; openModal('modal_rejeicao'); }
-    async function confirmarRejeicao() {
-        const id = document.getElementById('id_assinatura_rejeitar').value;
-        const motivo = document.getElementById('texto_motivo').value;
-        if (!motivo.trim()) return alert("Informe o motivo.");
-        try {
-            const res = await fetch(`/auth/assinar-rdo/${id}/rejeitar-rdo`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ motivo: motivo })
-            });
-            if ((await res.json()).success) window.location.reload();
-        } catch (e) { console.error(e); }
-    }
-
-    // --- MODAIS E UTILS ---
-    function openModal(id) {
-        document.getElementById(id).classList.add('active');
-        document.body.classList.add('modal-open');
-        if (id === 'modalAssinatura') setTimeout(initSignaturePad, 100);
-    }
-    function closeModal(id) {
-        document.getElementById(id).classList.remove('active');
-        document.body.classList.remove('modal-open');
-    }
-    function abrirModalAssinatura(id) { openModal('modalAssinatura'); }
-
-    function filterModalItems(inputId, listId) {
-        const term = document.getElementById(inputId).value.toLowerCase();
-        $(`#${listId} .item-filter`).each(function () {
-            const name = $(this).find('.name-filter').text().toLowerCase();
-            $(this).toggle(name.includes(term));
-        });
-    }
-
-    function filterModalList(inputId, listId) {
-        const term = document.getElementById(inputId).value.toLowerCase();
-        if (term.length > 0) expandUserList(true);
-        $(`#${listId} .item-filter`).each(function () {
-            const name = $(this).find('.name-filter').text().toLowerCase();
-            $(this).toggle(name.includes(term));
-        });
-    }
-
-    function removeRow(btn) { $(btn).closest('tr').remove(); }
-
-    function addAtividadeRow() {
-        const row = `
-        <tr class="group hover:bg-slate-50 transition-colors">
-            <td class="p-3 align-top full-width-mobile" data-label="Descrição:">
-                <textarea name="atividade_descricao[]" class="form-control-std text-sm min-h-[80px]" rows="2" placeholder="Descreva..." required></textarea>
-            </td>
-            <td class="p-3 align-top" data-label="Status:">
-                <select name="atividade_status[]" class="form-control-std text-sm select2-enable">
-                    <option value="Em andamento">Em andamento</option>
-                    <option value="Iniciada">Iniciada</option>
-                    <option value="Concluída">Concluída</option>
-                    <option value="Paralisada">Paralisada</option>
-                </select>
-            </td>
-            <td class="p-3 align-middle text-center action-cell">
-                <button type="button" onclick="removeRow(this)" class="w-8 h-8 rounded-full text-slate-400 hover:text-red-500 hover:bg-red-50 flex items-center justify-center"><i class="fas fa-trash-alt"></i></button>
-            </td>
-        </tr>`;
-        $('#table_atividades tbody').append(row);
-        $('.select2-enable').last().select2({ width: '100%' });
-    }
-
-    function addSelectedMO() {
-        $('.chk-mo:checked').each(function () {
-            const funcao = $(this).val();
-            const row = `
-                <tr>
-                    <td class="p-2" data-label="Função:">
-                        <select name="mo_funcao[]" class="form-control-std text-sm select2-enable">
-                            {% for op in mao_de_obra_options %}
-                            <option value="{{ op.nome }}" ${'{{ op.nome }}' === funcao ? 'selected' : ''}>{{ op.nome }}</option>
-                            {% endfor %}
-                        </select>
-                    </td>
-                    <td class="p-2" data-label="Qtd Própria:"><input type="number" name="mo_qtd_propria[]" value="0" class="form-control-std text-center font-bold" min="0" inputmode="numeric"></td>
-                    <td class="p-2" data-label="Qtd Terceiro:"><input type="number" name="mo_qtd_terceirizada[]" value="0" class="form-control-std text-center font-bold" min="0" inputmode="numeric"></td>
-                    <td class="p-2 text-center action-cell"><button type="button" onclick="removeRow(this)" class="text-slate-400 hover:text-red-500 p-2"><i class="fas fa-trash-alt"></i></button></td>
-                </tr>`;
-            $('#table_mao_obra tbody').append(row);
-            $(this).prop('checked', false);
-        });
-        $('.select2-enable').select2({ width: '100%' });
-        closeModal('modal_mo');
-    }
-
-    function addSelectedEq() {
-        $('.chk-eq:checked').each(function () {
-            const id = $(this).val();
-            const row = `
-                <tr>
-                    <td class="p-2" data-label="Equipamento:">
-                        <select name="eq_id[]" class="form-control-std text-sm select2-enable">
-                            {% for opt in equipamentos_options %}
-                            <option value="{{ opt.id }}" ${'{{ opt.id }}' == id ? 'selected' : ''}>{{ opt.nome }}</option>
-                            {% endfor %}
-                        </select>
-                    </td>
-                    <td class="p-2" data-label="Quantidade:"><input type="number" name="eq_qtd[]" value="1" class="form-control-std text-center font-bold" inputmode="numeric"></td>
-                    <td class="p-2 text-center action-cell"><button type="button" onclick="removeRow(this)" class="text-slate-400 hover:text-red-500 p-2"><i class="fas fa-trash-alt"></i></button></td>
-                </tr>`;
-            $('#table_equipamentos tbody').append(row);
-            $(this).prop('checked', false);
-        });
-        $('.select2-enable').select2({ width: '100%' });
-        closeModal('modal_eq');
-    }
-
-    function addSelectedOc() {
-        $('.chk-oc:checked').each(function () {
-            const id = $(this).val();
-            // Correção: Input agora é type="time" e removemos a classe mask-hora
-            const row = `
-            <tr>
-                <td class="p-2 align-top" data-label="Tipo:">
-                    <select name="oc_tag[]" class="form-control-std text-sm select2-enable">
-                        {% for t in tags_options %}
-                        <option value="{{ t.id }}" ${'{{ t.id }}' == id ? 'selected' : ''}>{{ t.nome }}</option>
-                        {% endfor %}
-                    </select>
-                </td>
-                <td class="p-2 full-width-mobile" data-label="Detalhes:">
-                    <input type="text" name="oc_desc[]" class="form-control-std" placeholder="Detalhes...">
-                </td>
-                <td class="p-2 full-width-mobile" data-label="Tempo Parado:">
-                    <input type="time" name="oc_tempo_parado[]" class="form-control-std">
-                </td>
-                <td class="p-2 text-center align-middle action-cell">
-                    <button type="button" onclick="removeRow(this)" class="text-slate-400 hover:text-red-500 p-2">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>
-                </td>
-            </tr>`;
-            $('#table_ocorrencias tbody').append(row);
-            $(this).prop('checked', false);
-        });
-        $('.select2-enable').select2({ width: '100%' });
-        // Removemos a chamada de .mask() pois type="time" já resolve
-        closeModal('modal_oc');
-    }
+function addRow(type) {
+    const tpl = document.getElementById(`tpl-${type}`);
+    const target = document.getElementById(type);
+    if (tpl && target) target.insertAdjacentHTML('beforeend', tpl.innerHTML);
+}
 </script>
 {% endblock %}

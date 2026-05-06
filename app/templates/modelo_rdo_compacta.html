@@ -351,9 +351,9 @@
                         <th width="15%" class="text-center">P</th>
                         <th width="15%" class="text-center">T</th>
                     </tr>
-                    {% for mo in rdo.maos_obra %}
+                    {% for mo in rdo.maos_obra|sort(attribute='nome_funcao_resolved') %}
                     <tr>
-                        <td>{{ mo.nome_funcao }}</td>
+                        <td>{{ mo.nome_funcao_resolved }}</td>
                         <td class="text-center">{{ mo.quantidade_propria }}</td>
                         <td class="text-center">{{ mo.quantidade_terceirizada }}</td>
                     </tr>
@@ -369,9 +369,9 @@
                         <th>Equipamento</th>
                         <th width="15%" class="text-center">Qtd</th>
                     </tr>
-                    {% for eq in rdo.equipamentos %}
+                    {% for eq in rdo.equipamentos|sort(attribute='nome_equipamento_resolved') %}
                     <tr>
-                        <td>{{ eq.nome_equipamento }}</td>
+                        <td>{{ eq.nome_equipamento_resolved }}</td>
                         <td class="text-center">{{ eq.quantidade }}</td>
                     </tr>
                     {% else %}<tr>
@@ -421,21 +421,31 @@
                             class="sig-img">{% endif %}
                     </div>
                     <div class="sig-txt"><b>{{ ass.usuario.nome|truncate(25) }}</b></div>
-                    <div class="sig-txt" style="color:#555;">{{ ass.usuario.papel }} | {{ass.usuario.email}}</div>
-                    <div>
-                        {% if ass.status == 'Aprovado' %}
-                        <span class="tag-status-sm status-aprovado">Aprovado</span>
-                        {% elif ass.status == 'Rejeitado' %}
-                        <span class="tag-status-sm status-rejeitado">Rejeitado</span>
-                        <span class="sig-meta">Motivo: {{ ass.motivo_rejeicao }}</span>
-                        {% else %}
-                        <span class="tag-status-sm status-pendente">Pendente</span>
-                        {% endif %}
+                    <div class="sig-txt" style="color:#555;">{{ ass.usuario.papel }}</div>
+
+                    {% if ass.status == 'Aprovado' %}
+                    <div style="font-size: 6pt; margin-top: 2px; color: #444;">
+                        {{ ass.criado.strftime('%d/%m/%y %H:%M') }}
                     </div>
-                </td>
-                {% endfor %}
-            </tr>
-        </table>
+
+                    <div
+                        style="font-size: 5pt; color: #666; font-family: monospace; margin-top: 2px; line-height: 1.1;">
+                        IP: {{ ass.ip_endereco or '-' }}<br>
+                        {% if ass.latitude %}Lat: {{ "%.4f"|format(ass.latitude) }} / Lon: {{
+                        "%.4f"|format(ass.longitude) }}<br>{% endif %}
+                        {% if ass.hash_documento %}ID: {{ ass.hash_documento[:8] }}...{% endif %}
+                    </div>
+                    <span class="tag-status-sm status-aprovado" style="margin-top:2px;">Aprovado</span>
+                    {% elif ass.status == 'Rejeitado' %}
+                    <span class="tag-status-sm status-rejeitado">Rejeitado</span>
+                    {% else %}
+                    <span class="tag-status-sm status-pendente">Pendente</span>
+                    {% endif %}
+    </div>
+    </td>
+    {% endfor %}
+    </tr>
+    </table>
     </div>
 
 </body>

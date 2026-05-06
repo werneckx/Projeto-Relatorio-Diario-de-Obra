@@ -2,7 +2,7 @@ import os
 import pathlib
 from datetime import datetime
 from flask import current_app, render_template,url_for
-from app.models.lista_opcoes import Clima, Equipamento, MaoObra, TagOcorrencia
+from app.models.auxiliares import AuxClima, AuxEquipamentos, AuxFuncoes, AuxTagOcorrencia
 from app.models.rdo import RDO
 from app.utils.qrcode_utils import gerar_qrcode_b64
 
@@ -10,6 +10,17 @@ try:
     from weasyprint import HTML
 except ImportError:
     HTML = None
+
+def _build_mao_obra_tipo_map():
+    """Mapeia o nome da mão de obra ao tipo cadastrado."""
+    tipo_por_nome = {}
+
+    for mao in AuxFuncoes.query.all():
+        nome_normalizado = (mao.descricao or "").strip().lower()
+        if nome_normalizado and nome_normalizado not in tipo_por_nome:
+            tipo_por_nome[nome_normalizado] = mao.tipo or ""
+
+    return tipo_por_nome
 
 def render_rdo_pdf(rdo_id):
     """
@@ -38,9 +49,10 @@ def render_rdo_pdf(rdo_id):
     upload_folder_uri = pathlib.Path(raw_upload_folder).as_uri()
     assinatura_folder_uri = pathlib.Path(raw_assinatura_folder).as_uri()
     
-    mao_de_obra_options = [{"id": m.id, "nome": m.nome} for m in MaoObra.query.all()]
-    equipamentos_options = [{"id": e.id, "nome": e.nome} for e in Equipamento.query.all()]
-    tags_options = [{"id": t.id, "nome": t.nome} for t in TagOcorrencia.query.all()]
+    mao_de_obra_options = [{"id": m.id, "nome": m.descricao} for m in AuxFuncoes.query.all()]
+    mao_obra_tipo_map = _build_mao_obra_tipo_map()
+    equipamentos_options = [{"id": e.id, "nome": e.descricao} for e in AuxEquipamentos.query.all()]
+    tags_options = [{"id": t.id, "nome": t.descricao} for t in AuxTagOcorrencia.query.all()]
     
     # Tratamento do Logo
     if os.path.exists(raw_logo_path):
@@ -56,11 +68,13 @@ def render_rdo_pdf(rdo_id):
         'modelo_rdo.html',
         rdo=rdo,
         logo_path=logo_path_uri,
-        clima=Clima.query.all(),
+        clima=AuxClima.query.all(),
         upload_folder=upload_folder_uri,       # Caminho URI para fotos
         assinatura_folder=assinatura_folder_uri, # Caminho URI para assinaturas
         data_geracao=data_geracao,             # Variável nova para o rodapé
-        qr_code_b64=qr_code_b64
+        qr_code_b64=qr_code_b64,
+        tipo_mao_obra_options=mao_de_obra_options,
+        mao_obra_tipo_map=mao_obra_tipo_map,
     )
 
     # 4. Converter HTML para Bytes PDF
@@ -95,9 +109,9 @@ def render_rdo_pdf_compact(rdo_id):
     upload_folder_uri = pathlib.Path(raw_upload_folder).as_uri()
     assinatura_folder_uri = pathlib.Path(raw_assinatura_folder).as_uri()
     
-    mao_de_obra_options = [{"id": m.id, "nome": m.nome} for m in MaoObra.query.all()]
-    equipamentos_options = [{"id": e.id, "nome": e.nome} for e in Equipamento.query.all()]
-    tags_options = [{"id": t.id, "nome": t.nome} for t in TagOcorrencia.query.all()]
+    mao_de_obra_options = [{"id": m.id, "nome": m.descricao} for m in AuxFuncoes.query.all()]
+    equipamentos_options = [{"id": e.id, "nome": e.descricao} for e in AuxEquipamentos.query.all()]
+    tags_options = [{"id": t.id, "nome": t.descricao} for t in AuxTagOcorrencia.query.all()]
     
     # Tratamento do Logo
     if os.path.exists(raw_logo_path):
@@ -113,7 +127,7 @@ def render_rdo_pdf_compact(rdo_id):
         'modelo_rdo_compacta.html',
         rdo=rdo,
         logo_path=logo_path_uri,
-        clima=Clima.query.all(),
+        clima=AuxClima.query.all(),
         upload_folder=upload_folder_uri,       # Caminho URI para fotos
         assinatura_folder=assinatura_folder_uri, # Caminho URI para assinaturas
         data_geracao=data_geracao,             # Variável nova para o rodapé

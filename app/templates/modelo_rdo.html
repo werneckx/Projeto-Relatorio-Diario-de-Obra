@@ -4,908 +4,1159 @@
 <head>
     <meta charset="UTF-8">
     <title>RDO #{{ rdo.id_sequencial }} - {{ rdo.obra.nome if rdo.obra else 'Obra' }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap"
+        rel="stylesheet">
+
     <style>
-        /* --- CLASSE PARA ELEMENTO DE RODAPÉ (RUNNING ELEMENT) --- */
-        .footer-qr-container {
-            /* Remove do fluxo normal e cria o elemento 'qrFooter' */
-            position: running(qrFooter);
-            text-align: right;
-            padding: 0px 0px 5px 0px;
+        :root {
+            --ink-950: #0a0f1e;
+            --ink-800: #1e293b;
+            --ink-600: #475569;
+            --ink-400: #94a3b8;
+            --ink-200: #cbd5e1;
+            --ink-100: #e2e8f0;
+            --ink-050: #f8fafc;
+
+            --accent: #1e40af;
+
+            --ok-fg: #15803d;
+            --ok-bg: #dcfce7;
+            --ok-bd: #86efac;
+            --wa-fg: #b45309;
+            --wa-bg: #fef3c7;
+            --wa-bd: #fcd34d;
+            --er-fg: #b91c1c;
+            --er-bg: #fee2e2;
+            --er-bd: #fca5a5;
+            --in-fg: #0369a1;
+            --in-bg: #e0f2fe;
+            --in-bd: #7dd3fc;
+            --nu-fg: #475569;
+            --nu-bg: #f1f5f9;
+            --nu-bd: #cbd5e1;
+
+            --font: 'Inter', -apple-system, sans-serif;
+            --mono: 'JetBrains Mono', 'Consolas', monospace;
         }
 
-        .footer-qr-img {
-            width: 45px;
-            height: 45px;
-            border: 1px solid #ddd;
-            padding: 2px;
-            background: #fff;
-        }
-
-        .footer-qr-text {
-            font-size: 5pt;
-            color: #555;
-            text-transform: uppercase;
-            font-weight: bold;
-            margin-top: 1px;
-        }
-
-        /* --- CONFIGURAÇÕES DE PÁGINA (PDF) --- */
         @page {
-            margin: 0.8cm 0.8cm 1.5cm 0.8cm;
-            /* Margens ligeiramente reduzidas */
+            margin: 1.1cm 1cm 1.8cm 1cm;
             size: A4;
 
-            /* Rodapé Esquerdo: Rastreabilidade */
             @bottom-left {
-                content: "{{ rdo.obra.nome if rdo.obra else 'Obra não identificada' }} | RDO {{ rdo.id_sequencial }} | Rev. {{ rdo.id_revisao }} | Doc ID: {{ rdo.id or 'N/A' }}";
-                font-family: "Segoe UI", sans-serif;
-                font-size: 6pt;
-                color: #555;
+                content: "{{ rdo.obra.nome if rdo.obra else 'Obra' }}  ·  RDO {{ rdo.id_sequencial }}  ·  Rev. {{ rdo.id_revisao }}  ·  ID {{ rdo.id or 'N/A' }}";
+                font-family: 'Inter', sans-serif;
+                font-size: 6.5pt;
+                color: #94a3b8;
             }
 
-            /* Rodapé Centro: Paginação */
             @bottom-center {
-                content: "Pág. " counter(page) " de " counter(pages);
-                font-family: "Segoe UI", sans-serif;
-                font-size: 6pt;
-                color: #555;
+                content: "Página " counter(page) " de " counter(pages);
+                font-family: 'JetBrains Mono', monospace;
+                font-size: 6.5pt;
+                color: #94a3b8;
             }
 
-            /* Rodapé Direito: Injeta o elemento QR Code */
             @bottom-right {
                 content: element(qrFooter);
                 vertical-align: bottom;
             }
         }
 
-        /* --- TIPOGRAFIA E CORES GERAIS --- */
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
         body {
-            font-family: "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
+            font-family: var(--font);
             font-size: 9pt;
-            /* Fonte levemente menor para caber mais */
-            color: #1a1a1a;
-            line-height: 1.25;
-            /* Entrelinha mais compacta */
-            background-color: #fff;
+            color: var(--ink-800);
+            line-height: 1.45;
+            background: #fff;
             margin: 0;
             padding: 0;
         }
 
-        /* --- MARCA D'ÁGUA DE SEGURANÇA --- */
+        .avoid-break {
+            page-break-inside: avoid;
+        }
+
+        /* ── WATERMARK ── */
         .watermark {
             position: fixed;
             top: 50%;
             left: 50%;
-            transform: translate(-50%, -50%) rotate(-45deg);
-            font-size: 60pt;
-            font-weight: 900;
-            color: rgba(0, 0, 0, 0.05);
+            transform: translate(-50%, -50%) rotate(-32deg);
+            font-size: 52pt;
+            font-weight: 800;
+            color: rgba(10, 15, 30, .04);
             z-index: -1000;
             text-transform: uppercase;
-            pointer-events: none;
-            width: 100%;
-            text-align: center;
-            border: 4px solid rgba(0, 0, 0, 0.05);
-            padding: 10px;
-            border-radius: 20px;
+            letter-spacing: 3px;
+            white-space: nowrap;
+            border: 3px solid rgba(10, 15, 30, .04);
+            padding: 10px 22px;
+            border-radius: 16px;
         }
 
-        /* --- CABEÇALHO (HEADER) --- */
-        .header-container {
-            width: 100%;
-            border-bottom: 2px solid #333;
-            padding-bottom: 8px;
-            /* Reduzido */
-            margin-bottom: 10px;
-            /* Reduzido */
+        /* ── QR FOOTER ── */
+        .footer-qr-container {
+            position: running(qrFooter);
+            text-align: right;
+            padding-bottom: 4px;
+        }
+
+        .footer-qr-img {
+            width: 44px;
+            height: 44px;
+            border: 1px solid var(--ink-200);
+            padding: 2px;
+            background: #fff;
+            border-radius: 4px;
+        }
+
+        .footer-qr-text {
+            font-size: 6pt;
+            color: var(--ink-400);
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-top: 2px;
+            letter-spacing: .4px;
+        }
+
+        /* ══════════════════════
+           HEADER
+        ══════════════════════ */
+        .header-wrap {
             display: table;
+            width: 100%;
             table-layout: fixed;
+            border: 1.5px solid var(--ink-200);
+            border-radius: 8px;
+            background: #fff;
+            margin-bottom: 8px;
+            overflow: hidden;
         }
 
-        .header-logo {
+        .h-logo,
+        .h-center,
+        .h-spacer {
             display: table-cell;
             vertical-align: middle;
+            padding: 12px 14px;
+        }
+
+        .h-logo {
             width: 18%;
         }
 
-        .header-logo img {
-            max-width: 100px;
-            max-height: 60px;
+        .h-center {
+            width: 64%;
+            text-align: center;
+            border-left: 1px solid var(--ink-100);
+            border-right: 1px solid var(--ink-100);
+        }
+
+        .h-spacer {
+            width: 18%;
+        }
+
+        .h-logo img {
+            max-width: 110px;
+            max-height: 56px;
             width: auto;
             height: auto;
         }
 
-        .header-content {
-            display: table-cell;
-            vertical-align: middle;
-            text-align: center;
-            width: 64%;
+        .logo-stub {
+            display: inline-block;
+            border: 1.5px solid var(--ink-800);
+            padding: 5px 10px;
+            font-size: 8pt;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: var(--ink-800);
+            border-radius: 4px;
         }
 
-        .header-right-spacer {
-            display: table-cell;
-            vertical-align: middle;
-            width: 18%;
-        }
-
-        .doc-title {
-            font-size: 16pt;
-            /* Ajustado */
+        .h-title {
+            font-size: 17pt;
             font-weight: 800;
-            color: #000;
-            text-transform: uppercase;
+            color: var(--ink-950);
+            letter-spacing: -.3px;
+            line-height: 1;
             margin: 0;
-            letter-spacing: -0.5px;
-            line-height: 1.1;
         }
 
-        .doc-subtitle {
-            font-size: 10pt;
-            color: #333;
-            margin-top: 3px;
-            text-transform: uppercase;
+        .h-meta {
+            font-size: 6.5pt;
+            color: var(--ink-950);
             font-weight: 500;
+            margin-top: 6px;
+            font-family: var(--mono);
         }
 
-        /* --- ESTILOS DE TABELAS E SEÇÕES --- */
-        .section-header {
-            background-color: #f8fafc;
-            color: #1e293b;
-            padding: 4px 10px;
-            /* Padding reduzido */
-            font-size: 9pt;
+        /* ── META BAR ── */
+        .meta-bar {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+            border: 1.5px solid var(--ink-200);
+            border-radius: 8px;
+            background: var(--ink-050);
+            margin-bottom: 12px;
+            overflow: hidden;
+        }
+
+        .meta-cell {
+            display: table-cell;
+            padding: 7px 12px;
+            border-right: 1px solid var(--ink-100);
+            text-align: center;
+        }
+
+        .meta-cell:last-child {
+            border-right: none;
+        }
+
+        .ml {
+            display: block;
+            font-size: 6pt;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-top: 10px;
-            /* Margem reduzida */
-            margin-bottom: 5px;
-            /* Margem reduzida */
-            border-left: 4px solid #cbd5e1;
-            border-bottom: 1px solid #e2e8f0;
-            page-break-after: avoid;
+            letter-spacing: .6px;
+            color: var(--ink-400);
+            margin-bottom: 2px;
+        }
+
+        .mv {
+            display: block;
+            font-size: 10pt;
+            font-weight: 700;
+            color: var(--ink-950);
+            font-family: var(--mono);
+        }
+
+        /* ══════════════════════
+           BLOCO = HEADER + TABLE UNIDOS
+           O wrapper agrupa o cabeçalho da seção
+           e a tabela em um único bloco visual.
+        ══════════════════════ */
+        .block {
+            border: 1.5px solid var(--ink-200);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 10px;
+            page-break-inside: avoid;
+        }
+
+        /* Cabeçalho da seção — topo do bloco */
+        .block-head {
             display: flex;
             align-items: center;
+            gap: 7px;
+            padding: 7px 11px;
+            background: var(--ink-050);
+            border-bottom: 1.5px solid var(--ink-200);
+            font-size: 7pt;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .9px;
+            color: var(--ink-700);
         }
 
-        /* Cores das Bordas (Mantidas) */
-        .header-blue {
-            border-left-color: #2563eb;
+        .block-head svg {
+            width: 12px;
+            height: 12px;
+            flex-shrink: 0;
+            fill: var(--ink-600);
         }
 
-        .header-orange {
-            border-left-color: #ea580c;
-        }
-
-        .header-purple {
-            border-left-color: #9333ea;
-        }
-
-        .header-indigo {
-            border-left-color: #4f46e5;
-        }
-
-        .header-gray {
-            border-left-color: #4b5563;
-        }
-
-        .header-red {
-            border-left-color: #dc2626;
-        }
-
-        .section-header svg {
-            vertical-align: middle;
-            margin-right: 6px;
-            width: 14px;
-            /* Ícone um pouco menor */
-            height: 14px;
-        }
-
-        /* Cores dos Ícones (Mantidas) */
-        .icon-blue {
-            fill: #2563eb;
-        }
-
-        .icon-orange {
-            fill: #ea580c;
-        }
-
-        .icon-yellow {
-            fill: #ca8a04;
-        }
-
-        .icon-purple {
-            fill: #9333ea;
-        }
-
-        .icon-indigo {
-            fill: #4f46e5;
-        }
-
-        .icon-gray {
-            fill: #4b5563;
-        }
-
-        .icon-red {
-            fill: #dc2626;
-        }
-
-        .info-table {
+        /* ── INFO TABLE (dentro do bloco) ── */
+        .info-t {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 5px;
+            background: #fff;
         }
 
-        .info-table td {
-            padding: 3px 6px;
-            /* Células bem mais compactas */
+        .info-t td {
+            padding: 8px 11px;
+            border-bottom: 1px solid var(--ink-100);
+            border-right: 1px solid var(--ink-100);
             vertical-align: top;
-            border-bottom: 1px solid #e0e0e0;
         }
 
-        .label {
+        .info-t tr:last-child td {
+            border-bottom: none;
+        }
+
+        .info-t td:last-child {
+            border-right: none;
+        }
+
+        .lbl {
             display: block;
-            font-size: 6.5pt;
-            text-transform: uppercase;
-            color: #64748b;
+            font-size: 6pt;
             font-weight: 700;
-            margin-bottom: 1px;
-            letter-spacing: 0.3px;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            color: var(--ink-400);
+            margin-bottom: 2px;
         }
 
-        .value {
+        .val {
             display: block;
             font-size: 9pt;
-            color: #0f172a;
-            font-weight: 500;
+            font-weight: 600;
+            color: var(--ink-800);
+            line-height: 1.4;
         }
 
-        .clean-table {
+        /* ── DATA TABLE (dentro do bloco) ── */
+        .dt {
             width: 100%;
             border-collapse: collapse;
-            font-size: 10pt;
-            margin-bottom: 8px;
-            border: 1px solid #e2e8f0;
+            font-size: 8.5pt;
+            background: #fff;
         }
 
-        .clean-table th {
+        .dt thead tr {
+            background: var(--ink-050);
+        }
+
+        .dt th {
             text-align: left;
-            padding: 4px 8px;
-            /* Cabeçalho compacto */
-            background-color: #f1f5f9;
-            color: #334155;
+            padding: 7px 10px;
+            font-size: 6.5pt;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            color: var(--ink-600);
+            border-bottom: 1px solid var(--ink-200);
+        }
+
+        .dt td {
+            padding: 6px 10px;
+            border-bottom: 1px solid var(--ink-100);
+            vertical-align: middle;
+            color: var(--ink-800);
+        }
+
+        .dt tbody tr:nth-child(even) td {
+            background: #fafbfc;
+        }
+
+        .dt tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* MO table */
+        .mo-t {
+            font-size: 7.8pt;
+            table-layout: fixed;
+        }
+
+        .mo-t th,
+        .mo-t td {
+            border: 1px solid var(--ink-100);
+        }
+
+        .mo-sep {
+            border-left: 1.5px solid var(--ink-200) !important;
+            background: var(--ink-050) !important;
+        }
+
+        /* MO legend — dentro do bloco, acima da tabela */
+        .mo-leg {
+            padding: 6px 11px;
+            background: #fff;
+            border-bottom: 1px solid var(--ink-100);
+            font-size: 7pt;
+            color: var(--ink-600);
+            line-height: 1.5;
+        }
+
+        /* MO summary — dentro do bloco, abaixo da tabela */
+        .mo-sum {
+            width: 100%;
+            border-collapse: collapse;
+            border-top: 1.5px solid var(--ink-200);
+        }
+
+        .mo-sum td {
+            padding: 7px 10px;
+            border-right: 1px solid var(--ink-100);
+            text-align: center;
+            background: var(--ink-050);
+        }
+
+        .mo-sum td:last-child {
+            border-right: none;
+        }
+
+        .sl {
+            display: block;
+            font-size: 6pt;
             font-weight: 700;
             text-transform: uppercase;
-            font-size: 8pt;
-            letter-spacing: 0.5px;
-            border-bottom: 2px solid #e2e8f0;
+            letter-spacing: .5px;
+            color: var(--ink-400);
+            margin-bottom: 2px;
         }
 
-        .clean-table td {
-            padding: 4px 8px;
-            /* Linhas compactas */
-            border-bottom: 1px solid #f1f5f9;
-            vertical-align: middle;
-            color: #333;
+        .sv {
+            display: block;
+            font-size: 12pt;
+            font-weight: 800;
+            color: var(--ink-950);
+            font-family: var(--mono);
         }
 
-        .clean-table tr:nth-child(even) {
-            background-color: #f8fafc;
+        /* ── CONTENT BOX (dentro do bloco) ── */
+        .cbox {
+            padding: 10px 12px;
+            font-size: 9pt;
+            color: var(--ink-600);
+            line-height: 1.6;
+            min-height: 28px;
+            background: #fff;
         }
 
-        .text-center {
-            text-align: center;
-        }
-
-        .text-right {
-            text-align: right;
-        }
-
-        .status-badge {
+        /* ══════════════════════
+           BADGES
+        ══════════════════════ */
+        .badge {
             display: inline-block;
             padding: 2px 8px;
-            border-radius: 10px;
+            border-radius: 999px;
             font-size: 6.5pt;
-            font-weight: 700;
+            font-weight: 800;
             text-transform: uppercase;
-            border: 1px solid transparent;
+            letter-spacing: .3px;
+            border: 1px solid;
+            line-height: 1.8;
         }
 
-        /* Cores de Status (Mantidas) */
-        .status-aprovado,
-        .status-concluida {
-            background-color: #d1fae5;
-            color: #047857;
-            border-color: #a7f3d0;
+        .b-ok {
+            background: var(--ok-bg);
+            color: var(--ok-fg);
+            border-color: var(--ok-bd);
         }
 
-        .status-rejeitado,
-        .status-paralisada {
-            background-color: #fee2e2;
-            color: #b91c1c;
-            border-color: #fecaca;
+        .b-wa {
+            background: var(--wa-bg);
+            color: var(--wa-fg);
+            border-color: var(--wa-bd);
         }
 
-        .status-pendente,
-        .status-emandamento {
-            background-color: #fef3c7;
-            color: #b45309;
-            border-color: #fde68a;
+        .b-er {
+            background: var(--er-bg);
+            color: var(--er-fg);
+            border-color: var(--er-bd);
         }
 
-        .status-iniciada {
-            background-color: #e0f2fe;
-            color: #0369a1;
-            border-color: #bae6fd;
+        .b-in {
+            background: var(--in-bg);
+            color: var(--in-fg);
+            border-color: var(--in-bd);
         }
 
-        .status-default {
-            background-color: #f1f5f9;
-            color: #475569;
-            border-color: #cbd5e1;
+        .b-nu {
+            background: var(--nu-bg);
+            color: var(--nu-fg);
+            border-color: var(--nu-bd);
         }
 
-        .comments-box {
-            background-color: #fff;
-            border: 1px solid #cbd5e1;
-            padding: 8px 10px;
-            font-size: 9pt;
-            color: #334155;
-            text-align: justify;
-            border-radius: 4px;
-            box-shadow: 1px 1px 0px #f1f5f9;
-            min-height: 20px;
-        }
-
-        /* --- FOTOS --- */
-        .photo-gallery {
+        /* ══════════════════════
+           PHOTOS
+        ══════════════════════ */
+        .photo-grid {
             width: 100%;
             border-collapse: separate;
-            border-spacing: 8px;
-            /* Espaçamento entre fotos reduzido */
-            margin-left: -8px;
-            width: calc(100% + 16px);
-            table-layout: fixed;
+            border-spacing: 0;
         }
 
         .photo-row {
             page-break-inside: avoid;
         }
 
-        .photo-cell {
+        /* cada par de fotos é uma linha da tabela */
+        .photo-pair {
+            display: table;
             width: 100%;
-            height: auto;
-            vertical-align: top;
-            background: #fff;
-            border: 1px solid #e2e8f0;
-            padding: 0;
-            margin-bottom: 10px;
-            border-radius: 4px;
-            overflow: hidden;
+            table-layout: fixed;
+            border-spacing: 0;
+            margin-bottom: 8px;
+            page-break-inside: avoid;
         }
 
-        .photo-container {
-            width: 100%;
-            min-height: 100px;
-            height: auto;
-            max-height: 450px;
+        .photo-cell {
+            display: table-cell;
+            width: 50%;
+            vertical-align: top;
+            border: 1.5px solid var(--ink-200);
+            border-radius: 8px;
             overflow: hidden;
-            background-color: #f8fafc;
+            background: #fff;
+        }
+
+        .photo-cell+.photo-cell {
+            margin-left: 8px;
+        }
+
+        .photo-pair-inner {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+            border-collapse: separate;
+            border-spacing: 8px 0;
+        }
+
+        .photo-pair-inner td {
+            width: 50%;
+            vertical-align: top;
+            border: 1.5px solid var(--ink-200);
+            border-radius: 8px;
+            overflow: hidden;
+            background: #fff;
+        }
+
+        .photo-img {
+            width: 100%;
+            min-height: 175px;
+            max-height: 250px;
+            overflow: hidden;
+            background: var(--ink-050);
             text-align: center;
-            line-height: 178px;
-            border-bottom: 1px solid #e2e8f0;
+            border-bottom: 1px solid var(--ink-100);
+            padding: 10px 0;
+        }
+
+        .photo-img img {
+            max-width: 94%;
+            max-height: 228px;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+        }
+
+        .photo-cap {
+            padding: 7px 9px;
+            font-size: 7.5pt;
+            color: var(--ink-600);
+            line-height: 1.4;
+            min-height: 28px;
+        }
+
+        .photo-n {
+            font-weight: 700;
+            color: var(--ink-800);
+        }
+
+        /* ══════════════════════
+           SIGNATURES
+        ══════════════════════ */
+        .sig-grid {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 8px;
+            table-layout: fixed;
+        }
+
+        .sig-item {
+            vertical-align: top;
+        }
+
+        .sig-card {
+            border: 1.5px solid var(--ink-200);
+            border-radius: 8px;
+            padding: 10px 11px;
+            background: #fff;
+        }
+
+        .sig-visual {
+            height: 56px;
+            border-bottom: 1px solid var(--ink-100);
+            margin-bottom: 8px;
             display: flex;
-            /* Flexbox para centralizar melhor */
             align-items: center;
             justify-content: center;
         }
 
-        .photo-container img {
+        .sig-visual img {
+            max-height: 48px;
             max-width: 100%;
-            max-height: 100%;
-            width: auto;
-            height: auto;
-            justify-content: center;
-            vertical-align: middle;
             object-fit: contain;
         }
 
-        .photo-caption {
-            padding: 5px 8px;
+        .sig-ph {
             font-size: 8pt;
-            color: #334155;
-            background-color: #fff;
-            min-height: 25px;
-            line-height: 1.3;
-            text-align: left;
+            font-style: italic;
+            font-weight: 600;
+            color: var(--ink-400);
         }
 
-        /* --- ASSINATURAS --- */
-        .signatures-section {
-            margin-top: 20px;
-            /* Reduzido */
-            page-break-inside: avoid;
-            border-top: 1px solid #e2e8f0;
-            padding-top: 10px;
-        }
-
-        .signature-grid {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 10px 0;
-            table-layout: fixed;
-        }
-
-        .signature-item {
-            vertical-align: bottom;
-            text-align: center;
-        }
-
-        .sig-line {
-            height: 50px;
-            /* Altura reduzida para assinaturas */
-            border-bottom: 1px solid #334155;
-            margin-bottom: 4px;
-            display: table;
-            width: 100%;
-        }
-
-        .sig-content {
-            display: table-cell;
-            vertical-align: bottom;
-            text-align: center;
-            height: 50px;
-            padding-bottom: 2px;
-        }
-
-        .sig-img {
-            max-height: 45px;
-            /* Imagem menor */
-            max-width: 90%;
-            display: inline-block;
+        .sig-ph.rejected {
+            color: var(--er-fg);
         }
 
         .sig-name {
-            font-weight: 700;
-            font-size: 8pt;
-            color: #000000;
+            font-size: 8.5pt;
+            font-weight: 800;
+            color: var(--ink-950);
             text-transform: uppercase;
-            margin-bottom: 1px;
+            margin-bottom: 2px;
         }
 
         .sig-role {
-            font-size: 7pt;
-            color: #000000;
+            font-size: 6.8pt;
+            color: var(--ink-400);
+            font-weight: 500;
+            line-height: 1.35;
+            margin-bottom: 6px;
         }
 
         .sig-meta {
             font-size: 6.5pt;
-            color: #000000;
-            margin-top: 1px;
+            color: var(--ink-400);
+            line-height: 1.55;
+            border-top: 1px solid var(--ink-100);
+            padding-top: 6px;
+            margin-top: 5px;
         }
 
-        .tag-status-sm {
-            font-size: 6pt;
+        .sig-meta strong {
+            color: var(--ink-600);
+            font-weight: 600;
+        }
+
+        .sig-meta .geo {
+            color: var(--accent);
             font-weight: 700;
-            padding: 1px 6px;
-            border-radius: 3px;
-            text-transform: uppercase;
-            display: inline-block;
-            margin-top: 4px;
+            text-decoration: none;
+        }
+
+        .sig-meta .hash {
+            font-family: var(--mono);
+            font-size: 6pt;
+            word-break: break-all;
+        }
+
+        .sig-reject {
+            margin-top: 6px;
+            padding: 5px 8px;
+            background: var(--er-bg);
+            border: 1px solid var(--er-bd);
+            border-radius: 4px;
+            font-size: 6.5pt;
+            font-weight: 700;
+            color: var(--er-fg);
+        }
+
+        /* utils */
+        .tc {
+            text-align: center;
+        }
+
+        .fw7 {
+            font-weight: 700;
+        }
+
+        .mono {
+            font-family: var(--mono);
+        }
+
+        .er-txt {
+            color: var(--er-fg);
+            font-weight: 700;
+        }
+
+        .empty td {
+            padding: 14px 10px;
+            text-align: center;
+            color: var(--ink-400);
+            font-style: italic;
+            font-size: 8pt;
         }
     </style>
 </head>
 
 <body>
 
-    <!-- 
-      ELEMENTO DE RODAPÉ (INVISÍVEL NO CORPO, APARECE NO RODAPÉ VIA CSS)
-    -->
+    <!-- QR footer -->
     <div class="footer-qr-container">
         {% if qr_code_b64 %}
-        <img src="data:image/png;base64,{{ qr_code_b64 }}" class="footer-qr-img" alt="QR Code">
-        <div class="footer-qr-text">Validar Doc.</div>
+        <img src="data:image/png;base64,{{ qr_code_b64 }}" class="footer-qr-img" alt="QR">
+        <div class="footer-qr-text">Validar</div>
         {% endif %}
     </div>
 
-    <!-- MARCA D'ÁGUA DE SEGURANÇA -->
-    {% if rdo.status == 'Pendente' or (not rdo.status and rdo.assinaturas|selectattr("status", "equalto",
-    "Pendente")|list|length > 0) %}
-    <div class="watermark">RASCUNHO / PENDENTE</div>
+    {% if rdo.status == 'Pendente' or (not rdo.status and
+    rdo.assinaturas|selectattr("status","equalto","Pendente")|list|length > 0) %}
+    <div class="watermark">Rascunho / Pendente</div>
     {% endif %}
 
-    <!-- CABEÇALHO -->
-    <div class="header-container">
-        <!-- 1. Logo (Esquerda) -->
-        <div class="header-logo">
+    <!-- ══ HEADER ══ -->
+    <div class="header-wrap avoid-break">
+        <div class="h-logo">
             {% if logo_path %}
-            <img src="{{ logo_path }}" alt="Logo Empresa">
+            <img src="{{ logo_path }}" alt="Logo">
             {% else %}
-            <div
-                style="padding: 5px; border: 2px solid #000; color: #000; font-weight: bold; text-align: center; border-radius: 0; font-size: 8pt;">
-                LOGO EMPRESA</div>
+            <div class="logo-stub">LOGO</div>
             {% endif %}
         </div>
-
-        <!-- 2. Títulos e Infos (Centro) -->
-        <div class="header-content">
-            <h1 class="doc-title">Relatório Diário de Obra</h1>
-            <div class="doc-subtitle">
-                <span style="color: #000; font-weight: bold;">RDO Nº {{ rdo.id_sequencial }}</span>
-                <span style="color: #999; margin: 0 6px;">|</span>
-                REV. {{ rdo.id_revisao }}
-                <span style="color: #999; margin: 0 6px;">|</span>
-                DATA: <strong>{{ rdo.data.strftime('%d/%m/%Y') }}</strong>
-                <span style="color: #999; margin: 0 6px;">|</span>
-                {% if rdo.status == 'Aprovado' %}
-                <span class="status-badge status-aprovado">Aprovado</span>
-                {% elif rdo.status == 'Rejeitado' %}
-                <span class="status-badge status-rejeitado">Rejeitado</span>
-                {% else %}
-                <span class="status-badge status-pendente">Pendente</span>
-                {% endif %}
-            </div>
-
-            <div style="font-size: 6.5pt; color: #666; margin-top: 3px; text-transform: uppercase; font-weight: 500;">
-                Criado: {{ rdo.criado.strftime('%d/%m/%Y %H:%M') if rdo.criado else '-' }} |
-                Modificado: {{ rdo.modificado.strftime('%d/%m/%Y %H:%M') if rdo.modificado else '-' }}
+        <div class="h-center">
+            <h1 class="h-title">Relatório Diário de Obra</h1>
+            <div class="h-meta">
+                Emissão: {{ rdo.criado.strftime('%d/%m/%Y %H:%M') if rdo.criado else '—' }}
+                &nbsp;·&nbsp;
+                Modificado: {{ rdo.modificado.strftime('%d/%m/%Y %H:%M') if rdo.modificado else '—' }}
             </div>
         </div>
-
-        <!-- 3. Espaçador (Direita) - Vazio para equilíbrio -->
-        <div class="header-right-spacer"></div>
+        <div class="h-spacer"></div>
     </div>
 
-    <!-- 1. DADOS CONTRATUAIS (AZUL) -->
-    <div class="section-header header-blue">
-        <svg viewBox="0 0 24 24" class="icon-blue">
-            <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
-        </svg>
-        <span>Dados do Contrato e Obra</span>
+    <!-- ── META BAR ── -->
+    <div class="meta-bar avoid-break">
+        <div class="meta-cell">
+            <span class="ml">Código</span>
+            <span class="mv">RDO-{{ "%06d"|format(rdo.id_sequencial or 0) }}</span>
+        </div>
+        <div class="meta-cell">
+            <span class="ml">Revisão</span>
+            <span class="mv">{{ rdo.id_revisao }}</span>
+        </div>
+        <div class="meta-cell">
+            <span class="ml">Data de Emissão</span>
+            <span class="mv">{{ rdo.data.strftime('%d/%m/%Y') if rdo.data else '—' }}</span>
+        </div>
+        <div class="meta-cell">
+            <span class="ml">Situação</span>
+            <span class="mv">
+                {% if rdo.status == 'Aprovado' %}<span class="badge b-ok">Aprovado</span>
+                {% elif rdo.status == 'Rejeitado' %}<span class="badge b-er">Rejeitado</span>
+                {% else %}<span class="badge b-wa">Pendente</span>{% endif %}
+            </span>
+        </div>
     </div>
-    <table class="info-table">
-        <tr>
-            <td width="50%">
-                <span class="label">Obra</span>
-                <span class="value">{{ (rdo.obra.nome if rdo.obra and rdo.obra.nome else 'Não Informado') |
-                    truncate(40,True) }}</span>
-            </td>
-            <td width="30%">
-                <span class="label">Contratante</span>
-                <span class="value">{{ (rdo.obra.contratante if rdo.obra and rdo.obra.contratante else '-') |
-                    truncate(35, True) }}</span>
-            </td>
-            <td width="20%">
-                <span class="label">CNPJ</span>
-                <span class="value">
-                    {% if rdo.obra and rdo.obra.cnpj and rdo.obra.cnpj|length == 14 %}
-                    {{ rdo.obra.cnpj[:2] }}.{{ rdo.obra.cnpj[2:5] }}.{{ rdo.obra.cnpj[5:8] }}/{{ rdo.obra.cnpj[8:12]
-                    }}-{{ rdo.obra.cnpj[12:14] }}
-                    {% else %}
-                    {{ rdo.obra.cnpj if rdo.obra and rdo.obra.cnpj else '-' }}
-                    {% endif %}
-                </span>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <span class="label">Localização</span>
-                <span class="value">
-                    {{ rdo.obra.endereco if rdo.obra and rdo.obra.endereco else '' }},
-                    {{ rdo.obra.numero if rdo.obra and rdo.obra.numero else '' }},
-                    {{ rdo.obra.complemento if rdo.obra and rdo.obra.complemento else '' }} -
-                    {{ rdo.obra.bairro if rdo.obra and rdo.obra.bairro else '' }},
-                    {{ rdo.obra.estado if rdo.obra and rdo.obra.estado else '' }}
-                </span>
-            </td>
-            <td colspan="2">
-                <span class="label">Vigência do Contrato</span>
-                <span class="value">
-                    {{ rdo.obra.inicio.strftime('%d/%m/%Y') if rdo.obra and rdo.obra.inicio else '...' }} até
-                    {{ rdo.obra.termino.strftime('%d/%m/%Y') if rdo.obra and rdo.obra.termino else '...' }}
-                </span>
-            </td>
-        </tr>
-    </table>
 
-    <!-- 2. CONDIÇÕES DO DIA (LARANJA) -->
-    <div class="section-header header-orange">
-        <svg viewBox="0 0 24 24" class="icon-orange">
-            <path
-                d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" />
-        </svg>
-        <span>Condições Operacionais</span>
-    </div>
-    <table class="info-table">
-        <tr>
-            <td width="30%">
-                <span class="label">Frente de Trabalho Ativa</span>
-                <span class="value">{{ rdo.frente_trabalho.nome_frente if rdo.frente_trabalho else 'Geral /
-                    Administrativo' }}</span>
-            </td>
-            <td width="15%">
-                <span class="label">Meta</span>
-                <span class="value">{{ rdo.frente_trabalho.qtd_planejada }} {{ rdo.frente_trabalho.unidade }}</span>
-            </td>
-            <td width="15%">
-                <span class="label">Realizada no dia</span>
-                <span class="value">{{ rdo.qtd_produzida if rdo.qtd_produzida else '0.00' }} {{
-                    rdo.frente_trabalho.unidade }}</span>
-            </td>
-            <td width="15%">
-                <span class="label">Clima Manhã</span>
-                <span class="value">
-                    {{ rdo.clima_manha_obj.nome if rdo.clima_manha_obj else '-' }}
-                </span>
-            </td>
-            <td width="15%">
-                <span class="label">Clima Tarde</span>
-                <span class="value">
-                    {{ rdo.clima_tarde_obj.nome if rdo.clima_tarde_obj else '-' }}
-                </span>
-            </td>
-            <td width="15%">
-                <span class="label">Horário de Trabalho</span>
-                <span class="value">
-                    {{ rdo.hora_entrada.strftime('%H:%M') if rdo.hora_entrada else '--:--' }} às
-                    {{ rdo.hora_saida.strftime('%H:%M') if rdo.hora_saida else '--:--' }}
-                </span>
-            </td>
-        </tr>
-    </table>
-
-    <!-- 3. ATIVIDADES REALIZADAS (ROXO) -->
-    <div class="section-header header-purple">
-        <svg viewBox="0 0 24 24" class="icon-purple">
-            <path
-                d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
-        </svg>
-        <span>Registro de Atividades</span>
-    </div>
-    <table class="clean-table">
-        <thead>
+    <!-- ══ CONTRATO E OBRA ══ -->
+    <div class="block">
+        <div class="block-head">
+            <svg viewBox="0 0 24 24">
+                <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
+            </svg>
+            Dados do Contrato e Obra
+        </div>
+        <table class="info-t">
             <tr>
-                <th width="80%">Descrição da Atividade</th>
-                <th width="20%" class="text-center">Status</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% if rdo.atividades %}
-            {% for atv in rdo.atividades %}
-            <tr>
-                <td>{{ atv.descricao }}</td>
-                <td class="text-center">
-                    {% if atv.status == 'Concluída' %}
-                    <span class="status-badge status-concluida">Concluída</span>
-                    {% elif atv.status == 'Em andamento' %}
-                    <span class="status-badge status-emandamento">Em Andamento</span>
-                    {% elif atv.status == 'Iniciada' %}
-                    <span class="status-badge status-iniciada">Iniciada</span>
-                    {% elif atv.status == 'Paralisada' %}
-                    <span class="status-badge status-paralisada">Paralisada</span>
-                    {% else %}
-                    <span class="status-badge status-default">{{ atv.status }}</span>
-                    {% endif %}
+                <td width="50%">
+                    <span class="lbl">Obra</span>
+                    <span class="val">{{ (rdo.obra.nome if rdo.obra and rdo.obra.nome else 'Não
+                        Informado')|truncate(48,True) }}</span>
                 </td>
-            </tr>
-            {% endfor %}
-            {% else %}
-            <tr>
-                <td colspan="2" class="text-center" style="padding: 10px; color: #999; font-style: italic;">
-                    Nenhuma atividade registrada.
+                <td width="30%">
+                    <span class="lbl">Contratante</span>
+                    <span class="val">{{ (rdo.obra.contratante if rdo.obra and rdo.obra.contratante else
+                        '—')|truncate(40,True) }}</span>
                 </td>
-            </tr>
-            {% endif %}
-        </tbody>
-    </table>
-
-    <!-- RECURSOS (Mão de Obra e Equipamentos) -->
-    <table style="width: 100%; border-collapse: collapse; margin-top: 5px;">
-        <tr>
-            <td style="width: 49%; vertical-align: top; padding-right: 1%;">
-                <div class="section-header header-indigo" style="margin-top: 0; font-size: 10pt; padding: 4px 10px;">
-                    <svg viewBox="0 0 24 24" class="icon-indigo">
-                        <path
-                            d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-                    </svg>
-                    <span>Efetivo (Mão de Obra)</span>
-                </div>
-                <table class="clean-table">
-                    <thead>
-                        <tr>
-                            <th>Função</th>
-                            <th class="text-center">Próp.</th>
-                            <th class="text-center">Terc.</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% if rdo.maos_obra %}
-                        {% for mo in rdo.maos_obra %}
-                        <tr>
-                            <td>{{ mo.nome_funcao }}</td>
-                            <td class="text-center">{{ mo.quantidade_propria }}</td>
-                            <td class="text-center">{{ mo.quantidade_terceirizada }}</td>
-                        </tr>
-                        {% endfor %}
-                        {% else %}
-                        <tr>
-                            <td colspan="3" class="text-center">-</td>
-                        </tr>
-                        {% endif %}
-                    </tbody>
-                </table>
-            </td>
-
-            <td style="width: 49%; vertical-align: top; padding-left: 1%;">
-                <div class="section-header header-gray" style="margin-top: 0; font-size: 10pt; padding: 4px 10px;">
-                    <svg viewBox="0 0 24 24" class="icon-gray">
-                        <path
-                            d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z" />
-                    </svg>
-                    <span>Equipamentos</span>
-                </div>
-                <table class="clean-table">
-                    <thead>
-                        <tr>
-                            <th>Equipamento</th>
-                            <th class="text-center">Qtd.</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% if rdo.equipamentos %}
-                        {% for eq in rdo.equipamentos %}
-                        <tr>
-                            <td>{{ eq.nome_equipamento }}</td>
-                            <td class="text-center">{{ eq.quantidade }}</td>
-                        </tr>
-                        {% endfor %}
-                        {% else %}
-                        <tr>
-                            <td colspan="2" class="text-center">-</td>
-                        </tr>
-                        {% endif %}
-                    </tbody>
-                </table>
-            </td>
-        </tr>
-    </table>
-
-    <!-- 4. OCORRÊNCIAS (VERMELHO) -->
-    {% if rdo.ocorrencias %}
-    <div class="section-header header-red">
-        <svg viewBox="0 0 24 24" class="icon-red">
-            <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" />
-        </svg>
-        <span>Ocorrências e Imprevistos</span>
-    </div>
-    <table class="clean-table">
-        <thead>
-            <tr>
-                <th width="25%">Classificação</th>
-                <th width="50%">Descrição Detalhada</th>
-                <th width="25%">Tempo Parado</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for oc in rdo.ocorrencias %}
-            <tr>
-                <td>
-                    <span style="font-weight: 700; color: #b91c1c;">
-                        {{ oc.tag_lista.nome if oc.tag_lista else 'Geral' }}
+                <td width="20%">
+                    <span class="lbl">CNPJ</span>
+                    <span class="val mono">
+                        {% if rdo.obra and rdo.obra.cnpj and rdo.obra.cnpj|length == 14 %}
+                        {{ rdo.obra.cnpj[:2] }}.{{ rdo.obra.cnpj[2:5] }}.{{ rdo.obra.cnpj[5:8] }}/{{ rdo.obra.cnpj[8:12]
+                        }}-{{ rdo.obra.cnpj[12:14] }}
+                        {% else %}{{ rdo.obra.cnpj if rdo.obra and rdo.obra.cnpj else '—' }}{% endif %}
                     </span>
                 </td>
-                <td>{{ oc.descricao }}</td>
-                <td>{{ oc.tempo_parado }}</td>
             </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% endif %}
-
-    <!-- 5. OBSERVAÇÕES (AZUL CLARO/PADRÃO) -->
-    {% if rdo.comentarios_gerais %}
-    <div class="section-header header-blue">
-        <svg viewBox="0 0 24 24" class="icon-blue">
-            <path
-                d="M21.99 4c0-1.1-.89-2-1.99-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4-.01-18zM18 14H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z" />
-        </svg>
-        <span>Observações Gerais</span>
-    </div>
-    <div class="comments-box">
-        {{ rdo.comentarios_gerais }}
-    </div>
-    {% endif %}
-
-    <!-- 6. RELATÓRIO FOTOGRÁFICO (AZUL) -->
-    {% if rdo.fotos %}
-    <div class="section-header header-blue" style="page-break-before: always;">
-        <svg viewBox="0 0 24 24" class="icon-blue">
-            <path
-                d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z" />
-        </svg>
-        <span>Relatório Fotográfico</span>
-    </div>
-
-    <table class="photo-gallery">
-        {% for foto in rdo.fotos %}
-        {% if loop.index0 is divisibleby(1) %}
-        <tr class="photo-row">
-            {% endif %}
-
-            <td class="photo-cell">
-                <div class="photo-container">
-                    <img src="{{ upload_folder }}/{{ foto.arquivo }}" alt="Evidência Fotográfica">
-                </div>
-                <div class="photo-caption">
-                    <strong style="color: #1e293b;">FOTO {{ loop.index }}:</strong>
-                    {{ foto.comentario if foto.comentario else 'Registro sem descrição.' }}
-                </div>
-            </td>
-
-            {% if (loop.index is divisibleby(2)) or loop.last %}
-            {% if loop.last and (loop.index % 2 != 0) %}
-            <td class="photo-cell" style="border:none; background:transparent; box-shadow:none;"></td>
-            {% endif %}
-        </tr>
-        <tr style="height: 10px;">
-            <td colspan="2"></td>
-        </tr>
-        {% endif %}
-        {% endfor %}
-    </table>
-    {% endif %}
-
-    <!-- 7. APROVAÇÕES E ASSINATURAS -->
-    <div class="signatures-section">
-        <div
-            style="font-size: 8pt; color: #333; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; font-weight: bold; display: flex; align-items: center;">
-            <svg viewBox="0 0 24 24" class="icon-blue" style="width:12px; height:12px; margin-right:5px;">
-                <path
-                    d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
-            </svg>
-            Declaração de Responsabilidade e Aprovação
-        </div>
-
-        <table class="signature-grid">
             <tr>
-                {% for ass in rdo.assinaturas %}
-                <td class="signature-item">
-                    <div class="sig-line">
-                        <div class="sig-content">
-                            {% if ass.img_assinatura %}
-                            <img src="{{ assinatura_folder }}/{{ ass.img_assinatura }}" class="sig-img">
-                            {% elif ass.status == 'Rejeitado' %}
-                            <span
-                                style="color:#94a3b8; font-size: 8pt; font-style:italic; font-weight:600;">Rejeitado</span>
-                            {% else %}
-                            <span
-                                style="color:#94a3b8; font-size: 8pt; font-style:italic; font-weight:600;">Pendente</span>
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    <div class="sig-name">{{ ass.usuario.nome }}</div>
-                    <div class="sig-role">{{ ass.usuario.papel or 'Responsável Técnico' }} | {{ ass.usuario.email or ''
-                        }}</div>
-
-                    {% if ass.criado %}
-                    <div class="sig-meta">Data de Registro: {{ ass.criado.strftime('%d/%m/%Y às %H:%M') }}</div>
-                    {% endif %}
-
-                    <div>
-                        {% if ass.status == 'Aprovado' %}
-                        <span class="tag-status-sm status-aprovado">Aprovado</span>
-                        {% elif ass.status == 'Rejeitado' %}
-                        <span class="tag-status-sm status-rejeitado">Rejeitado</span>
-                        <span class="sig-meta">Motivo: {{ ass.motivo_rejeicao }}</span>
-                        {% else %}
-                        <span class="tag-status-sm status-pendente">Pendente</span>
-                        {% endif %}
-                    </div>
+                <td width="50%">
+                    <span class="lbl">Localização</span>
+                    <span class="val">
+                        {{ rdo.obra.endereco if rdo.obra and rdo.obra.endereco else '' }}{% if rdo.obra and
+                        rdo.obra.numero %}, {{ rdo.obra.numero }}{% endif %}{% if rdo.obra and rdo.obra.complemento %},
+                        {{ rdo.obra.complemento }}{% endif %}{% if rdo.obra and rdo.obra.bairro %} — {{ rdo.obra.bairro
+                        }}{% endif %}{% if rdo.obra and rdo.obra.estado %}, {{ rdo.obra.estado }}{% endif %}
+                    </span>
                 </td>
-                {% endfor %}
+                <td width="30%">
+                    <span class="lbl">Vigência</span>
+                    <span class="val">{{ rdo.obra.inicio.strftime('%d/%m/%Y') if rdo.obra and rdo.obra.inicio else '…'
+                        }} até {{ rdo.obra.termino.strftime('%d/%m/%Y') if rdo.obra and rdo.obra.termino else '…'
+                        }}</span>
+                </td>
+                <td width="20%">
+                    <span class="lbl">Responsável</span>
+                    <span class="val">{{ rdo.obra.responsavel.nome if rdo.obra and rdo.obra.responsavel and
+                        rdo.obra.responsavel.nome else '—' }}</span>
+                </td>
             </tr>
         </table>
+    </div>
+
+    <!-- ══ CONDIÇÕES OPERACIONAIS ══ -->
+    <div class="block">
+        <div class="block-head">
+            <svg viewBox="0 0 24 24">
+                <path
+                    d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm.5 14.5h-1V11h1v5.5zm0-7h-1V7h1v2.5z" />
+            </svg>
+            Condições Operacionais
+        </div>
+        <table class="info-t">
+            <tr>
+                <td width="30%">
+                    <span class="lbl">Frente de Trabalho</span>
+                    <span class="val">{{ rdo.frente_trabalho.nome_frente if rdo.frente_trabalho else 'Geral /
+                        Administrativo' }}</span>
+                </td>
+                <td width="13%">
+                    <span class="lbl">Meta</span>
+                    <span class="val">{{ rdo.frente_trabalho.qtd_planejada if rdo.frente_trabalho else '0' }} {{
+                        rdo.frente_trabalho.unidade if rdo.frente_trabalho else '' }}</span>
+                </td>
+                <td width="15%">
+                    <span class="lbl">Realizado no dia</span>
+                    <span class="val">{{ rdo.qtd_produzida if rdo.qtd_produzida else '0.00' }} {{
+                        rdo.frente_trabalho.unidade if rdo.frente_trabalho else '' }}</span>
+                </td>
+                <td width="15%">
+                    <span class="lbl">Clima Manhã</span>
+                    <span class="val">{{ rdo.clima_manha_obj.nome if rdo.clima_manha_obj else '—' }}</span>
+                </td>
+                <td width="15%">
+                    <span class="lbl">Clima Tarde</span>
+                    <span class="val">{{ rdo.clima_tarde_obj.nome if rdo.clima_tarde_obj else '—' }}</span>
+                </td>
+                <td width="12%">
+                    <span class="lbl">Horário</span>
+                    <span class="val mono">{{ rdo.hora_entrada.strftime('%H:%M') if rdo.hora_entrada else '--:--' }} –
+                        {{ rdo.hora_saida.strftime('%H:%M') if rdo.hora_saida else '--:--' }}</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- ══ ATIVIDADES ══ -->
+    <div class="block">
+        <div class="block-head">
+            <svg viewBox="0 0 24 24">
+                <path
+                    d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm-2 14H7v-2h3v2zm7 0h-5v-2h5v2zm0-4H7v-2h10v2zm0-4H7V7h10v2z" />
+            </svg>
+            Registro de Atividades
+        </div>
+        <table class="dt">
+            <thead>
+                <tr>
+                    <th width="80%">Descrição da Atividade</th>
+                    <th width="20%" class="tc">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if rdo.atividades %}{% for atv in rdo.atividades %}
+                <tr>
+                    <td>{{ atv.descricao }}</td>
+                    <td class="tc">
+                        {% if atv.status == 'Concluída' %}<span class="badge b-ok">Concluída</span>
+                        {% elif atv.status == 'Em andamento' %}<span class="badge b-wa">Andamento</span>
+                        {% elif atv.status == 'Iniciada' %}<span class="badge b-in">Iniciada</span>
+                        {% elif atv.status == 'Paralisada' %}<span class="badge b-er">Paralisada</span>
+                        {% else %}<span class="badge b-nu">{{ atv.status }}</span>{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}{% else %}
+                <tr class="empty">
+                    <td colspan="2">Nenhuma atividade registrada.</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- ══ MÃO DE OBRA ══ -->
+    {% set lista_mo = rdo.maos_obra|sort(attribute='nome_funcao_resolved')|list %}
+    {% set tp = namespace(v=0) %}{% set tt = namespace(v=0) %}{% set ttt = namespace(v=0) %}
+    {% set tmod = namespace(v=0) %}{% set tmoi = namespace(v=0) %}
+    {% for mo in lista_mo %}
+    {% set p = mo.quantidade_propria or 0 %}{% set t = mo.quantidade_terceirizada or 0 %}{% set x = mo.quantidade_total
+    or (p+t) %}
+    {% set tipo = (mo.tipo or mao_obra_tipo_map.get((mo.nome_funcao_resolved or '')|trim|lower,''))|lower %}
+    {% set tp.v = tp.v + p %}{% set tt.v = tt.v + t %}{% set ttt.v = ttt.v + x %}
+    {% if tipo == 'direta' %}{% set tmod.v = tmod.v + x %}{% elif tipo == 'indireta' %}{% set tmoi.v = tmoi.v + x %}{%
+    endif %}
+    {% endfor %}
+
+    <div class="block">
+        <div class="block-head">
+            <svg viewBox="0 0 24 24">
+                <path
+                    d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
+            </svg>
+            Efetivo — Mão de Obra
+        </div>
+        <div class="mo-leg">
+            <strong>P</strong> = Próprio &nbsp;·&nbsp; <strong>T</strong> = Terceirizado &nbsp;·&nbsp;
+            <strong>TT</strong> = Total &nbsp;·&nbsp; <strong>MOD</strong> = Mão de Obra Direta &nbsp;·&nbsp;
+            <strong>MOI</strong> = Mão de Obra Indireta
+        </div>
+        <table class="dt mo-t">
+            <thead>
+                <tr>
+                    <th style="width:3%">#</th>
+                    <th style="width:25%">Cargo / Função</th>
+                    <th style="width:5%" class="tc">P</th>
+                    <th style="width:5%" class="tc">T</th>
+                    <th style="width:5%" class="tc">TT</th>
+                    <th style="width:7%" class="tc">Tipo</th>
+                    <th class="mo-sep" style="width:3%">#</th>
+                    <th style="width:25%">Cargo / Função</th>
+                    <th style="width:5%" class="tc">P</th>
+                    <th style="width:5%" class="tc">T</th>
+                    <th style="width:5%" class="tc">TT</th>
+                    <th style="width:7%" class="tc">Tipo</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for i in range(0, lista_mo|length, 2) %}
+                <tr>
+                    {% set m = lista_mo[i] %}
+                    {% set pe = m.quantidade_propria or 0 %}{% set te = m.quantidade_terceirizada or 0 %}{% set xe =
+                    m.quantidade_total or (pe+te) %}
+                    {% set tipo_e = m.tipo or mao_obra_tipo_map.get((m.nome_funcao_resolved or '')|trim|lower,'') %}
+                    <td class="tc mono">{{ "%02d"|format(i+1) }}</td>
+                    <td class="fw7">{{ m.nome_funcao_resolved }}</td>
+                    <td class="tc">{{ pe }}</td>
+                    <td class="tc">{{ te }}</td>
+                    <td class="tc fw7">{{ xe }}</td>
+                    <td class="tc">{% if tipo_e|lower=='direta'%}MOD{% elif tipo_e|lower=='indireta'%}MOI{% else %}{{
+                        tipo_e }}{% endif %}</td>
+
+                    {% if i+1 < lista_mo|length %} {% set m2=lista_mo[i+1] %} {% set pd=m2.quantidade_propria or 0 %}{%
+                        set td2=m2.quantidade_terceirizada or 0 %}{% set xd=m2.quantidade_total or (pd+td2) %} {% set
+                        tipo_d=m2.tipo or mao_obra_tipo_map.get((m2.nome_funcao_resolved or '' )|trim|lower,'') %} <td
+                        class="tc mono mo-sep">{{ "%02d"|format(i+2) }}</td>
+                        <td class="fw7">{{ m2.nome_funcao_resolved }}</td>
+                        <td class="tc">{{ pd }}</td>
+                        <td class="tc">{{ td2 }}</td>
+                        <td class="tc fw7">{{ xd }}</td>
+                        <td class="tc">{% if tipo_d|lower=='direta'%}MOD{% elif tipo_d|lower=='indireta'%}MOI{% else
+                            %}{{ tipo_d }}{% endif %}</td>
+                        {% else %}
+                        <td class="mo-sep"></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        {% endif %}
+                </tr>
+                {% endfor %}
+                {% if not lista_mo %}<tr class="empty">
+                    <td colspan="12">Nenhuma mão de obra registrada.</td>
+                </tr>{% endif %}
+            </tbody>
+        </table>
+        {% if lista_mo %}
+        <table class="mo-sum">
+            <tr>
+                <td><span class="sl">MOD (Direta)</span><span class="sv">{{ tmod.v }}</span></td>
+                <td><span class="sl">MOI (Indireta)</span><span class="sv">{{ tmoi.v }}</span></td>
+                <td><span class="sl">Próprios</span><span class="sv">{{ tp.v }}</span></td>
+                <td><span class="sl">Terceirizados</span><span class="sv">{{ tt.v }}</span></td>
+                <td><span class="sl">Total Geral</span><span class="sv">{{ ttt.v }}</span></td>
+            </tr>
+        </table>
+        {% endif %}
+    </div>
+
+    <!-- ══ EQUIPAMENTOS ══ -->
+    <div class="block">
+        <div class="block-head">
+            <svg viewBox="0 0 24 24">
+                <path
+                    d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z" />
+            </svg>
+            Equipamentos
+        </div>
+        <table class="dt">
+            <thead>
+                <tr>
+                    <th width="80%">Equipamento</th>
+                    <th width="20%" class="tc">Quantidade</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if rdo.equipamentos %}{% for eq in rdo.equipamentos|sort(attribute='nome_equipamento_resolved') %}
+                <tr>
+                    <td>{{ eq.nome_equipamento_resolved }}</td>
+                    <td class="tc fw7">{{ eq.quantidade }}</td>
+                </tr>
+                {% endfor %}{% else %}
+                <tr class="empty">
+                    <td colspan="2">Nenhum equipamento registrado.</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- ══ OCORRÊNCIAS ══ -->
+    {% if rdo.ocorrencias %}
+    <div class="block">
+        <div class="block-head">
+            <svg viewBox="0 0 24 24">
+                <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" />
+            </svg>
+            Ocorrências e Imprevistos
+        </div>
+        <table class="dt">
+            <thead>
+                <tr>
+                    <th width="22%">Classificação</th>
+                    <th width="56%">Descrição</th>
+                    <th width="22%">Tempo Parado</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for oc in rdo.ocorrencias %}
+                <tr>
+                    <td><span class="er-txt">{{ oc.tag_lista.nome if oc.tag_lista else 'Geral' }}</span></td>
+                    <td>{{ oc.descricao }}</td>
+                    <td class="mono fw7">{{ oc.tempo_parado }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- ══ OBSERVAÇÕES ══ -->
+    {% if rdo.comentarios_gerais %}
+    <div class="block">
+        <div class="block-head">
+            <svg viewBox="0 0 24 24">
+                <path
+                    d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z" />
+            </svg>
+            Observações Gerais
+        </div>
+        <div class="cbox">{{ rdo.comentarios_gerais }}</div>
+    </div>
+    {% endif %}
+
+    <!-- ══ FOTOS ══ -->
+    {% set lista_fotos = rdo.fotos|list %}
+    {% if lista_fotos %}
+    <div class="block" style="page-break-before: always;">
+        <div class="block-head">
+            <svg viewBox="0 0 24 24">
+                <path
+                    d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z" />
+            </svg>
+            Relatório Fotográfico
+        </div>
+        <div style="padding: 8px 8px 0 8px;">
+            {% for i in range(0, lista_fotos|length, 2) %}
+            <table
+                style="width:100%;border-collapse:separate;border-spacing:8px;table-layout:fixed;page-break-inside:avoid;margin-bottom:0;">
+                <tr>
+                    {% set f1 = lista_fotos[i] %}
+                    <td
+                        style="width:50%;vertical-align:top;border:1.5px solid var(--ink-200);border-radius:6px;overflow:hidden;background:#fff;padding:0;">
+                        <div class="photo-img"><img src="{{ upload_folder }}/{{ f1.arquivo }}" alt="Foto {{ i+1 }}">
+                        </div>
+                        <div class="photo-cap"><span class="photo-n">FOTO {{ "%02d"|format(i+1) }} —</span> {{
+                            f1.comentario if f1.comentario else 'Sem descrição.' }}</div>
+                    </td>
+                    {% if i+1 < lista_fotos|length %} {% set f2=lista_fotos[i+1] %} <td
+                        style="width:50%;vertical-align:top;border:1.5px solid var(--ink-200);border-radius:6px;overflow:hidden;background:#fff;padding:0;">
+                        <div class="photo-img"><img src="{{ upload_folder }}/{{ f2.arquivo }}" alt="Foto {{ i+2 }}">
+                        </div>
+                        <div class="photo-cap"><span class="photo-n">FOTO {{ "%02d"|format(i+2) }} —</span> {{
+                            f2.comentario if f2.comentario else 'Sem descrição.' }}</div>
+                        </td>
+                        {% else %}
+                        <td style="border:none;background:transparent;"></td>
+                        {% endif %}
+                </tr>
+            </table>
+            {% endfor %}
+        </div>
+        <div style="height:8px;"></div>
+    </div>
+    {% endif %}
+
+    <!-- ══ ASSINATURAS ══ -->
+    <div class="block" style="margin-top: 10px;">
+        <div class="block-head">
+            <svg viewBox="0 0 24 24">
+                <path d="M12 1l3 6 6 .9-4.5 4.4 1.1 6.2L12 15.8 6.4 18.5l1.1-6.2L3 7.9 9 7z" />
+            </svg>
+            Fluxo de Aprovação e Responsabilidade Técnica
+        </div>
+        <div style="padding: 10px;">
+            <table class="sig-grid">
+                <tr>
+                    {% for ass in rdo.assinaturas %}
+                    <td class="sig-item">
+                        <div class="sig-card">
+                            <div class="sig-visual">
+                                {% if ass.img_assinatura %}
+                                <img src="{{ assinatura_folder }}/{{ ass.img_assinatura }}" alt="Assinatura">
+                                {% elif ass.status == 'Rejeitado' %}
+                                <span class="sig-ph rejected">Rejeitado</span>
+                                {% else %}
+                                <span class="sig-ph">Pendente</span>
+                                {% endif %}
+                            </div>
+
+                            <div class="sig-name">{{ ass.usuario.nome }}</div>
+                            <div class="sig-role">
+                                {{ ass.usuario.papel or 'Responsável Técnico' }}
+                                {% if ass.usuario.email %}&nbsp;·&nbsp;{{ ass.usuario.email }}{% endif %}
+                            </div>
+
+                            <div style="margin-bottom:6px;">
+                                {% if ass.status == 'Aprovado' %}<span class="badge b-ok">Aprovado</span>
+                                {% elif ass.status == 'Rejeitado' %}<span class="badge b-er">Rejeitado</span>
+                                {% else %}<span class="badge b-wa">Pendente</span>{% endif %}
+                            </div>
+
+                            {% if ass.criado %}
+                            <div class="sig-meta">
+                                <div><strong>Data:</strong> {{ ass.criado.strftime('%d/%m/%Y %H:%M') }}</div>
+                                <div><strong>IP:</strong> {{ ass.ip_endereco or '—' }}</div>
+                                {% if ass.latitude and ass.longitude %}
+                                <div><a href="https://www.google.com/maps?q={{ ass.latitude }},{{ ass.longitude }}"
+                                        class="geo">Ver localização</a></div>
+                                {% endif %}
+                                {% if ass.hash_documento %}
+                                <div style="margin-top:3px;"><strong>Hash:</strong> <span class="hash">{{
+                                        ass.hash_documento }}</span></div>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+
+                            {% if ass.status == 'Rejeitado' and ass.motivo_rejeicao %}
+                            <div class="sig-reject">Motivo: {{ ass.motivo_rejeicao }}</div>
+                            {% endif %}
+                        </div>
+                    </td>
+                    {% if loop.index is divisibleby 3 and not loop.last %}
+                </tr>
+                <tr>{% endif %}
+                    {% endfor %}
+                </tr>
+            </table>
+        </div>
     </div>
 
 </body>

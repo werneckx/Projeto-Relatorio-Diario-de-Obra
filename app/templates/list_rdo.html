@@ -306,7 +306,7 @@
     }
 
     /* --- TABELA RESPONSIVA TIPO CARD (Mobile GRID SYSTEM) --- */
-    @media (max-width: 768px) {
+    @media (max-width: 920px) {
 
         /* Esconde elementos nativos de tabela */
         table#dataTableRDO,
@@ -350,6 +350,19 @@
         }
 
         /* --- Posicionamento dos Elementos no Grid --- */
+
+        table#dataTableRDO {
+            width: 100% !important;
+            max-width: 100% !important;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        table#dataTableRDO tbody td,
+        table#dataTableRDO tbody td * {
+            word-break: break-word;
+            overflow-wrap: anywhere;
+        }
 
         /* 1. Status (Topo Esquerda) */
         table#dataTableRDO tbody td:nth-child(1) {
@@ -450,122 +463,145 @@
         .dataTables_wrapper {
             padding: 0;
         }
-    }
-</style>
 
-<div class="space-y-5 max-w-[1600px] mx-auto px-2 sm:px-0">
+        /* Ajusta o card para telas muito pequenas */
+        @media (max-width: 560px) {
+            table#dataTableRDO tbody tr {
+                grid-template-columns: 1fr;
+            }
 
-    <!-- 1. Cabeçalho -->
-    <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 animate-fade-up">
+            table#dataTableRDO tbody td:nth-child(2),
+            table#dataTableRDO tbody td:nth-child(3),
+            table#dataTableRDO tbody td:nth-child(5),
+            table#dataTableRDO tbody td:nth-child(6) {
+                justify-content: flex-start;
+                width: 100%;
+            }
+
+            table#dataTableRDO tbody td:nth-child(6) {
+                gap: 6px;
+            }
+        }<div class="premium-container py-10 animate-premium-in">
+    {# --- HEADER --- #}
+    <div class="flex flex-col lg:flex-row justify-between items-start gap-8 mb-12">
         <div>
-            <h1 class="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">Relatórios Diários</h1>
-            <p class="text-slate-500 mt-1 text-xs md:text-sm">Visão geral e gerenciamento.</p>
+            <div class="flex items-center gap-3 text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-4">
+                <i class="fas fa-list-ul text-[8px] opacity-70"></i>
+                <span>Gestão de Relatórios</span>
+            </div>
+            <h1 class="text-4xl font-black text-slate-900 tracking-tight leading-tight">
+                Listagem de <span class="text-blue-600">RDOs</span>
+            </h1>
+            <p class="mt-4 max-w-2xl text-slate-500 font-medium leading-relaxed">
+                Consulte, filtre e gerencie todos os Relatórios Diários de Obra emitidos. Utilize os filtros rápidos para localizar pendências críticas.
+            </p>
         </div>
-        <div>
-            <a href="{{ url_for('auth.criar_rdo') }}"
-                class="w-full md:w-auto inline-flex justify-center items-center px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-sm shadow-blue-500/30 transition-all hover:-translate-y-0.5">
-                <i class="fas fa-plus mr-2"></i> Novo RDO
+        
+        <div class="w-full lg:w-auto flex flex-wrap gap-4">
+            <a href="{{ url_for('auth.validar_documento_publico') }}" class="flex-1 lg:flex-none premium-button bg-slate-800 text-white hover:bg-slate-900 shadow-xl shadow-slate-200">
+                <i class="fas fa-qrcode mr-2 opacity-70"></i> Validar RDO
+            </a>
+            <a href="{{ url_for('auth.criar_rdo') }}" class="flex-1 lg:flex-none premium-button premium-button-primary shadow-xl shadow-blue-500/20">
+                <i class="fas fa-plus mr-2 opacity-70"></i> Novo Relatório
             </a>
         </div>
     </div>
 
-    <!-- AREA DE DESTAQUE: Ação Pendente -->
-    {% if ns.count_minhas_pendencias > 0 %}
-    <div class="animate-fade-up" style="animation-delay: 50ms;">
-        <div onclick="filtrarTabelaPorStatus('minhas_pendencias', this)" data-type="assinar"
-            class="action-card w-full md:w-auto md:inline-flex md:min-w-[300px] stat-card">
-            <div class="flex items-center gap-4">
-                <div class="icon-wrapper">
-                    <i class="fas fa-pen-nib"></i>
+    {# --- QUICK FILTERS (KPIs) --- #}
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+        <div onclick="filtrarTabelaPorStatus('', this)" class="premium-card p-6 cursor-pointer hover:border-blue-500 transition-all group active-filter" data-type="total">
+            <div class="flex justify-between items-start mb-4">
+                <div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
+                    <i class="fas fa-layer-group text-lg"></i>
                 </div>
-                <div>
-                    <h3 class="font-bold text-lg leading-tight">{{ ns.count_minhas_pendencias }} Pendência{{ 's' if
-                        ns.count_minhas_pendencias > 1 else '' }}</h3>
-                    <p class="text-xs text-indigo-100 font-medium uppercase tracking-wide">Aguardando sua assinatura</p>
-                </div>
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Geral</span>
             </div>
-            <div class="bg-white/20 rounded-full p-1.5 ml-4">
-                <i class="fas fa-arrow-right text-sm"></i>
+            <p class="text-3xl font-black text-slate-900">{{ count_total }}</p>
+            <p class="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">Total Emitidos</p>
+        </div>
+
+        <div onclick="filtrarTabelaPorStatus('Aprovado', this)" class="premium-card p-6 cursor-pointer hover:border-emerald-500 transition-all group" data-type="aprovado">
+            <div class="flex justify-between items-start mb-4">
+                <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                    <i class="fas fa-check-circle text-lg"></i>
+                </div>
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Finalizados</span>
+            </div>
+            <p class="text-3xl font-black text-slate-900">{{ count_aprovado }}</p>
+            <p class="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">Aprovados</p>
+        </div>
+
+        <div onclick="filtrarTabelaPorStatus('Pendente', this)" class="premium-card p-6 cursor-pointer hover:border-amber-500 transition-all group" data-type="pendente">
+            <div class="flex justify-between items-start mb-4">
+                <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                    <i class="fas fa-clock text-lg"></i>
+                </div>
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Em Análise</span>
+            </div>
+            <p class="text-3xl font-black text-slate-900">{{ count_pendente }}</p>
+            <p class="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">Pendentes</p>
+        </div>
+
+        <div onclick="filtrarTabelaPorStatus('Rejeitado', this)" class="premium-card p-6 cursor-pointer hover:border-red-500 transition-all group" data-type="rejeitado">
+            <div class="flex justify-between items-start mb-4">
+                <div class="w-10 h-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center">
+                    <i class="fas fa-times-circle text-lg"></i>
+                </div>
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ajustes</span>
+            </div>
+            <p class="text-3xl font-black text-slate-900">{{ count_rejeitado }}</p>
+            <p class="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">Rejeitados</p>
+        </div>
+    </div>
+
+    {# --- MY PENDENCIES HIGHLIGHT --- #}
+    {% if ns.count_minhas_pendencias > 0 %}
+    <div class="mb-10">
+        <div onclick="filtrarTabelaPorStatus('minhas_pendencias', this)" class="w-full lg:w-auto inline-flex items-center gap-6 p-6 bg-slate-900 text-white rounded-3xl cursor-pointer hover:scale-[1.02] transition-all shadow-2xl shadow-slate-200">
+            <div class="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+                <i class="fas fa-pen-nib text-xl"></i>
+            </div>
+            <div>
+                <p class="text-2xl font-black tracking-tight">{{ ns.count_minhas_pendencias }} Pendência{{ 's' if ns.count_minhas_pendencias > 1 else '' }}</p>
+                <p class="text-[10px] text-slate-400 font-black uppercase tracking-widest">Aguardando sua assinatura</p>
+            </div>
+            <div class="ml-auto bg-white/10 rounded-full p-2">
+                <i class="fas fa-arrow-right text-xs"></i>
             </div>
         </div>
     </div>
     {% endif %}
 
-    <!-- 2. Cards de Filtro (KPIs) -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 animate-fade-up" style="animation-delay: 100ms;">
-        <!-- Total -->
-        <div onclick="filtrarTabelaPorStatus('', this)" data-type="total"
-            class="kpi-card active-filter group stat-card">
-            <div class="kpi-icon"><i class="fas fa-layer-group"></i></div>
-            <div class="kpi-content">
-                <div class="kpi-label">Total</div>
-                <div class="kpi-value group-hover:text-blue-600 transition-colors">{{ count_total }}</div>
-            </div>
-        </div>
-        <!-- Aprovados -->
-        <div onclick="filtrarTabelaPorStatus('Aprovado', this)" data-type="aprovado" class="kpi-card group stat-card">
-            <div class="kpi-icon"><i class="fas fa-check-circle"></i></div>
-            <div class="kpi-content">
-                <div class="kpi-label">Aprovados</div>
-                <div class="kpi-value group-hover:text-emerald-600 transition-colors">{{ count_aprovado }}</div>
-            </div>
-        </div>
-        <!-- Pendentes -->
-        <div onclick="filtrarTabelaPorStatus('Pendente', this)" data-type="pendente" class="kpi-card group stat-card">
-            <div class="kpi-icon"><i class="fas fa-clock"></i></div>
-            <div class="kpi-content">
-                <div class="kpi-label">Análise</div>
-                <div class="kpi-value group-hover:text-amber-600 transition-colors">{{ count_pendente }}</div>
-            </div>
-        </div>
-        <!-- Rejeitados -->
-        <div onclick="filtrarTabelaPorStatus('Rejeitado', this)" data-type="rejeitado" class="kpi-card group stat-card">
-            <div class="kpi-icon"><i class="fas fa-times-circle"></i></div>
-            <div class="kpi-content">
-                <div class="kpi-label">Rejeitados</div>
-                <div class="kpi-value group-hover:text-red-600 transition-colors">{{ count_rejeitado }}</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 3. Container da Tabela -->
-    <div class="bg-white border border-slate-200 rounded-xl shadow-sm animate-fade-up flex flex-col"
-        style="animation-delay: 200ms;">
-
-        <!-- Toolbar -->
-        <div
-            class="p-4 border-b border-slate-100 flex flex-col md:flex-row gap-3 justify-between items-center bg-white rounded-t-xl">
-            <div class="relative w-full md:w-80 group">
-                <input type="text" id="customSearch"
-                    class="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-lg bg-slate-50 text-sm focus:bg-white focus:ring-2 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all placeholder:text-slate-400"
-                    placeholder="Buscar RDO, obra ou ID...">
+    {# --- DATA TABLE CARD --- #}
+    <div class="premium-card overflow-hidden">
+        {# --- TOOLBAR --- #}
+        <div class="p-6 border-b border-slate-100 flex flex-col md:flex-row gap-4 justify-between items-center bg-slate-50/50">
+            <div class="relative w-full md:w-96">
+                <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 text-xs"></i>
+                <input type="text" id="customSearch" class="premium-input pl-10" placeholder="Buscar RDO, obra ou ID...">
             </div>
 
-            <div class="flex w-full md:w-auto gap-2">
-                <button onclick="toggleAdvancedFilter()"
-                    class="flex-1 md:flex-none inline-flex justify-center items-center px-4 py-2.5 border border-slate-200 rounded-lg text-sm font-semibold text-slate-600 bg-white hover:bg-slate-50 hover:text-slate-900 transition-all shadow-sm">
-                    <i class="fas fa-sliders-h mr-2"></i> Filtros
+            <div class="flex w-full md:w-auto gap-3">
+                <button onclick="toggleAdvancedFilter()" class="flex-1 md:flex-none premium-button bg-white border border-slate-200 text-slate-600 hover:bg-slate-50">
+                    <i class="fas fa-sliders-h mr-2 opacity-70"></i> Filtros
                 </button>
-                <button onclick="resetTableState()"
-                    class="inline-flex justify-center items-center w-10 h-10 border border-slate-200 rounded-lg text-slate-500 bg-white hover:bg-slate-50 hover:text-blue-600 transition-all shadow-sm"
-                    title="Recarregar">
-                    <i class="fas fa-sync-alt"></i>
+                <button onclick="resetTableState()" class="premium-button bg-white border border-slate-200 text-slate-400 hover:text-blue-600 w-12 px-0 flex items-center justify-center">
+                    <i class="fas fa-sync-alt text-xs"></i>
                 </button>
             </div>
         </div>
 
-        <!-- Tabela -->
-        <div class="w-full px-0">
-            <table id="dataTableRDO" class="w-full text-left border-collapse">
-                <thead class="bg-slate-50/80 border-b border-slate-200 backdrop-blur">
+        {# --- TABLE --- #}
+        <div class="overflow-x-auto">
+            <table id="dataTableRDO" class="premium-table">
+                <thead>
                     <tr>
-                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
-                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Documento</th>
-                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Data Ref.</th>
-                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Obra</th>
-                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Criação</th>
-                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Ações
-                        </th>
+                        <th>Status</th>
+                        <th>Documento</th>
+                        <th>Data Ref.</th>
+                        <th>Projeto / Obra</th>
+                        <th>Criado Por</th>
+                        <th class="text-right">Ações</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 bg-white">
@@ -587,101 +623,61 @@
                     {% endif %}
                     {% endfor %}
                     {% endif %}
-
-                    <tr class="hover:bg-slate-50/80 transition-colors group"
+                      <tr class="hover:bg-slate-50/50 transition-colors group cursor-pointer" 
+                        onclick="window.location='{{ url_for('auth.visualizar_rdo', rdo_id=rdo.id) }}'"
                         data-minha-pendencia="{{ 'true' if rdo_row.is_my_turn else 'false' }}">
 
-                        <!-- Status (Coluna 1) -->
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border
-                                {% if s == 'Aprovado' %} bg-emerald-50 text-emerald-700 border-emerald-200
-                                {% elif s == 'Pendente' %} bg-amber-50 text-amber-700 border-amber-200
-                                {% elif s == 'Rejeitado' %} bg-red-50 text-red-700 border-red-200
-                                {% else %} bg-slate-50 text-slate-600 border-slate-200 {% endif %}">
-                                <span class="w-1.5 h-1.5 rounded-full mr-2
-                                    {% if s == 'Aprovado' %} bg-emerald-500
-                                    {% elif s == 'Pendente' %} bg-amber-500
-                                    {% elif s == 'Rejeitado' %} bg-red-500
-                                    {% else %} bg-slate-400 {% endif %}"></span>
+                        <td class="px-6 py-5">
+                            <span class="premium-badge 
+                                {% if s == 'Aprovado' %} premium-badge-success
+                                {% elif s == 'Rejeitado' %} premium-badge-error
+                                {% else %} premium-badge-warning {% endif %}">
                                 {{ s }}
                             </span>
                         </td>
 
-                        <!-- ID (Coluna 2) -->
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-bold text-slate-700">#{{ '%03d' % (rdo.id_sequencial | int)
-                                    }}</span>
-                                <span
-                                    class="text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">v{{
-                                    rdo.id_revisao }}</span>
+                        <td class="px-6 py-5">
+                            <div class="flex items-center gap-3">
+                                <span class="text-sm font-black text-slate-900">#{{ '%03d' % (rdo.id_sequencial | int) }}</span>
+                                <span class="text-[9px] font-black text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full uppercase tracking-tighter">v{{ rdo.id_revisao }}</span>
                                 {% if rdo_row.is_my_turn %}
-                                <div class="w-2 h-2 rounded-full bg-purple-500 animate-pulse ml-1" title="Sua Vez">
-                                </div>
+                                <div class="w-2 h-2 rounded-full bg-blue-600 animate-ping"></div>
                                 {% endif %}
                             </div>
                         </td>
 
-                        <!-- Data Ref (Coluna 3) -->
-                        <td class="px-6 py-4 whitespace-nowrap"
-                            data-order="{{ rdo.data.strftime('%Y%m%d') if rdo.data }}">
-                            <div class="text-sm text-slate-600 font-medium">
-                                {{ rdo.data.strftime('%d/%m/%Y') if rdo.data else '-' }}
-                            </div>
+                        <td class="px-6 py-5 text-sm font-bold text-slate-600">
+                            {{ rdo.data.strftime('%d/%m/%Y') if rdo.data else '-' }}
                         </td>
 
-                        <!-- Obra (Coluna 4) -->
-                        <td class="px-6 py-4">
-                            <div class="text-sm font-bold text-slate-800 truncate max-w-[180px]"
-                                title="{{ rdo.obra.nome }}">
-                                {{ rdo.obra.nome if rdo.obra else 'Sem Obra' }}
-                            </div>
-                            <!-- Subtítulo só visível em desktop -->
-                            <div class="text-[11px] text-slate-500 truncate max-w-[180px] hidden md:block">
-                                {{ rdo.obra.cliente if rdo.obra else '-' }}
-                            </div>
+                        <td class="px-6 py-5">
+                            <p class="text-sm font-bold text-slate-900 truncate max-w-[240px]">{{ rdo.obra.nome if rdo.obra else 'Sem Obra' }}</p>
+                            <p class="text-[10px] text-slate-400 font-medium mt-1 truncate max-w-[240px]">{{ rdo.obra.cliente if rdo.obra else '-' }}</p>
                         </td>
 
-                        <!-- Criação (Coluna 5) -->
-                        <td class="px-6 py-4 whitespace-nowrap"
-                            data-order="{{ rdo.criado.strftime('%Y%m%d%H%M%S') if rdo.criado else '0' }}">
-                            <div class="flex items-center gap-2 md:gap-3 justify-end md:justify-start">
-                                <div
-                                    class="h-8 w-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-xs font-bold border border-blue-100 uppercase">
+                        <td class="px-6 py-5">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-[10px] font-black border border-blue-100 uppercase">
                                     {{ rdo.usuario.nome[:2] if rdo.usuario and rdo.usuario.nome else 'SI' }}
                                 </div>
-                                <div class="text-right md:text-left">
-                                    <div class="text-xs md:text-sm font-medium text-slate-700">{{
-                                        rdo.usuario.nome.split()[0] if rdo.usuario else 'Sistema' }}</div>
-                                    <div class="text-[10px] text-slate-400 hidden md:block">Criado em: {{
-                                        rdo.criado.strftime('%d/%m/%y %H:%M') if rdo.criado }}</div>
+                                <div>
+                                    <p class="text-xs font-bold text-slate-800">{{ rdo.usuario.nome.split()[0] if rdo.usuario else 'Sistema' }}</p>
+                                    <p class="text-[9px] text-slate-400 font-medium">{{ rdo.criado.strftime('%d/%m/%y') if rdo.criado else '-' }}</p>
                                 </div>
                             </div>
                         </td>
 
-                        <!-- Ações (Coluna 6) -->
-                        <td class="px-6 py-4 whitespace-nowrap text-right">
-                            <div class="flex justify-end items-center gap-1">
-                                <a href="{{ url_for('auth.gerar_pdf_rdo_view', rdo_id=rdo.id) }}" target="_blank"
-                                    class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors action-btn"
-                                    title="PDF">
+                        <td class="px-6 py-5 text-right" onclick="event.stopPropagation()">
+                            <div class="flex justify-end items-center gap-2">
+                                <a href="{{ url_for('auth.gerar_pdf_rdo_view', rdo_id=rdo.id) }}" target="_blank" class="w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all" title="PDF">
                                     <i class="fas fa-file-pdf"></i>
                                 </a>
-                                <a href="{{ url_for('auth.visualizar_rdo', rdo_id=rdo.id) }}"
-                                    class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors action-btn"
-                                    title="Ver">
-                                    <i class="fas fa-eye"></i>
-                                </a>
                                 {% if s != 'Aprovado' %}
-                                <a href="{{ url_for('auth.editar_rdo', rdo_id=rdo.id) }}"
-                                    class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors action-btn"
-                                    title="Editar">
+                                <a href="{{ url_for('auth.editar_rdo', rdo_id=rdo.id) }}" class="w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all" title="Editar">
                                     <i class="fas fa-pen"></i>
                                 </a>
                                 {% endif %}
-                                <button onclick="excluirItem('{{ rdo.id }}')"
-                                    class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors action-btn"
-                                    title="Excluir">
+                                <button onclick="excluirItem('{{ rdo.id }}')" class="w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all" title="Excluir">
                                     <i class="fas fa-trash-alt"></i>
                                 </button>
                             </div>

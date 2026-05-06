@@ -1,140 +1,203 @@
 from datetime import datetime
-from app import db 
+from app import db
 
 class RDO(db.Model):
     __tablename__ = "rdo"
 
-    id = db.Column(db.Integer, primary_key=True)
-    id_sequencial = db.Column(db.Integer)
-    id_revisao = db.Column(db.Integer, default=0)
-    
-    # Chaves Estrangeiras
-    id_obra = db.Column(db.Integer, db.ForeignKey("obras.id"), nullable=False)
-    id_frente_trabalho = db.Column(db.Integer, db.ForeignKey("obras_frente_trabalho.id_frente_trabalho"), nullable=True)
-    id_usuario = db.Column(db.Integer, db.ForeignKey("usuarios.id"), nullable=True)
-    
-    # Climas
-    id_climas_manha = db.Column(db.Integer, db.ForeignKey('lista_opcoes.id'), nullable=True) 
-    id_climas_tarde = db.Column(db.Integer, db.ForeignKey('lista_opcoes.id'), nullable=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    empresa_id = db.Column(db.Integer, db.ForeignKey('empresa.id'), nullable=False, index=True)
+    obra_id = db.Column(db.Integer, db.ForeignKey('obras.id'), nullable=False, index=True)
+    frente_trabalho_id = db.Column(db.Integer, db.ForeignKey('frente_trabalho.id'), nullable=False, index=True)
+    numero_sequencial = db.Column(db.Integer, nullable=True)
+    data_rdo = db.Column(db.Date, nullable=True, index=True)
+    status = db.Column(db.Enum('PENDENTE', 'APROVADO', 'REJEITADO'), index=True)
+    ativo = db.Column(db.Boolean, nullable=False, default=True)
 
-    # Relacionamentos de Clima
-    clima_manha_obj = db.relationship('Clima', foreign_keys=[id_climas_manha])
-    clima_tarde_obj = db.relationship('Clima', foreign_keys=[id_climas_tarde])
+    clima_manha_id = db.Column(db.Integer, db.ForeignKey('aux_clima.id'), nullable=True)
+    clima_tarde_id = db.Column(db.Integer, db.ForeignKey('aux_clima.id'), nullable=True)
 
-    # Dados Gerais
-    data = db.Column(db.Date, nullable=False)
-    status = db.Column(db.String(100)) # Pendente, Revisado, Aprovado, Rejeitado
-    comentarios_gerais = db.Column(db.Text, nullable=True)
-    qtd_produzida = db.Column(db.Float, nullable=True)
-
-    # Campos de Horário (Novos)
     hora_entrada = db.Column(db.Time, nullable=True)
     hora_saida = db.Column(db.Time, nullable=True)
     intervalo_entrada = db.Column(db.Time, nullable=True)
     intervalo_saida = db.Column(db.Time, nullable=True)
-    
-    # Relacionamentos Filhos (Cascade para deletar filhos se o RDO for deletado)
-    maos_obra = db.relationship('RDOMaoObra', backref='rdo', cascade='all, delete-orphan', lazy='dynamic')
-    equipamentos = db.relationship('Equipamentos', backref='rdo', cascade='all, delete-orphan', lazy='dynamic')
-    atividades = db.relationship('Atividades', backref='rdo', cascade='all, delete-orphan', lazy='dynamic')
-    fotos = db.relationship('Fotos', backref='rdo', cascade='all, delete-orphan', lazy='dynamic')
-    ocorrencias = db.relationship('TagsOcorrencias', backref='rdo', cascade='all, delete-orphan', lazy='dynamic')
-    
-    # [FIX 6] Remover onupdate=utcnow para evitar sobrescrita do Timezone BR
-    criado = db.Column(db.DateTime, default=datetime.utcnow)
-    modificado = db.Column(db.DateTime, default=datetime.utcnow) # Remove onupdate
-    
-    obra = db.relationship("Obra")
-    usuario = db.relationship("Usuario", foreign_keys=[id_usuario])
-    frente_trabalho = db.relationship("Frente_Trabalho", foreign_keys=[id_frente_trabalho])
+
+    observacoes = db.Column(db.Text, nullable=True)
+
+    criado_por = db.Column(db.Integer, nullable=True)
+    modificado_por = db.Column(db.Integer, nullable=True)
+    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
+    modificado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relacionamentos
+    obra = db.relationship('Obra', backref='rdos')
+    frente_trabalho = db.relationship('FrenteTrabalho', backref='rdos')
+    clima_manha = db.relationship('AuxClima', foreign_keys=[clima_manha_id])
+    clima_tarde = db.relationship('AuxClima', foreign_keys=[clima_tarde_id])
+    data = db.synonym("data_rdo")
+    id_sequencial = db.synonym("numero_sequencial")
 
     @property
-    def numero_sequencial(self):
-        return self.id_sequencial
+    def id_revisao(self):
+        return 0
+
+    @property
+    def usuario(self):
+        from app.models.usuario import Usuario
+        return Usuario.query.get(self.criado_por) if self.criado_por else None
+
+    @property
+    def id_criado_por(self):
+        return self.criado_por
+
+    @property
+    def criado(self):
+        return self.criado_em
+
+    @property
+    def clima_manha_obj(self):
+        return self.clima_manha
+
+    @property
+    def clima_tarde_obj(self):
+        return self.clima_tarde
 
 class RDOMaoObra(db.Model):
-    __tablename__ = 'rdo_mao_obra'
+    __tablename__ = "rdo_mao_obra"
 
-    id_mao_obra = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    empresa_id = db.Column(db.Integer, db.ForeignKey('empresa.id'), nullable=False, index=True)
+    rdo_id = db.Column(db.Integer, db.ForeignKey('rdo.id'), nullable=False, index=True)
+    colaborador_id = db.Column(db.Integer, db.ForeignKey('colaboradores.id'), nullable=False, index=True)
+    funcao = db.Column(db.String(100), nullable=True)
+    quantidade_horas = db.Column(db.Numeric(10, 2), nullable=True)
+    tipo_mao_obra = db.Column(db.Enum('PROPRIA', 'TERCEIRO'), nullable=True)
+    observacao = db.Column(db.Text, nullable=True)
+    ativo = db.Column(db.Boolean, nullable=False, default=True)
 
-    id_rdo = db.Column(
-        db.Integer,
-        db.ForeignKey('rdo.id'),
-        nullable=False
-    )
+    criado_por = db.Column(db.Integer, nullable=True)
+    modificado_por = db.Column(db.Integer, nullable=True)
+    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
+    modificado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    nome_funcao = db.Column(db.String(100))
+    rdo = db.relationship('RDO', backref=db.backref('maos_obra', cascade='all, delete-orphan', lazy='dynamic'))
+    colaborador = db.relationship('Colaborador')
 
-    quantidade_propria = db.Column(db.Integer, default=0)
-    quantidade_terceirizada = db.Column(db.Integer, default=0)
+    @property
+    def nome_funcao_resolved(self):
+        if self.colaborador:
+            return self.colaborador.nome
+        return self.funcao or "-"
 
-    tempo = db.Column(db.Time, nullable=True)
+    @property
+    def tipo(self):
+        return self.tipo_mao_obra
 
+class RDOEquipamento(db.Model):
+    __tablename__ = "rdo_equipamentos"
 
-class Equipamentos(db.Model):
-    __tablename__ = 'rdo_equipamentos' # Nome padronizado
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    empresa_id = db.Column(db.Integer, db.ForeignKey('empresa.id'), nullable=False, index=True)
+    rdo_id = db.Column(db.Integer, db.ForeignKey('rdo.id'), nullable=False, index=True)
+    equipamento_id = db.Column(db.Integer, db.ForeignKey('aux_equipamentos.id'), nullable=False, index=True)
+    quantidade = db.Column(db.Integer, nullable=True)
+    horas_utilizadas = db.Column(db.Numeric(10, 2), nullable=True)
+    status = db.Column(db.Enum('OPERANDO', 'PARADO'), nullable=True)
+    motivo_parada = db.Column(db.Text, nullable=True)
+    ativo = db.Column(db.Boolean, nullable=False, default=True)
 
-    id_equipamento_rdo = db.Column(db.Integer, primary_key=True)
-    id_rdo = db.Column(db.Integer, db.ForeignKey('rdo.id'), nullable=False)
-    # Se persistir o ID do equipamento da lista de opções:
-    id_equipamento_lista = db.Column(db.Integer, db.ForeignKey('lista_opcoes.id'), nullable=True)
-    nome_equipamento = db.Column(db.String(255)) # Fallback ou nome copiado
-    quantidade = db.Column(db.Integer, default=0)
-    
-    equipamento_lista = db.relationship('Equipamento')
+    criado_por = db.Column(db.Integer, nullable=True)
+    modificado_por = db.Column(db.Integer, nullable=True)
+    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
+    modificado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-class Atividades(db.Model):
-    __tablename__ = 'rdo_atividades'
+    rdo = db.relationship('RDO', backref=db.backref('equipamentos', cascade='all, delete-orphan', lazy='dynamic'))
+    equipamento = db.relationship('AuxEquipamentos')
 
-    id_atividade = db.Column(db.Integer, primary_key=True)
-    id_rdo = db.Column(db.Integer, db.ForeignKey('rdo.id'), nullable=False)
-    descricao = db.Column(db.Text) # Text é melhor para descrições longas
-    status = db.Column(db.String(50)) # Iniciada, Concluída, etc.
+    @property
+    def nome_equipamento_resolved(self):
+        return self.equipamento.descricao if self.equipamento else "-"
 
-class Fotos(db.Model):
-    __tablename__ = 'rdo_fotos'
+class RDOOcorrencia(db.Model):
+    __tablename__ = "rdo_ocorrencias"
 
-    id_foto = db.Column(db.Integer, primary_key=True)
-    id_rdo = db.Column(db.Integer, db.ForeignKey('rdo.id'), nullable=False)
-    arquivo = db.Column(db.String(255), nullable=False) # Nome do arquivo físico
-    comentario = db.Column(db.String(255), nullable=True)
-    data_upload = db.Column(db.DateTime, default=datetime.utcnow)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    empresa_id = db.Column(db.Integer, db.ForeignKey('empresa.id'), nullable=False, index=True)
+    rdo_id = db.Column(db.Integer, db.ForeignKey('rdo.id'), nullable=False, index=True)
+    tipo_ocorrencia = db.Column(db.Integer, db.ForeignKey('aux_tag_ocorrencia.id'), nullable=True)
+    descricao = db.Column(db.Text, nullable=True)
+    impacto = db.Column(db.Enum('BAIXO', 'MEDIO', 'ALTO'), nullable=True)
+    tempo_paralisacao = db.Column(db.Numeric(10, 2), nullable=True)
+    ativo = db.Column(db.Boolean, nullable=False, default=True)
 
-class TagsOcorrencias(db.Model):
-    __tablename__ = 'rdo_tags_ocorrencias'
+    criado_por = db.Column(db.Integer, nullable=True)
+    modificado_por = db.Column(db.Integer, nullable=True)
+    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
+    modificado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    id_tag_rdo = db.Column(db.Integer, primary_key=True)
-    id_rdo = db.Column(db.Integer, db.ForeignKey('rdo.id'), nullable=False)
-    id_tag_lista = db.Column(db.Integer, db.ForeignKey('lista_opcoes.id'), nullable=True)
-    descricao = db.Column(db.Text)
-    tempo_parado = db.Column(db.Time, nullable=True)
-    
-    tag_lista = db.relationship('TagOcorrencia')
+    rdo = db.relationship('RDO', backref=db.backref('ocorrencias', cascade='all, delete-orphan', lazy='dynamic'))
+    tag_ocorrencia = db.relationship('AuxTagOcorrencia')
+    tag_lista = db.synonym("tag_ocorrencia")
 
-    
-class Assinatura(db.Model):
-    __tablename__ = 'rdo_assinaturas'
+class RDOAtividade(db.Model):
+    __tablename__ = "rdo_atividades"
 
-    id_assinatura = db.Column(db.Integer, primary_key=True)
-    id_rdo = db.Column(db.Integer, db.ForeignKey('rdo.id'), nullable=False)
-    id_usuario = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=False)
-    
-    # New Field: Determines the sequence (1, 2, 3...)
-    ordem = db.Column(db.Integer, nullable=False, default=1)
-    
-    # Workflow Status: 'Pendente', 'Aprovado', 'Rejeitado'
-    status = db.Column(db.String(50), default='Pendente') 
-    
-    # Nullable fields (filled only upon action)
-    img_assinatura = db.Column(db.Text, nullable=True) 
-    ip_endereco = db.Column(db.String(50), nullable=True)
-    validacao = db.Column(db.String(255)) # Hash ou token de validação
-    criado = db.Column(db.DateTime, default=datetime.utcnow)
-    motivo_rejeicao = db.Column(db.String(255), nullable=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    empresa_id = db.Column(db.Integer, db.ForeignKey('empresa.id'), nullable=False, index=True)
+    rdo_id = db.Column(db.Integer, db.ForeignKey('rdo.id'), nullable=False, index=True)
+    descricao = db.Column(db.Text, nullable=True)
+    status = db.Column(db.String(50), nullable=True)
+    ativo = db.Column(db.Boolean, nullable=False, default=True)
 
-    usuario = db.relationship("Usuario", backref="assinaturas_workflow")
-    rdo = db.relationship('RDO', backref=db.backref('assinaturas', lazy='dynamic'))
-    def aprovar(self, img_assinatura, ip_endereco):
-        self.status = 'Aprovado'
-        self.img_assinatura = img_assinatura
-        self.ip_endereco = ip_endereco
+    criado_por = db.Column(db.Integer, nullable=True)
+    modificado_por = db.Column(db.Integer, nullable=True)
+    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
+    modificado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    rdo = db.relationship('RDO', backref=db.backref('atividades', cascade='all, delete-orphan', lazy='dynamic'))
+
+class RDOFoto(db.Model):
+    __tablename__ = "rdo_fotos"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    empresa_id = db.Column(db.Integer, db.ForeignKey('empresa.id'), nullable=False, index=True)
+    rdo_id = db.Column(db.Integer, db.ForeignKey('rdo.id'), nullable=False, index=True)
+    arquivo = db.Column(db.String(255), nullable=True)
+    comentario = db.Column(db.Text, nullable=True)
+    ativo = db.Column(db.Boolean, nullable=False, default=True)
+
+    criado_por = db.Column(db.Integer, nullable=True)
+    modificado_por = db.Column(db.Integer, nullable=True)
+    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
+    modificado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    rdo = db.relationship('RDO', backref=db.backref('fotos', cascade='all, delete-orphan', lazy='dynamic'))
+
+class RDOAprovacao(db.Model):
+    __tablename__ = "rdo_aprovacoes"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    empresa_id = db.Column(db.Integer, db.ForeignKey('empresa.id'), nullable=False, index=True)
+    rdo_id = db.Column(db.Integer, db.ForeignKey('rdo.id'), nullable=False, index=True)
+    aprovador_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=False)
+    nivel = db.Column(db.Integer, nullable=True)
+    status = db.Column(db.Enum('PENDENTE', 'APROVADO', 'REJEITADO'), index=True)
+    data_aprovacao = db.Column(db.DateTime, nullable=True)
+    comentario = db.Column(db.Text, nullable=True)
+    endereco_ip = db.Column(db.String(45), nullable=True)
+    hash = db.Column(db.String(255), nullable=True)
+    imagem_assinatura = db.Column(db.Text, nullable=True)
+    ativo = db.Column(db.Boolean, nullable=False, default=True)
+
+    criado_por = db.Column(db.Integer, nullable=True)
+    modificado_por = db.Column(db.Integer, nullable=True)
+    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
+    modificado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    rdo = db.relationship('RDO', backref=db.backref('aprovacoes', cascade='all, delete-orphan', lazy='dynamic'))
+    aprovador = db.relationship('Usuario')
+    usuario = db.synonym("aprovador")
+    img_assinatura = db.synonym("imagem_assinatura")
+
+    @property
+    def motivo_rejeicao(self):
+        return self.comentario

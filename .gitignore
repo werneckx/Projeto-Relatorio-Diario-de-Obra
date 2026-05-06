@@ -1,0 +1,48 @@
+# Environment files
+.env
+.env.*
+
+# Python environment and caches
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.context
+
+# Flask instance folder
+instance/
+
+# Local storage and generated files
+tmp/
+*.sqlite3
+*.db
+*.db-journal
+
+# Static uploads and generated reports
+static/uploads/
+static/rdo_gerados/
+app/static/uploads/
+app/static/rdo_gerados/
+app/static/temp.html
+
+# Local tool/vendor folders
+openclaude/
+Microsoft/
+
+# IDE settings
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# GitHub Actions
+.github/
