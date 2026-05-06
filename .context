@@ -1,0 +1,44 @@
+Este projeto é um Sistema de Relatório Diário de Obra baseado na plataforma Flask, projetado para gerenciar informações de obras de forma eficiente e profissional. O sistema permite o registro de atividades diárias, equipe, materiais, ocorrências, medições, entre outras funcionalidades essenciais para o acompanhamento de projetos de construção civil.
+
+No nosso model temos as seguintes tabelas:
+- Model Auxiliares: Clima, Função, Equipamento, Tag de Ocorrência
+- Model Empresa: Empresa
+- Model Fornecedores: Fornecedores
+- Model Obra: Obra, Frente de Trabalho, Frente Colaborador
+- Model RDO: RDO, Atividade, Ocorrência, Equipamento, Mão de Obra, Foto, Aprovação
+- Model Usuario: Colaborador, Usuario
+- Model RBAC: Papel, Permissão, Papel Permissão, Usuário Papel
+
+O sistema está quase pronto, mas temos alguns ajustes a serem feitos:
+- O logo não está aparecendo
+- O ícone não está aparecendo
+- A autenticação não está funcionando
+
+Os requisitos do sistema são:
+- O sistema deve ser capaz de gerenciar informações de obras de forma eficiente e profissional.
+- O sistema deve permitir o registro de atividades diárias, equipe, materiais, ocorrências, medições, entre outras funcionalidades essenciais para o acompanhamento de projetos de construção civil.
+- O sistema deve ser capaz de gerar relatórios diários de obras.
+- O sistema deve ser capaz de gerar relatórios mensais de obras.
+- O sistema deve ser capaz de gerar relatórios anuais de obras.
+- O sistema deve ser capaz de gerar relatórios de obras por período.
+- O sistema deve ser capaz de gerar relatórios de obras por equipe.
+- O sistema deve ser capaz de gerar relatórios de obras por material.
+- O sistema deve ser capaz de gerar relatórios de obras por ocorrência.
+- O sistema deve ser capaz de gerar relatórios de obras por medição.
+- O sistema deve ser capaz de gerar relatórios de obras por orçamento.
+- O sistema deve ser capaz de gerar relatórios de obras por item de orçamento.
+- O sistema deve ser capaz de gerar relatórios de obras por medição.
+- O sistema deve ser capaz de gerar relatórios de obras por orçamento.
+- O sistema deve ser capaz de gerar relatórios de obras por item de orçamento.
+- O sistema deve ser capaz de gerar relatórios de obras por medição.
+- O sistema deve ser capaz de gerar relatórios de obras por orçamento.
+- O sistema deve ser capaz de gerar relatórios de obras por item de orçamento.
+- O sistema deve ser capaz de gerar relatórios de obras por medição.
+- O sistema deve ser capaz de gerar relatórios de obras por orçamento.
+- O sistema deve ser capaz de gerar relatórios de obras por item de orçamento.
+- O sistema deve ser capaz de gerar relatórios de obras por medição.
+- O sistema deve ser capaz de gerar relatórios de obras por orçamento.
+- O sistema deve ser capaz de gerar relatórios de obras por item de orçamento.
+- O sistema deve ser capaz de gerar relatórios de obras por medição.
+- O sistema deve ser capaz de gerar relatórios de obras por orçamento.
+- O sistema deve ser capaz de gerar relatórios de obras por item de orçamento.
