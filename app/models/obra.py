@@ -6,12 +6,31 @@ class Obra(db.Model):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     empresa_id = db.Column(db.Integer, db.ForeignKey('empresa.id'), nullable=False, index=True)
-    pai_id = db.Column(db.Integer, db.ForeignKey('obras.id'), nullable=True, index=True)
     nome = db.Column(db.String(150), nullable=False)
     data_inicio = db.Column(db.Date, nullable=True)
     data_fim_planejada = db.Column(db.Date, nullable=True)
     data_fim = db.Column(db.Date, nullable=True)
     
+    # Responsável
+    usuario_responsavel_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=True, index=True)
+
+    # Tipo de Obra
+    tipo_obra_id = db.Column(db.Integer, db.ForeignKey('aux_tipo_obra.id'), nullable=True, index=True)
+
+    # Dados do Cliente
+    cliente_nome = db.Column(db.String(200), nullable=True)
+    cliente_cnpj = db.Column(db.String(20), nullable=True)
+    cnpj_obra = db.Column(db.String(20), nullable=True)
+
+    # Endereço Normalizado
+    logradouro = db.Column(db.String(200), nullable=True)
+    numero = db.Column(db.String(20), nullable=True)
+    complemento = db.Column(db.String(100), nullable=True)
+    bairro = db.Column(db.String(100), nullable=True)
+    cidade = db.Column(db.String(100), nullable=True, index=True)
+    estado = db.Column(db.String(2), nullable=True)
+    cep = db.Column(db.String(10), nullable=True)
+
     hora_entrada_padrao = db.Column(db.Time, nullable=True)
     intervalo_entrada_padrao = db.Column(db.Time, nullable=True)
     intervalo_saida_padrao = db.Column(db.Time, nullable=True)
@@ -23,97 +42,18 @@ class Obra(db.Model):
     criado_em = db.Column(db.DateTime, default=datetime.utcnow)
     modificado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    # Relacionamentos
     empresa = db.relationship('Empresa', backref='obras')
-    sub_obras = db.relationship('Obra', backref=db.backref('obra_pai', remote_side=[id]))
+    usuario_responsavel = db.relationship('Usuario', foreign_keys=[usuario_responsavel_id], backref='obras_sob_responsabilidade')
+    tipo_obra = db.relationship('AuxTipoObra', backref='obras')
+
+    # Sinônimos e Propriedades Legado
     status = db.synonym("ativo")
     inicio = db.synonym("data_inicio")
     termino = db.synonym("data_fim")
     horario_entrada = db.synonym("hora_entrada_padrao")
     horario_saida = db.synonym("hora_saida_padrao")
-
-    @property
-    def cnpj(self):
-        return getattr(self, "_cnpj", None)
-
-    @cnpj.setter
-    def cnpj(self, value):
-        self._cnpj = value
-
-    @property
-    def contratante(self):
-        return getattr(self, "_contratante", None)
-
-    @contratante.setter
-    def contratante(self, value):
-        self._contratante = value
-
-    @property
-    def contrato(self):
-        return getattr(self, "_contrato", None)
-
-    @contrato.setter
-    def contrato(self, value):
-        self._contrato = value
-
-    @property
-    def cep(self):
-        return getattr(self, "_cep", None)
-
-    @cep.setter
-    def cep(self, value):
-        self._cep = value
-
-    @property
-    def endereco(self):
-        return getattr(self, "_endereco", None)
-
-    @endereco.setter
-    def endereco(self, value):
-        self._endereco = value
-
-    @property
-    def numero(self):
-        return getattr(self, "_numero", None)
-
-    @numero.setter
-    def numero(self, value):
-        self._numero = value
-
-    @property
-    def complemento(self):
-        return getattr(self, "_complemento", None)
-
-    @complemento.setter
-    def complemento(self, value):
-        self._complemento = value
-
-    @property
-    def bairro(self):
-        return getattr(self, "_bairro", None)
-
-    @bairro.setter
-    def bairro(self, value):
-        self._bairro = value
-
-    @property
-    def cidade(self):
-        return getattr(self, "_cidade", None)
-
-    @cidade.setter
-    def cidade(self, value):
-        self._cidade = value
-
-    @property
-    def estado(self):
-        return getattr(self, "_estado", None)
-
-    @estado.setter
-    def estado(self, value):
-        self._estado = value
-
-    @property
-    def responsavel(self):
-        return None
+    responsavel = db.synonym("usuario_responsavel")
 
     def __repr__(self):
         return f'<Obra {self.id}: {self.nome}>'

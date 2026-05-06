@@ -114,3 +114,32 @@ class AuxTagOcorrencia(db.Model):
 
     def __repr__(self):
         return f"<AuxTagOcorrencia {self.descricao}>"
+
+
+class AuxTipoObra(db.Model):
+    __tablename__ = "aux_tipo_obra"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    empresa_id = db.Column(db.Integer, db.ForeignKey('empresa.id'), nullable=True, index=True)
+    nome = db.Column(db.String(100), nullable=False)
+    descricao = db.Column(db.Text, nullable=True)
+    is_system = db.Column(db.Boolean, nullable=False, default=False)
+    ativo = db.Column(db.Boolean, nullable=False, default=True)
+
+    criado_por = db.Column(db.Integer, nullable=True)
+    modificado_por = db.Column(db.Integer, nullable=True)
+    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
+    modificado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    empresa = db.relationship('Empresa', backref='aux_tipos_obra')
+
+    @property
+    def tipo_lista(self):
+        return "Tipos de Obra"
+
+    @tipo_lista.setter
+    def tipo_lista(self, value):
+        pass
+
+    def __repr__(self):
+        return f"<AuxTipoObra {self.nome}>"

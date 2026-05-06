@@ -31,6 +31,7 @@ DROP TABLE IF EXISTS colaboradores;
 DROP TABLE IF EXISTS fornecedores;
 
 DROP TABLE IF EXISTS aux_tag_ocorrencia;
+DROP TABLE IF EXISTS aux_tipo_obra;
 DROP TABLE IF EXISTS aux_equipamentos;
 DROP TABLE IF EXISTS aux_funcoes;
 DROP TABLE IF EXISTS aux_clima;
@@ -129,6 +130,25 @@ CREATE TABLE aux_tag_ocorrencia (
 
     UNIQUE KEY uk_tag_empresa (empresa_id, descricao),
     INDEX idx_tag_empresa (empresa_id),
+
+    FOREIGN KEY (empresa_id) REFERENCES empresa(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE aux_tipo_obra (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    empresa_id INT NULL,              -- NULL = padrão global do sistema
+    nome VARCHAR(100) NOT NULL,
+    descricao TEXT,
+    is_system BOOLEAN NOT NULL DEFAULT FALSE,
+    ativo BOOLEAN DEFAULT TRUE,
+
+    criado_por INT NULL,
+    modificado_por INT NULL,
+    criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+    modificado_em DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    UNIQUE KEY uk_tipo_obra_empresa (empresa_id, nome),
+    INDEX idx_tipo_obra_empresa (empresa_id),
 
     FOREIGN KEY (empresa_id) REFERENCES empresa(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -289,11 +309,30 @@ CREATE TABLE usuario_papel (
 CREATE TABLE obras (
     id INT AUTO_INCREMENT PRIMARY KEY,
     empresa_id INT NOT NULL,
-    pai_id INT NULL,
     nome VARCHAR(150) NOT NULL,
     data_inicio DATE,
     data_fim_planejada DATE,
     data_fim DATE,
+
+    -- Responsável
+    usuario_responsavel_id INT NULL,
+
+    -- Tipo de Obra
+    tipo_obra_id INT NULL,
+
+    -- Dados do Cliente
+    cliente_nome VARCHAR(200),
+    cliente_cnpj VARCHAR(20),
+    cnpj_obra VARCHAR(20),
+
+    -- Endereço Normalizado
+    logradouro VARCHAR(200),
+    numero VARCHAR(20),
+    complemento VARCHAR(100),
+    bairro VARCHAR(100),
+    cidade VARCHAR(100),
+    estado CHAR(2),
+    cep VARCHAR(10),
 
     hora_entrada_padrao TIME,
     intervalo_entrada_padrao TIME,
@@ -307,10 +346,13 @@ CREATE TABLE obras (
     modificado_em DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
     INDEX idx_obras_empresa (empresa_id),
-    INDEX idx_obras_pai (pai_id),
+    INDEX idx_obras_usuario_responsavel (usuario_responsavel_id),
+    INDEX idx_obras_tipo (tipo_obra_id),
+    INDEX idx_obras_cidade (cidade),
 
     FOREIGN KEY (empresa_id) REFERENCES empresa(id),
-    FOREIGN KEY (pai_id) REFERENCES obras(id)
+    FOREIGN KEY (usuario_responsavel_id) REFERENCES usuarios(id),
+    FOREIGN KEY (tipo_obra_id) REFERENCES aux_tipo_obra(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 /* =========================
@@ -731,6 +773,14 @@ INSERT INTO aux_tag_ocorrencia (empresa_id, descricao, tipo, is_system, ativo) V
 (NULL, 'Retrabalho', 'Qualidade', TRUE, TRUE),
 (NULL, 'Aguardando Inspeção', 'Qualidade', TRUE, TRUE);
 
+-- Aux Tipo Obra
+INSERT INTO aux_tipo_obra (empresa_id, nome, descricao, is_system, ativo) VALUES
+(NULL, 'Saneamento', 'Obras de redes de água, esgoto e tratamento.', TRUE, TRUE),
+(NULL, 'Óleo e Gás', 'Obras em refinarias, dutos e plataformas.', TRUE, TRUE),
+(NULL, 'Infraestrutura', 'Obras de estradas, pontes e vias urbanas.', TRUE, TRUE),
+(NULL, 'Industrial', 'Construção e manutenção de plantas industriais.', TRUE, TRUE),
+(NULL, 'Energia', 'Obras em subestações e linhas de transmissão.', TRUE, TRUE);
+
 /* ==========================================================
    SCRIPT DE SEED PARA DEMONSTRAÇÃO (RDO PLATFORM)
    Este script assume que as tabelas base e os dados de 
@@ -773,9 +823,9 @@ INSERT INTO usuario_papel (empresa_id, usuario_id, papel_id) VALUES
 (1, 2, 3); -- Ana é OPERADOR
 
 -- 6. Inserir Obras
-INSERT INTO obras (id, empresa_id, nome, data_inicio, data_fim_planejada, hora_entrada_padrao, hora_saida_padrao) VALUES
-(1, 1, 'Residencial Bella Vista', '2023-10-01', '2025-12-31', '07:00:00', '17:00:00'),
-(2, 1, 'Edifício Comercial Sky', '2024-01-15', '2026-06-30', '08:00:00', '18:00:00');
+INSERT INTO obras (id, empresa_id, nome, data_inicio, data_fim_planejada, tipo_obra_id, usuario_responsavel_id, cliente_nome, cidade, estado, hora_entrada_padrao, hora_saida_padrao) VALUES
+(1, 1, 'Residencial Bella Vista', '2023-10-01', '2025-12-31', 4, 1, 'Incorporadora XYZ', 'São Paulo', 'SP', '07:00:00', '17:00:00'),
+(2, 1, 'Edifício Comercial Sky', '2024-01-15', '2026-06-30', 4, 1, 'Sky Corp', 'Rio de Janeiro', 'RJ', '08:00:00', '18:00:00');
 
 -- 7. Inserir Frentes de Trabalho
 INSERT INTO frente_trabalho (id, empresa_id, obra_id, nome, centro_custo) VALUES
