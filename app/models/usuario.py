@@ -90,8 +90,7 @@ class Colaborador(db.Model):
 
     # Relacionamentos
     empresa = db.relationship('Empresa')
-    fornecedor = db.relationship('Fornecedor', backref='colaboradores')
-    cliente = db.relationship('Cliente', backref='colaboradores_viculados')
+    cliente = db.relationship('Cliente', backref='colaboradores_vinculados')
 
     criado_por = db.Column(db.Integer, nullable=True)
     modificado_por = db.Column(db.Integer, nullable=True)
@@ -99,7 +98,7 @@ class Colaborador(db.Model):
     modificado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     @property
-    def is_terceiro(self):
+    def is_terceiro(self):  
         return self.tipo == 'TERCEIRO' or self.fornecedor_id is not None
 
     @validates('tipo')
