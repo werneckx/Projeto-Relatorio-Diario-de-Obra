@@ -201,3 +201,31 @@ class RDOAprovacao(db.Model):
     @property
     def motivo_rejeicao(self):
         return self.comentario
+
+
+class RDOAssinatura(db.Model):
+    __tablename__ = "rdo_assinaturas"
+
+    id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    empresa_id = db.Column(db.Integer, db.ForeignKey('empresa.id'), nullable=False, index=True)
+    rdo_id = db.Column(db.Integer, db.ForeignKey('rdo.id'), nullable=False, index=True)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=False, index=True)
+    colaborador_id = db.Column(db.Integer, db.ForeignKey('colaboradores.id'), nullable=False, index=True)
+
+    tipo_assinatura = db.Column(db.Enum('INTERNO', 'CLIENTE'), nullable=False)
+    status = db.Column(db.Enum('ASSINADO', 'REJEITADO', 'PENDENTE'), nullable=False)
+
+    hash_documento = db.Column(db.String(255), nullable=False)
+
+    ip = db.Column(db.String(45), nullable=True)
+    user_agent = db.Column(db.String(255), nullable=True)
+
+    assinado_em = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relacionamentos
+    rdo = db.relationship('RDO', backref=db.backref('assinaturas_formais', cascade='all, delete-orphan', lazy='dynamic'))
+    usuario = db.relationship('Usuario')
+    colaborador = db.relationship('Colaborador')
+
+    def __repr__(self):
+        return f'<RDOAssinatura RDO:{self.rdo_id} User:{self.usuario_id}>'

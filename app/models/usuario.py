@@ -1,5 +1,6 @@
 from datetime import datetime
 from app import db, login_manager
+from sqlalchemy.orm import validates
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -100,6 +101,23 @@ class Colaborador(db.Model):
     @property
     def is_terceiro(self):
         return self.tipo == 'TERCEIRO' or self.fornecedor_id is not None
+
+    @validates('tipo')
+    def validate_tipo(self, key, value):
+        if value == 'PROPRIO':
+            if self.fornecedor_id is not None or self.cliente_id is not None:
+                raise ValueError("Colaborador PRÓPRIO não deve ter fornecedor ou cliente vinculado.")
+        elif value == 'TERCEIRO':
+            if self.fornecedor_id is None:
+                raise ValueError("Colaborador TERCEIRO deve ter um fornecedor vinculado.")
+            if self.cliente_id is not None:
+                raise ValueError("Colaborador TERCEIRO não deve ter um cliente vinculado.")
+        elif value == 'CLIENTE':
+            if self.cliente_id is None:
+                raise ValueError("Colaborador CLIENTE deve ter um cliente vinculado.")
+            if self.fornecedor_id is not None:
+                raise ValueError("Colaborador CLIENTE não deve ter um fornecedor vinculado.")
+        return value
 
     def __repr__(self):
         return f'<Colaborador {self.nome}>'

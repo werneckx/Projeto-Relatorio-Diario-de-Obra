@@ -8,8 +8,10 @@ USE rdo_platform_db;
    DROP (ORDEM REVERSA)
 ========================= */
 
+DROP TABLE IF EXISTS rdo_assinaturas;
 DROP TABLE IF EXISTS rdo_aprovacoes;
 DROP TABLE IF EXISTS rdo_fotos;
+DROP TABLE IF EXISTS auditoria_log;
 DROP TABLE IF EXISTS rdo_atividades;
 DROP TABLE IF EXISTS rdo_ocorrencias;
 DROP TABLE IF EXISTS rdo_equipamentos;
@@ -20,7 +22,6 @@ DROP TABLE IF EXISTS frente_colaborador;
 DROP TABLE IF EXISTS frente_trabalho;
 DROP TABLE IF EXISTS obra_usuario;
 DROP TABLE IF EXISTS obras;
-DROP TABLE IF EXISTS clientes;
 
 DROP TABLE IF EXISTS papel_permissao;
 DROP TABLE IF EXISTS usuario_papel;
@@ -29,6 +30,7 @@ DROP TABLE IF EXISTS papeis;
 
 DROP TABLE IF EXISTS usuarios;
 DROP TABLE IF EXISTS colaboradores;
+DROP TABLE IF EXISTS clientes;
 DROP TABLE IF EXISTS fornecedores;
 
 DROP TABLE IF EXISTS aux_tag_ocorrencia;
@@ -295,13 +297,7 @@ CREATE TABLE colaboradores (
 
     FOREIGN KEY (empresa_id) REFERENCES empresa(id),
     FOREIGN KEY (fornecedor_id) REFERENCES fornecedores(id),
-    CONSTRAINT fk_colab_cliente FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    
-    CONSTRAINT chk_colab_tipo CHECK (
-        (tipo = 'PROPRIO' AND fornecedor_id IS NULL AND cliente_id IS NULL) OR
-        (tipo = 'TERCEIRO' AND fornecedor_id IS NOT NULL AND cliente_id IS NULL) OR
-        (tipo = 'CLIENTE' AND cliente_id IS NOT NULL AND fornecedor_id IS NULL)
-    )
+    CONSTRAINT fk_colab_cliente FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE usuarios (
@@ -842,7 +838,12 @@ INSERT INTO fornecedores (id, empresa_id, nome, cnpj, endereco) VALUES
 (1, 1, 'LocaMáquinas Brasil', '11.222.333/0001-44', 'Rua Industrial, 100 - SP'),
 (2, 1, 'Mão de Obra Especializada Ltda', '55.444.333/0001-22', 'Av. Central, 500 - RJ');
 
--- 3. Inserir Colaboradores (Próprios e Terceiros)
+-- 3. Inserir Clientes
+INSERT INTO clientes (id, empresa_id, razao_social, nome_fantasia, cnpj, contato_nome, contato_email) VALUES
+(1, 1, 'Incorporadora Bella Vista Ltda', 'Bella Vista Inc', '12.345.678/0001-90', 'Marcos Oliveira', 'contato@bellavista.com.br'),
+(2, 1, 'Sky Tower Empreendimentos S.A.', 'Sky Corp', '98.765.432/0001-10', 'Julia Santos', 'vendas@skycorp.com');
+
+-- 4. Inserir Colaboradores (Próprios e Terceiros)
 -- Próprios
 INSERT INTO colaboradores (id, empresa_id, fornecedor_id, tipo, cadastro_pessoa_fisica, nome) VALUES
 (1, 1, NULL, 'PROPRIO', '123.456.789-00', 'Ricardo Silva (Gestor)'),
@@ -858,24 +859,19 @@ INSERT INTO colaboradores (id, empresa_id, fornecedor_id, tipo, cadastro_pessoa_
 INSERT INTO colaboradores (id, empresa_id, cliente_id, tipo, nome) VALUES
 (6, 1, 1, 'CLIENTE', 'Supervisor Bella Vista (Cliente)');
 
--- 4. Inserir Usuários (Acesso ao Sistema)
+-- 5. Inserir Usuários (Acesso ao Sistema)
 -- Senha padrão para demo: 'password123' (hash simplificado para exemplo)
 INSERT INTO usuarios (id, empresa_id, colaborador_id, email, senha_hash) VALUES
 (1, 1, 1, 'gestor@horizonte.com.br', '$2y$10$eImiTXuWVxfM37uY4JANjOL.oMqpzh07YlC2v8t/1W/K9/u6hVnd.'),
 (2, 1, 3, 'operador@horizonte.com.br', '$2y$10$eImiTXuWVxfM37uY4JANjOL.oMqpzh07YlC2v8t/1W/K9/u6hVnd.'),
 (3, 1, 6, 'supervisor@bellavista.com.br', '$2y$10$eImiTXuWVxfM37uY4JANjOL.oMqpzh07YlC2v8t/1W/K9/u6hVnd.');
 
--- 5. Atribuir Papéis aos Usuários
+-- 6. Atribuir Papéis aos Usuários
 -- Assumindo IDs do script original: 1=ADMIN, 2=GESTOR, 3=OPERADOR
 INSERT INTO usuario_papel (empresa_id, usuario_id, papel_id) VALUES
 (1, 1, 1), -- Ricardo é ADMIN (Acesso Total)
 (1, 2, 3), -- Ana é OPERADOR
 (1, 3, 3); -- Supervisor do Cliente com papel OPERADOR (ou um novo papelStakeholder)
-
--- 6. Inserir Clientes
-INSERT INTO clientes (id, empresa_id, razao_social, nome_fantasia, cnpj, contato_nome, contato_email) VALUES
-(1, 1, 'Incorporadora Bella Vista Ltda', 'Bella Vista Inc', '12.345.678/0001-90', 'Marcos Oliveira', 'contato@bellavista.com.br'),
-(2, 1, 'Sky Tower Empreendimentos S.A.', 'Sky Corp', '98.765.432/0001-10', 'Julia Santos', 'vendas@skycorp.com');
 
 -- 7. Inserir Obras
 INSERT INTO obras (id, empresa_id, nome, data_inicio, data_fim_planejada, tipo_obra_id, usuario_responsavel_id, cliente_id, cidade, estado, hora_entrada_padrao, hora_saida_padrao) VALUES
@@ -888,7 +884,7 @@ INSERT INTO frente_trabalho (id, empresa_id, obra_id, nome, centro_custo) VALUES
 (2, 1, 1, 'Instalações Elétricas', 'CC-2023-02'),
 (3, 1, 2, 'Terraplenagem', 'CC-2024-01');
 
--- 8. Vincular Colaboradores às Frentes de Trabalho
+-- 9. Vincular Colaboradores às Frentes de Trabalho
 -- (Supondo que Engenheiro=1, Pedreiro=3 no aux_funcoes do sistema)
 INSERT INTO frente_colaborador (empresa_id, frente_id, colaborador_id, funcao_id, data_inicio) VALUES
 (1, 1, 2, 1, '2023-10-01'), -- João Engenheiro na Fundação
@@ -922,3 +918,53 @@ INSERT INTO rdo_ocorrencias (empresa_id, rdo_id, tipo_ocorrencia, descricao, imp
 -- Fotos do RDO
 INSERT INTO rdo_fotos (empresa_id, rdo_id, arquivo, comentario) VALUES
 (1, 1, 'https://storage.demo/rdo_1_foto_1.jpg', 'Vista geral da escavação dos blocos.');
+
+/* =========================
+   AUDITORIA E RASTREABILIDADE
+========================= */
+
+CREATE TABLE auditoria_log (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    empresa_id INT NOT NULL,
+    usuario_id INT NULL,
+    colaborador_id INT NULL,
+    acao VARCHAR(50) NOT NULL,
+    entidade VARCHAR(50) NOT NULL,
+    entidade_id INT NULL,
+    dados_antes JSON NULL,
+    dados_depois JSON NULL,
+    ip VARCHAR(45),
+    user_agent VARCHAR(255),
+    criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    INDEX idx_audit_empresa (empresa_id),
+    INDEX idx_audit_usuario (usuario_id),
+    INDEX idx_audit_entidade (entidade, entidade_id),
+    INDEX idx_audit_data (criado_em),
+
+    CONSTRAINT fk_audit_empresa FOREIGN KEY (empresa_id) REFERENCES empresa(id),
+    CONSTRAINT fk_audit_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
+    CONSTRAINT fk_audit_colaborador FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE rdo_assinaturas (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    empresa_id INT NOT NULL,
+    rdo_id INT NOT NULL,
+    usuario_id INT NOT NULL,
+    colaborador_id INT NOT NULL,
+    tipo_assinatura ENUM('INTERNO','CLIENTE') NOT NULL,
+    status ENUM('ASSINADO','REJEITADO', 'PENDENTE') NOT NULL,
+    hash_documento VARCHAR(255) NOT NULL,
+    ip VARCHAR(45),
+    user_agent VARCHAR(255),
+    assinado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    INDEX idx_rdo_assinatura_rdo (rdo_id),
+    INDEX idx_rdo_assinatura_usuario (usuario_id),
+
+    CONSTRAINT fk_rdo_ass_empresa FOREIGN KEY (empresa_id) REFERENCES empresa(id),
+    CONSTRAINT fk_rdo_ass_rdo FOREIGN KEY (rdo_id) REFERENCES rdo(id),
+    CONSTRAINT fk_rdo_ass_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
+    CONSTRAINT fk_rdo_ass_colab FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
