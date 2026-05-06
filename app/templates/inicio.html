@@ -132,8 +132,8 @@
                                 </td>
                                 <td class="text-right">
                                     <span class="premium-badge 
-                                        {% if rdo.status == 'Aprovado' %} premium-badge-success
-                                        {% elif rdo.status == 'Rejeitado' %} premium-badge-error
+                                        {% if rdo.status == 'APROVADO' %} premium-badge-success
+                                        {% elif rdo.status == 'REJEITADO' %} premium-badge-error
                                         {% else %} premium-badge-warning {% endif %}">
                                         {{ rdo.status }}
                                     </span>
@@ -316,7 +316,7 @@
                 onClick: (e, elements) => {
                     if (elements.length > 0) {
                         const index = elements[0].index;
-                        const labels = ['Aprovado', 'Pendente', 'Rejeitado'];
+                        const labels = ['APROVADO', 'PENDENTE', 'REJEITADO'];
                         setFilterStatus(labels[index]);
                     } else {
                         setFilterStatus(null);
@@ -334,9 +334,10 @@
         dataForMonthly.forEach(d => monthlyCounts[d.mes - 1]++);
 
         const dataForStatus = filterMonth ? rawData.filter(d => d.mes === filterMonth) : rawData;
-        const statusCounts = { 'Aprovado': 0, 'Pendente': 0, 'Rejeitado': 0 };
+        const statusCounts = { 'APROVADO': 0, 'PENDENTE': 0, 'REJEITADO': 0 };
         dataForStatus.forEach(d => {
-            if (statusCounts[d.status] !== undefined) statusCounts[d.status]++;
+            const statusUpper = d.status.toUpperCase();
+            if (statusCounts[statusUpper] !== undefined) statusCounts[statusUpper]++;
         });
 
         monthlyChart.data.datasets[0].data = monthlyCounts;
@@ -356,9 +357,9 @@
 
         const total = Object.values(statusCounts).reduce((a, b) => a + b, 0);
         document.getElementById('totalCount').innerText = total;
-        document.getElementById('legendAprovado').innerText = statusCounts['Aprovado'];
-        document.getElementById('legendPendente').innerText = statusCounts['Pendente'];
-        document.getElementById('legendRejeitado').innerText = statusCounts['Rejeitado'];
+        document.getElementById('legendAprovado').innerText = statusCounts['APROVADO'];
+        document.getElementById('legendPendente').innerText = statusCounts['PENDENTE'];
+        document.getElementById('legendRejeitado').innerText = statusCounts['REJEITADO'];
 
         monthlyChart.update();
         statusChart.update();

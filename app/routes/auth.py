@@ -25,7 +25,7 @@ from flask import (
     Blueprint, Config, abort, render_template, request, redirect, 
     url_for, flash, session, send_file, current_app, jsonify, make_response
 )
-from flask_login import UserMixin, current_user
+from flask_login import UserMixin, current_user, login_user
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 from itsdangerous import SignatureExpired, URLSafeTimedSerializer
@@ -444,15 +444,15 @@ def login_post():
         print(f"Erro ao salvar log de acesso: {e}")
     # -------------------------------------
     
+    # --- LOGIN NO FLASK-LOGIN ---
+    login_user(user)
+    
     session["user_id"] = user.id
     session["empresa_id"] = user.empresa_id
     session["user_name"] = user.nome
     session["user_email"] = user.email
     session["user_role"] = user.papeis[0].nome if user.papeis else "Leitor"
     
-    if getattr(user, 'primeiro_acesso', False):
-        return redirect(url_for("auth.alterar_senha_obrigatoria"))
-
     return redirect(url_for("auth.inicio"))
 
 @auth_bp.get("/logout")
@@ -608,7 +608,11 @@ def inicio():
     raw_rdos = q_raw.all()
     
     dados_graficos_json = [
-        {'status': rdo.status, 'mes': rdo.data_rdo.month, 'data_iso': rdo.data_rdo.isoformat()} 
+        {
+            'status': str(rdo.status.value) if hasattr(rdo.status, 'value') else str(rdo.status), 
+            'mes': rdo.data_rdo.month, 
+            'data_iso': rdo.data_rdo.isoformat()
+        } 
         for rdo in raw_rdos
         if rdo.data_rdo
     ]
