@@ -81,10 +81,16 @@ class Colaborador(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     empresa_id = db.Column(db.Integer, db.ForeignKey('empresa.id'), nullable=False, index=True)
     fornecedor_id = db.Column(db.Integer, db.ForeignKey('fornecedores.id'), nullable=True, index=True)
-    tipo = db.Column(db.Enum('PROPRIO', 'TERCEIRO'), nullable=False, default='PROPRIO')
+    cliente_id = db.Column(db.Integer, db.ForeignKey('clientes.id'), nullable=True, index=True)
+    tipo = db.Column(db.Enum('PROPRIO', 'TERCEIRO', 'CLIENTE'), nullable=False, default='PROPRIO')
     cadastro_pessoa_fisica = db.Column(db.String(100), nullable=True)
     nome = db.Column(db.String(150), nullable=False)
     ativo = db.Column(db.Boolean, nullable=False, default=True)
+
+    # Relacionamentos
+    empresa = db.relationship('Empresa')
+    fornecedor = db.relationship('Fornecedor', backref='colaboradores')
+    cliente = db.relationship('Cliente', backref='colaboradores_viculados')
 
     criado_por = db.Column(db.Integer, nullable=True)
     modificado_por = db.Column(db.Integer, nullable=True)

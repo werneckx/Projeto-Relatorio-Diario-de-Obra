@@ -238,6 +238,38 @@ CREATE TABLE fornecedores (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 /* =========================
+   CLIENTES
+========================= */
+
+CREATE TABLE clientes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    empresa_id INT NOT NULL,
+
+    razao_social VARCHAR(200) NOT NULL,
+    nome_fantasia VARCHAR(200),
+    cnpj VARCHAR(18) NOT NULL,
+
+    contato_nome VARCHAR(150),
+    contato_email VARCHAR(150),
+    contato_telefone VARCHAR(30),
+
+    ativo BOOLEAN DEFAULT TRUE,
+
+    criado_por INT NULL,
+    modificado_por INT NULL,
+    criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+    modificado_em DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    UNIQUE KEY uk_cliente_empresa_cnpj (empresa_id, cnpj),
+    INDEX idx_cliente_empresa (empresa_id),
+    INDEX idx_clientes_cnpj (cnpj),
+
+    CONSTRAINT fk_cliente_empresa
+        FOREIGN KEY (empresa_id) REFERENCES empresa(id)
+        ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+/* =========================
    COLABORADORES / USUÁRIOS
 ========================= */
 
@@ -245,7 +277,8 @@ CREATE TABLE colaboradores (
     id INT AUTO_INCREMENT PRIMARY KEY,
     empresa_id INT NOT NULL,
     fornecedor_id INT NULL,                        -- NULL = colaborador próprio
-    tipo ENUM('PROPRIO','TERCEIRO') NOT NULL DEFAULT 'PROPRIO',
+    cliente_id INT NULL,                           -- NULL = se não for tipo CLIENTE
+    tipo ENUM('PROPRIO','TERCEIRO','CLIENTE') NOT NULL DEFAULT 'PROPRIO',
     cadastro_pessoa_fisica VARCHAR(100),
     nome VARCHAR(150) NOT NULL,
     ativo BOOLEAN DEFAULT TRUE,
@@ -258,9 +291,17 @@ CREATE TABLE colaboradores (
     UNIQUE KEY uk_colab_empresa_doc (empresa_id, cadastro_pessoa_fisica),
     INDEX idx_colab_empresa (empresa_id),
     INDEX idx_colab_fornecedor (fornecedor_id),
+    INDEX idx_colab_cliente (cliente_id),
 
     FOREIGN KEY (empresa_id) REFERENCES empresa(id),
-    FOREIGN KEY (fornecedor_id) REFERENCES fornecedores(id)
+    FOREIGN KEY (fornecedor_id) REFERENCES fornecedores(id),
+    CONSTRAINT fk_colab_cliente FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    
+    CONSTRAINT chk_colab_tipo CHECK (
+        (tipo = 'PROPRIO' AND fornecedor_id IS NULL AND cliente_id IS NULL) OR
+        (tipo = 'TERCEIRO' AND fornecedor_id IS NOT NULL AND cliente_id IS NULL) OR
+        (tipo = 'CLIENTE' AND cliente_id IS NOT NULL AND fornecedor_id IS NULL)
+    )
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE usuarios (
@@ -301,38 +342,6 @@ CREATE TABLE usuario_papel (
     FOREIGN KEY (empresa_id) REFERENCES empresa(id),
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
     FOREIGN KEY (papel_id) REFERENCES papeis(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-/* =========================
-   CLIENTES
-========================= */
-
-CREATE TABLE clientes (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    empresa_id INT NOT NULL,
-
-    razao_social VARCHAR(200) NOT NULL,
-    nome_fantasia VARCHAR(200),
-    cnpj VARCHAR(18) NOT NULL,
-
-    contato_nome VARCHAR(150),
-    contato_email VARCHAR(150),
-    contato_telefone VARCHAR(30),
-
-    ativo BOOLEAN DEFAULT TRUE,
-
-    criado_por INT NULL,
-    modificado_por INT NULL,
-    criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
-    modificado_em DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-
-    UNIQUE KEY uk_cliente_empresa_cnpj (empresa_id, cnpj),
-    INDEX idx_cliente_empresa (empresa_id),
-    INDEX idx_clientes_cnpj (cnpj),
-
-    CONSTRAINT fk_cliente_empresa
-        FOREIGN KEY (empresa_id) REFERENCES empresa(id)
-        ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 /* =========================
@@ -654,7 +663,7 @@ CREATE TABLE rdo_aprovacoes (
     data_aprovacao DATETIME,
     comentario TEXT,
     endereco_ip VARCHAR(45),
-    hash VARCHAR(255),
+    hash VARCHAR(255), -- Hash da assinatura SHA256
     imagem_assinatura TEXT,
     ativo BOOLEAN DEFAULT TRUE,
 
@@ -845,17 +854,23 @@ INSERT INTO colaboradores (id, empresa_id, fornecedor_id, tipo, cadastro_pessoa_
 (4, 1, 2, 'TERCEIRO', '444.555.666-77', 'Carlos Pedreiro (Terceirizado)'),
 (5, 1, 2, 'TERCEIRO', '111.000.111-22', 'Marcos Ajudante (Terceirizado)');
 
+-- Clientes (Stakeholders)
+INSERT INTO colaboradores (id, empresa_id, cliente_id, tipo, nome) VALUES
+(6, 1, 1, 'CLIENTE', 'Supervisor Bella Vista (Cliente)');
+
 -- 4. Inserir Usuários (Acesso ao Sistema)
 -- Senha padrão para demo: 'password123' (hash simplificado para exemplo)
 INSERT INTO usuarios (id, empresa_id, colaborador_id, email, senha_hash) VALUES
 (1, 1, 1, 'gestor@horizonte.com.br', '$2y$10$eImiTXuWVxfM37uY4JANjOL.oMqpzh07YlC2v8t/1W/K9/u6hVnd.'),
-(2, 1, 3, 'operador@horizonte.com.br', '$2y$10$eImiTXuWVxfM37uY4JANjOL.oMqpzh07YlC2v8t/1W/K9/u6hVnd.');
+(2, 1, 3, 'operador@horizonte.com.br', '$2y$10$eImiTXuWVxfM37uY4JANjOL.oMqpzh07YlC2v8t/1W/K9/u6hVnd.'),
+(3, 1, 6, 'supervisor@bellavista.com.br', '$2y$10$eImiTXuWVxfM37uY4JANjOL.oMqpzh07YlC2v8t/1W/K9/u6hVnd.');
 
 -- 5. Atribuir Papéis aos Usuários
 -- Assumindo IDs do script original: 1=ADMIN, 2=GESTOR, 3=OPERADOR
 INSERT INTO usuario_papel (empresa_id, usuario_id, papel_id) VALUES
 (1, 1, 1), -- Ricardo é ADMIN (Acesso Total)
-(1, 2, 3); -- Ana é OPERADOR
+(1, 2, 3), -- Ana é OPERADOR
+(1, 3, 3); -- Supervisor do Cliente com papel OPERADOR (ou um novo papelStakeholder)
 
 -- 6. Inserir Clientes
 INSERT INTO clientes (id, empresa_id, razao_social, nome_fantasia, cnpj, contato_nome, contato_email) VALUES
