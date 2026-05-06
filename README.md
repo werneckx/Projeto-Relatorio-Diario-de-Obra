@@ -1,4 +1,4 @@
-﻿# Nosde System RDO
+# Nosde System RDO
 
 Aplicacao web em Flask para gestao de Relatorios Diarios de Obra (RDO), com recursos de autenticacao, compressao de imagens, geracao de PDF, assinaturas digitais e controle de acesso.
 
@@ -40,7 +40,7 @@ DB_USER=root
 DB_PASSWORD=senha_do_banco
 DB_NAME=dbrdo
 DB_HOST=localhost
-DB_PORT=3306
+DB_PORT=3307
 ```
 
 ### 4. Executar migracoes

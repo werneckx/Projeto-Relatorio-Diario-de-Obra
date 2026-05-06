@@ -13,7 +13,7 @@ class Config:
     DB_PASSWORD = os.environ.get("DB_PASSWORD", "")
     DB_NAME = os.environ.get("DB_NAME", "dbrdo")
     DB_HOST = os.environ.get("DB_HOST", "localhost")
-    DB_PORT = os.environ.get("DB_PORT", 3306)
+    DB_PORT = os.environ.get("DB_PORT", 3307)
 
     SQLALCHEMY_DATABASE_URI = os.environ.get(
         "DATABASE_URL",
