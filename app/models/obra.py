@@ -55,6 +55,25 @@ class Obra(db.Model):
     horario_saida = db.synonym("hora_saida_padrao")
     responsavel = db.synonym("usuario_responsavel")
 
+    @property
+    def cnpj(self):
+        """Retorna o CNPJ da obra (ou do cliente se não houver um específico para a obra)"""
+        return self.cnpj_obra or (self.cliente.cnpj if self.cliente else None)
+
+    @property
+    def contratante(self):
+        """Alias para o cliente vinculado à obra"""
+        return self.cliente.razao_social if self.cliente else None
+
+    @property
+    def endereco(self):
+        """Gera o endereço completo a partir dos campos normalizados"""
+        partes = [self.logradouro]
+        if self.numero: partes.append(f"nº {self.numero}")
+        if self.complemento: partes.append(self.complemento)
+        if self.bairro: partes.append(self.bairro)
+        return ", ".join([p for p in partes if p])
+
     def __repr__(self):
         return f'<Obra {self.id}: {self.nome}>'
 
