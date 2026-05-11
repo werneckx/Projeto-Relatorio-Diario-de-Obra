@@ -1,6 +1,6 @@
 # Plano de Refatoracao por Branches e Commits
 
-Este plano foi criado com base no `docs/Contexto.md` atual do projeto. A ideia e evoluir o sistema sem uma refatoracao gigante de uma vez: primeiro separar responsabilidades, depois alinhar schema/models/rotas, depois adicionar regras corporativas como RBAC real, auditoria, workflow, notificacoes e arquivos.
+Este plano foi criado com base no `.Context` atual do projeto. A ideia e evoluir o sistema sem uma refatoracao gigante de uma vez: primeiro separar responsabilidades, depois alinhar schema/models/rotas, depois adicionar regras corporativas como RBAC real, auditoria, workflow, notificacoes e arquivos.
 
 ## Padrao de Commits
 
@@ -36,7 +36,7 @@ test(rbac): cubra permissao por rota
 - Preservar endpoints existentes sempre que possivel para nao quebrar `url_for`.
 - Rodar o app e testes ao final de cada branch.
 - Fazer commits pequenos o bastante para reverter sem sofrimento.
-- Atualizar o `docs/Contexto.md` quando uma branch fechar uma etapa importante.
+- Atualizar o `.Context` quando uma branch fechar uma etapa importante.
 
 ## Branch 1 - Baseline e Ambiente
 
