@@ -10,7 +10,15 @@ class RDO(db.Model):
     frente_trabalho_id = db.Column(db.Integer, db.ForeignKey('frente_trabalho.id'), nullable=False, index=True)
     numero_sequencial = db.Column(db.Integer, nullable=True)
     data_rdo = db.Column(db.Date, nullable=True, index=True)
-    status = db.Column(db.Enum('PENDENTE', 'APROVADO', 'REJEITADO'), index=True)
+    status = db.Column(
+        db.Enum('RASCUNHO', 'PENDENTE', 'APROVADO', 'REJEITADO', 'CANCELADO'),
+        default='RASCUNHO',
+        index=True,
+    )
+    versao = db.Column(db.Integer, nullable=False, default=1)
+    rdo_origem_id = db.Column(db.Integer, db.ForeignKey('rdo.id'), nullable=True)
+    bloqueado_em = db.Column(db.DateTime, nullable=True)
+    bloqueado_por = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=True)
     ativo = db.Column(db.Boolean, nullable=False, default=True)
 
     clima_manha_id = db.Column(db.Integer, db.ForeignKey('aux_clima.id'), nullable=True)
@@ -33,6 +41,8 @@ class RDO(db.Model):
     frente_trabalho = db.relationship('FrenteTrabalho', backref='rdos')
     clima_manha = db.relationship('AuxClima', foreign_keys=[clima_manha_id])
     clima_tarde = db.relationship('AuxClima', foreign_keys=[clima_tarde_id])
+    rdo_origem = db.relationship('RDO', remote_side=[id], backref='revisoes')
+    usuario_bloqueio = db.relationship('Usuario', foreign_keys=[bloqueado_por])
     data = db.synonym("data_rdo")
     id_sequencial = db.synonym("numero_sequencial")
 
@@ -180,7 +190,7 @@ class RDOAprovacao(db.Model):
     rdo_id = db.Column(db.Integer, db.ForeignKey('rdo.id'), nullable=False, index=True)
     aprovador_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=False)
     nivel = db.Column(db.Integer, nullable=True)
-    status = db.Column(db.Enum('PENDENTE', 'APROVADO', 'REJEITADO'), index=True)
+    status = db.Column(db.Enum('PENDENTE', 'APROVADO', 'REJEITADO'), default='PENDENTE', index=True)
     data_aprovacao = db.Column(db.DateTime, nullable=True)
     comentario = db.Column(db.Text, nullable=True)
     endereco_ip = db.Column(db.String(45), nullable=True)
@@ -229,3 +239,28 @@ class RDOAssinatura(db.Model):
 
     def __repr__(self):
         return f'<RDOAssinatura RDO:{self.rdo_id} User:{self.usuario_id}>'
+
+
+class RDOVersao(db.Model):
+    __tablename__ = "rdo_versoes"
+
+    id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    empresa_id = db.Column(db.Integer, db.ForeignKey('empresa.id'), nullable=False, index=True)
+    rdo_id = db.Column(db.Integer, db.ForeignKey('rdo.id'), nullable=False, index=True)
+    numero_versao = db.Column(db.Integer, nullable=False)
+    motivo = db.Column(db.String(255), nullable=True)
+    dados_snapshot = db.Column(db.JSON, nullable=False)
+    hash_snapshot = db.Column(db.String(255), nullable=True)
+    criado_por = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=True)
+    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
+
+    rdo = db.relationship('RDO', backref=db.backref('versoes_historico', lazy='dynamic'))
+    usuario_criador = db.relationship('Usuario')
+    empresa = db.relationship('Empresa')
+
+    __table_args__ = (
+        db.UniqueConstraint('rdo_id', 'numero_versao', name='uk_rdo_versao'),
+    )
+
+    def __repr__(self):
+        return f'<RDOVersao RDO:{self.rdo_id} v{self.numero_versao}>'

@@ -5,8 +5,9 @@ class AuxClima(db.Model):
     __tablename__ = "aux_clima"
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    empresa_id = db.Column(db.Integer, db.ForeignKey('empresa.id'), nullable=False, index=True)
+    empresa_id = db.Column(db.Integer, db.ForeignKey('empresa.id'), nullable=True, index=True)
     descricao = db.Column(db.String(100), nullable=False)
+    is_system = db.Column(db.Boolean, nullable=False, default=False)
     ativo = db.Column(db.Boolean, nullable=False, default=True)
 
     criado_por = db.Column(db.Integer, nullable=True)
@@ -33,9 +34,10 @@ class AuxFuncoes(db.Model):
     __tablename__ = "aux_funcoes"
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    empresa_id = db.Column(db.Integer, db.ForeignKey('empresa.id'), nullable=False, index=True)
+    empresa_id = db.Column(db.Integer, db.ForeignKey('empresa.id'), nullable=True, index=True)
     descricao = db.Column(db.String(100), nullable=False)
     tipo = db.Column(db.Enum('DIRETO', 'INDIRETO'), nullable=True)
+    is_system = db.Column(db.Boolean, nullable=False, default=False)
     ativo = db.Column(db.Boolean, nullable=False, default=True)
 
     criado_por = db.Column(db.Integer, nullable=True)
@@ -62,9 +64,10 @@ class AuxEquipamentos(db.Model):
     __tablename__ = "aux_equipamentos"
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    empresa_id = db.Column(db.Integer, db.ForeignKey('empresa.id'), nullable=False, index=True)
+    empresa_id = db.Column(db.Integer, db.ForeignKey('empresa.id'), nullable=True, index=True)
     descricao = db.Column(db.String(150), nullable=False)
     tipo = db.Column(db.String(100), nullable=True)
+    is_system = db.Column(db.Boolean, nullable=False, default=False)
     ativo = db.Column(db.Boolean, nullable=False, default=True)
 
     criado_por = db.Column(db.Integer, nullable=True)
@@ -91,9 +94,10 @@ class AuxTagOcorrencia(db.Model):
     __tablename__ = "aux_tag_ocorrencia"
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    empresa_id = db.Column(db.Integer, db.ForeignKey('empresa.id'), nullable=False, index=True)
+    empresa_id = db.Column(db.Integer, db.ForeignKey('empresa.id'), nullable=True, index=True)
     descricao = db.Column(db.String(150), nullable=False)
     tipo = db.Column(db.String(100), nullable=True)
+    is_system = db.Column(db.Boolean, nullable=False, default=False)
     ativo = db.Column(db.Boolean, nullable=False, default=True)
 
     criado_por = db.Column(db.Integer, nullable=True)

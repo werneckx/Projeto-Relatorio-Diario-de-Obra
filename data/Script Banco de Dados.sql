@@ -4,10 +4,22 @@ COLLATE utf8mb4_unicode_ci;
 
 USE rdo_platform_db;
 
+SET FOREIGN_KEY_CHECKS = 0;
+
 /* =========================
    DROP (ORDEM REVERSA)
 ========================= */
 
+DROP TABLE IF EXISTS acesso_log;
+DROP TABLE IF EXISTS sessoes_usuario;
+DROP TABLE IF EXISTS arquivos;
+DROP TABLE IF EXISTS notificacoes;
+DROP TABLE IF EXISTS workflow_etapas;
+DROP TABLE IF EXISTS workflow_definicoes;
+DROP TABLE IF EXISTS rdo_versoes;
+DROP TABLE IF EXISTS obra_config;
+DROP TABLE IF EXISTS empresa_config;
+DROP TABLE IF EXISTS config_definicoes;
 DROP TABLE IF EXISTS rdo_assinaturas;
 DROP TABLE IF EXISTS rdo_aprovacoes;
 DROP TABLE IF EXISTS rdo_fotos;
@@ -39,6 +51,7 @@ DROP TABLE IF EXISTS aux_equipamentos;
 DROP TABLE IF EXISTS aux_funcoes;
 DROP TABLE IF EXISTS aux_clima;
 
+DROP TABLE IF EXISTS cad_listas;
 DROP TABLE IF EXISTS empresa;
 
 /* =========================
@@ -56,6 +69,43 @@ CREATE TABLE empresa (
     modificado_por INT NULL,
     criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
     modificado_em DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+/* =========================
+   MASTER LIST (GOVERNANÇA)
+========================= */
+
+CREATE TABLE cad_listas (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    empresa_id INT NULL,
+    titulo VARCHAR(150) NOT NULL,
+    nome_interno VARCHAR(150) NOT NULL,
+    slug VARCHAR(150) NOT NULL,
+    descricao TEXT,
+    modulo ENUM('RDO', 'Estoque', 'Suprimentos', 'Administrativo', 'RH', 'Configuração', 'Integração', 'Financeiro', 'Engenharia', 'Sistema') NOT NULL,
+    tipo_lista ENUM('Auxiliar', 'Cadastro', 'Transacional', 'Configuração', 'Auditoria', 'Log', 'Sistema') NOT NULL,
+    origem_dados ENUM('SharePoint', 'SQL Server', 'MySQL', 'Dataverse', 'API Externa') NOT NULL,
+    versao_estrutura VARCHAR(20) DEFAULT 'v1.0',
+    is_system BOOLEAN NOT NULL DEFAULT FALSE,
+    ativo BOOLEAN DEFAULT TRUE,
+    permite_edicao_usuario BOOLEAN DEFAULT FALSE,
+    sincronizar_integracoes BOOLEAN DEFAULT FALSE,
+
+    criado_por INT NULL,
+    modificado_por INT NULL,
+    criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+    modificado_em DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    UNIQUE KEY uk_lista_nome_interno (nome_interno),
+    UNIQUE KEY uk_lista_slug (empresa_id, slug),
+    INDEX idx_lista_empresa (empresa_id),
+    INDEX idx_lista_modulo (modulo),
+    INDEX idx_lista_tipo (tipo_lista),
+    INDEX idx_lista_ativo (ativo),
+
+    FOREIGN KEY (empresa_id) REFERENCES empresa(id),
+    FOREIGN KEY (criado_por) REFERENCES usuarios(id),
+    FOREIGN KEY (modificado_por) REFERENCES usuarios(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 /* =========================
@@ -482,7 +532,11 @@ CREATE TABLE rdo (
     numero_sequencial INT,
     frente_trabalho_id INT NOT NULL,
     data_rdo DATE,
-    status ENUM('PENDENTE','APROVADO','REJEITADO') DEFAULT 'PENDENTE',
+    status ENUM('RASCUNHO','PENDENTE','APROVADO','REJEITADO','CANCELADO') DEFAULT 'RASCUNHO',
+    versao INT NOT NULL DEFAULT 1,
+    rdo_origem_id INT NULL,
+    bloqueado_em DATETIME NULL,
+    bloqueado_por INT NULL,
 
     clima_manha_id INT,
     clima_tarde_id INT,
@@ -508,6 +562,8 @@ CREATE TABLE rdo (
 
     FOREIGN KEY (empresa_id) REFERENCES empresa(id),
     FOREIGN KEY (obra_id) REFERENCES obras(id),
+    FOREIGN KEY (rdo_origem_id) REFERENCES rdo(id),
+    FOREIGN KEY (bloqueado_por) REFERENCES usuarios(id),
     FOREIGN KEY (frente_trabalho_id) REFERENCES frente_trabalho(id),
     FOREIGN KEY (clima_manha_id) REFERENCES aux_clima(id),
     FOREIGN KEY (clima_tarde_id) REFERENCES aux_clima(id)
@@ -676,6 +732,30 @@ CREATE TABLE rdo_aprovacoes (
     FOREIGN KEY (empresa_id) REFERENCES empresa(id),
     FOREIGN KEY (rdo_id) REFERENCES rdo(id),
     FOREIGN KEY (aprovador_id) REFERENCES usuarios(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+/* =========================
+   VERSIONAMENTO DO RDO
+========================= */
+
+CREATE TABLE rdo_versoes (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    empresa_id INT NOT NULL,
+    rdo_id INT NOT NULL,
+    numero_versao INT NOT NULL,
+    motivo VARCHAR(255),
+    dados_snapshot JSON NOT NULL,
+    hash_snapshot VARCHAR(255),
+    criado_por INT NULL,
+    criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    UNIQUE KEY uk_rdo_versao (rdo_id, numero_versao),
+    INDEX idx_rdo_versao_empresa (empresa_id),
+    INDEX idx_rdo_versao_rdo (rdo_id),
+
+    CONSTRAINT fk_rdo_versao_empresa FOREIGN KEY (empresa_id) REFERENCES empresa(id),
+    CONSTRAINT fk_rdo_versao_rdo FOREIGN KEY (rdo_id) REFERENCES rdo(id),
+    CONSTRAINT fk_rdo_versao_usuario FOREIGN KEY (criado_por) REFERENCES usuarios(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 /* =========================
@@ -968,3 +1048,504 @@ CREATE TABLE rdo_assinaturas (
     CONSTRAINT fk_rdo_ass_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
     CONSTRAINT fk_rdo_ass_colab FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+/* =========================
+   SISTEMA DE CONFIGURAÇÕES
+========================= */
+
+/* =========================
+   WORKFLOW CONFIGURAVEL
+========================= */
+
+CREATE TABLE workflow_definicoes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    empresa_id INT NOT NULL,
+    obra_id INT NULL,
+    nome VARCHAR(150) NOT NULL,
+    descricao TEXT,
+    aprovacao_paralela BOOLEAN NOT NULL DEFAULT FALSE,
+    rejeicao_cancela_fluxo BOOLEAN NOT NULL DEFAULT TRUE,
+    sla_horas INT NULL,
+    ativo BOOLEAN DEFAULT TRUE,
+
+    criado_por INT NULL,
+    modificado_por INT NULL,
+    criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+    modificado_em DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    INDEX idx_workflow_empresa (empresa_id),
+    INDEX idx_workflow_obra (obra_id),
+    UNIQUE KEY uk_workflow_empresa_obra_nome (empresa_id, obra_id, nome),
+
+    CONSTRAINT fk_workflow_empresa FOREIGN KEY (empresa_id) REFERENCES empresa(id),
+    CONSTRAINT fk_workflow_obra FOREIGN KEY (obra_id) REFERENCES obras(id),
+    CONSTRAINT fk_workflow_criado_por FOREIGN KEY (criado_por) REFERENCES usuarios(id),
+    CONSTRAINT fk_workflow_modificado_por FOREIGN KEY (modificado_por) REFERENCES usuarios(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE workflow_etapas (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    empresa_id INT NOT NULL,
+    workflow_id INT NOT NULL,
+    nivel INT NOT NULL,
+    nome VARCHAR(150) NOT NULL,
+    papel_id INT NULL,
+    usuario_aprovador_id INT NULL,
+    obrigatorio BOOLEAN NOT NULL DEFAULT TRUE,
+    sla_horas INT NULL,
+    ativo BOOLEAN DEFAULT TRUE,
+
+    criado_por INT NULL,
+    modificado_por INT NULL,
+    criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+    modificado_em DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    UNIQUE KEY uk_workflow_etapa_nivel (workflow_id, nivel),
+    INDEX idx_workflow_etapa_empresa (empresa_id),
+    INDEX idx_workflow_etapa_papel (papel_id),
+    INDEX idx_workflow_etapa_usuario (usuario_aprovador_id),
+
+    CONSTRAINT fk_workflow_etapa_empresa FOREIGN KEY (empresa_id) REFERENCES empresa(id),
+    CONSTRAINT fk_workflow_etapa_workflow FOREIGN KEY (workflow_id) REFERENCES workflow_definicoes(id),
+    CONSTRAINT fk_workflow_etapa_papel FOREIGN KEY (papel_id) REFERENCES papeis(id),
+    CONSTRAINT fk_workflow_etapa_usuario FOREIGN KEY (usuario_aprovador_id) REFERENCES usuarios(id),
+    CONSTRAINT fk_workflow_etapa_criado_por FOREIGN KEY (criado_por) REFERENCES usuarios(id),
+    CONSTRAINT fk_workflow_etapa_modificado_por FOREIGN KEY (modificado_por) REFERENCES usuarios(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+/* =========================
+   NOTIFICACOES
+========================= */
+
+CREATE TABLE notificacoes (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    empresa_id INT NOT NULL,
+    usuario_id INT NULL,
+    obra_id INT NULL,
+    rdo_id INT NULL,
+    tipo ENUM('APROVACAO_PENDENTE','NOVO_RDO','ALERTA','REJEICAO','AVISO_OPERACIONAL','SISTEMA') NOT NULL,
+    titulo VARCHAR(150) NOT NULL,
+    mensagem TEXT,
+    link VARCHAR(255),
+    lida BOOLEAN NOT NULL DEFAULT FALSE,
+    lida_em DATETIME NULL,
+    ativo BOOLEAN DEFAULT TRUE,
+
+    criado_por INT NULL,
+    criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    INDEX idx_notif_empresa (empresa_id),
+    INDEX idx_notif_usuario_lida (usuario_id, lida),
+    INDEX idx_notif_obra (obra_id),
+    INDEX idx_notif_rdo (rdo_id),
+    INDEX idx_notif_tipo (tipo),
+
+    CONSTRAINT fk_notif_empresa FOREIGN KEY (empresa_id) REFERENCES empresa(id),
+    CONSTRAINT fk_notif_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
+    CONSTRAINT fk_notif_obra FOREIGN KEY (obra_id) REFERENCES obras(id),
+    CONSTRAINT fk_notif_rdo FOREIGN KEY (rdo_id) REFERENCES rdo(id),
+    CONSTRAINT fk_notif_criado_por FOREIGN KEY (criado_por) REFERENCES usuarios(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+/* =========================
+   ARQUIVOS E DOCUMENTOS
+========================= */
+
+CREATE TABLE arquivos (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    empresa_id INT NOT NULL,
+    obra_id INT NULL,
+    rdo_id INT NULL,
+    entidade VARCHAR(80) NULL,
+    entidade_id INT NULL,
+    categoria ENUM('PDF','IMAGEM','ART','CONTRATO','ANEXO','DOCUMENTO','OUTRO') NOT NULL DEFAULT 'ANEXO',
+    nome_original VARCHAR(255) NOT NULL,
+    nome_armazenado VARCHAR(255) NOT NULL,
+    mime_type VARCHAR(100),
+    tamanho_bytes BIGINT NULL,
+    storage_provider ENUM('LOCAL','S3','AZURE','MINIO') NOT NULL DEFAULT 'LOCAL',
+    storage_path VARCHAR(500) NOT NULL,
+    hash_arquivo VARCHAR(255),
+    publico BOOLEAN NOT NULL DEFAULT FALSE,
+    ativo BOOLEAN DEFAULT TRUE,
+
+    criado_por INT NULL,
+    modificado_por INT NULL,
+    criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+    modificado_em DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    INDEX idx_arquivo_empresa (empresa_id),
+    INDEX idx_arquivo_obra (obra_id),
+    INDEX idx_arquivo_rdo (rdo_id),
+    INDEX idx_arquivo_entidade (entidade, entidade_id),
+    INDEX idx_arquivo_categoria (categoria),
+
+    CONSTRAINT fk_arquivo_empresa FOREIGN KEY (empresa_id) REFERENCES empresa(id),
+    CONSTRAINT fk_arquivo_obra FOREIGN KEY (obra_id) REFERENCES obras(id),
+    CONSTRAINT fk_arquivo_rdo FOREIGN KEY (rdo_id) REFERENCES rdo(id),
+    CONSTRAINT fk_arquivo_criado_por FOREIGN KEY (criado_por) REFERENCES usuarios(id),
+    CONSTRAINT fk_arquivo_modificado_por FOREIGN KEY (modificado_por) REFERENCES usuarios(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+/* =========================
+   SESSOES E LOGS DE ACESSO
+========================= */
+
+CREATE TABLE sessoes_usuario (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    empresa_id INT NOT NULL,
+    usuario_id INT NOT NULL,
+    token_hash VARCHAR(255) NOT NULL,
+    ip VARCHAR(45),
+    user_agent VARCHAR(255),
+    iniciada_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+    expira_em DATETIME NOT NULL,
+    encerrada_em DATETIME NULL,
+    encerrada_por INT NULL,
+    motivo_encerramento VARCHAR(100),
+    ativa BOOLEAN NOT NULL DEFAULT TRUE,
+
+    UNIQUE KEY uk_sessao_token_hash (token_hash),
+    INDEX idx_sessao_empresa (empresa_id),
+    INDEX idx_sessao_usuario_ativa (usuario_id, ativa),
+    INDEX idx_sessao_expira (expira_em),
+
+    CONSTRAINT fk_sessao_empresa FOREIGN KEY (empresa_id) REFERENCES empresa(id),
+    CONSTRAINT fk_sessao_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
+    CONSTRAINT fk_sessao_encerrada_por FOREIGN KEY (encerrada_por) REFERENCES usuarios(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE acesso_log (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    empresa_id INT NULL,
+    usuario_id INT NULL,
+    email VARCHAR(150),
+    acao ENUM('LOGIN_SUCESSO','LOGIN_FALHA','LOGOUT','LOGOUT_REMOTO','SESSAO_EXPIRADA','SENHA_REDEFINIDA') NOT NULL,
+    ip VARCHAR(45),
+    user_agent VARCHAR(255),
+    detalhes JSON NULL,
+    criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    INDEX idx_acesso_empresa (empresa_id),
+    INDEX idx_acesso_usuario (usuario_id),
+    INDEX idx_acesso_email (email),
+    INDEX idx_acesso_acao_data (acao, criado_em),
+
+    CONSTRAINT fk_acesso_empresa FOREIGN KEY (empresa_id) REFERENCES empresa(id),
+    CONSTRAINT fk_acesso_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+/* =========================
+   SISTEMA DE CONFIGURACOES
+========================= */
+
+CREATE TABLE config_definicoes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    chave VARCHAR(100) NOT NULL UNIQUE,
+    descricao TEXT,
+    tipo ENUM('BOOLEAN', 'STRING', 'INT', 'JSON') NOT NULL,
+    valor_padrao TEXT,
+    is_system BOOLEAN NOT NULL DEFAULT TRUE,
+    criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_config_def_chave (chave)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE empresa_config (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    empresa_id INT NOT NULL,
+    chave VARCHAR(100) NOT NULL,
+    valor TEXT,
+    
+    UNIQUE KEY uk_empresa_config (empresa_id, chave),
+    CONSTRAINT fk_empresa_config_empresa FOREIGN KEY (empresa_id) REFERENCES empresa(id) ON DELETE CASCADE,
+    CONSTRAINT fk_empresa_config_chave FOREIGN KEY (chave) REFERENCES config_definicoes(chave) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE obra_config (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    empresa_id INT NOT NULL,
+    obra_id INT NOT NULL,
+    chave VARCHAR(100) NOT NULL,
+    valor TEXT,
+
+    UNIQUE KEY uk_obra_config (obra_id, chave),
+    CONSTRAINT fk_obra_config_empresa FOREIGN KEY (empresa_id) REFERENCES empresa(id) ON DELETE CASCADE,
+    CONSTRAINT fk_obra_config_obra FOREIGN KEY (obra_id) REFERENCES obras(id) ON DELETE CASCADE,
+    CONSTRAINT fk_obra_config_chave FOREIGN KEY (chave) REFERENCES config_definicoes(chave) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Seed Inicial de Configurações
+INSERT INTO config_definicoes (chave, descricao, tipo, valor_padrao) VALUES
+('workflow.aprovacao.ordem', 'Ordem dos aprovadores no workflow do RDO', 'JSON', '["RESPONSAVEL_OBRA", "CLIENTE"]'),
+('workflow.aprovacao.obrigatorio', 'Define se o RDO exige aprovação formal', 'BOOLEAN', 'true'),
+('rdo.secoes.atividades', 'Habilitar seção de atividades no RDO', 'BOOLEAN', 'true'),
+('rdo.secoes.ocorrencias', 'Habilitar seção de ocorrências no RDO', 'BOOLEAN', 'true'),
+('rdo.secoes.mao_obra', 'Habilitar seção de mão de obra no RDO', 'BOOLEAN', 'true'),
+('rdo.secoes.equipamentos', 'Habilitar seção de equipamentos no RDO', 'BOOLEAN', 'true'),
+('rdo.secoes.fotos', 'Habilitar seção de fotos no RDO', 'BOOLEAN', 'true'),
+('assinatura.modo', 'Modo de assinatura (HASH_ONLY ou COM_IMAGEM)', 'STRING', 'HASH_ONLY'),
+('assinatura.capturar_ip', 'Registrar IP na assinatura', 'BOOLEAN', 'true'),
+('assinatura.capturar_user_agent', 'Registrar User Agent na assinatura', 'BOOLEAN', 'true');
+
+-- Seed Inicial de Listas (Governança)
+INSERT INTO config_definicoes (chave, descricao, tipo, valor_padrao) VALUES
+('workflow.aprovacao.paralela', 'Permitir aprovacao paralela quando configurada', 'BOOLEAN', 'false'),
+('workflow.aprovacao.sla_horas', 'SLA padrao de aprovacao em horas', 'INT', '48'),
+('sessao.timeout_minutos', 'Tempo padrao para expiracao de sessao', 'INT', '480'),
+('upload.storage_provider', 'Provedor padrao para armazenamento de arquivos', 'STRING', 'LOCAL'),
+('empresa.tema_cor_primaria', 'Cor primaria padrao do tema da empresa', 'STRING', '#0F766E'),
+('empresa.tema_cor_secundaria', 'Cor secundaria padrao do tema da empresa', 'STRING', '#1F2937'),
+('empresa.dark_mode', 'Habilitar modo escuro por padrao', 'BOOLEAN', 'false');
+
+INSERT INTO cad_listas (titulo, nome_interno, slug, modulo, tipo_lista, origem_dados, is_system, ativo) VALUES
+-- SISTEMA E CONFIGURAÇÃO
+('Catálogo de Listas', 'cad_listas', 'cad-listas', 'Sistema', 'Sistema', 'MySQL', TRUE, TRUE),
+('Empresas', 'empresa', 'empresa', 'Sistema', 'Cadastro', 'MySQL', TRUE, TRUE),
+('Usuários', 'usuarios', 'usuarios', 'Sistema', 'Cadastro', 'MySQL', TRUE, TRUE),
+('Papéis de Acesso', 'papeis', 'papeis', 'Sistema', 'Configuração', 'MySQL', TRUE, TRUE),
+('Permissões', 'permissoes', 'permissoes', 'Sistema', 'Configuração', 'MySQL', TRUE, TRUE),
+('Mapeamento Papel/Permissão', 'papel_permissao', 'papel-permissao', 'Sistema', 'Configuração', 'MySQL', TRUE, TRUE),
+('Mapeamento Usuário/Papel', 'usuario_papel', 'usuario-papel', 'Sistema', 'Configuração', 'MySQL', TRUE, TRUE),
+('Definições de Configuração', 'config_definicoes', 'config-definicoes', 'Sistema', 'Configuração', 'MySQL', TRUE, TRUE),
+('Configurações da Empresa', 'empresa_config', 'empresa-config', 'Sistema', 'Configuração', 'MySQL', TRUE, TRUE),
+('Log de Auditoria', 'auditoria_log', 'auditoria-log', 'Sistema', 'Log', 'MySQL', TRUE, TRUE),
+
+-- CADASTROS GERAIS
+('Colaboradores', 'colaboradores', 'colaboradores', 'RH', 'Cadastro', 'MySQL', TRUE, TRUE),
+('Clientes', 'clientes', 'clientes', 'Administrativo', 'Cadastro', 'MySQL', TRUE, TRUE),
+('Fornecedores', 'fornecedores', 'fornecedores', 'Suprimentos', 'Cadastro', 'MySQL', TRUE, TRUE),
+
+-- ENGENHARIA E OBRAS
+('Tipos de Obra', 'aux_tipo_obra', 'tipos-de-obra', 'Engenharia', 'Auxiliar', 'MySQL', TRUE, TRUE),
+('Obras', 'obras', 'obras', 'Engenharia', 'Cadastro', 'MySQL', TRUE, TRUE),
+('Frentes de Trabalho', 'frente_trabalho', 'frentes-de-trabalho', 'Engenharia', 'Cadastro', 'MySQL', TRUE, TRUE),
+('Usuários da Obra', 'obra_usuario', 'obra-usuario', 'Engenharia', 'Configuração', 'MySQL', TRUE, TRUE),
+('Colaboradores da Frente', 'frente_colaborador', 'frente-colaborador', 'Engenharia', 'Configuração', 'MySQL', TRUE, TRUE),
+('Configurações da Obra', 'obra_config', 'obra-config', 'Engenharia', 'Configuração', 'MySQL', TRUE, TRUE),
+
+-- RDO (AUXILIARES)
+('Clima', 'aux_clima', 'clima', 'RDO', 'Auxiliar', 'MySQL', TRUE, TRUE),
+('Funções de Mão de Obra', 'aux_funcoes', 'funcoes-mao-obra', 'RDO', 'Auxiliar', 'MySQL', TRUE, TRUE),
+('Equipamentos', 'aux_equipamentos', 'equipamentos', 'RDO', 'Auxiliar', 'MySQL', TRUE, TRUE),
+('Tags de Ocorrência', 'aux_tag_ocorrencia', 'tags-ocorrencia', 'RDO', 'Auxiliar', 'MySQL', TRUE, TRUE),
+
+-- RDO (TRANSACIONAL)
+('RDO (Capa)', 'rdo', 'rdo', 'RDO', 'Transacional', 'MySQL', TRUE, TRUE),
+('RDO - Mão de Obra', 'rdo_mao_obra', 'rdo-mao-obra', 'RDO', 'Transacional', 'MySQL', TRUE, TRUE),
+('RDO - Equipamentos', 'rdo_equipamentos', 'rdo-equipamentos', 'RDO', 'Transacional', 'MySQL', TRUE, TRUE),
+('RDO - Atividades', 'rdo_atividades', 'rdo-atividades', 'RDO', 'Transacional', 'MySQL', TRUE, TRUE),
+('RDO - Ocorrências', 'rdo_ocorrencias', 'rdo-ocorrencias', 'RDO', 'Transacional', 'MySQL', TRUE, TRUE),
+('RDO - Fotos', 'rdo_fotos', 'rdo-fotos', 'RDO', 'Transacional', 'MySQL', TRUE, TRUE),
+('RDO - Aprovações', 'rdo_aprovacoes', 'rdo-aprovacoes', 'RDO', 'Transacional', 'MySQL', TRUE, TRUE),
+('RDO - Assinaturas', 'rdo_assinaturas', 'rdo-assinaturas', 'RDO', 'Transacional', 'MySQL', TRUE, TRUE),
+('RDO - Versoes', 'rdo_versoes', 'rdo-versoes', 'RDO', 'Auditoria', 'MySQL', TRUE, TRUE),
+('Workflows de Aprovacao', 'workflow_definicoes', 'workflow-definicoes', 'Sistema', 'Sistema', 'MySQL', TRUE, TRUE),
+('Etapas do Workflow', 'workflow_etapas', 'workflow-etapas', 'Sistema', 'Sistema', 'MySQL', TRUE, TRUE),
+('Notificacoes', 'notificacoes', 'notificacoes', 'Sistema', 'Transacional', 'MySQL', TRUE, TRUE),
+('Arquivos e Documentos', 'arquivos', 'arquivos', 'Sistema', 'Cadastro', 'MySQL', TRUE, TRUE),
+('Sessoes de Usuario', 'sessoes_usuario', 'sessoes-usuario', 'Sistema', 'Log', 'MySQL', TRUE, TRUE),
+('Log de Acesso', 'acesso_log', 'acesso-log', 'Sistema', 'Log', 'MySQL', TRUE, TRUE);
+
+/* ==========================================================
+   SEED CORPORATIVO COMPLETO - EMPRESA REALISTA
+   Massa de dados para validar todas as tabelas do modelo.
+   ========================================================== */
+
+-- Empresa
+INSERT INTO empresa (id, nome, logo_empresa, icone_empresa, ativo, criado_em) VALUES
+(2, 'Enfil Saneamento e Engenharia S.A.', '/static/logo/logo.png', '/static/logo/icone.png', TRUE, NOW());
+
+-- Configuracoes da empresa
+INSERT INTO empresa_config (empresa_id, chave, valor) VALUES
+(2, 'workflow.aprovacao.ordem', '["RESPONSAVEL_OBRA","GESTOR_CONTRATO","CLIENTE"]'),
+(2, 'workflow.aprovacao.obrigatorio', 'true'),
+(2, 'workflow.aprovacao.paralela', 'false'),
+(2, 'workflow.aprovacao.sla_horas', '24'),
+(2, 'sessao.timeout_minutos', '600'),
+(2, 'upload.storage_provider', 'LOCAL'),
+(2, 'empresa.tema_cor_primaria', '#005F73'),
+(2, 'empresa.tema_cor_secundaria', '#0A9396'),
+(2, 'empresa.dark_mode', 'false');
+
+-- Cadastros auxiliares especificos da empresa
+INSERT INTO aux_clima (id, empresa_id, descricao, is_system, ativo) VALUES
+(20, 2, 'Sol forte', FALSE, TRUE),
+(21, 2, 'Chuva intermitente', FALSE, TRUE);
+
+INSERT INTO aux_funcoes (id, empresa_id, descricao, tipo, is_system, ativo) VALUES
+(20, 2, 'Supervisor de Campo', 'DIRETO', FALSE, TRUE),
+(21, 2, 'Soldador PEAD', 'DIRETO', FALSE, TRUE),
+(22, 2, 'Assistente Administrativo de Obra', 'INDIRETO', FALSE, TRUE);
+
+INSERT INTO aux_equipamentos (id, empresa_id, descricao, tipo, is_system, ativo) VALUES
+(20, 2, 'Escavadeira CAT 320', 'Pesado', FALSE, TRUE),
+(21, 2, 'Caminhao Poliguindaste', 'Transporte', FALSE, TRUE),
+(22, 2, 'Bomba Submersivel 3CV', 'Leve', FALSE, TRUE);
+
+INSERT INTO aux_tag_ocorrencia (id, empresa_id, descricao, tipo, is_system, ativo) VALUES
+(20, 2, 'Interferencia de rede existente', 'Engenharia', FALSE, TRUE),
+(21, 2, 'Aguardando liberacao da concessionaria', 'Atraso', FALSE, TRUE);
+
+INSERT INTO aux_tipo_obra (id, empresa_id, nome, descricao, is_system, ativo) VALUES
+(20, 2, 'ETE - Estacao de Tratamento', 'Implantacao e ampliacao de estacoes de tratamento de esgoto.', FALSE, TRUE);
+
+-- RBAC especifico da empresa
+INSERT INTO papeis (id, empresa_id, nome, descricao, is_system, ativo) VALUES
+(20, 2, 'GESTOR_CONTRATO', 'Gestor responsavel por contratos e medicoes da empresa.', FALSE, TRUE);
+
+INSERT INTO permissoes (id, empresa_id, chave, descricao, is_system, ativo) VALUES
+(20, 2, 'medicao.view', 'Visualizar dados de medicao e produtividade da obra.', FALSE, TRUE),
+(21, 2, 'workflow.manage', 'Gerenciar workflows de aprovacao da empresa.', FALSE, TRUE);
+
+INSERT INTO papel_permissao (id, empresa_id, papel_id, permissao_id, ativo) VALUES
+(100, 2, 20, 20, TRUE),
+(101, 2, 20, 21, TRUE);
+
+-- Fornecedores e clientes
+INSERT INTO fornecedores (id, empresa_id, nome, cnpj, endereco, ativo, criado_por) VALUES
+(20, 2, 'Terraplenagem Rio Claro Ltda', '42.778.991/0001-30', 'Rodovia SP-330, km 118 - Campinas/SP', TRUE, NULL),
+(21, 2, 'Locadora Atlas Equipamentos Pesados', '18.455.220/0001-88', 'Av. Industrial, 1250 - Jundiai/SP', TRUE, NULL);
+
+INSERT INTO clientes (id, empresa_id, razao_social, nome_fantasia, cnpj, contato_nome, contato_email, contato_telefone, ativo) VALUES
+(20, 2, 'Companhia Municipal de Saneamento de Campinas', 'SANECAMP', '07.123.456/0001-55', 'Marina Andrade', 'marina.andrade@sanecamp.example', '(19) 3333-4400', TRUE);
+
+-- Colaboradores e usuarios
+INSERT INTO colaboradores (id, empresa_id, fornecedor_id, cliente_id, tipo, cadastro_pessoa_fisica, nome, ativo) VALUES
+(20, 2, NULL, NULL, 'PROPRIO', '310.450.780-10', 'Paulo Mendes - Diretor de Operacoes', TRUE),
+(21, 2, NULL, NULL, 'PROPRIO', '225.778.990-44', 'Camila Rocha - Gestora de Contrato', TRUE),
+(22, 2, NULL, NULL, 'PROPRIO', '144.555.222-91', 'Rafael Nunes - Engenheiro Residente', TRUE),
+(23, 2, NULL, NULL, 'PROPRIO', '090.321.777-85', 'Beatriz Lima - Tecnica de Seguranca', TRUE),
+(24, 2, 20, NULL, 'TERCEIRO', '418.200.771-66', 'Jose Carlos - Operador de Escavadeira', TRUE),
+(25, 2, 20, NULL, 'TERCEIRO', '301.778.120-43', 'Mateus Vieira - Soldador PEAD', TRUE),
+(26, 2, NULL, 20, 'CLIENTE', '771.441.992-10', 'Marina Andrade - Fiscal SANECAMP', TRUE);
+
+INSERT INTO usuarios (id, empresa_id, colaborador_id, email, senha_hash, ativo, ultimo_login, ultimo_login_ip) VALUES
+(20, 2, 20, 'diretoria@enfil.example', '$2y$10$eImiTXuWVxfM37uY4JANjOL.oMqpzh07YlC2v8t/1W/K9/u6hVnd.', TRUE, NOW() - INTERVAL 2 HOUR, '10.10.1.10'),
+(21, 2, 21, 'camila.rocha@enfil.example', '$2y$10$eImiTXuWVxfM37uY4JANjOL.oMqpzh07YlC2v8t/1W/K9/u6hVnd.', TRUE, NOW() - INTERVAL 35 MINUTE, '10.10.1.21'),
+(22, 2, 22, 'rafael.nunes@enfil.example', '$2y$10$eImiTXuWVxfM37uY4JANjOL.oMqpzh07YlC2v8t/1W/K9/u6hVnd.', TRUE, NOW() - INTERVAL 10 MINUTE, '10.10.2.22'),
+(23, 2, 26, 'fiscal@sanecamp.example', '$2y$10$eImiTXuWVxfM37uY4JANjOL.oMqpzh07YlC2v8t/1W/K9/u6hVnd.', TRUE, NOW() - INTERVAL 1 DAY, '177.10.20.30');
+
+INSERT INTO usuario_papel (empresa_id, usuario_id, papel_id, ativo) VALUES
+(2, 20, 1, TRUE),
+(2, 21, 20, TRUE),
+(2, 22, 3, TRUE),
+(2, 23, 5, TRUE);
+
+-- Obra, frentes e alocacoes
+INSERT INTO obras (
+    id, empresa_id, nome, data_inicio, data_fim_planejada, usuario_responsavel_id,
+    tipo_obra_id, cliente_id, cnpj_obra, logradouro, numero, complemento, bairro,
+    cidade, estado, cep, hora_entrada_padrao, intervalo_entrada_padrao,
+    intervalo_saida_padrao, hora_saida_padrao, ativo, criado_por
+) VALUES
+(20, 2, 'Ampliacao ETE Capivari II', '2026-01-08', '2027-04-30', 22, 20, 20,
+ '07.123.456/0042-18', 'Estrada Municipal do Capivari', '4500', 'Area operacional 2',
+ 'Distrito Industrial', 'Campinas', 'SP', '13064-900', '07:00:00', '12:00:00',
+ '13:00:00', '17:00:00', TRUE, 21);
+
+INSERT INTO obra_config (empresa_id, obra_id, chave, valor) VALUES
+(2, 20, 'workflow.aprovacao.ordem', '["ENGENHEIRO_RESIDENTE","GESTOR_CONTRATO","FISCAL_CLIENTE"]'),
+(2, 20, 'workflow.aprovacao.sla_horas', '12'),
+(2, 20, 'rdo.secoes.fotos', 'true'),
+(2, 20, 'rdo.secoes.ocorrencias', 'true');
+
+INSERT INTO frente_trabalho (id, empresa_id, obra_id, nome, centro_custo, data_inicio, data_fim_planejada, ativo, criado_por) VALUES
+(20, 2, 20, 'Linha de recalque norte', 'ETE-CAP2-LR-N', '2026-01-08', '2026-08-15', TRUE, 22),
+(21, 2, 20, 'Casa de bombas e tratamento preliminar', 'ETE-CAP2-CB-TP', '2026-02-01', '2026-11-30', TRUE, 22);
+
+INSERT INTO obra_usuario (id, empresa_id, obra_id, usuario_id, papel_id, ativo, criado_por) VALUES
+(20, 2, 20, 21, 20, TRUE, 20),
+(21, 2, 20, 22, 3, TRUE, 21),
+(22, 2, 20, 23, 5, TRUE, 21);
+
+INSERT INTO frente_colaborador (id, empresa_id, frente_id, colaborador_id, funcao_id, data_inicio, ativo, criado_por) VALUES
+(20, 2, 20, 22, 1, '2026-01-08', TRUE, 21),
+(21, 2, 20, 23, 11, '2026-01-08', TRUE, 21),
+(22, 2, 20, 24, 10, '2026-01-10', TRUE, 22),
+(23, 2, 20, 25, 21, '2026-01-15', TRUE, 22),
+(24, 2, 21, 26, NULL, '2026-02-01', TRUE, 21);
+
+-- Workflow de aprovacao
+INSERT INTO workflow_definicoes (id, empresa_id, obra_id, nome, descricao, aprovacao_paralela, rejeicao_cancela_fluxo, sla_horas, ativo, criado_por) VALUES
+(20, 2, 20, 'Workflow RDO ETE Capivari II', 'Fluxo sequencial para aprovacao de RDO com validacao interna e fiscalizacao do cliente.', FALSE, TRUE, 12, TRUE, 21);
+
+INSERT INTO workflow_etapas (id, empresa_id, workflow_id, nivel, nome, papel_id, usuario_aprovador_id, obrigatorio, sla_horas, ativo, criado_por) VALUES
+(20, 2, 20, 1, 'Validacao do engenheiro residente', 3, 22, TRUE, 4, TRUE, 21),
+(21, 2, 20, 2, 'Aprovacao do gestor de contrato', 20, 21, TRUE, 6, TRUE, 21),
+(22, 2, 20, 3, 'Assinatura da fiscalizacao do cliente', 5, 23, TRUE, 12, TRUE, 21);
+
+-- RDOs e detalhes operacionais
+INSERT INTO rdo (
+    id, empresa_id, obra_id, frente_trabalho_id, data_rdo, status, versao,
+    bloqueado_em, bloqueado_por, clima_manha_id, clima_tarde_id, hora_entrada,
+    hora_saida, intervalo_entrada, intervalo_saida, observacoes, ativo, criado_por
+) VALUES
+(20, 2, 20, 20, '2026-05-08', 'APROVADO', 1, '2026-05-08 18:40:00', 21, 20, 1, '07:00:00', '17:00:00', '12:00:00', '13:00:00', 'Execucao de escavacao da vala e preparacao de leito para assentamento de tubulacao PEAD DN400.', TRUE, 22),
+(21, 2, 20, 21, '2026-05-09', 'PENDENTE', 1, NULL, NULL, 21, 21, '07:00:00', '16:30:00', '12:00:00', '13:00:00', 'Atividades reduzidas por chuva intermitente e aguardando liberacao de area energizada.', TRUE, 22);
+
+INSERT INTO rdo_mao_obra (id, empresa_id, rdo_id, colaborador_id, funcao, quantidade_horas, tipo_mao_obra, observacao, ativo, criado_por) VALUES
+(20, 2, 20, 22, 'Engenheiro Residente', 8.00, 'PROPRIA', 'Acompanhamento de campo e liberacao tecnica.', TRUE, 22),
+(21, 2, 20, 24, 'Operador de Escavadeira', 8.00, 'TERCEIRO', 'Operacao de escavadeira na frente norte.', TRUE, 22),
+(22, 2, 20, 25, 'Soldador PEAD', 6.50, 'TERCEIRO', 'Preparacao de junta e solda por termofusao.', TRUE, 22),
+(23, 2, 21, 23, 'Tecnica de Seguranca', 6.00, 'PROPRIA', 'DDS, APR e bloqueio de area.', TRUE, 22);
+
+INSERT INTO rdo_equipamentos (id, empresa_id, rdo_id, equipamento_id, quantidade, horas_utilizadas, status, motivo_parada, ativo, criado_por) VALUES
+(20, 2, 20, 20, 1, 7.25, 'OPERANDO', NULL, TRUE, 22),
+(21, 2, 20, 22, 2, 5.00, 'OPERANDO', NULL, TRUE, 22),
+(22, 2, 21, 21, 1, 2.00, 'PARADO', 'Aguardando liberacao da area de carga.', TRUE, 22);
+
+INSERT INTO rdo_atividades (id, empresa_id, rdo_id, descricao, status, ativo, criado_por) VALUES
+(20, 2, 20, 'Escavacao mecanizada de 84 metros lineares de vala para linha de recalque.', 'Concluido', TRUE, 22),
+(21, 2, 20, 'Regularizacao de fundo de vala e lancamento de lastro de areia.', 'Concluido', TRUE, 22),
+(22, 2, 21, 'Montagem preliminar da casa de bombas.', 'Em Andamento', TRUE, 22);
+
+INSERT INTO rdo_ocorrencias (id, empresa_id, rdo_id, tipo_ocorrencia, descricao, impacto, tempo_paralisacao, ativo, criado_por) VALUES
+(20, 2, 20, 20, 'Identificada interferencia de rede pluvial nao cadastrada no trecho 03.', 'MEDIO', 1.50, TRUE, 22),
+(21, 2, 21, 21, 'Servico em area energizada aguardando liberacao formal da concessionaria.', 'ALTO', 3.00, TRUE, 22);
+
+INSERT INTO rdo_fotos (id, empresa_id, rdo_id, arquivo, comentario, ativo, criado_por) VALUES
+(20, 2, 20, '/static/uploads/rdo/20/vala_trecho_03.jpg', 'Vala escavada no trecho 03 com sinalizacao lateral.', TRUE, 22),
+(21, 2, 20, '/static/uploads/rdo/20/solda_pead_dn400.jpg', 'Solda PEAD DN400 registrada antes do ensaio visual.', TRUE, 22),
+(22, 2, 21, '/static/uploads/rdo/21/casa_bombas_base.jpg', 'Base da casa de bombas apos chuva.', TRUE, 22);
+
+INSERT INTO rdo_aprovacoes (id, empresa_id, rdo_id, aprovador_id, nivel, status, data_aprovacao, comentario, endereco_ip, hash, imagem_assinatura, ativo, criado_por) VALUES
+(20, 2, 20, 22, 1, 'APROVADO', '2026-05-08 17:45:00', 'RDO conferido em campo.', '10.10.2.22', SHA2('rdo-20-nivel-1', 256), NULL, TRUE, 22),
+(21, 2, 20, 21, 2, 'APROVADO', '2026-05-08 18:20:00', 'Aprovado para envio ao cliente.', '10.10.1.21', SHA2('rdo-20-nivel-2', 256), NULL, TRUE, 21),
+(22, 2, 20, 23, 3, 'APROVADO', '2026-05-08 18:40:00', 'Fiscalizacao aprova o diario.', '177.10.20.30', SHA2('rdo-20-nivel-3', 256), NULL, TRUE, 23),
+(23, 2, 21, 21, 1, 'PENDENTE', NULL, NULL, NULL, NULL, NULL, TRUE, 22);
+
+INSERT INTO rdo_assinaturas (id, empresa_id, rdo_id, usuario_id, colaborador_id, tipo_assinatura, status, hash_documento, ip, user_agent, assinado_em) VALUES
+(20, 2, 20, 21, 21, 'INTERNO', 'ASSINADO', SHA2('assinatura-rdo-20-camila', 256), '10.10.1.21', 'Mozilla/5.0 RDO Seed', '2026-05-08 18:20:00'),
+(21, 2, 20, 23, 26, 'CLIENTE', 'ASSINADO', SHA2('assinatura-rdo-20-cliente', 256), '177.10.20.30', 'Mozilla/5.0 RDO Seed', '2026-05-08 18:40:00');
+
+INSERT INTO rdo_versoes (id, empresa_id, rdo_id, numero_versao, motivo, dados_snapshot, hash_snapshot, criado_por, criado_em) VALUES
+(20, 2, 20, 1, 'Snapshot automatico no bloqueio por aprovacao final',
+ JSON_OBJECT('rdo_id', 20, 'status', 'APROVADO', 'obra_id', 20, 'data_rdo', '2026-05-08', 'versao', 1),
+ SHA2('snapshot-rdo-20-v1', 256), 21, '2026-05-08 18:40:00');
+
+-- Arquivos, notificacoes, sessoes e auditoria
+INSERT INTO arquivos (id, empresa_id, obra_id, rdo_id, entidade, entidade_id, categoria, nome_original, nome_armazenado, mime_type, tamanho_bytes, storage_provider, storage_path, hash_arquivo, publico, ativo, criado_por) VALUES
+(20, 2, 20, NULL, 'obras', 20, 'CONTRATO', 'Contrato_SANECAMP_ETE_Capivari_II.pdf', 'contrato_sanecamp_ete_capivari_ii.pdf', 'application/pdf', 2457600, 'LOCAL', '/static/uploads/obras/20/contrato_sanecamp_ete_capivari_ii.pdf', SHA2('contrato-capivari-ii', 256), FALSE, TRUE, 21),
+(21, 2, 20, 20, 'rdo', 20, 'PDF', 'RDO_0001_2026-05-08.pdf', 'rdo_20_v1.pdf', 'application/pdf', 524288, 'LOCAL', '/static/uploads/rdo/20/rdo_20_v1.pdf', SHA2('pdf-rdo-20-v1', 256), TRUE, TRUE, 22),
+(22, 2, 20, 20, 'rdo_fotos', 20, 'IMAGEM', 'vala_trecho_03.jpg', 'vala_trecho_03.jpg', 'image/jpeg', 384120, 'LOCAL', '/static/uploads/rdo/20/vala_trecho_03.jpg', SHA2('foto-vala-trecho-03', 256), FALSE, TRUE, 22);
+
+INSERT INTO notificacoes (id, empresa_id, usuario_id, obra_id, rdo_id, tipo, titulo, mensagem, link, lida, lida_em, ativo, criado_por, criado_em) VALUES
+(20, 2, 21, 20, 21, 'APROVACAO_PENDENTE', 'RDO pendente de aprovacao', 'O RDO de 2026-05-09 aguarda aprovacao do gestor de contrato.', '/rdo/21', FALSE, NULL, TRUE, 22, NOW()),
+(21, 2, 23, 20, 20, 'NOVO_RDO', 'RDO aprovado disponivel', 'O RDO de 2026-05-08 foi aprovado e esta disponivel para consulta.', '/rdo/20', TRUE, NOW() - INTERVAL 1 HOUR, TRUE, 21, NOW() - INTERVAL 2 HOUR),
+(22, 2, 22, 20, 21, 'ALERTA', 'Liberacao de area pendente', 'Aguardando liberacao da concessionaria para continuidade dos servicos.', '/rdo/21', FALSE, NULL, TRUE, 23, NOW());
+
+INSERT INTO sessoes_usuario (id, empresa_id, usuario_id, token_hash, ip, user_agent, iniciada_em, expira_em, encerrada_em, encerrada_por, motivo_encerramento, ativa) VALUES
+(20, 2, 21, SHA2('sessao-camila-ativa', 256), '10.10.1.21', 'Mozilla/5.0 RDO Seed', NOW() - INTERVAL 35 MINUTE, NOW() + INTERVAL 565 MINUTE, NULL, NULL, NULL, TRUE),
+(21, 2, 22, SHA2('sessao-rafael-encerrada', 256), '10.10.2.22', 'Mozilla/5.0 RDO Seed', NOW() - INTERVAL 2 DAY, NOW() - INTERVAL 1 DAY, NOW() - INTERVAL 1 DAY, 22, 'SESSAO_EXPIRADA', FALSE);
+
+INSERT INTO acesso_log (id, empresa_id, usuario_id, email, acao, ip, user_agent, detalhes, criado_em) VALUES
+(20, 2, 21, 'camila.rocha@enfil.example', 'LOGIN_SUCESSO', '10.10.1.21', 'Mozilla/5.0 RDO Seed', JSON_OBJECT('origem', 'seed', 'mfa', true), NOW() - INTERVAL 35 MINUTE),
+(21, 2, 22, 'rafael.nunes@enfil.example', 'LOGOUT', '10.10.2.22', 'Mozilla/5.0 RDO Seed', JSON_OBJECT('origem', 'seed'), NOW() - INTERVAL 1 DAY),
+(22, 2, NULL, 'tentativa.invalida@enfil.example', 'LOGIN_FALHA', '200.10.10.10', 'Mozilla/5.0 RDO Seed', JSON_OBJECT('motivo', 'senha_invalida'), NOW() - INTERVAL 3 HOUR);
+
+INSERT INTO auditoria_log (id, empresa_id, usuario_id, colaborador_id, acao, entidade, entidade_id, dados_antes, dados_depois, ip, user_agent, criado_em) VALUES
+(20, 2, 22, 22, 'CREATE', 'rdo', 20, NULL, JSON_OBJECT('status', 'PENDENTE', 'obra_id', 20, 'data_rdo', '2026-05-08'), '10.10.2.22', 'Mozilla/5.0 RDO Seed', '2026-05-08 17:10:00'),
+(21, 2, 21, 21, 'APPROVE', 'rdo', 20, JSON_OBJECT('status', 'PENDENTE'), JSON_OBJECT('status', 'APROVADO'), '10.10.1.21', 'Mozilla/5.0 RDO Seed', '2026-05-08 18:20:00'),
+(22, 2, 23, 26, 'SIGN', 'rdo_assinaturas', 21, JSON_OBJECT('status', 'PENDENTE'), JSON_OBJECT('status', 'ASSINADO'), '177.10.20.30', 'Mozilla/5.0 RDO Seed', '2026-05-08 18:40:00');
+
+SET FOREIGN_KEY_CHECKS = 1;

@@ -77,6 +77,24 @@ class Obra(db.Model):
     def __repr__(self):
         return f'<Obra {self.id}: {self.nome}>'
 
+    def get_config(self, chave):
+        """Resolve a configuração da obra com fallback: Obra -> Empresa -> Sistema"""
+        from app.models.configuracao import ObraConfig, EmpresaConfig, ConfigDefinicao
+        
+        # 1. Tenta Config da Obra
+        cfg_obra = ObraConfig.query.filter_by(obra_id=self.id, chave=chave).first()
+        if cfg_obra and cfg_obra.valor is not None:
+            return cfg_obra.definicao.cast_value(cfg_obra.valor)
+        
+        # 2. Tenta Config da Empresa
+        cfg_emp = EmpresaConfig.query.filter_by(empresa_id=self.empresa_id, chave=chave).first()
+        if cfg_emp and cfg_emp.valor is not None:
+            return cfg_emp.definicao.cast_value(cfg_emp.valor)
+        
+        # 3. Fallback para Definição (valor_padrao)
+        defn = ConfigDefinicao.query.filter_by(chave=chave).first()
+        return defn.cast_value(None) if defn else None
+
 class FrenteTrabalho(db.Model):
     __tablename__ = "frente_trabalho"
     

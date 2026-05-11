@@ -17,3 +17,16 @@ class Empresa(db.Model):
 
     def __repr__(self):
         return f'<Empresa {self.id}: {self.nome}>'
+
+    def get_config(self, chave):
+        """Resolve a configuração da empresa com fallback para o sistema"""
+        from app.models.configuracao import EmpresaConfig, ConfigDefinicao
+        
+        # 1. Tenta Config da Empresa
+        cfg = EmpresaConfig.query.filter_by(empresa_id=self.id, chave=chave).first()
+        if cfg and cfg.valor is not None:
+            return cfg.definicao.cast_value(cfg.valor)
+        
+        # 2. Fallback para Definição (valor_padrao)
+        defn = ConfigDefinicao.query.filter_by(chave=chave).first()
+        return defn.cast_value(None) if defn else None
