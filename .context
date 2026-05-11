@@ -1,333 +1,746 @@
-# Visão geral
-Este projeto é um Sistema de Relatório Diário de Obra baseado na plataforma Flask, projetado para gerenciar informações de obras de forma eficiente e profissional. O sistema permite o registro de atividades diárias, equipe, materiais, ocorrências, medições, entre outras funcionalidades essenciais para o acompanhamento de projetos de construção civil.
+# CONTEXTO COMPLETO DO PROJETO — NOSDE SYSTEM RDO
 
-# Tecnologias utilizadas:
-- Python (Flask)
-- MySQL
+## Visão Geral
+
+Este projeto consiste em uma plataforma corporativa de gestão de Relatório Diário de Obra (RDO), desenvolvida em Flask, com arquitetura multiempresa (multi-tenant), controle de permissões por papéis (RBAC), workflow de aprovação configurável, auditoria completa e capacidade de expansão futura para integrações, BI, automações e clientes externos.
+
+O sistema tem como objetivo centralizar e gerenciar operações de obras de construção civil e engenharia, permitindo o acompanhamento operacional diário das obras, equipes, equipamentos, ocorrências, produtividade, aprovações, documentação e indicadores gerenciais.
+
+O projeto deve possuir arquitetura escalável, modular, segura e preparada para crescimento corporativo.
+
+---
+
+# Stack Tecnológica
+
+## Backend
+
+- Python
+- Flask
 - SQLAlchemy
-- HTML
-- CSS
+
+## Banco de Dados
+
+- MySQL
+- InnoDB
+- UTF8MB4
+
+## Frontend
+
+- HTML5
+- CSS3
 - JavaScript
+- Bootstrap
+- Tailwind CSS
+- Templates Jinja2 responsivos
 
-# No nosso model temos as seguintes tabelas:
-- Model Auxiliares: Clima, Função, Equipamento, Tag de Ocorrência
-- Model Auditoria: Log de Auditoria 
-- Model Empresa: Empresa
-- Model Cliente: Cliente
-- Model Fornecedores: Fornecedores
-- Model Obra: Obra, Frente de Trabalho, Frente Colaborador
-- Model RDO: RDO, Atividade, Ocorrência, Equipamento, Mão de Obra, Foto, Aprovação
-- Model Usuario: Colaborador, Usuario,Papel, Permissão, Papel Permissão, Usuário Papel
-- Model Configurações: Configurações de Empresa, Configurações de Obra.
+## Infraestrutura
 
-# Os requisitos do sistema são:
+- Docker
+- Linux
+- WSL2
+- Ambiente preparado para cloud
 
-    - Colocar o id de cada campo correspondente ao banco de dados nos templates HTML.
+---
 
-    - Requisitos Gerais:
-        - O sistema deve ser capaz de gerar, exportar e imprimir relatórios de todas as rotas das tabelas presentes no sistema.
-        - Rota para o administrador do sistema (eu), para cadastramento de novas empresas, com todas as configurações disponiveis no sistema.
-        - Pagina padrão para erro, deve ser personalizada com a logo da empresa e a cor do tema, com uma mensagem amigável.
-        - Os botões de ação, como "Salvar", "Editar", "Excluir", "Cancelar", "Voltar", devem seguir o mesmo padrão visual, ou seja, ter o mesmo tamanho, cor, fonte e formato. Deve ser possível identificar o que cada botão faz pelo seu texto.
-        - Os botões de ação de Excluir/Deletar devem apenas mudar o campo de ativo para inativo.
-        - Quando eu estiver em modo de edição ao tentar salvar o registro deve verificar se houve mesmo alguma alteração nos campos, caso contrario deve retornar uma mensagem informando que não houve alteração e apenas voltar para a pagina de visualização.
-        - O sistema deve ser transitivo, ou seja, ao tentar realizar em uma tabela ou ele realiza todas as operações necessarias de acordo com o que foi solicitado ou caso alguma tenha dado erro deve retornar uma mensagem informando o que deu errado e não fazer as ações que haviam dado certo.
-        - Caso tenha dado erro ao tentar salvar um novo registro ele não deve apagar os dados que o usuário havia digitado, facilitando pro usuario a correção do erro.
+# Arquitetura do Sistema
 
-    - Template de Lista: Deve ter um template para as listas de registros de cada tabela do sistema dos menus acima, ou seja, um para cada tabela. Com as informações mais relevantes. Nesse template deve ser possivel filtrar, realizar buscas e organizar os registros em ordem crescente ou decrescente. Com uma coluna a mais para a coluna "Ações", sendo as ações padrões visualizar, editar e excluir, com ícones representativos. É importante que cada ação seja identificada pelo mouse. Os botões de visualização, edição e exclusão devem seguir o mesmo padrão visual do sistema. O botão de exclusão deve apenas mudar o campo de ativo para inativo da tabela.
+O sistema deve seguir arquitetura modular corporativa.
 
-    - Requisitos Template Base:
-        - Os templates devem seguir o mesmo padrão visual do sistema, ou seja, ter o mesmo tamanho, cor, fonte e formato.
-        - Os templates devem ser responsivos, ou seja, devem se adaptar a diferentes tamanhos de tela (mobile, tablet e desktop).
-        - Cabeçalho deve conter:
-            - Logo da empresa 
-            - Menu para as rotas disponiveis:
-                - Inicio
-                - Relatórios:
-                    - Lista
-                    - Criar Novo RDO
-                - Cadastros:
-                    - Obras:
-                        - Lista
-                        - Criar Novo
-                    - Clientes:
-                        - Lista
-                        - Criar Novo
-                    - Colaboradores:
-                        - Lista
-                        - Criar Novo
-                    - Usuarios:
-                        - Lista
-                        - Criar Novo
-                    - Fornecedores:
-                        - Lista
-                        - Criar Novo
-                    - Tabelas Auxiliares:
-                        - Clima
-                        - Função
-                        - Equipamento
-                        - Tag de Ocorrência
-                        - Tipo de Obra
-            - Icone de Notificações:
-                - Notifica quando tem uma aprovação pendente pelo usuario, quando um novo rdo da obra é criado e informações importantes...
-            - Seção com informações do usuario, icone, e-mail, role.
-                - Ao passar o mouse da seção, deve mostrar um menu com as seguintes opções:
-                    - Perfil
-                    - Minha Empresa
-                    - Sair
-        - Rodapé deve conter:
-            - Logo da empresa criadora
-            - Nome da empresa criadora (Nosde System RDO) 
-            - Ano
-            - Versão do sistema
-            - Rotas institucionais:
-                - Suporte
-                - Privacidade
-                - Termos de uso
+## Estrutura Esperada
 
-    - Requisitos Inicio:
-        - Resumo Operacional de acordo com o que o usuario tem acesso
-        - Se o usuario for administrador da plataforma, mostrar todas as empresas.
-        - Se o usuario for administrador de uma empresa, mostrar todas as obras da empresa.
-        - Se o usuario for administrador de uma obra, mostrar todas as frentes de trabalho da obra.
-        - Se o usuario for administrador de uma frente de trabalho, mostrar todas as atividades da frente de trabalho.
+```plaintext
+app/
+├── routes/
+├── services/
+├── repositories/
+├── validators/
+├── permissions/
+├── middleware/
+├── templates/
+├── static/
+├── models/
+├── forms/
+├── utils/
+├── exports/
+├── notifications/
+├── workflow/
+└── integrations/
+```
 
-    - Requisitos Empresa:
-        - Em empresa, deve ser possível configurar o sistema para personalização da propria empresa
-        - Nome da empresa
-        - Logo da empresa
-        - Ícone da empresa
-        - Cor do tema de acordo com a empresa
-        - Configurar empresa (Workflow de aprovação, Modelo de RDO)
+---
 
-    - Requisitos Obra:
-        - Template de Formulário:
-            - Em cada obra, deve ser possível adicionar os dados da obra, como:
-                - Nome da obra
-                - CNPJ da Obra (Se for possivel trazer os dados automaticamente seria uma boa.)
-                - Nome do Contratante (Aqui será o cliente, com base na tabela cadastrada no sistema esse campo será de escolha)
-                - Endereço da obra (CEP, Logradouro, Número, Complemento, Bairro, Cidade, Estado, País), com pesquisa automatica com base no CEP.
-                - Tipo da Obra com base na tabela de Tipos de Obra. Campo de Escolha.
-                - Data de início da obra
-                - Data de término da obra
-                - Data de término da obra planejada
-                - Responsável técnico
-                - Hora Padrão de Entrada
-                - Hora Padrão de Intervalo Entrada
-                - Hora Padrão de Intervalo Saída
-                - Hora Padrão de Saída
-                - Ativo ou Inativo
-                - Frente de Trabalho:
-                    - Nome da Frente de Trabalho
-                    - Centro de Custo
-                    - Data Inicio
-                    - Data Fim 
-                    - Data Fim Planejada
-                    - Ativo ou Inativo
-                    - Colaborador: 
-                        - Associar os colaboradores cadastrados no sistema, sejam eles de quadro próprio ou de empresa terceirizada.
-                    Observações: A ideia é que a obra tenha varias frentes de trabalho e cada frente de trabalho tenha seus colaboradores pré-definidos para que na hora de realizar o RDO, o preenchimento seja mais rapido.
-                - Configurações da obra (Workflow de aprovação, Modelo RDO). Caso não tenha nenhuma personalização, herda as configurações da empresa.
-                - Validações:
-                    - cliente_id deve pertencer à mesma empresa
-                    - usuário responsável deve ter acesso à obra
+# Regras Arquiteturais Obrigatórias
 
-    - Requisitos RDO:
-        - Lista RDO
-            - Deve ter uma tabela com as colunas de status, documento, data rdo, obra, criação e botões de ação (PDF, visualizar, editar, deletar)
+## Multiempresa (Multi-Tenant)
 
-        - Formulário RDO
-            - O RDO deve ser preenchido de acordo com as seguintes seções:
-                - Dados do RDO
-                    - Obra
-                    - Data do RDO, trazendo automaticamente a data que o usuario está criando
-                    - Frente de Trabalho
-                    - Jornada de Trabalho (Campo gerado automaticamente com base na obra)
-                    - Horário de Entrada
-                    - Horário de Intervalo Entrada
-                    - Horário de Intervalo Saída
-                    - Horário de Saída
-                    - Condições Climáticas com busca automática com base em localização da obra, que é um dado que está na tabela de Obra.
-                    - Observações Gerais sobre o RDO mas apenas no final do relatório.
-                - Atividades
-                    - Com a descrição
-                    - Status da atividade
-                - Equipamentos  
-                    - Deve ser registrado: equipamento, quantidade, horas utilizadas, status, motivo_parada.
-                - Mão de Obra
-                    - Trazendo os valores já pré cadastrado na frente de trabalho.
-                    - Com possibilidade de registrar usuarios que não estão pré cadastrado na frente de trabalho. Caso o uuario não esteja cadastrado nem no sistema, deve abrir um modal para cadastrar o mesmo, cadastro rápido.
-                    - Deve ser registrado: Colaborador, Função, , quantidade horas, tipo de mão de obra (Próprio ou Terceirizado ou Cliente), observação.
-                - Ocorrências
-                    - Deve ser registrado tipo_ocorrencia, descrição, impacto, tempo_paralisação. 
-                - Aprovação
-                    - Workflow padrão dependerá do fluxo configurado nas configurações da empresa ou obra.
-                    - No workflow deve ser possivel adicionar mais um aprovador. (Mas apenas aqueles que tenham acesso a obra). 
-                    - Ao salvar deve registrar o hash e o ip do usuario e o usuario deve dar uma assinatura para validar (mas também dependerá do que foi configurado em obra podendo ser obrigatório assinar ou apenas o registro de aprovação é o suficiente.)
-                    - quando todos aprovarem ou um rejeitar, atualiza o status do RDO.
-    - Requisitos Clientes:  
-        - Lista
-        - Razão social
-        - Nome fantasia
-        - CNPJ
-        - Contato
-        - Status
+Todas as tabelas transacionais e operacionais devem possuir:
 
-        Filtros:
+```sql
+empresa_id
+```
 
-        - Nome
-        - CNPJ
-        - Ativo
-        - Criar / Editar
+Nenhum usuário poderá visualizar ou manipular dados de outra empresa.
 
-        Campos:
+Toda consulta deve obrigatoriamente filtrar:
 
-        - razao_social (obrigatório)
-        - nome_fantasia
-        - cnpj (obrigatório, único por empresa)
+```python
+empresa_id = current_user.empresa_id
+```
 
-        - contato_nome
-        - contato_email
-        - contato_telefone
+---
 
-        - ativo
+## Soft Delete
 
-        Validações:
+Nenhum registro operacional deverá ser removido fisicamente.
 
-        - CNPJ único por empresa
-    
-    - Requisitos Fornecedores:
-        - Lista
-        - Razão social
-        - Nome fantasia
-        - CNPJ
-        - Contato
-        - Status
+O sistema deve utilizar:
 
-        Filtros:
+```sql
+ativo BOOLEAN DEFAULT TRUE
+```
 
-        - Nome
-        - CNPJ
-        - Ativo
-        - Criar / Editar
+Ao excluir:
 
-        Campos:
+- Alterar apenas `ativo = FALSE`
+- Manter rastreabilidade
+- Preservar integridade histórica
 
-        - razao_social (obrigatório)
-        - nome_fantasia
-        - cnpj (obrigatório, único por empresa)
+---
 
-        - contato_nome
-        - contato_email
-        - contato_telefone
+## Auditoria
 
-        - ativo
+Toda operação crítica deve registrar:
 
-        Validações:
+- Usuário
+- Data/Hora
+- IP
+- User Agent
+- Dados antes
+- Dados depois
+- Entidade afetada
 
-        - CNPJ único por empresa
+Tabela existente:
 
-    - Requisitos Colaboradores:
-        - Lista
-        - Nome
-        - CPF
-        - Telefone
-        - Status
+- `auditoria_log`
 
-        Filtros:
+O sistema deve possuir middleware de auditoria automática.
 
-        - Nome
-        - CPF
-        - Status
-        - Criar / Editar
+---
 
-        Campos:
+# Segurança
 
-        - nome (obrigatório)
-        - cpf (obrigatório, único por empresa)
-        - telefone (obrigatório)
-        - ativo
+## Requisitos Obrigatórios
 
-        Validações:
+- Senha com hash seguro
+- CSRF Protection
+- Session Management
+- Controle RBAC
+- Rate Limit
+- Proteção contra SQL Injection
+- Proteção contra XSS
+- Logs de acesso
+- Controle de permissões por rota
+- Logout seguro
+- Expiração de sessão
 
-        - CPF único por empresa
+---
 
-    - Requisitos Usuarios:
-        - Lista
-        - Nome
-        - E-mail
-        - Telefone
-        - Status
+# Controle de Permissões (RBAC)
 
-        Filtros:
+O sistema deve utilizar:
 
-        - Nome
-        - E-mail
-        - Status
-        - Criar / Editar
+- Usuários
+- Papéis
+- Permissões
+- Usuário Papel
+- Papel Permissão
 
-        Campos:
+As permissões devem controlar:
 
-        - nome (obrigatório)
-        - email (obrigatório, único por empresa)
-        - telefone (obrigatório)
-        - ativo
+- Menus
+- Rotas
+- Ações
+- Visualização
+- Edição
+- Aprovação
+- Exportação
 
-        Validações:
+## Exemplo
 
-        - E-mail único por empresa
-    
-    - Requisitos Auxiliares:
-        - Clima
+```python
+@permission_required('rdo.create')
+```
 
-            Campos:
+---
 
-            nome (obrigatório)
-            descricao
-            ativo
+# Governança de Dados
 
-        - Função
+Existe uma tabela central chamada:
 
-            Campos:
+```sql
+cad_listas
+```
 
-            nome (obrigatório)
-            descricao
-            ativo
+Responsável por:
 
-        - Equipamento
+- Catálogo de tabelas
+- Governança
+- Integração
+- Versionamento estrutural
+- Rastreabilidade
 
-            Campos:
+---
 
-            nome (obrigatório)
-            descricao
-            ativo
+# Modelos Existentes
 
-        - Tag de Ocorrência
+## Modelos Auxiliares
 
-            Campos:
+- Clima
+- Função
+- Equipamento
+- Tag de Ocorrência
+- Tipo de Obra
 
-            nome (obrigatório)
-            descricao
-            ativo
+## Auditoria
 
-        - Tipo de Obra
+- Auditoria Log
 
-            Campos:
+## Empresa
 
-            nome (obrigatório, único)
-            descricao
-            ativo
+- Empresa
 
-        Regras Globais:
-        - Nenhum usuário acessa dados de outra empresa, ele só vê os dados da sua empresa.
-        - A senha do usuario é criptografada com hash, de acordo com o sistema de autenticação.
-        - As rotas devem ser carregadas de acordo com as permissões do usuario/role.
-        
-        Resultado esperado
-            Formulários consistentes
-            Dados íntegros
-            Pronto para integração com RDO
-            Base sólida para expansão (cliente externo, workflow, BI)    
+## Cliente
 
-# Ajustes a serem feitos:
-- Devido a alteração nas tabelas e nos models, todos os templates estão desatualizados, devendo ser atualizados de acordo com os novos models.
+- Cliente
+
+## Fornecedor
+
+- Fornecedor
+
+## Obras
+
+- Obras
+- Frente de Trabalho
+- Frente Colaborador
+- Obra Usuário
+
+## Usuários
+
+- Colaborador
+- Usuário
+- Papel
+- Permissão
+- Usuário Papel
+- Papel Permissão
+
+## RDO
+
+- RDO
+- Atividades
+- Equipamentos
+- Mão de Obra
+- Ocorrências
+- Fotos
+- Aprovações
+- Assinaturas
+
+## Configurações
+
+- Configuração da Empresa
+- Configuração da Obra
+- Definições Globais
+
+---
+
+# Requisitos Gerais do Sistema
+
+## Exportação
+
+Todas as rotas e listagens devem permitir:
+
+- Exportar PDF
+- Exportar XLSX
+- Exportar CSV
+- Impressão
+
+---
+
+## Transações
+
+Todas as operações críticas devem utilizar transação.
+
+Se qualquer etapa falhar:
+
+- Realizar rollback completo
+- Não permitir alterações parciais
+
+---
+
+## Persistência de Formulário
+
+Caso haja erro ao salvar:
+
+- Manter dados preenchidos
+- Exibir erros amigáveis
+- Evitar perda de informações
+
+---
+
+## Verificação de Alteração
+
+Ao editar registros:
+
+- Validar se houve alteração real
+- Caso não exista alteração:
+  - Exibir mensagem
+  - Retornar para visualização
+
+---
+
+## Templates
+
+Todos os templates devem:
+
+- Seguir padrão visual único
+- Ser responsivos
+- Reutilizar componentes
+- Possuir acessibilidade
+- Possuir IDs compatíveis com banco/model
+
+---
+
+# Padronização HTML
+
+Todos os campos HTML devem possuir IDs padronizados conforme model/banco.
+
+## Exemplos
+
+```html
+<input id="obra_nome" name="nome">
+
+<select id="cliente_id" name="cliente_id">
+
+<input id="hora_entrada_padrao">
+```
+
+Nunca utilizar:
+
+```html
+id="field"
+id="name"
+```
+
+Objetivos:
+
+- Automação
+- Testes automatizados
+- Integração com IA
+- Rastreabilidade frontend
+
+---
+
+# Componentes Visuais
+
+## Botões
+
+Todos os botões devem seguir padrão único:
+
+- Tamanho
+- Fonte
+- Cor
+- Espaçamento
+- Borda
+- Ícones
+
+## Botões Obrigatórios
+
+- Salvar
+- Editar
+- Excluir
+- Cancelar
+- Voltar
+- Aprovar
+- Rejeitar
+- Exportar
+
+---
+
+# Template Base
+
+## Cabeçalho
+
+Deve possuir:
+
+- Logo da empresa
+- Menu dinâmico conforme permissão
+- Notificações
+- Usuário logado
+- Menu dropdown
+
+---
+
+## Menu Principal
+
+### Início
+
+### Relatórios
+
+- Lista RDO
+- Novo RDO
+
+### Cadastros
+
+- Obras
+- Clientes
+- Colaboradores
+- Usuários
+- Fornecedores
+
+### Auxiliares
+
+- Clima
+- Função
+- Equipamento
+- Tag Ocorrência
+- Tipo de Obra
+
+---
+
+# Notificações
+
+O sistema deve possuir tabela:
+
+```sql
+notificacoes
+```
+
+## Funcionalidades
+
+- Aprovações pendentes
+- Novo RDO
+- Alertas
+- Rejeições
+- Avisos operacionais
+
+---
+
+# Rodapé
+
+Deve conter:
+
+- Logo do sistema
+- Nome da plataforma
+- Versão
+- Ano
+- Suporte
+- Privacidade
+- Termos de uso
+
+---
+
+# Dashboard Inicial
+
+O dashboard deve ser dinâmico conforme permissão.
+
+## Administrador Plataforma
+
+- Todas as empresas
+- Métricas globais
+
+## Administrador Empresa
+
+- Obras da empresa
+- Indicadores da empresa
+
+## Administrador Obra
+
+- Frentes
+- Produtividade
+- Status
+
+## Administrador Frente
+
+- Atividades
+- Mão de obra
+- Produção
+
+---
+
+# Requisitos Empresa
+
+Cada empresa poderá personalizar:
+
+- Nome
+- Logo
+- Ícone
+- Tema
+- Cores
+- Workflow
+- Modelo RDO
+
+## Campos Recomendados
+
+- tema_cor_primaria
+- tema_cor_secundaria
+- dark_mode
+- favicon
+
+---
+
+# Requisitos Obras
+
+## Campos
+
+- Nome
+- Cliente
+- Tipo de Obra
+- Responsável
+- CNPJ
+- Datas
+- Endereço completo
+- Jornada padrão
+- Configurações
+
+---
+
+# Integrações
+
+## CEP
+
+Consulta automática via API.
+
+## CNPJ
+
+Possibilidade futura de integração automática.
+
+---
+
+# Frentes de Trabalho
+
+Cada obra:
+
+- Possui várias frentes
+- Possui equipes vinculadas a cada frente.
+- Acelera preenchimento do RDO
+
+---
+
+# Requisitos RDO
+
+## Status Padronizados
+
+```sql
+RASCUNHO
+PENDENTE
+APROVADO
+REJEITADO
+CANCELADO
+```
+
+---
+
+# Workflow
+
+Workflow configurável por:
+
+- Empresa
+- Obra
+- Níveis
+- Aprovadores
+- SLA
+- Aprovação paralela
+- Rejeição
+
+---
+
+# Aprovação
+
+Registrar:
+
+- Hash
+- IP
+- Assinatura
+- Data
+- Usuário
+
+---
+
+# Bloqueio Pós Aprovação
+
+RDO aprovado:
+
+- Não pode ser editado
+- Deve ser versionado
+
+---
+
+# Versionamento
+
+O RDO deve possuir:
+
+- Controle de versão
+- Histórico
+- Rastreabilidade
+
+---
+
+# Módulos Operacionais
+
+## Atividades
+
+- Descrição
+- Status
+- Observação
+
+## Equipamentos
+
+- Equipamento
+- Quantidade
+- Horas
+- Status
+- Motivo parada
+
+## Mão de Obra
+
+- Colaborador
+- Função
+- Horas
+- Tipo
+- Observação
+
+## Ocorrências
+
+- Tipo
+- Impacto
+- Paralisação
+- Descrição
+
+## Fotos
+
+- Anexos
+- Evidências
+- Imagens da obra
+
+---
+
+# Arquivos e Documentos
+
+Criar estrutura genérica:
+
+```sql
+arquivos
+```
+
+## Finalidade
+
+- PDF
+- Imagens
+- ART
+- Contratos
+- Anexos
+- Documentos
+
+## Compatibilidade
+
+- Local
+- S3
+- Azure
+- MinIO
+
+---
+
+# Requisitos de Listagem
+
+Todas as listagens devem possuir:
+
+- Filtros
+- Paginação
+- Busca
+- Ordenação
+- Exportação
+- Ações rápidas
+
+## Ações
+
+- Visualizar
+- Editar
+- Excluir
+
+---
+
+# Controle de Sessão
+
+Criar estrutura para:
+
+- Sessões ativas
+- Auditoria login
+- Logout remoto
+- Expiração
+
+---
+
+# BI e Indicadores
+
+Estrutura preparada para:
+
+- Power BI
+- Dashboards
+- SLA
+- Produtividade
+- Lead Time
+- Histórico operacional
+
+---
+
+# Integrações Futuras
+
+O sistema deve estar preparado para integração com:
+
+- Power BI
+- Power Apps
+- Power Automate
+- UiPath
+- n8n
+- ERP
+- APIs externas
+- WhatsApp
+- E-mail
+- OCR
+- IA
+
+---
+
+# Regras Globais
+
+- Nenhum usuário acessa outra empresa
+- Permissões controlam menus e rotas
+- Toda operação crítica deve ser auditada
+- Todo delete é lógico
+- Todo RDO aprovado é imutável
+- Todo upload deve ser rastreável
+- Toda listagem deve exportar dados
+- Todo formulário deve manter consistência visual
+
+---
+
+# Objetivo Final
+
+Construir uma plataforma corporativa de gestão operacional de obras com:
+
+- Arquitetura escalável
+- Governança de dados
+- Rastreabilidade completa
+- Workflow corporativo
+- Multiempresa
+- Auditoria
+- BI Ready
+- Integrações futuras
+- Experiência profissional
+- Segurança corporativa
+- Expansão modular
+
+
+O sistema deve estar preparado para crescimento enterprise e evolução contínua sem necessidade de refatoração estrutural massiva.
+
+Feito até o momento:
+- 
