@@ -80,6 +80,14 @@ Objetivo:
 
 Dividir `app/routes/auth.py` sem mudar comportamento. Esta branch deve ser o mais mecanica possivel.
 
+Status em 2026-05-11:
+
+- Separacao mecanica aplicada.
+- `app/routes/auth.py` ficou responsavel por autenticacao, setup, recuperacao de senha e paginas institucionais.
+- Foi criado `app/routes/auth_common.py` para concentrar blueprint, imports, constantes, decorators e helpers compartilhados.
+- Foram criados modulos por dominio mantendo o mesmo `auth_bp`, para preservar endpoints como `auth.lista_rdo`, `auth.criar_rdo` e `auth.inicio`.
+- A validacao Python ainda depende de corrigir o ambiente local, pois o executavel atual aponta para Microsoft Store e nao inicia.
+
 Arquivos sugeridos:
 
 - `app/routes/auth.py`
