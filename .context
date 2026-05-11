@@ -11,60 +11,323 @@ Este projeto é um Sistema de Relatório Diário de Obra baseado na plataforma F
 
 # No nosso model temos as seguintes tabelas:
 - Model Auxiliares: Clima, Função, Equipamento, Tag de Ocorrência
+- Model Auditoria: Log de Auditoria 
 - Model Empresa: Empresa
+- Model Cliente: Cliente
 - Model Fornecedores: Fornecedores
 - Model Obra: Obra, Frente de Trabalho, Frente Colaborador
 - Model RDO: RDO, Atividade, Ocorrência, Equipamento, Mão de Obra, Foto, Aprovação
-- Model Usuario: Colaborador, Usuario
-- Model RBAC: Papel, Permissão, Papel Permissão, Usuário Papel
+- Model Usuario: Colaborador, Usuario,Papel, Permissão, Papel Permissão, Usuário Papel
+- Model Configurações: Configurações de Empresa, Configurações de Obra.
 
 # Os requisitos do sistema são:
 
+    - Colocar o id de cada campo correspondente ao banco de dados nos templates HTML.
+
     - Requisitos Gerais:
         - O sistema deve ser capaz de gerar, exportar e imprimir relatórios de todas as rotas das tabelas presentes no sistema.
+        - Rota para o administrador do sistema (eu), para cadastramento de novas empresas, com todas as configurações disponiveis no sistema.
+        - Pagina padrão para erro, deve ser personalizada com a logo da empresa e a cor do tema, com uma mensagem amigável.
+        - Os botões de ação, como "Salvar", "Editar", "Excluir", "Cancelar", "Voltar", devem seguir o mesmo padrão visual, ou seja, ter o mesmo tamanho, cor, fonte e formato. Deve ser possível identificar o que cada botão faz pelo seu texto.
+        - Os botões de ação de Excluir/Deletar devem apenas mudar o campo de ativo para inativo.
+        - Quando eu estiver em modo de edição ao tentar salvar o registro deve verificar se houve mesmo alguma alteração nos campos, caso contrario deve retornar uma mensagem informando que não houve alteração e apenas voltar para a pagina de visualização.
+        - O sistema deve ser transitivo, ou seja, ao tentar realizar em uma tabela ou ele realiza todas as operações necessarias de acordo com o que foi solicitado ou caso alguma tenha dado erro deve retornar uma mensagem informando o que deu errado e não fazer as ações que haviam dado certo.
+        - Caso tenha dado erro ao tentar salvar um novo registro ele não deve apagar os dados que o usuário havia digitado, facilitando pro usuario a correção do erro.
+
+    - Template de Lista: Deve ter um template para as listas de registros de cada tabela do sistema dos menus acima, ou seja, um para cada tabela. Com as informações mais relevantes. Nesse template deve ser possivel filtrar, realizar buscas e organizar os registros em ordem crescente ou decrescente. Com uma coluna a mais para a coluna "Ações", sendo as ações padrões visualizar, editar e excluir, com ícones representativos. É importante que cada ação seja identificada pelo mouse. Os botões de visualização, edição e exclusão devem seguir o mesmo padrão visual do sistema. O botão de exclusão deve apenas mudar o campo de ativo para inativo da tabela.
+
+    - Requisitos Template Base:
+        - Os templates devem seguir o mesmo padrão visual do sistema, ou seja, ter o mesmo tamanho, cor, fonte e formato.
+        - Os templates devem ser responsivos, ou seja, devem se adaptar a diferentes tamanhos de tela (mobile, tablet e desktop).
+        - Cabeçalho deve conter:
+            - Logo da empresa 
+            - Menu para as rotas disponiveis:
+                - Inicio
+                - Relatórios:
+                    - Lista
+                    - Criar Novo RDO
+                - Cadastros:
+                    - Obras:
+                        - Lista
+                        - Criar Novo
+                    - Clientes:
+                        - Lista
+                        - Criar Novo
+                    - Colaboradores:
+                        - Lista
+                        - Criar Novo
+                    - Usuarios:
+                        - Lista
+                        - Criar Novo
+                    - Fornecedores:
+                        - Lista
+                        - Criar Novo
+                    - Tabelas Auxiliares:
+                        - Clima
+                        - Função
+                        - Equipamento
+                        - Tag de Ocorrência
+                        - Tipo de Obra
+            - Icone de Notificações:
+                - Notifica quando tem uma aprovação pendente pelo usuario, quando um novo rdo da obra é criado e informações importantes...
+            - Seção com informações do usuario, icone, e-mail, role.
+                - Ao passar o mouse da seção, deve mostrar um menu com as seguintes opções:
+                    - Perfil
+                    - Minha Empresa
+                    - Sair
+        - Rodapé deve conter:
+            - Logo da empresa criadora
+            - Nome da empresa criadora (Nosde System RDO) 
+            - Ano
+            - Versão do sistema
+            - Rotas institucionais:
+                - Suporte
+                - Privacidade
+                - Termos de uso
+
+    - Requisitos Inicio:
+        - Resumo Operacional de acordo com o que o usuario tem acesso
+        - Se o usuario for administrador da plataforma, mostrar todas as empresas.
+        - Se o usuario for administrador de uma empresa, mostrar todas as obras da empresa.
+        - Se o usuario for administrador de uma obra, mostrar todas as frentes de trabalho da obra.
+        - Se o usuario for administrador de uma frente de trabalho, mostrar todas as atividades da frente de trabalho.
 
     - Requisitos Empresa:
         - Em empresa, deve ser possível configurar o sistema para personalização da propria empresa
         - Nome da empresa
         - Logo da empresa
         - Ícone da empresa
-        - Cor do tema
-        - Favicon
-        - Deve ser possível logar na plataforma como adminstrador, usando um email e senha, verificação de duas etapas, por e-mail ou por código no whatsapp.
-        - Deve ser possível modelar o RDO de acordo com o que a empresa precisa.
+        - Cor do tema de acordo com a empresa
+        - Configurar empresa (Workflow de aprovação, Modelo de RDO)
 
     - Requisitos Obra:
-        - Em cada obra, deve ser possível adicionar os dados da obra, como:
-        - Nome da obra
-        - Código da obra
-        - Endereço da obra
-        - Data de início da obra
-        - Data de término da obra
-        - Data de término da obra planejada
-        - Responsável técnico
-        - Hora Padrão de Entrada
-        - Hora Padrão de Intervalo Entrada
-        - Hora Padrão de Intervalo Saída
-        - Hora Padrão de Saída
-        - Ativo ou Inativo
-        - Frente de Trabalho:
-            - Nome da Frente de Trabalho
-            - Centro de Custo
-            - Data Inicio
-            - Data Fim 
-            - Data Fim Planejada
-            - Ativo ou Inativo
-            - Colaborador: 
-                - Associar os colaboradores cadastrados no sistema, sejam eles de quadro próprio ou de empresa terceirizada.
-            Observações: A ideia é que a obra tenha varias frentes de trabalho e cada frente de trabalho tenha seus colaboradores pré-definidos para que na hora de realizar o RDO, o preenchimento seja mais rapido.
-
-        - Pagina padrão para erro, deve ser personalizada com a logo da empresa e a cor do tema, com uma mensagem amigável.
+        - Template de Formulário:
+            - Em cada obra, deve ser possível adicionar os dados da obra, como:
+                - Nome da obra
+                - CNPJ da Obra (Se for possivel trazer os dados automaticamente seria uma boa.)
+                - Nome do Contratante (Aqui será o cliente, com base na tabela cadastrada no sistema esse campo será de escolha)
+                - Endereço da obra (CEP, Logradouro, Número, Complemento, Bairro, Cidade, Estado, País), com pesquisa automatica com base no CEP.
+                - Tipo da Obra com base na tabela de Tipos de Obra. Campo de Escolha.
+                - Data de início da obra
+                - Data de término da obra
+                - Data de término da obra planejada
+                - Responsável técnico
+                - Hora Padrão de Entrada
+                - Hora Padrão de Intervalo Entrada
+                - Hora Padrão de Intervalo Saída
+                - Hora Padrão de Saída
+                - Ativo ou Inativo
+                - Frente de Trabalho:
+                    - Nome da Frente de Trabalho
+                    - Centro de Custo
+                    - Data Inicio
+                    - Data Fim 
+                    - Data Fim Planejada
+                    - Ativo ou Inativo
+                    - Colaborador: 
+                        - Associar os colaboradores cadastrados no sistema, sejam eles de quadro próprio ou de empresa terceirizada.
+                    Observações: A ideia é que a obra tenha varias frentes de trabalho e cada frente de trabalho tenha seus colaboradores pré-definidos para que na hora de realizar o RDO, o preenchimento seja mais rapido.
+                - Configurações da obra (Workflow de aprovação, Modelo RDO). Caso não tenha nenhuma personalização, herda as configurações da empresa.
+                - Validações:
+                    - cliente_id deve pertencer à mesma empresa
+                    - usuário responsável deve ter acesso à obra
 
     - Requisitos RDO:
+        - Lista RDO
+            - Deve ter uma tabela com as colunas de status, documento, data rdo, obra, criação e botões de ação (PDF, visualizar, editar, deletar)
 
+        - Formulário RDO
+            - O RDO deve ser preenchido de acordo com as seguintes seções:
+                - Dados do RDO
+                    - Obra
+                    - Data do RDO, trazendo automaticamente a data que o usuario está criando
+                    - Frente de Trabalho
+                    - Jornada de Trabalho (Campo gerado automaticamente com base na obra)
+                    - Horário de Entrada
+                    - Horário de Intervalo Entrada
+                    - Horário de Intervalo Saída
+                    - Horário de Saída
+                    - Condições Climáticas com busca automática com base em localização da obra, que é um dado que está na tabela de Obra.
+                    - Observações Gerais sobre o RDO mas apenas no final do relatório.
+                - Atividades
+                    - Com a descrição
+                    - Status da atividade
+                - Equipamentos  
+                    - Deve ser registrado: equipamento, quantidade, horas utilizadas, status, motivo_parada.
+                - Mão de Obra
+                    - Trazendo os valores já pré cadastrado na frente de trabalho.
+                    - Com possibilidade de registrar usuarios que não estão pré cadastrado na frente de trabalho. Caso o uuario não esteja cadastrado nem no sistema, deve abrir um modal para cadastrar o mesmo, cadastro rápido.
+                    - Deve ser registrado: Colaborador, Função, , quantidade horas, tipo de mão de obra (Próprio ou Terceirizado ou Cliente), observação.
+                - Ocorrências
+                    - Deve ser registrado tipo_ocorrencia, descrição, impacto, tempo_paralisação. 
+                - Aprovação
+                    - Workflow padrão dependerá do fluxo configurado nas configurações da empresa ou obra.
+                    - No workflow deve ser possivel adicionar mais um aprovador. (Mas apenas aqueles que tenham acesso a obra). 
+                    - Ao salvar deve registrar o hash e o ip do usuario e o usuario deve dar uma assinatura para validar (mas também dependerá do que foi configurado em obra podendo ser obrigatório assinar ou apenas o registro de aprovação é o suficiente.)
+                    - quando todos aprovarem ou um rejeitar, atualiza o status do RDO.
+    - Requisitos Clientes:  
+        - Lista
+        - Razão social
+        - Nome fantasia
+        - CNPJ
+        - Contato
+        - Status
+
+        Filtros:
+
+        - Nome
+        - CNPJ
+        - Ativo
+        - Criar / Editar
+
+        Campos:
+
+        - razao_social (obrigatório)
+        - nome_fantasia
+        - cnpj (obrigatório, único por empresa)
+
+        - contato_nome
+        - contato_email
+        - contato_telefone
+
+        - ativo
+
+        Validações:
+
+        - CNPJ único por empresa
+    
+    - Requisitos Fornecedores:
+        - Lista
+        - Razão social
+        - Nome fantasia
+        - CNPJ
+        - Contato
+        - Status
+
+        Filtros:
+
+        - Nome
+        - CNPJ
+        - Ativo
+        - Criar / Editar
+
+        Campos:
+
+        - razao_social (obrigatório)
+        - nome_fantasia
+        - cnpj (obrigatório, único por empresa)
+
+        - contato_nome
+        - contato_email
+        - contato_telefone
+
+        - ativo
+
+        Validações:
+
+        - CNPJ único por empresa
+
+    - Requisitos Colaboradores:
+        - Lista
+        - Nome
+        - CPF
+        - Telefone
+        - Status
+
+        Filtros:
+
+        - Nome
+        - CPF
+        - Status
+        - Criar / Editar
+
+        Campos:
+
+        - nome (obrigatório)
+        - cpf (obrigatório, único por empresa)
+        - telefone (obrigatório)
+        - ativo
+
+        Validações:
+
+        - CPF único por empresa
+
+    - Requisitos Usuarios:
+        - Lista
+        - Nome
+        - E-mail
+        - Telefone
+        - Status
+
+        Filtros:
+
+        - Nome
+        - E-mail
+        - Status
+        - Criar / Editar
+
+        Campos:
+
+        - nome (obrigatório)
+        - email (obrigatório, único por empresa)
+        - telefone (obrigatório)
+        - ativo
+
+        Validações:
+
+        - E-mail único por empresa
+    
+    - Requisitos Auxiliares:
+        - Clima
+
+            Campos:
+
+            nome (obrigatório)
+            descricao
+            ativo
+
+        - Função
+
+            Campos:
+
+            nome (obrigatório)
+            descricao
+            ativo
+
+        - Equipamento
+
+            Campos:
+
+            nome (obrigatório)
+            descricao
+            ativo
+
+        - Tag de Ocorrência
+
+            Campos:
+
+            nome (obrigatório)
+            descricao
+            ativo
+
+        - Tipo de Obra
+
+            Campos:
+
+            nome (obrigatório, único)
+            descricao
+            ativo
+
+        Regras Globais:
+        - Nenhum usuário acessa dados de outra empresa, ele só vê os dados da sua empresa.
+        - A senha do usuario é criptografada com hash, de acordo com o sistema de autenticação.
+        - As rotas devem ser carregadas de acordo com as permissões do usuario/role.
+        
+        Resultado esperado
+            Formulários consistentes
+            Dados íntegros
+            Pronto para integração com RDO
+            Base sólida para expansão (cliente externo, workflow, BI)    
 
 # Ajustes a serem feitos:
 - Devido a alteração nas tabelas e nos models, todos os templates estão desatualizados, devendo ser atualizados de acordo com os novos models.
-
-
-
