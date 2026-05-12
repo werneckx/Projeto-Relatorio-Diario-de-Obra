@@ -51,6 +51,20 @@ class RDO(db.Model):
         return 0
 
     @property
+    def assinaturas(self):
+        """
+        Alias legado usado pelos templates para a lista de aprovações do RDO.
+        Mantém compatibilidade com telas antigas que esperam `rdo.assinaturas`.
+        """
+        try:
+            return self.aprovacoes.all()
+        except Exception:
+            try:
+                return list(self.aprovacoes)
+            except Exception:
+                return []
+
+    @property
     def usuario(self):
         from app.models.usuario import Usuario
         return Usuario.query.get(self.criado_por) if self.criado_por else None
@@ -207,6 +221,11 @@ class RDOAprovacao(db.Model):
     aprovador = db.relationship('Usuario')
     usuario = db.synonym("aprovador")
     img_assinatura = db.synonym("imagem_assinatura")
+
+    @property
+    def id_usuario(self):
+        """Alias legado (templates antigos usam `ass.id_usuario`)."""
+        return self.aprovador_id
 
     @property
     def motivo_rejeicao(self):
