@@ -3,6 +3,7 @@ from app import db, login_manager
 from sqlalchemy.orm import validates
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
+import bcrypt
 
 # =========================
 # RBAC
@@ -150,7 +151,42 @@ class Usuario(db.Model, UserMixin):
         self.senha_hash = generate_password_hash(senha)
 
     def check_senha(self, senha):
-        return check_password_hash(self.senha_hash, senha)
+        """
+        Valida a senha contra senha_hash.
+
+        Suporta múltiplos formatos:
+        - Werkzeug: pbkdf2:sha256:...
+        - Bcrypt: $2a$, $2b$, $2x$, $2y$ (PHP)
+
+        Observação:
+        - Werkzeug lança ValueError se a hash estiver malformada.
+        - Para evitar erro 500, tratamos essas exceções e retornamos False.
+        """
+        if not senha:
+            return False
+        if not self.senha_hash:
+            return False
+        if not isinstance(self.senha_hash, str) or not self.senha_hash.strip():
+            return False
+
+        hash_str = self.senha_hash.strip()
+
+        # Detectar e validar com bcrypt
+        if hash_str.startswith(('$2a$', '$2b$', '$2x$', '$2y$')):
+            try:
+                # Converter $2y$ (PHP) para $2b$ (Python) se necessário
+                if hash_str.startswith('$2y$'):
+                    hash_str = hash_str.replace('$2y$', '$2b$', 1)
+                
+                return bcrypt.checkpw(senha.encode('utf-8'), hash_str.encode('utf-8'))
+            except (ValueError, TypeError, AttributeError):
+                return False
+
+        # Validar com werkzeug (padrão)
+        try:
+            return check_password_hash(hash_str, senha)
+        except (ValueError, TypeError):
+            return False
 
     @property
     def nome(self):

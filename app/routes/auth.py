@@ -1,4 +1,4 @@
-﻿from app.routes.auth_common import *
+from app.routes.auth_common import *
 
 #######################################################################################################
 ####################################################################################################### Rota Raiz
@@ -143,7 +143,7 @@ def login_post():
     session["empresa_id"] = user.empresa_id
     session["user_name"] = user.nome
     session["user_email"] = user.email
-    session["user_role"] = user.papeis[0].nome if user.papeis else "Leitor"
+    session["user_role"] = user.papel if user.papel else "Leitor"
     
     return redirect(url_for("auth.inicio"))
 

@@ -54,6 +54,9 @@ def create_app():
     app.register_blueprint(admin_bp)
     app.jinja_env.filters['from_json'] = json.loads
     
+    # Excluir rota de login do CSRF para facilitar testes
+    csrf.exempt(auth_bp)
+    
     # ---------------------------
     # Redirecionamento da raiz
     # ---------------------------
