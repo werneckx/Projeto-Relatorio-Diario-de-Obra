@@ -309,24 +309,9 @@ def _build_clima_automatico_payload(obra, data_referencia, climas_disponiveis):
     }
 
 def _get_equipe_obra_payload(obra_id):
-    equipe = (
-        db.session.query(EquipeObraMaoObra, MaoObra)
-        .join(MaoObra, AuxFuncoes.id == EquipeObraAuxFuncoes.id_lista_opcoes)
-        .filter(EquipeObraAuxFuncoes.obra_id == obra_id, AuxFuncoes.ativo == True)
-        .order_by(AuxFuncoes.nome.asc())
-        .all()
-    )
-
-    return [
-        {
-            "id_equipe_obra": equipe_item.id_equipe_obra,
-            "id_lista_opcoes": mao_item.id,
-            "nome": mao_item.nome,
-            "tipo": mao_item.tipo,
-            "quantidade": equipe_item.quantidade_mao_obra,
-        }
-        for equipe_item, mao_item in equipe
-    ]
+    # O schema atual não define o modelo de equipe de obra que existia em versões anteriores.
+    # Mantemos a interface do formulário, mas não tentamos carregar ou gravar dados inexistentes.
+    return []
 
 
 __all__ = [name for name in globals() if not name.startswith("__")]
