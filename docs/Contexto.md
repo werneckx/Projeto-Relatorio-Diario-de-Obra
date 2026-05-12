@@ -744,6 +744,10 @@ O sistema deve estar preparado para crescimento enterprise e evolução contínu
 
 Feito até o momento:
 
+- Marco 1 - Base saudável concluído em 2026-05-12.
+- Compatibilidade do schema novo com rotas principais e templates (Branch `fix/schema-route-compat`) aplicada.
+- Verificação (2026-05-12): Branches 1, 2 e 3 revisadas em `app/routes` e `app/templates`; compatibilização inclui alias de aprovações (`rdo.assinaturas` / `ass.id_usuario`) e correção do template `app/templates/list_rdo.html` para manter navegação e filtros operacionais.
+
 ## Checkpoint em 2026-05-11
 
 ### Estrutura de banco de dados

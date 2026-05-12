@@ -350,9 +350,9 @@
         }
 
         statusChart.data.datasets[0].data = [
-            statusCounts['Aprovado'],
-            statusCounts['Pendente'],
-            statusCounts['Rejeitado']
+            statusCounts['APROVADO'],
+            statusCounts['PENDENTE'],
+            statusCounts['REJEITADO']
         ];
 
         const total = Object.values(statusCounts).reduce((a, b) => a + b, 0);

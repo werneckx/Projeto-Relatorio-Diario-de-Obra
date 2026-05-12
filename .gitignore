@@ -9,7 +9,6 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
-.context
 
 # Flask instance folder
 instance/
@@ -52,3 +51,9 @@ Thumbs.db
 *.pyd
 .context
 *.pyc
+*.pyc
+app/__pycache__/__init__.cpython-311.pyc
+app/models/__pycache__/rdo.cpython-311.pyc
+app/models/__pycache__/usuario.cpython-311.pyc
+app/routes/__pycache__/auth.cpython-311.pyc
+.vscode/settings.json

@@ -271,9 +271,9 @@
             </td>
             <td width="20%" class="text-right">
                 <span>
-                    {% if rdo.status == 'Aprovado' %}
+                    {% if rdo.status == 'APROVADO' %}
                     <span class="status-badge status-aprovado">Aprovado</span>
-                    {% elif rdo.status == 'Rejeitado' %}
+                    {% elif rdo.status == 'REJEITADO' %}
                     <span class="status-badge status-rejeitado">Rejeitado</span>
                     {% else %}
                     <span class="status-badge status-pendente">Pendente</span>
@@ -423,7 +423,7 @@
                     <div class="sig-txt"><b>{{ ass.usuario.nome|truncate(25) }}</b></div>
                     <div class="sig-txt" style="color:#555;">{{ ass.usuario.papel }}</div>
 
-                    {% if ass.status == 'Aprovado' %}
+                    {% if ass.status == 'APROVADO' %}
                     <div style="font-size: 6pt; margin-top: 2px; color: #444;">
                         {{ ass.criado.strftime('%d/%m/%y %H:%M') }}
                     </div>
@@ -436,7 +436,7 @@
                         {% if ass.hash_documento %}ID: {{ ass.hash_documento[:8] }}...{% endif %}
                     </div>
                     <span class="tag-status-sm status-aprovado" style="margin-top:2px;">Aprovado</span>
-                    {% elif ass.status == 'Rejeitado' %}
+                    {% elif ass.status == 'REJEITADO' %}
                     <span class="tag-status-sm status-rejeitado">Rejeitado</span>
                     {% else %}
                     <span class="tag-status-sm status-pendente">Pendente</span>

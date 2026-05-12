@@ -274,27 +274,37 @@ shadow-sm placeholder:text-slate-400" %}
                             {{ 'readonly disabled' if view_mode }} required>
                     </div>
 
-                    <!-- CNPJ -->
+                    <!-- CNPJ da Obra -->
                     <div class="lg:col-span-4">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">CNPJ</label>
-                        <input type="text" name="cnpj" id="cnpj" maxlength="18" value="{{ item.cnpj if item }}"
-                            placeholder="00.000.000/0000-00" class="{{ final_input_css }} font-mono"
-                            {{ 'readonly disabled' if view_mode }} required>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">CNPJ da Obra</label>
+                        <input type="text" name="cnpj_obra" id="cnpj_obra" maxlength="18"
+                            value="{{ item.cnpj if item }}" placeholder="00.000.000/0000-00"
+                            class="{{ final_input_css }} font-mono" {{ 'readonly disabled' if view_mode }}>
                     </div>
 
                     <!-- Cliente -->
                     <div class="lg:col-span-6">
                         <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Cliente</label>
-                        <input type="text" name="contratante" value="{{ item.contratante if item }}"
-                            placeholder="Ex: Indústria XYZ Ltda" class="{{ final_input_css }}" {{ 'readonly disabled' if
-                            view_mode }}>
-                    </div>
-
-                    <!-- Contrato -->
-                    <div class="lg:col-span-3">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Nº Contrato</label>
-                        <input type="text" name="contrato" value="{{ item.contrato if item }}"
-                            class="{{ final_input_css }}" {{ 'readonly disabled' if view_mode }}>
+                        {% if view_mode %}
+                        <input type="text" value="{{ item.contratante if item }}" class="{{ final_input_css }}" readonly
+                            disabled>
+                        {% else %}
+                        <div class="relative">
+                            <select name="cliente_id" class="{{ final_input_css }} {{ select_view_css }}" required>
+                                <option value="">Selecione um cliente...</option>
+                                {% for cliente in clientes %}
+                                <option value="{{ cliente.id }}" {% if item and item.cliente_id==cliente.id %}selected{%
+                                    endif %}>
+                                    {{ cliente.razao_social }}{% if cliente.cnpj %} ({{ cliente.cnpj }}){% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div
+                                class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
+                                <i class="fas fa-chevron-down text-xs"></i>
+                            </div>
+                        </div>
+                        {% endif %}
                     </div>
 
                     <!-- Responsável -->
@@ -350,20 +360,24 @@ shadow-sm placeholder:text-slate-400" %}
 
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center shrink-0 text-sm">
+                    <div
+                        class="w-8 h-8 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center shrink-0 text-sm">
                         <i class="far fa-clock"></i>
                     </div>
-                    <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">Horarios Padrao da Obra</h3>
+                    <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">Horarios Padrao da Obra
+                    </h3>
                 </div>
                 <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Horario Entrada Padrao</label>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Horario Entrada
+                            Padrao</label>
                         <input type="time" name="horario_entrada"
                             value="{{ item.horario_entrada.strftime('%H:%M') if item and item.horario_entrada else '' }}"
                             class="{{ final_input_css }} font-mono" {{ 'readonly disabled' if view_mode }}>
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Horario Saida Padrao</label>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Horario Saida
+                            Padrao</label>
                         <input type="time" name="horario_saida"
                             value="{{ item.horario_saida.strftime('%H:%M') if item and item.horario_saida else '' }}"
                             class="{{ final_input_css }} font-mono" {{ 'readonly disabled' if view_mode }}>
@@ -724,8 +738,10 @@ shadow-sm placeholder:text-slate-400" %}
                             <i class="fas fa-users"></i>
                         </div>
                         <div>
-                            <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">Equipe Padrão da Obra</h3>
-                            <p class="text-[10px] text-slate-500 hidden sm:block">Composição base para ser importada no RDO.</p>
+                            <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">Equipe Padrão da
+                                Obra</h3>
+                            <p class="text-[10px] text-slate-500 hidden sm:block">Composição base para ser importada no
+                                RDO.</p>
                         </div>
                     </div>
                     {% if not view_mode %}
@@ -739,7 +755,8 @@ shadow-sm placeholder:text-slate-400" %}
                 <div class="w-full overflow-hidden">
                     <table class="w-full text-left mobile-table" id="table-equipe-obra">
                         <thead>
-                            <tr class="bg-slate-50 text-[10px] uppercase text-slate-500 font-bold border-b border-slate-200">
+                            <tr
+                                class="bg-slate-50 text-[10px] uppercase text-slate-500 font-bold border-b border-slate-200">
                                 <th class="p-3 w-[70%]">Mão de Obra</th>
                                 <th class="p-3 w-[20%] text-center">Quantidade</th>
                                 {% if not view_mode %}<th class="p-3 w-[10%] text-center"></th>{% endif %}
@@ -750,11 +767,13 @@ shadow-sm placeholder:text-slate-400" %}
                             {% for equipe in equipe_obra %}
                             <tr class="group hover:bg-slate-50 transition-colors">
                                 <td class="p-2 full-width-mobile" data-label="Mão de Obra:">
-                                    <select class="{{ 'w-full h-9 text-sm px-2 rounded-md bg-transparent border-none text-slate-700 appearance-none pointer-events-none' if view_mode else 'form-control-std h-9 text-sm select-equipe-obra bg-white' }}"
+                                    <select
+                                        class="{{ 'w-full h-9 text-sm px-2 rounded-md bg-transparent border-none text-slate-700 appearance-none pointer-events-none' if view_mode else 'form-control-std h-9 text-sm select-equipe-obra bg-white' }}"
                                         {{ 'disabled' if view_mode }}>
                                         <option value="">Selecione...</option>
                                         {% for op in mao_de_obra_options %}
-                                        <option value="{{ op.id }}" {% if op.id == equipe.id_lista_opcoes %}selected{% endif %}>{{ op.nome }}{% if op.tipo %} ({{ op.tipo }}){% endif %}</option>
+                                        <option value="{{ op.id }}" {% if op.id==equipe.id_lista_opcoes %}selected{%
+                                            endif %}>{{ op.nome }}{% if op.tipo %} ({{ op.tipo }}){% endif %}</option>
                                         {% endfor %}
                                     </select>
                                 </td>
@@ -775,7 +794,8 @@ shadow-sm placeholder:text-slate-400" %}
                             {% endfor %}
                             {% elif view_mode %}
                             <tr>
-                                <td colspan="3" class="p-8 text-center text-slate-400 italic bg-slate-50">Nenhuma equipe padrão cadastrada nesta obra.</td>
+                                <td colspan="3" class="p-8 text-center text-slate-400 italic bg-slate-50">Nenhuma equipe
+                                    padrão cadastrada nesta obra.</td>
                             </tr>
                             {% endif %}
                         </tbody>
@@ -902,7 +922,7 @@ shadow-sm placeholder:text-slate-400" %}
 
         // --- MÁSCARAS ---
         function applyMasks() {
-            if (el('cnpj')) el('cnpj').addEventListener('input', e => {
+            if (el('cnpj_obra')) el('cnpj_obra').addEventListener('input', e => {
                 let x = e.target.value.replace(/\D/g, '').match(/(\d{0,2})(\d{0,3})(\d{0,3})(\d{0,4})(\d{0,2})/);
                 e.target.value = !x[2] ? x[1] : x[1] + '.' + x[2] + '.' + x[3] + '/' + x[4] + (x[5] ? '-' + x[5] : '');
             });
@@ -1104,8 +1124,8 @@ shadow-sm placeholder:text-slate-400" %}
         function submitObraForm() {
             if (!checkDateLogic()) return alert("Verifique as datas globais da obra.");
 
-            // Limpeza do CNPJ
-            const cnpjInput = el('cnpj');
+            // Limpeza do CNPJ da obra
+            const cnpjInput = el('cnpj_obra');
             if (cnpjInput) cnpjInput.value = cnpjInput.value.replace(/\D/g, '');
 
             // --- CORREÇÃO CEP ---

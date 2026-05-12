@@ -437,6 +437,14 @@ Checklist:
 
 ### Marco 1 - Base saudavel
 
+Status: concluído em 2026-05-12
+
+Verificação (2026-05-12):
+
+- Branch 1: `app/__init__.py` importa os módulos de models na inicialização e existe `scripts/diagnostics/import_check.py` (validação de execução depende de Python local funcional).
+- Branch 2: separação de rotas aplicada com `app/routes/auth_common.py` e módulos por domínio registrados no mesmo `auth_bp` (importados em `app/routes/auth.py`).
+- Branch 3: compatibilidade de schema aplicada (status em maiúsculo, `cliente_id`/`cnpj_obra` em obras, remoção de dependência do modelo legado de equipe) e correções de templates/aliases para manter navegação.
+
 Branches:
 
 - `chore/baseline-validacao-ambiente`

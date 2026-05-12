@@ -1,4 +1,5 @@
 ﻿from app.routes.auth_common import *
+from app.models.cliente import Cliente
 
 @auth_bp.get("/lista-obras")
 @login_required
@@ -38,8 +39,9 @@ def lista_obras():
 @role_required(PERM_MANAGEMENT) # Apenas Admin e Gestor
 def criar_obra():
     usuarios = Usuario.query.filter_by(status=1).all()
+    clientes = Cliente.query.filter_by(empresa_id=session.get('empresa_id'), ativo=True).order_by(Cliente.razao_social.asc()).all()
     mao_de_obra_options = AuxFuncoes.query.filter_by(ativo=True).order_by(AuxFuncoes.nome.asc()).all()
-    return render_template("form_obra.html", item=None, usuarios=usuarios, mao_de_obra_options=mao_de_obra_options, equipe_obra=[])
+    return render_template("form_obra.html", item=None, usuarios=usuarios, clientes=clientes, mao_de_obra_options=mao_de_obra_options, equipe_obra=[])
 
 @auth_bp.post("/mudar-status-obras/<int:obraid>")
 @login_required
@@ -71,17 +73,26 @@ def gerar_obra():
              flash("Sem permissão para editar esta obra", "danger")
              return redirect(url_for('auth.lista_obras'))
 
-    cnpj = request.form.get('cnpj')
-    obra_existente = Obra.query.filter_by(cnpj=cnpj).first()
+    cnpj_obra = request.form.get('cnpj_obra')
+    cliente_id = request.form.get('cliente_id')
+
+    if not cliente_id:
+        flash("Erro: selecione um cliente válido para esta obra.", "danger")
+        return redirect(url_for('auth.lista_obras'))
+
+    cliente = Cliente.query.filter_by(id=cliente_id, empresa_id=session.get('empresa_id')).first()
+    if not cliente:
+        flash("Erro: cliente inválido.", "danger")
+        return redirect(url_for('auth.lista_obras'))
+
+    obra_existente = Obra.query.filter_by(cnpj_obra=cnpj_obra).first() if cnpj_obra else None
     if obra_existente:
         if not obra_id or str(obra_existente.id) != str(obra_id):
-            flash(f"Erro: O CNPJ {cnpj} já está cadastrado.", "danger")
+            flash(f"Erro: O CNPJ {cnpj_obra} já está cadastrado.", "danger")
             return redirect(url_for('auth.lista_obras'))
 
     nome = request.form.get('nome')
-    contratante = request.form.get('contratante')
-    contrato = request.form.get('contrato')
-    criado_por = request.form.get('criado_por')
+    criado_por = session.get('user_id')
     inicio_str = request.form.get('inicio')
     termino_str = request.form.get('termino')
     horario_entrada_str = request.form.get('horario_entrada')
@@ -106,16 +117,14 @@ def gerar_obra():
         if obra_id:
             obra = Obra.query.get(obra_id)
             obra.nome = nome
-            obra.cnpj = cnpj
-            obra.contratante = contratante
-            obra.contrato = contrato
-            obra.criado_por = criado_por if criado_por else None
+            obra.cnpj_obra = cnpj_obra
+            obra.cliente_id = cliente.id
             obra.data_inicio = inicio
             obra.data_fim = termino
-            obra.horario_entrada = horario_entrada
-            obra.horario_saida = horario_saida
+            obra.hora_entrada_padrao = horario_entrada
+            obra.hora_saida_padrao = horario_saida
             obra.cep = cep
-            obra.endereco = endereco
+            obra.logradouro = endereco
             obra.numero = numero
             obra.complemento = complemento
             obra.bairro = bairro
@@ -125,12 +134,23 @@ def gerar_obra():
             flash("Obra atualizada com sucesso!", "success")
         else:
             obra = Obra(
-                nome=nome, cnpj=cnpj, contratante=contratante, contrato=contrato,
+                empresa_id=session.get('empresa_id'),
+                nome=nome,
+                cliente_id=cliente.id,
+                cnpj_obra=cnpj_obra,
                 criado_por=criado_por if criado_por else None,
-                inicio=inicio, termino=termino,
-                horario_entrada=horario_entrada, horario_saida=horario_saida,
-                cep=cep, endereco=endereco, numero=numero, complemento=complemento,
-                bairro=bairro, cidade=cidade, estado=estado, status=status
+                data_inicio=inicio,
+                data_fim=termino,
+                hora_entrada_padrao=horario_entrada,
+                hora_saida_padrao=horario_saida,
+                cep=cep,
+                logradouro=endereco,
+                numero=numero,
+                complemento=complemento,
+                bairro=bairro,
+                cidade=cidade,
+                estado=estado,
+                ativo=status
             )
             db.session.add(obra)
             db.session.flush() 
@@ -168,33 +188,8 @@ def gerar_obra():
                     frente_existente.data_inicio = datetime.strptime(f_edit.get('data_inicio'), '%Y-%m-%d').date() if f_edit.get('data_inicio') else None
                     frente_existente.data_planejada = datetime.strptime(f_edit.get('data_planejada'), '%Y-%m-%d').date() if f_edit.get('data_planejada') else None
 
-        if equipe_payload is not None:
-            EquipeObraAuxFuncoes.query.filter_by(obra_id=obra.id).delete()
-            equipe_rows = json.loads(equipe_payload) if equipe_payload else []
-            equipe_agrupada = {}
-            for equipe_item in equipe_rows:
-                mo_id = equipe_item.get('id_lista_opcoes')
-                quantidade = equipe_item.get('quantidade_mao_obra')
-                try:
-                    mo_id = int(mo_id)
-                    quantidade = int(quantidade)
-                except (TypeError, ValueError):
-                    continue
-
-                if quantidade <= 0:
-                    continue
-
-                equipe_agrupada[mo_id] = equipe_agrupada.get(mo_id, 0) + quantidade
-
-            for mo_id, quantidade in equipe_agrupada.items():
-                db.session.add(
-                    EquipeObraAuxFuncoes(
-                        obra_id=obra.id,
-                        id_lista_opcoes=mo_id,
-                        quantidade_mao_obra=quantidade,
-                    )
-                )
-
+        # Legacy equipe de obra não possui modelo compatível com o schema atual.
+        # O payload é preservado no formulário, mas não é gravado enquanto a tabela de suporte não estiver disponível.
         db.session.commit()
         return redirect(url_for('auth.lista_obras'))
 
@@ -215,9 +210,10 @@ def editar_obra(id):
     obra = Obra.query.get_or_404(id)
     frentes = FrenteTrabalho.query.filter_by(obra_id=id).all()
     usuarios = Usuario.query.filter_by(status=1).all()
+    clientes = Cliente.query.filter_by(empresa_id=session.get('empresa_id'), ativo=True).order_by(Cliente.razao_social.asc()).all()
     mao_de_obra_options = AuxFuncoes.query.filter_by(ativo=True).order_by(AuxFuncoes.nome.asc()).all()
     equipe_obra = _get_equipe_obra_payload(id)
-    return render_template("form_obra.html", item=obra, frentes=frentes, usuarios=usuarios, mao_de_obra_options=mao_de_obra_options, equipe_obra=equipe_obra)
+    return render_template("form_obra.html", item=obra, frentes=frentes, usuarios=usuarios, clientes=clientes, mao_de_obra_options=mao_de_obra_options, equipe_obra=equipe_obra)
 
 @auth_bp.get("/visualizar-obra/<int:id>")
 @login_required
@@ -230,6 +226,7 @@ def visualizar_obra(id):
 
     item = Obra.query.get_or_404(id) 
     usuarios = Usuario.query.filter_by(status=1).all()
+    clientes = Cliente.query.filter_by(empresa_id=session.get('empresa_id'), ativo=True).order_by(Cliente.razao_social.asc()).all()
     frentes = FrenteTrabalho.query.filter_by(obra_id=id).all()
     usuario = Usuario.query.order_by(Usuario.nome).all()
     mao_de_obra_options = AuxFuncoes.query.filter_by(ativo=True).order_by(AuxFuncoes.nome.asc()).all()
@@ -243,6 +240,7 @@ def visualizar_obra(id):
         frentes=frentes,
         usuario=usuario,
         usuarios=usuarios,
+        clientes=clientes,
         mao_de_obra_options=mao_de_obra_options,
         equipe_obra=equipe_obra
     )

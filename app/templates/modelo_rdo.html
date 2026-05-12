@@ -697,8 +697,8 @@
         {% endif %}
     </div>
 
-    {% if rdo.status == 'Pendente' or (not rdo.status and
-    rdo.assinaturas|selectattr("status","equalto","Pendente")|list|length > 0) %}
+    {% if rdo.status == 'PENDENTE' or (not rdo.status and
+    rdo.assinaturas|selectattr("status","equalto","PENDENTE")|list|length > 0) %}
     <div class="watermark">Rascunho / Pendente</div>
     {% endif %}
 
@@ -739,8 +739,8 @@
         <div class="meta-cell">
             <span class="ml">Situação</span>
             <span class="mv">
-                {% if rdo.status == 'Aprovado' %}<span class="badge b-ok">Aprovado</span>
-                {% elif rdo.status == 'Rejeitado' %}<span class="badge b-er">Rejeitado</span>
+                {% if rdo.status == 'APROVADO' %}<span class="badge b-ok">Aprovado</span>
+                {% elif rdo.status == 'REJEITADO' %}<span class="badge b-er">Rejeitado</span>
                 {% else %}<span class="badge b-wa">Pendente</span>{% endif %}
             </span>
         </div>
@@ -1111,7 +1111,7 @@
                             <div class="sig-visual">
                                 {% if ass.img_assinatura %}
                                 <img src="{{ assinatura_folder }}/{{ ass.img_assinatura }}" alt="Assinatura">
-                                {% elif ass.status == 'Rejeitado' %}
+                                {% elif ass.status == 'REJEITADO' %}
                                 <span class="sig-ph rejected">Rejeitado</span>
                                 {% else %}
                                 <span class="sig-ph">Pendente</span>
@@ -1125,8 +1125,8 @@
                             </div>
 
                             <div style="margin-bottom:6px;">
-                                {% if ass.status == 'Aprovado' %}<span class="badge b-ok">Aprovado</span>
-                                {% elif ass.status == 'Rejeitado' %}<span class="badge b-er">Rejeitado</span>
+                                {% if ass.status == 'APROVADO' %}<span class="badge b-ok">Aprovado</span>
+                                {% elif ass.status == 'REJEITADO' %}<span class="badge b-er">Rejeitado</span>
                                 {% else %}<span class="badge b-wa">Pendente</span>{% endif %}
                             </div>
 
@@ -1145,7 +1145,7 @@
                             </div>
                             {% endif %}
 
-                            {% if ass.status == 'Rejeitado' and ass.motivo_rejeicao %}
+                            {% if ass.status == 'REJEITADO' and ass.motivo_rejeicao %}
                             <div class="sig-reject">Motivo: {{ ass.motivo_rejeicao }}</div>
                             {% endif %}
                         </div>
