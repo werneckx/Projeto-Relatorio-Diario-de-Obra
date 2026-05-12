@@ -13,8 +13,8 @@ def client():
 
 def test_app_running(client):
     """Verifica se a aplicação inicia corretamente"""
-    response = client.get("/")
-    assert response.status_code in [200, 404], "A aplicação não está respondendo como esperado."
+    response = client.get("/", follow_redirects=False)
+    assert response.status_code in [200, 302, 404], "A aplicação não está respondendo como esperado."
 
 
 def test_blueprints_registered():

@@ -43,7 +43,7 @@ def alterar_minha_senha():
         return redirect(url_for("auth.meu_perfil"))
         
     user = Usuario.query.get(session.get("user_id"))
-    if not user or not check_password_hash(user.senha, senha_atual):
+    if not user or not user.check_senha(senha_atual):
         flash("A senha atual está incorreta.", "danger")
         return redirect(url_for("auth.meu_perfil"))
         

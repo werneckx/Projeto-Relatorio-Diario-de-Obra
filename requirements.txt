@@ -8,6 +8,7 @@ PyMySQL
 cryptography
 Werkzeug
 flask-login
+bcrypt
 Pillow
 qrcode[pil]
 pdfkit
