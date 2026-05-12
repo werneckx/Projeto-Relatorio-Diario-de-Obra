@@ -9,7 +9,6 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
-.context
 
 # Flask instance folder
 instance/
