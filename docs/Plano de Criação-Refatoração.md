@@ -490,6 +490,23 @@ Resultado esperado:
 
 ### Marco 4 - Operacao e qualidade
 
+### Marco 4.1 - Navegação por permissões (RBAC)
+
+Status: concluído em 2026-05-13
+
+Verificação (2026-05-13):
+
+- `app/templates/base.html` atualizado para o menu **“Cadastros”** renderizar itens com base em `session["permissions"]` (em vez de `session.user_role`).
+- Condicional por permissões principais (exemplos):
+  - `obra.manage` → Obras e Projetos
+  - `usuario.manage` → Usuários
+  - `mao_obra.view` → Mão de Obra
+  - `equipamento.view` → Equipamentos
+  - `clima.view` → Climas
+  - `tag_ocorrencia.view` → Tags de Ocorrências
+- Objetivo: garantir que a navegação acompanhe RBAC real (por permissão) e não apenas o papel nominal.
+
+
 Branches:
 
 - `feat/exports-bi`
