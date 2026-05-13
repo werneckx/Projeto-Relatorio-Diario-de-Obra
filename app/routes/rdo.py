@@ -2,15 +2,16 @@
 
 @auth_bp.get("/criar-rdo")
 @login_required
-@role_required(PERM_WRITE_BASIC) # Leitor e Cliente NÃO criam RDO
+@permission_required('rdo.create')
 def criar_rdo():
-    # Carregar apenas obras permitidas
+    # Carregar apenas obras ativas da empresa atual
+    empresa_id = session.get("empresa_id")
     user = Usuario.query.get(session.get("user_id"))
-    if user.papel == ROLE_ADMIN:
-        obras = Obra.query.filter_by(status=1).all()
+    if user and user.papel == ROLE_ADMIN:
+        obras = Obra.query.filter_by(empresa_id=empresa_id, status=1).all()
     else:
         # Filtra na memória as obras ativas do usuário
-        obras = [o for o in Obra.query.filter_by(empresa_id=session.get('empresa_id')).all() if o.status == 1]
+        obras = [o for o in Obra.query.filter_by(empresa_id=empresa_id).all() if o.status == 1]
     
     mao_de_obra_options = [{"id": m.id, "nome": m.nome, "tipo": m.tipo} for m in AuxFuncoes.query.filter_by(ativo=True).order_by(AuxFuncoes.nome.asc()).all()]
     equipamentos_options = [{"id": e.id, "nome": e.nome} for e in AuxEquipamentos.query.filter_by(ativo=True).order_by(AuxEquipamentos.nome.asc()).all()]
@@ -37,13 +38,14 @@ def criar_rdo():
 @auth_bp.get("/api/obra/<int:id>")
 @login_required
 def get_obra_api(id):
-    # SECURITY: Verifica se usuário pode ver detalhes desta obra
+    # SECURITY: Escopo por empresa
+    empresa_id = session.get("empresa_id")
     scope_ids = get_user_scope_ids()
     if scope_ids is not None and id not in scope_ids:
         return jsonify({"error": "Acesso não autorizado a esta obra"}), 403
 
-    obra = Obra.query.get_or_404(id)
-    frentes = FrenteTrabalho.query.filter_by(obra_id=id).all()
+    obra = Obra.query.filter_by(id=id, empresa_id=empresa_id).first_or_404()
+    frentes = FrenteTrabalho.query.filter_by(obra_id=id, empresa_id=empresa_id).all()
     
     data_inicio_fmt = obra.data_inicio.strftime('%d/%m/%Y') if obra.data_inicio else "-"
     data_inicio_iso = obra.data_inicio.isoformat() if obra.data_inicio else ""
@@ -76,11 +78,12 @@ def get_obra_api(id):
 @auth_bp.get("/api/obra/<int:id>/clima")
 @login_required
 def get_obra_clima_api(id):
+    empresa_id = session.get("empresa_id")
     scope_ids = get_user_scope_ids()
     if scope_ids is not None and id not in scope_ids:
         return jsonify({"error": "Acesso não autorizado a esta obra"}), 403
 
-    obra = Obra.query.get_or_404(id)
+    obra = Obra.query.filter_by(id=id, empresa_id=empresa_id).first_or_404()
     data_str = request.args.get("data")
     try:
         data_referencia = datetime.strptime(data_str, "%Y-%m-%d").date() if data_str else date.today()
@@ -102,8 +105,9 @@ def get_obra_clima_api(id):
 @auth_bp.get("/api/frente/<int:id>")
 @login_required
 def get_frente_api(id):
-    # SECURITY: Validação básica
-    frente = FrenteTrabalho.query.get_or_404(id)
+    # SECURITY: Validação básica + escopo por empresa
+    empresa_id = session.get("empresa_id")
+    frente = FrenteTrabalho.query.filter_by(id=id, empresa_id=empresa_id).first_or_404()
     # Verifica scope da obra pai da frente
     scope_ids = get_user_scope_ids()
     if scope_ids is not None and frente.obra_id not in scope_ids:
@@ -116,7 +120,7 @@ def get_frente_api(id):
 
 @auth_bp.post("/gerar-rdo")
 @login_required
-@role_required(PERM_WRITE_BASIC) # Leitor e Cliente não podem postar
+@permission_required('rdo.update')
 def gerar_rdo():
     try:
         sp_tz = timezone(timedelta(hours=-3))
@@ -168,7 +172,8 @@ def gerar_rdo():
 
         # SECURITY: Se for edição, verifica status e permissões extras
         if rdo_id_original:
-            item_rdo = RDO.query.get(rdo_id_original)
+            empresa_id = session.get('empresa_id')
+            item_rdo = RDO.query.filter_by(id=rdo_id_original, empresa_id=empresa_id).first()
             if not item_rdo:
                 abort(404)
             
@@ -219,7 +224,8 @@ def gerar_rdo():
 
         # [Criação] Assinatura do criador
         if not rdo_id_original:
-            obra_rdo = Obra.query.get(obra_id) if obra_id else None
+            empresa_id = session.get('empresa_id')
+            obra_rdo = Obra.query.filter_by(id=obra_id, empresa_id=empresa_id).first() if obra_id else None
             aprovador_padrao_id = obra_rdo.criado_por if obra_rdo and obra_rdo.criado_por else current_user_id
             existe_ass = RDOAprovacao.query.filter_by(rdo_id=item_rdo.id, aprovador_id=aprovador_padrao_id).first()
             if not existe_ass:
@@ -392,7 +398,8 @@ def gerar_rdo():
 @auth_bp.get("/visualizar-rdo/<int:rdo_id>")
 @login_required
 def visualizar_rdo(rdo_id):
-    item = RDO.query.filter_by(id=rdo_id, ativo=True).first_or_404()
+    empresa_id = session.get("empresa_id")
+    item = RDO.query.filter_by(id=rdo_id, empresa_id=empresa_id, ativo=True).first_or_404()
 
     # SECURITY: Verifica permissão na obra para leitura
     scope_ids = get_user_scope_ids()
@@ -453,9 +460,10 @@ def visualizar_rdo(rdo_id):
 
 @auth_bp.get("/editar-rdo/<int:rdo_id>")
 @login_required
-@role_required(PERM_WRITE_BASIC) # Leitor e Cliente não editam
+@permission_required('rdo.update')
 def editar_rdo(rdo_id):
-    item = RDO.query.filter_by(id=rdo_id, ativo=True).first_or_404()
+    empresa_id = session.get("empresa_id")
+    item = RDO.query.filter_by(id=rdo_id, empresa_id=empresa_id, ativo=True).first_or_404()
 
     # SECURITY: Verifica se usuario tem acesso à obra deste RDO
     scope_ids = get_user_scope_ids()
@@ -513,10 +521,11 @@ def editar_rdo(rdo_id):
 
 @auth_bp.post("/excluir-rdo/<int:rdo_id>")
 @login_required
-@role_required(PERM_MANAGEMENT) # SECURITY: Apenas Admin/Gestor exclui RDO (Operador não)
+@permission_required('rdo.approve')
 def excluir_rdo(rdo_id):
     try:
-        item_rdo = RDO.query.get_or_404(rdo_id)
+        empresa_id = session.get("empresa_id")
+        item_rdo = RDO.query.filter_by(id=rdo_id, empresa_id=empresa_id).first_or_404()
         
         # SECURITY: Scoping Check
         scope_ids = get_user_scope_ids()
@@ -537,16 +546,21 @@ def excluir_rdo(rdo_id):
 @auth_bp.get("/lista-rdo")
 @login_required
 def lista_rdo():
+    empresa_id = session.get("empresa_id")
     current_user_id = session.get("user_id")
     user = Usuario.query.get(current_user_id)
 
-    # SCOPING: Filtra RDOs ativos
+    # SCOPING: Filtra RDOs ativos da empresa atual
     if user:
         if user.papel == ROLE_ADMIN:
-             rdos = RDO.query.filter_by(ativo=True).order_by(RDO.data_rdo.desc()).all()
+             rdos = RDO.query.filter_by(ativo=True, empresa_id=empresa_id).order_by(RDO.data_rdo.desc()).all()
         else:
             ids_obras_permitidas = [obra.id for obra in user.obras_permitidas]
-            rdos = RDO.query.filter(RDO.obra_id.in_(ids_obras_permitidas), RDO.ativo == True).order_by(RDO.data_rdo.desc()).all()
+            rdos = RDO.query.filter(
+                RDO.obra_id.in_(ids_obras_permitidas),
+                RDO.ativo == True,
+                RDO.empresa_id == empresa_id
+            ).order_by(RDO.data_rdo.desc()).all()
     else:
         rdos = []
     
