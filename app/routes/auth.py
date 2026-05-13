@@ -144,7 +144,23 @@ def login_post():
     session["user_name"] = user.nome
     session["user_email"] = user.email
     session["user_role"] = user.papel if user.papel else "Leitor"
-    
+
+    # SECURITY: permissões efetivas (RBAC) para menu/validações de UI
+    # inclui permissões globais (empresa_id IS NULL) e da empresa atual.
+    try:
+        empresa_id = user.empresa_id
+        permissoes = Permissao.query.filter(
+            Permissao.ativo.is_(True),
+            (
+                Permissao.empresa_id.is_(None) |
+                (Permissao.empresa_id == empresa_id)
+            )
+        ).all()
+        session["permissions"] = sorted({p.chave for p in permissoes})
+    except Exception:
+        # se falhar, não quebra login; menu ficará mais restrito
+        session["permissions"] = []
+
     return redirect(url_for("auth.inicio"))
 
 @auth_bp.get("/logout")
@@ -230,6 +246,8 @@ def privacidade():
 def suporte():
     email_usuario = session.get("user_email", "")
     return render_template("suporte.html", email_usuario=email_usuario)
+
+
 
 # Importa os dominios que registram rotas no mesmo auth_bp.
 from app.routes import dashboard  # noqa: F401,E402
