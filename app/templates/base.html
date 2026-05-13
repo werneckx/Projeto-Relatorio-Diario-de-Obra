@@ -438,7 +438,8 @@
                     </div>
                 </div>
 
-                {% if session.get('user_role') not in ['Cliente', 'Leitor'] %}
+                {% set perms = session.get('permissions', []) %}
+                {% if 'obra.manage' in perms or 'usuario.manage' in perms or 'mao_obra.view' in perms or 'equipamento.view' in perms or 'clima.view' in perms or 'tag_ocorrencia.view' in perms %}
                 <div class="border border-slate-100 rounded-xl overflow-hidden">
                     <button onclick="toggleMobileSubmenu('mobile-cadastros', this)"
                         class="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-slate-50 transition text-left">
@@ -450,19 +451,34 @@
                     <div id="mobile-cadastros" class="submenu-mobile bg-slate-50">
                         <div class="p-2 space-y-1">
                             <div class="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase mt-1">Geral</div>
+                            {% if 'obra.manage' in perms %}
                             <a href="{{ url_for('auth.lista_obras') }}"
                                 class="block px-4 py-2 text-sm text-slate-600 hover:text-blue-600 rounded-lg">Obras e
                                 Projetos</a>
+                            {% endif %}
+                            {% if 'usuario.manage' in perms %}
                             <a href="{{ url_for('auth.lista_usuarios') }}"
                                 class="block px-4 py-2 text-sm text-slate-600 hover:text-blue-600 rounded-lg">Usuários</a>
+                            {% endif %}
                             <div class="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase mt-2">Auxiliares</div>
+                            {% if 'mao_obra.view' in perms %}
                             <a href="{{ url_for('auth.lista_mao_obra') }}"
                                 class="block px-4 py-2 text-sm text-slate-600 hover:text-blue-600 rounded-lg">Mão de
                                 Obra</a>
+                            {% endif %}
+                            {% if 'equipamento.view' in perms %}
                             <a href="{{ url_for('auth.lista_equipamentos') }}"
                                 class="block px-4 py-2 text-sm text-slate-600 hover:text-blue-600 rounded-lg">Equipamentos</a>
+                            {% endif %}
+                            {% if 'clima.view' in perms %}
                             <a href="{{ url_for('auth.lista_climas') }}"
                                 class="block px-4 py-2 text-sm text-slate-600 hover:text-blue-600 rounded-lg">Climas</a>
+                            {% endif %}
+                            {% if 'tag_ocorrencia.view' in perms %}
+                            <a href="{{ url_for('auth.lista_tags_ocorrencias') }}"
+                                class="block px-4 py-2 text-sm text-slate-600 hover:text-blue-600 rounded-lg">Tags
+                                de Ocorrências</a>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
