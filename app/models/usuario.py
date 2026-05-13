@@ -174,10 +174,16 @@ class Usuario(db.Model, UserMixin):
         # Detectar e validar com bcrypt
         if hash_str.startswith(('$2a$', '$2b$', '$2x$', '$2y$')):
             try:
-                # Converter $2y$ (PHP) para $2b$ (Python) se necessário
-                if hash_str.startswith('$2y$'):
-                    hash_str = hash_str.replace('$2y$', '$2b$', 1)
-                
+                hash_str_norm = hash_str.strip()
+
+                # Converter $2y$ (PHP) para $2b$ (mais compatível com bcrypt Python)
+                # (Faz somente troca do prefixo, preservando o resto do hash)
+                if hash_str_norm.startswith('$2y$'):
+                    hash_str_norm = '$2b$' + hash_str_norm[len('$2y$'):]
+
+                # Tenta normalizado primeiro; se falhar, tenta o hash original (após strip)
+                if bcrypt.checkpw(senha.encode('utf-8'), hash_str_norm.encode('utf-8')):
+                    return True
                 return bcrypt.checkpw(senha.encode('utf-8'), hash_str.encode('utf-8'))
             except (ValueError, TypeError, AttributeError):
                 return False

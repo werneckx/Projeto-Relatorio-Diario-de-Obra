@@ -36,7 +36,7 @@ def lista_obras():
 
 @auth_bp.get("/criar-obra")
 @login_required
-@role_required(PERM_MANAGEMENT) # Apenas Admin e Gestor
+@permission_required('obra.manage')
 def criar_obra():
     usuarios = Usuario.query.filter_by(status=1).all()
     clientes = Cliente.query.filter_by(empresa_id=session.get('empresa_id'), ativo=True).order_by(Cliente.razao_social.asc()).all()
@@ -45,14 +45,15 @@ def criar_obra():
 
 @auth_bp.post("/mudar-status-obras/<int:obraid>")
 @login_required
-@role_required(PERM_MANAGEMENT)
+@permission_required('obra.manage')
 def toggle_user_obras(obraid):
     # Security scope check
     scope_ids = get_user_scope_ids()
     if scope_ids is not None and obraid not in scope_ids:
         return {"message": "Forbidden"}, 403
 
-    obra = Obra.query.get_or_404(obraid)
+    empresa_id = session.get('empresa_id')
+    obra = Obra.query.filter_by(id=obraid, empresa_id=empresa_id).first_or_404()
     obra.status = not obra.status 
     try:
         db.session.commit()
@@ -63,7 +64,7 @@ def toggle_user_obras(obraid):
     
 @auth_bp.route('/gerar-obra', methods=['POST'])
 @login_required
-@role_required(PERM_MANAGEMENT)
+@permission_required('obra.manage')
 def gerar_obra():
     obra_id = request.form.get("id")
     if obra_id:
@@ -115,7 +116,8 @@ def gerar_obra():
         horario_saida = datetime.strptime(horario_saida_str, '%H:%M').time() if horario_saida_str else None
 
         if obra_id:
-            obra = Obra.query.get(obra_id)
+            empresa_id = session.get('empresa_id')
+            obra = Obra.query.filter_by(id=obra_id, empresa_id=empresa_id).first()
             obra.nome = nome
             obra.cnpj_obra = cnpj_obra
             obra.cliente_id = cliente.id
@@ -200,14 +202,15 @@ def gerar_obra():
     
 @auth_bp.get("/editar-obra/<int:id>")
 @login_required
-@role_required(PERM_MANAGEMENT)
+@permission_required('obra.manage')
 def editar_obra(id):
     # Security scope
     scope_ids = get_user_scope_ids()
     if scope_ids is not None and id not in scope_ids:
         abort(403)
 
-    obra = Obra.query.get_or_404(id)
+    empresa_id = session.get('empresa_id')
+    obra = Obra.query.filter_by(id=id, empresa_id=empresa_id).first_or_404()
     frentes = FrenteTrabalho.query.filter_by(obra_id=id).all()
     usuarios = Usuario.query.filter_by(status=1).all()
     clientes = Cliente.query.filter_by(empresa_id=session.get('empresa_id'), ativo=True).order_by(Cliente.razao_social.asc()).all()
@@ -224,7 +227,8 @@ def visualizar_obra(id):
         flash("Acesso restrito.", "danger")
         return redirect(url_for('auth.lista_obras'))
 
-    item = Obra.query.get_or_404(id) 
+    empresa_id = session.get('empresa_id')
+    item = Obra.query.filter_by(id=id, empresa_id=empresa_id).first_or_404()
     usuarios = Usuario.query.filter_by(status=1).all()
     clientes = Cliente.query.filter_by(empresa_id=session.get('empresa_id'), ativo=True).order_by(Cliente.razao_social.asc()).all()
     frentes = FrenteTrabalho.query.filter_by(obra_id=id).all()
@@ -247,14 +251,15 @@ def visualizar_obra(id):
 
 @auth_bp.post("/obra/toggle-status/<int:id>")
 @login_required
-@role_required(PERM_MANAGEMENT)
+@permission_required('obra.manage')
 def toggle_obra_status(id):
     # Security scope
     scope_ids = get_user_scope_ids()
     if scope_ids is not None and id not in scope_ids:
         return '', 403
 
-    obra = Obra.query.get_or_404(id)
+    empresa_id = session.get('empresa_id')
+    obra = Obra.query.filter_by(id=id, empresa_id=empresa_id).first_or_404()
     if obra.status == 1: obra.status = 0
     else: obra.status = 1
     try:
