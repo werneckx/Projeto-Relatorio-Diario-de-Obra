@@ -45,7 +45,14 @@ from app.forms import LoginForm, RdoForm
 # Definições das tabelas e objetos do sistema.
 # ==============================================================================
 
-from app.models.usuario import Usuario, Colaborador, Papel, UsuarioPapel
+from app.models.usuario import (
+    Usuario,
+    Colaborador,
+    Papel,
+    UsuarioPapel,
+    Permissao,
+    PapelPermissao,
+)
 from app.models.empresa import Empresa
 from app.models.auxiliares import AuxClima, AuxFuncoes, AuxEquipamentos, AuxTagOcorrencia
 from app.models.obra import FrenteTrabalho, Obra, FrenteColaborador

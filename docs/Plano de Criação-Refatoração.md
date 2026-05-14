@@ -419,6 +419,23 @@ Checklist:
 - Testes para auditoria.
 - Testes para upload.
 
+## Branch 12 - Definições
+
+Checklist:
+
+- Template de Ajuste das definições da Empresa
+- Ajuste Template de Obra para permitir personalização das definições
+- RBAC (Deve mostrar os padrões e os personalizados da empresa.)
+
+## Branch 13 - Mão de Obra/Colaboradores
+
+Checklit:
+
+- Cadastrar Colaboradores
+  - Template deve ter opção de selecionar como Usuario ou não (Confirmar no Contexto.md)
+- Relacionar nas frentes de trabalho
+- Trazer Automaticamente em RDO a mão de obra cadastrada na Frente de Trabalho.
+
 ## Ordem Recomendada das Branches
 
 1. `chore/baseline-validacao-ambiente`
