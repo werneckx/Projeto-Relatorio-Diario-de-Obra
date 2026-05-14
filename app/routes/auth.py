@@ -146,19 +146,23 @@ def login_post():
     session["user_role"] = user.papel if user.papel else "Leitor"
 
     # SECURITY: permissões efetivas (RBAC) para menu/validações de UI
-    # inclui permissões globais (empresa_id IS NULL) e da empresa atual.
+    # Calcula a partir dos papéis realmente atribuídos ao usuário (RBAC real).
+    # OBS: Papel.permissoes pode ser uma relationship que nem sempre retorna uma lista
+    # (pode ser lazy/dynamic). Então tratamos como iterável.
     try:
-        empresa_id = user.empresa_id
-        permissoes = Permissao.query.filter(
-            Permissao.ativo.is_(True),
-            (
-                Permissao.empresa_id.is_(None) |
-                (Permissao.empresa_id == empresa_id)
-            )
-        ).all()
-        session["permissions"] = sorted({p.chave for p in permissoes})
-    except Exception:
-        # se falhar, não quebra login; menu ficará mais restrito
+        perms = set()
+
+        user_papeis = user.papeis or []
+        for papel in user_papeis:
+            papel_perms = papel.permissoes or []
+            for perm in papel_perms:
+                if perm and perm.ativo:
+                    perms.add(perm.chave)
+
+        session["permissions"] = sorted(perms)
+    except Exception as e:
+        # Se falhar, não quebra login; menu ficará mais restrito
+        print(f"[SECURITY] Falha ao calcular permissions no login: {e}")
         session["permissions"] = []
 
     return redirect(url_for("auth.inicio"))
