@@ -18,8 +18,8 @@ def criar_rdo():
     tags_options = [{"id": t.id, "nome": t.nome} for t in AuxTagOcorrencia.query.filter_by(ativo=True).order_by(AuxTagOcorrencia.nome.asc()).all()]
 
     clima = AuxClima.query.filter_by(ativo=True).order_by(AuxClima.nome.asc()).all()
-    frente_trabalho = FrenteTrabalho.query.all() 
-    usuarios_obra = Usuario.query.all()
+    frente_trabalho = FrenteTrabalho.query.filter_by(empresa_id=empresa_id).all()
+    usuarios_obra = Usuario.query.filter_by(empresa_id=empresa_id, ativo=True).all()
 
     return render_template(
         "form_rdo.html", 
@@ -421,16 +421,10 @@ def visualizar_rdo(rdo_id):
     clima = AuxClima.query.filter(
         or_(AuxClima.ativo == True, AuxClima.id.in_(selected_clima_ids))
     ).order_by(AuxClima.nome.asc()).all()
-    assinaturas = RDOAprovacao.query.filter_by(rdo_id=rdo_id).order_by(RDOAprovacao.nivel).all()
-    
-    if item.obra_id:
-        usuarios_obra = Usuario.query.filter_by(
-            empresa_id=session.get('empresa_id'), ativo=True
-        ).all()
-    else:
-        usuarios_obra = Usuario.query.filter_by(
-            empresa_id=session.get('empresa_id'), ativo=True
-        ).all()
+    assinaturas = RDOAprovacao.query.filter_by(rdo_id=rdo_id, ativo=True).order_by(RDOAprovacao.nivel).all()
+    usuarios_obra = Usuario.query.filter_by(
+        empresa_id=session.get('empresa_id'), ativo=True
+    ).all()
     
     ass_valida = RDOAprovacao.query.filter_by(rdo_id=rdo_id, status='APROVADO').order_by(RDOAprovacao.nivel.desc()).first()
     if ass_valida and ass_valida.hash:
@@ -444,13 +438,13 @@ def visualizar_rdo(rdo_id):
         "form_rdo.html",
         item=item,
         view_mode=True,
-        obras=Obra.query.all(),
+        obras=Obra.query.filter_by(empresa_id=empresa_id, ativo=True).all(),
         clima=AuxClima.query.filter_by(ativo=True).order_by(AuxClima.nome.asc()).all(),
         frente_trabalho=FrenteTrabalho.query.filter_by(empresa_id=session.get('empresa_id')).all(),
         equipamentos=AuxEquipamentos.query.filter_by(ativo=True).all(),
         assinaturas=assinaturas,
         mao_obra=RDOMaoObra.query.all(),
-        usuarios=Usuario.query.all(),
+        usuarios=Usuario.query.filter_by(empresa_id=empresa_id, ativo=True).all(),
         usuarios_obra=usuarios_obra,
         mao_de_obra_options=mao_de_obra_options,
         equipamentos_options=equipamentos_options,
