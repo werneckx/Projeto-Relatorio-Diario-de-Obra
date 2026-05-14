@@ -419,6 +419,23 @@ Checklist:
 - Testes para auditoria.
 - Testes para upload.
 
+## Branch 12 - Definições
+
+Checklist:
+
+- Template de Ajuste das definições da Empresa
+- Ajuste Template de Obra para permitir personalização das definições
+- RBAC (Deve mostrar os padrões e os personalizados da empresa.)
+
+## Branch 13 - Mão de Obra/Colaboradores
+
+Checklit:
+
+- Cadastrar Colaboradores
+  - Template deve ter opção de selecionar como Usuario ou não (Confirmar no Contexto.md)
+- Relacionar nas frentes de trabalho
+- Trazer Automaticamente em RDO a mão de obra cadastrada na Frente de Trabalho.
+
 ## Ordem Recomendada das Branches
 
 1. `chore/baseline-validacao-ambiente`
@@ -460,6 +477,16 @@ Resultado esperado:
 
 ### Marco 2 - Regras corporativas
 
+Status: concluído em 2026-05-14
+
+Verificação (2026-05-14):
+
+- Branch `refactor/persistence-soft-delete` aplicada no fluxo de workflow de assinaturas de RDO.
+- Endpoint `POST /assinar-rdo/<int:rdo_id>/salvar-workflow` (`app/routes/rdo_assinaturas.py`):
+  - substituiu exclusão física das entradas `RDOAprovacao` por Soft Delete (via `ass.soft_delete(...)`, preservando histórico com `ativo=False`).
+  - agrupou a operação multi-step em transação (`with db.session.begin()`), garantindo rollback seguro.
+- Validação: `python -m py_compile app/routes/rdo_assinaturas.py`.
+
 Branches:
 
 - `feat/security-rbac-multitenant`
@@ -472,6 +499,7 @@ Resultado esperado:
 - RBAC real aplicado.
 - Auditoria e sessoes gravadas.
 - Deletes logicos.
+
 
 ### Marco 3 - RDO enterprise
 

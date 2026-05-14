@@ -65,9 +65,11 @@ def editar_clima(id):
 def excluir_clima(id):
     clima = AuxClima.query.get(id)
     if clima:
-        db.session.delete(clima)
+        clima.ativo = False
+        db.session.add(clima)
         db.session.commit()
     return redirect(url_for('auth.lista_climas'))
+
 
 # --- EQUIPAMENTOS ---
 @auth_bp.get("/lista-equipamentos")
@@ -131,9 +133,11 @@ def editar_equipamento(id):
 def excluir_equipamento(id):
     equipamento = AuxEquipamentos.query.get(id)
     if equipamento:
-        db.session.delete(equipamento)
+        equipamento.ativo = False
+        db.session.add(equipamento)
         db.session.commit()
     return redirect(url_for('auth.lista_equipamentos'))
+
 
 # --- TAGS ---
 @auth_bp.get("/lista-tags-ocorrencias")
@@ -195,9 +199,11 @@ def editar_tags_ocorrencias(id):
 def excluir_tags_ocorrencias(id):
     tag = AuxTagOcorrencia.query.get(id)
     if tag:
-        db.session.delete(tag)
+        tag.ativo = False
+        db.session.add(tag)
         db.session.commit()
     return redirect(url_for('auth.lista_tags_ocorrencias'))
+
 
 # --- MAO DE OBRA ---
 @auth_bp.get("/lista-mao-obra")
@@ -261,9 +267,11 @@ def editar_mao_obra(id):
 def excluir_mao_obra(id):
     mo = AuxFuncoes.query.get(id)
     if mo:
-        db.session.delete(mo)
+        mo.ativo = False
+        db.session.add(mo)
         db.session.commit()
     return redirect(url_for('auth.lista_mao_obra'))
+
 
 #######################################################################################################
 ####################################################################################################### OBRAS

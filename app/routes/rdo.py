@@ -241,10 +241,16 @@ def gerar_rdo():
 
         # Limpeza de filhos para recriação
         if rdo_id_original:
-            RDOAtividade.query.filter_by(rdo_id=item_rdo.id).delete()
-            RDOMaoObra.query.filter_by(rdo_id=item_rdo.id).delete()
-            RDOEquipamento.query.filter_by(rdo_id=item_rdo.id).delete()
-            RDOOcorrencia.query.filter_by(rdo_id=item_rdo.id).delete()
+            # Soft delete dos filhos (não usar delete físico)
+            for _a in RDOAtividade.query.filter_by(rdo_id=item_rdo.id, ativo=True).all():
+                _a.soft_delete(usuario=current_user, motivo="recriação RDO")
+            for _m in RDOMaoObra.query.filter_by(rdo_id=item_rdo.id, ativo=True).all():
+                _m.soft_delete(usuario=current_user, motivo="recriação RDO")
+            for _e in RDOEquipamento.query.filter_by(rdo_id=item_rdo.id, ativo=True).all():
+                _e.soft_delete(usuario=current_user, motivo="recriação RDO")
+            for _o in RDOOcorrencia.query.filter_by(rdo_id=item_rdo.id, ativo=True).all():
+                _o.soft_delete(usuario=current_user, motivo="recriação RDO")
+
 
         # 1. Atividades
         descricoes = request.form.getlist("atividade_descricao[]")
@@ -334,7 +340,9 @@ def gerar_rdo():
                             caminho_arquivo = os.path.join(UPLOAD_FOLDER, foto_del.arquivo)
                             if os.path.exists(caminho_arquivo): os.remove(caminho_arquivo)
                         except Exception: pass
-                        db.session.delete(foto_del)
+                        # Soft delete da foto
+                        foto_del.soft_delete(usuario=current_user, motivo="remover foto")
+
                 except Exception: pass
             
         ids_existentes = request.form.getlist("fotos_existentes_ids[]")
@@ -526,9 +534,10 @@ def excluir_rdo(rdo_id):
         if scope_ids is not None and item_rdo.obra_id not in scope_ids:
             abort(403)
 
-        item_rdo.ativo = False
-        item_rdo.modificado_por = session.get('user_id')
-        db.session.commit()
+        with db.session.begin():
+            # Exclusão lógica em transação
+            item_rdo.soft_delete(usuario=current_user, motivo="exclusão RDO")
+
 
         flash(f"RDO #{item_rdo.id} enviado para lixeira com sucesso!", "success")
         return redirect(url_for('auth.inicio'))

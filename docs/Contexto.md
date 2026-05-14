@@ -515,6 +515,10 @@ Possibilidade futura de integração automática.
 
 ---
 
+# Integrações Futuras
+
+Permitir criar programações de RDO's. Por exemplo, o planejador de uma obra sabe que uma atividade vai ser executada dia X, o sistema deverá permitir esse pré cadastramento da programação do dia para quando o usuario responsável pelo preenchimento acessar o sistema, ele poderá ver o que tem planejado e falar o que foi realizado ou não na proprio apontamento do RDO.
+
 # Frentes de Trabalho
 
 Cada obra:
