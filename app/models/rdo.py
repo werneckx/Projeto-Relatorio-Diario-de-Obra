@@ -1,7 +1,8 @@
 from datetime import datetime
 from app import db
+from app.models.crud_mixin import CRUDMixin
 
-class RDO(db.Model):
+class RDO(CRUDMixin, db.Model):
     __tablename__ = "rdo"
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -85,7 +86,7 @@ class RDO(db.Model):
     def clima_tarde_obj(self):
         return self.clima_tarde
 
-class RDOMaoObra(db.Model):
+class RDOMaoObra(CRUDMixin, db.Model):
     __tablename__ = "rdo_mao_obra"
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -116,7 +117,7 @@ class RDOMaoObra(db.Model):
     def tipo(self):
         return self.tipo_mao_obra
 
-class RDOEquipamento(db.Model):
+class RDOEquipamento(CRUDMixin, db.Model):
     __tablename__ = "rdo_equipamentos"
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -141,7 +142,7 @@ class RDOEquipamento(db.Model):
     def nome_equipamento_resolved(self):
         return self.equipamento.descricao if self.equipamento else "-"
 
-class RDOOcorrencia(db.Model):
+class RDOOcorrencia(CRUDMixin, db.Model):
     __tablename__ = "rdo_ocorrencias"
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -162,7 +163,7 @@ class RDOOcorrencia(db.Model):
     tag_ocorrencia = db.relationship('AuxTagOcorrencia')
     tag_lista = db.synonym("tag_ocorrencia")
 
-class RDOAtividade(db.Model):
+class RDOAtividade(CRUDMixin, db.Model):
     __tablename__ = "rdo_atividades"
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -179,7 +180,7 @@ class RDOAtividade(db.Model):
 
     rdo = db.relationship('RDO', backref=db.backref('atividades', cascade='all, delete-orphan', lazy='dynamic'))
 
-class RDOFoto(db.Model):
+class RDOFoto(CRUDMixin, db.Model):
     __tablename__ = "rdo_fotos"
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -196,7 +197,7 @@ class RDOFoto(db.Model):
 
     rdo = db.relationship('RDO', backref=db.backref('fotos', cascade='all, delete-orphan', lazy='dynamic'))
 
-class RDOAprovacao(db.Model):
+class RDOAprovacao(CRUDMixin, db.Model):
     __tablename__ = "rdo_aprovacoes"
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -232,7 +233,7 @@ class RDOAprovacao(db.Model):
         return self.comentario
 
 
-class RDOAssinatura(db.Model):
+class RDOAssinatura(CRUDMixin, db.Model):
     __tablename__ = "rdo_assinaturas"
 
     id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
@@ -260,7 +261,7 @@ class RDOAssinatura(db.Model):
         return f'<RDOAssinatura RDO:{self.rdo_id} User:{self.usuario_id}>'
 
 
-class RDOVersao(db.Model):
+class RDOVersao(CRUDMixin, db.Model):
     __tablename__ = "rdo_versoes"
 
     id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
