@@ -144,7 +144,27 @@ def login_post():
     session["user_name"] = user.nome
     session["user_email"] = user.email
     session["user_role"] = user.papel if user.papel else "Leitor"
-    
+
+    # SECURITY: permissões efetivas (RBAC) para menu/validações de UI
+    # Calcula a partir dos papéis realmente atribuídos ao usuário (RBAC real).
+    # OBS: Papel.permissoes pode ser uma relationship que nem sempre retorna uma lista
+    # (pode ser lazy/dynamic). Então tratamos como iterável.
+    try:
+        perms = set()
+
+        user_papeis = user.papeis or []
+        for papel in user_papeis:
+            papel_perms = papel.permissoes or []
+            for perm in papel_perms:
+                if perm and perm.ativo:
+                    perms.add(perm.chave)
+
+        session["permissions"] = sorted(perms)
+    except Exception as e:
+        # Se falhar, não quebra login; menu ficará mais restrito
+        print(f"[SECURITY] Falha ao calcular permissions no login: {e}")
+        session["permissions"] = []
+
     return redirect(url_for("auth.inicio"))
 
 @auth_bp.get("/logout")
@@ -230,6 +250,8 @@ def privacidade():
 def suporte():
     email_usuario = session.get("user_email", "")
     return render_template("suporte.html", email_usuario=email_usuario)
+
+
 
 # Importa os dominios que registram rotas no mesmo auth_bp.
 from app.routes import dashboard  # noqa: F401,E402

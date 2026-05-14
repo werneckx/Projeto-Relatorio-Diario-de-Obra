@@ -108,9 +108,31 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated
 
+def get_current_user():
+    """
+    Retorna o usuário atual autenticado (Usuario) a partir de session['user_id'].
+    """
+    user_id = session.get("user_id")
+    if not user_id:
+        return None
+    try:
+        return Usuario.query.get(int(user_id))
+    except Exception:
+        return None
+
+
+def get_current_empresa_id():
+    """
+    Retorna o empresa_id atual do usuário.
+    Importante: para registros operacionais o escopo deve ser o da empresa.
+    """
+    user = get_current_user()
+    return getattr(user, "empresa_id", None) if user else None
+
+
 def role_required(allowed_roles):
     """
-    Decorator para verificar se o usuário tem um dos papéis permitidos.
+    Decorator temporário para compatibilidade legada.
     Uso: @role_required([ROLE_ADMIN, ROLE_GESTOR])
     """
     def decorator(f):
@@ -118,23 +140,114 @@ def role_required(allowed_roles):
         def decorated_function(*args, **kwargs):
             if "user_id" not in session:
                 return redirect(url_for('auth.login'))
-            
+
             user_role = session.get("user_role")
-            
+
             if user_role not in allowed_roles:
-                # Log de segurança (opcional)
-                print(f"[SECURITY] Acesso negado. User ID: {session.get('user_id')}, Role: {user_role}, Endpoint: {request.endpoint}")
+                print(
+                    f"[SECURITY] Acesso negado (role_required). "
+                    f"User ID: {session.get('user_id')}, Role: {user_role}, Endpoint: {request.endpoint}"
+                )
                 flash("Acesso não autorizado para o seu perfil de usuário.", "danger")
                 return redirect(url_for('auth.inicio'))
-            
+
             return f(*args, **kwargs)
         return decorated_function
     return decorator
 
+
+def permission_required(chave: str):
+    """
+    Decorator RBAC tenant-aware por permissão de rota.
+
+    Regras:
+    - Registros operacionais: empresa_id = current_user.empresa_id
+    - Registros globais: empresa_id IS NULL
+    """
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if "user_id" not in session:
+                return redirect(url_for('auth.login'))
+
+            user = get_current_user()
+            if not user or not user.ativo:
+                flash("Sessão inválida.", "danger")
+                return redirect(url_for('auth.inicio'))
+
+            empresa_id = user.empresa_id
+
+            # A) Permissões globais (empresa_id IS NULL)
+            perm_global = Permissao.query.filter(
+                Permissao.chave == chave,
+                Permissao.empresa_id.is_(None),
+                Permissao.ativo.is_(True)
+            ).first()
+
+            # B) Permissões da empresa atual
+            perm_empresa = Permissao.query.filter(
+                Permissao.chave == chave,
+                Permissao.empresa_id == empresa_id,
+                Permissao.ativo.is_(True)
+            ).first()
+
+            # Se não existe permissão no banco para essa chave (global ou empresa), bloqueia por segurança.
+            if not perm_global and not perm_empresa:
+                flash("Permissão não configurada para esta ação.", "danger")
+                return redirect(url_for('auth.inicio'))
+
+            # Verifica papéis do usuário (vinculadas a empresa ou globais).
+            # - papéis do usuário: UsuarioPapel.empresa_id
+            # - papéis globais: Papel.empresa_id IS NULL
+            # - papéis da empresa: Papel.empresa_id = usuario.empresa_id
+            allowed_papel_query = (
+                db.session.query(Papel.id)
+                .join(UsuarioPapel, UsuarioPapel.papel_id == Papel.id)
+                .filter(
+                    UsuarioPapel.usuario_id == user.id,
+                    UsuarioPapel.ativo.is_(True),
+                    Papel.ativo.is_(True),
+                )
+            )
+
+            # papéis com escopo:
+            # - se Papel é global (Papel.empresa_id NULL) então pode usar permissões globais
+            # - se Papel é da empresa então pode usar permissões de empresa
+            papel_ids = set([pid for (pid,) in allowed_papel_query.all()])
+
+            # Checagem por existência de vínculo PapelPermissao com o escopo correto
+            # (papel_permissao.empresa_id NULL = global; empresa_id = tenant = empresa)
+            if perm_global:
+                has_global = PapelPermissao.query.filter(
+                    PapelPermissao.papel_id.in_(papel_ids),
+                    PapelPermissao.permissao_id == perm_global.id,
+                    PapelPermissao.empresa_id.is_(None),
+                    PapelPermissao.ativo.is_(True)
+                ).first()
+                if has_global:
+                    return f(*args, **kwargs)
+
+            if perm_empresa:
+                has_empresa = PapelPermissao.query.filter(
+                    PapelPermissao.papel_id.in_(papel_ids),
+                    PapelPermissao.permissao_id == perm_empresa.id,
+                    PapelPermissao.empresa_id == empresa_id,
+                    PapelPermissao.ativo.is_(True)
+                ).first()
+                if has_empresa:
+                    return f(*args, **kwargs)
+
+            flash("Você não tem permissão para executar esta ação.", "danger")
+            return redirect(url_for('auth.inicio'))
+        return decorated_function
+    return decorator
+
+
 # Helper para verificação de escopo (Scoping)
 def get_user_scope_ids():
-    """Retorna None para permitir acesso às obras da empresa"""
-    # A lógica de scope agora é por empresa_id nas queries.
+    """
+    Legado: a lógica de scope agora deve ser aplicada diretamente nas queries (por empresa_id).
+    """
     return None
 
 

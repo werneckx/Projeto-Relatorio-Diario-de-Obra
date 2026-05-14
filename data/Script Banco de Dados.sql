@@ -796,14 +796,41 @@ INSERT INTO permissoes (empresa_id, chave, descricao, is_system, ativo) VALUES
 (NULL, 'empresa.create',    'Criar novas empresas no sistema',         TRUE, TRUE),
 (NULL, 'empresa.view',      'Visualizar dados da empresa',             TRUE, TRUE),
 (NULL, 'empresa.manage',    'Gerenciar configurações da empresa',      TRUE, TRUE),
-(NULL, 'usuario.manage',    'Gerenciar usuários da empresa',           TRUE, TRUE),
+(NULL, 'usuario.manage',   'Gerenciar usuários da empresa',           TRUE, TRUE),
 (NULL, 'rdo.create',        'Criar novos RDOs',                        TRUE, TRUE),
 (NULL, 'rdo.update',        'Editar RDOs existentes',                  TRUE, TRUE),
 (NULL, 'rdo.approve',       'Aprovar ou rejeitar RDOs',                TRUE, TRUE),
 (NULL, 'rdo.view',          'Visualizar RDOs',                         TRUE, TRUE),
-(NULL, 'fornecedor.manage', 'Gerenciar fornecedores da empresa',       TRUE, TRUE),
-(NULL, 'obra.manage',       'Gerenciar obras e frentes de trabalho',   TRUE, TRUE),
-(NULL, 'colaborador.manage','Gerenciar colaboradores e equipes',       TRUE, TRUE);
+(NULL, 'rdo.sign',         'Assinar RDOs no fluxo',                 TRUE, TRUE),
+(NULL, 'rdo.reject',       'Rejeitar assinaturas no fluxo',          TRUE, TRUE),
+(NULL, 'fornecedor.manage','Gerenciar fornecedores da empresa',       TRUE, TRUE),
+(NULL, 'obra.manage',      'Gerenciar obras e frentes de trabalho',   TRUE, TRUE),
+(NULL, 'colaborador.manage','Gerenciar colaboradores e equipes',      TRUE, TRUE),
+
+
+-- Auxiliares (clima)
+(NULL, 'clima.view',       'Visualizar climas',                      TRUE, TRUE),
+(NULL, 'clima.create',     'Criar climas',                            TRUE, TRUE),
+(NULL, 'clima.update',     'Editar climas',                           TRUE, TRUE),
+(NULL, 'clima.delete',     'Excluir climas',                          TRUE, TRUE),
+
+-- Auxiliares (equipamentos)
+(NULL, 'equipamento.view',   'Visualizar equipamentos',               TRUE, TRUE),
+(NULL, 'equipamento.create', 'Criar equipamentos',                    TRUE, TRUE),
+(NULL, 'equipamento.update', 'Editar equipamentos',                   TRUE, TRUE),
+(NULL, 'equipamento.delete', 'Excluir equipamentos',                  TRUE, TRUE),
+
+-- Auxiliares (mão de obra)
+(NULL, 'mao_obra.view',    'Visualizar mão de obra',                 TRUE, TRUE),
+(NULL, 'mao_obra.create',  'Criar mão de obra',                      TRUE, TRUE),
+(NULL, 'mao_obra.update',  'Editar mão de obra',                     TRUE, TRUE),
+(NULL, 'mao_obra.delete',  'Excluir mão de obra',                    TRUE, TRUE),
+
+-- Auxiliares (tags de ocorrências)
+(NULL, 'tag_ocorrencia.view',   'Visualizar tags de ocorrências',     TRUE, TRUE),
+(NULL, 'tag_ocorrencia.create', 'Criar tags de ocorrências',          TRUE, TRUE),
+(NULL, 'tag_ocorrencia.update', 'Editar tags de ocorrências',         TRUE, TRUE),
+(NULL, 'tag_ocorrencia.delete', 'Excluir tags de ocorrências',        TRUE, TRUE);
 
 -- Mapeamento ADMIN → todas as permissões
 INSERT INTO papel_permissao (empresa_id, papel_id, permissao_id, ativo)
@@ -942,9 +969,9 @@ INSERT INTO colaboradores (id, empresa_id, cliente_id, tipo, nome) VALUES
 -- 5. Inserir Usuários (Acesso ao Sistema)
 -- Senha padrão para demo: 'password123' (hash simplificado para exemplo)
 INSERT INTO usuarios (id, empresa_id, colaborador_id, email, senha_hash) VALUES
-(1, 1, 1, 'gestor@horizonte.com.br', '$2y$10$eImiTXuWVxfM37uY4JANjOL.oMqpzh07YlC2v8t/1W/K9/u6hVnd.'),
-(2, 1, 3, 'operador@horizonte.com.br', '$2y$10$eImiTXuWVxfM37uY4JANjOL.oMqpzh07YlC2v8t/1W/K9/u6hVnd.'),
-(3, 1, 6, 'supervisor@bellavista.com.br', '$2y$10$eImiTXuWVxfM37uY4JANjOL.oMqpzh07YlC2v8t/1W/K9/u6hVnd.');
+(1, 1, 1, 'gestor@horizonte.com.br', 'scrypt:32768:8:1$NMXQmJ4GCOJVmNoe$c62100d1b8d581dddc096ec887df55f1a716ab08c8cbd8f6ff16eae875822597681b6b29e4633ef098f281d3b7ab47c7b8540be065efe25605c1ac82a441dbf8'),
+(2, 1, 3, 'operador@horizonte.com.br', 'scrypt:32768:8:1$NMXQmJ4GCOJVmNoe$c62100d1b8d581dddc096ec887df55f1a716ab08c8cbd8f6ff16eae875822597681b6b29e4633ef098f281d3b7ab47c7b8540be065efe25605c1ac82a441dbf8'),
+(3, 1, 6, 'supervisor@bellavista.com.br', 'scrypt:32768:8:1$NMXQmJ4GCOJVmNoe$c62100d1b8d581dddc096ec887df55f1a716ab08c8cbd8f6ff16eae875822597681b6b29e4633ef098f281d3b7ab47c7b8540be065efe25605c1ac82a441dbf8');
 
 -- 6. Atribuir Papéis aos Usuários
 -- Assumindo IDs do script original: 1=ADMIN, 2=GESTOR, 3=OPERADOR
@@ -1393,9 +1420,9 @@ INSERT INTO aux_tipo_obra (id, empresa_id, nome, descricao, is_system, ativo) VA
 INSERT INTO papeis (id, empresa_id, nome, descricao, is_system, ativo) VALUES
 (20, 2, 'GESTOR_CONTRATO', 'Gestor responsavel por contratos e medicoes da empresa.', FALSE, TRUE);
 
-INSERT INTO permissoes (id, empresa_id, chave, descricao, is_system, ativo) VALUES
-(20, 2, 'medicao.view', 'Visualizar dados de medicao e produtividade da obra.', FALSE, TRUE),
-(21, 2, 'workflow.manage', 'Gerenciar workflows de aprovacao da empresa.', FALSE, TRUE);
+INSERT INTO permissoes (empresa_id, chave, descricao, is_system, ativo) VALUES
+(2, 'medicao.view', 'Visualizar dados de medicao e produtividade da obra.', FALSE, TRUE),
+(2, 'workflow.manage', 'Gerenciar workflows de aprovacao da empresa.', FALSE, TRUE);
 
 INSERT INTO papel_permissao (id, empresa_id, papel_id, permissao_id, ativo) VALUES
 (100, 2, 20, 20, TRUE),
@@ -1420,10 +1447,10 @@ INSERT INTO colaboradores (id, empresa_id, fornecedor_id, cliente_id, tipo, cada
 (26, 2, NULL, 20, 'CLIENTE', '771.441.992-10', 'Marina Andrade - Fiscal SANECAMP', TRUE);
 
 INSERT INTO usuarios (id, empresa_id, colaborador_id, email, senha_hash, ativo, ultimo_login, ultimo_login_ip) VALUES
-(20, 2, 20, 'diretoria@enfil.example', '$2y$10$eImiTXuWVxfM37uY4JANjOL.oMqpzh07YlC2v8t/1W/K9/u6hVnd.', TRUE, NOW() - INTERVAL 2 HOUR, '10.10.1.10'),
-(21, 2, 21, 'camila.rocha@enfil.example', '$2y$10$eImiTXuWVxfM37uY4JANjOL.oMqpzh07YlC2v8t/1W/K9/u6hVnd.', TRUE, NOW() - INTERVAL 35 MINUTE, '10.10.1.21'),
-(22, 2, 22, 'rafael.nunes@enfil.example', '$2y$10$eImiTXuWVxfM37uY4JANjOL.oMqpzh07YlC2v8t/1W/K9/u6hVnd.', TRUE, NOW() - INTERVAL 10 MINUTE, '10.10.2.22'),
-(23, 2, 26, 'fiscal@sanecamp.example', '$2y$10$eImiTXuWVxfM37uY4JANjOL.oMqpzh07YlC2v8t/1W/K9/u6hVnd.', TRUE, NOW() - INTERVAL 1 DAY, '177.10.20.30');
+(20, 2, 20, 'diretoria@enfil.example', 'scrypt:32768:8:1$NMXQmJ4GCOJVmNoe$c62100d1b8d581dddc096ec887df55f1a716ab08c8cbd8f6ff16eae875822597681b6b29e4633ef098f281d3b7ab47c7b8540be065efe25605c1ac82a441dbf8', TRUE, NOW() - INTERVAL 2 HOUR, '10.10.1.10'),
+(21, 2, 21, 'camila.rocha@enfil.example', 'scrypt:32768:8:1$NMXQmJ4GCOJVmNoe$c62100d1b8d581dddc096ec887df55f1a716ab08c8cbd8f6ff16eae875822597681b6b29e4633ef098f281d3b7ab47c7b8540be065efe25605c1ac82a441dbf8', TRUE, NOW() - INTERVAL 35 MINUTE, '10.10.1.21'),
+(22, 2, 22, 'rafael.nunes@enfil.example', 'scrypt:32768:8:1$NMXQmJ4GCOJVmNoe$c62100d1b8d581dddc096ec887df55f1a716ab08c8cbd8f6ff16eae875822597681b6b29e4633ef098f281d3b7ab47c7b8540be065efe25605c1ac82a441dbf8', TRUE, NOW() - INTERVAL 10 MINUTE, '10.10.2.22'),
+(23, 2, 26, 'fiscal@sanecamp.example', 'scrypt:32768:8:1$NMXQmJ4GCOJVmNoe$c62100d1b8d581dddc096ec887df55f1a716ab08c8cbd8f6ff16eae875822597681b6b29e4633ef098f281d3b7ab47c7b8540be065efe25605c1ac82a441dbf8', TRUE, NOW() - INTERVAL 1 DAY, '177.10.20.30');
 
 INSERT INTO usuario_papel (empresa_id, usuario_id, papel_id, ativo) VALUES
 (2, 20, 1, TRUE),

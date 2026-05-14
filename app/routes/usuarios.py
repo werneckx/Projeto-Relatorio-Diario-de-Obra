@@ -2,14 +2,14 @@
 
 @auth_bp.get("/lista-usuarios")
 @login_required
-@role_required(PERM_WRITE_BASIC) # Leitor e Cliente não veem usuários
+@permission_required('usuario.manage')
 def lista_usuarios():
-    # SCOPING: Gestor/Operador só veem usuários de suas obras
-    query = Usuario.query
+    # SCOPING: Gestor/Operador só veem usuários da empresa atual (e, na prática, das suas obras)
+    empresa_id = session.get('empresa_id')
+    query = Usuario.query.filter_by(empresa_id=empresa_id)
+
     if session.get("user_role") != ROLE_ADMIN:
-        user = Usuario.query.get(session.get("user_id"))
-        ids_permitidos = [o.id for o in Obra.query.filter_by(empresa_id=session.get('empresa_id')).all()]
-        # Filtra usuários que tenham intersecção de obras (usuários da mesma obra)
+        ids_permitidos = [o.id for o in Obra.query.filter_by(empresa_id=empresa_id).all()]
         query = query.filter(Usuario.obras_permitidas.any(Obra.id.in_(ids_permitidos)))
 
     usuarios = query.order_by(Usuario.id.asc()).all()
@@ -40,16 +40,17 @@ def lista_usuarios():
 
 @auth_bp.get("/criar-usuario")
 @login_required
-@role_required(PERM_MANAGEMENT) # Apenas Admin e Gestor criam
+@permission_required('usuario.manage')
 def criar_usuario():
     # SCOPING: Gestor só pode vincular às suas obras
+    empresa_id = session.get('empresa_id')
     user = Usuario.query.get(session.get("user_id"))
-    if user.papel == ROLE_ADMIN:
-        obras = Obra.query.filter_by(status=1).order_by(Obra.nome).all()
+    if user and user.papel == ROLE_ADMIN:
+        obras = Obra.query.filter_by(empresa_id=empresa_id, status=1).order_by(Obra.nome).all()
     else:
-        obras = [o for o in Obra.query.filter_by(empresa_id=session.get('empresa_id')).all() if o.status == 1]
+        obras = [o for o in Obra.query.filter_by(empresa_id=empresa_id).all() if o.status == 1]
     
-    admin = Usuario.query.filter_by(papel='Admin').first()
+    admin = Usuario.query.filter_by(empresa_id=empresa_id, papel='Admin').first()
     default_supervisor = {'id': admin.id, 'nome': admin.nome, 'email': admin.email} if admin else None
 
     return render_template(
@@ -61,17 +62,18 @@ def criar_usuario():
 
 @auth_bp.post("/gerar-usuario")
 @login_required
-@role_required(PERM_MANAGEMENT)
+@permission_required('usuario.manage')
 def gerar_usuario():
     categoria = request.form.get("categoria")
     user_id = request.form.get("id")
+    empresa_id = session.get('empresa_id')
     current_user_obj = Usuario.query.get(session.get("user_id"))
     
     # SCOPING: Para reload do template em caso de erro
     if current_user_obj.papel == ROLE_ADMIN:
-        obras_ativas = Obra.query.filter_by(status=1).order_by(Obra.nome).all()
+        obras_ativas = Obra.query.filter_by(empresa_id=empresa_id, status=1).order_by(Obra.nome).all()
     else:
-        obras_ativas = [o for o in current_user_obj.obras_permitidas if o.status == 1]
+        obras_ativas = [o for o in current_user_obj.obras_permitidas if o.status == 1 and o.empresa_id == empresa_id]
 
     if categoria == "usuario":
         nome = request.form.get("nome")
@@ -91,7 +93,7 @@ def gerar_usuario():
         item_form = {'id': user_id, 'nome': nome, 'email': email, 'papel': papel, 'cpf': cpf}
 
         if user_id:
-            user = Usuario.query.get_or_404(user_id)
+            user = Usuario.query.filter_by(id=user_id, empresa_id=empresa_id).first_or_404()
             # Validar se Gestor pode editar este usuário
             if current_user_obj.papel != ROLE_ADMIN:
                 # Simplificação: Se o usuário alvo tem alguma obra em comum, permite (ou restringe mais conforme regra)
@@ -100,7 +102,7 @@ def gerar_usuario():
                     flash("Gestores não podem editar Admins.", "danger")
                     return redirect(url_for('auth.lista_usuarios'))
 
-            if Usuario.query.filter(Usuario.cpf == cpf, Usuario.id != user_id).first():
+            if Usuario.query.filter(Usuario.empresa_id == empresa_id, Usuario.cpf == cpf, Usuario.id != user_id).first():
                 flash("Este CPF já está cadastrado.", "danger")
                 return render_template("form_usuario.html", item=item_form, obras=obras_ativas)
             
@@ -119,7 +121,7 @@ def gerar_usuario():
             db.session.add(user)
 
         if papel == 'Admin':
-            user.obras_permitidas = Obra.query.all()
+            user.obras_permitidas = Obra.query.filter_by(empresa_id=empresa_id).all()
         else:
             obras_selecionadas = []
             if obras_ids:
@@ -134,7 +136,7 @@ def gerar_usuario():
 
         if not getattr(user, 'id_supervisor', None):
             try:
-                admin = Usuario.query.filter_by(papel='Admin').first()
+                admin = Usuario.query.filter_by(empresa_id=empresa_id, papel='Admin').first()
                 if admin: user.id_supervisor = admin.id
             except Exception: pass
 
@@ -149,10 +151,11 @@ def gerar_usuario():
 
 @auth_bp.post("/mudar-status-usuario/<int:userId>")
 @login_required
-@role_required(PERM_MANAGEMENT)
+@permission_required('usuario.manage')
 def toggle_user_status(userId):
-    # SECURITY: Verifica permissão sobre o usuário alvo
-    user_alvo = Usuario.query.get_or_404(userId)
+    # SECURITY: Verifica permissão sobre o usuário alvo (tenant)
+    empresa_id = session.get('empresa_id')
+    user_alvo = Usuario.query.filter_by(id=userId, empresa_id=empresa_id).first_or_404()
     if session.get("user_role") == ROLE_GESTOR:
         if user_alvo.papel == ROLE_ADMIN:
             return jsonify({"message": "Proibido alterar Admin"}), 403
@@ -167,9 +170,10 @@ def toggle_user_status(userId):
      
 @auth_bp.post("/usuario-resetar-senha/<int:id>")
 @login_required
-@role_required(PERM_MANAGEMENT)
+@permission_required('usuario.manage')
 def reset_senha_usuario(id):
-    user = Usuario.query.get_or_404(id)
+    empresa_id = session.get('empresa_id')
+    user = Usuario.query.filter_by(id=id, empresa_id=empresa_id).first_or_404()
     # SECURITY
     if session.get("user_role") == ROLE_GESTOR and user.papel == ROLE_ADMIN:
          return {"message": "Gestor não reseta senha de Admin"}, 403
@@ -182,9 +186,10 @@ def reset_senha_usuario(id):
 
 @auth_bp.route("/editar-usuario/<int:id>", methods=['GET', 'POST'])
 @login_required
-@role_required(PERM_MANAGEMENT)
+@permission_required('usuario.manage')
 def editar_usuario(id):
-    user_edit = Usuario.query.get_or_404(id)
+    empresa_id = session.get('empresa_id')
+    user_edit = Usuario.query.filter_by(id=id, empresa_id=empresa_id).first_or_404()
     current_user_obj = Usuario.query.get(session.get("user_id"))
 
     # SECURITY Scope
@@ -194,15 +199,16 @@ def editar_usuario(id):
             return redirect(url_for('auth.lista_usuarios'))
         obras = [o for o in current_user_obj.obras_permitidas if o.status == 1]
     else:
-        obras = Obra.query.filter_by(status=1).order_by(Obra.nome).all()
+        obras = Obra.query.filter_by(empresa_id=session.get('empresa_id'), status=1).order_by(Obra.nome).all()
 
     return render_template("form_usuario.html", item=user_edit, categoria="usuario", obras=obras)
     
 @auth_bp.get("/visualizar-usuario/<int:id>")
 @login_required
-@role_required(PERM_WRITE_BASIC)
+@permission_required('usuario.manage')
 def visualizar_usuario(id):
-    user_view = Usuario.query.get_or_404(id)
+    empresa_id = session.get('empresa_id')
+    user_view = Usuario.query.filter_by(id=id, empresa_id=empresa_id).first_or_404()
     current_user_obj = Usuario.query.get(session.get("user_id"))
     
     # SECURITY Scope check
@@ -215,7 +221,7 @@ def visualizar_usuario(id):
              return redirect(url_for('auth.lista_usuarios'))
         obras = [o for o in current_user_obj.obras_permitidas if o.status == 1]
     else:
-        obras = Obra.query.filter_by(status=1).order_by(Obra.nome).all()
+        obras = Obra.query.filter_by(empresa_id=session.get('empresa_id'), status=1).order_by(Obra.nome).all()
     
     view_mode = True
     supervisor_chain = get_supervisor_chain_for_user(user_view)
@@ -230,7 +236,7 @@ def visualizar_usuario(id):
 
     default_supervisor = None
     try:
-        admin = Usuario.query.filter_by(papel='Admin').first()
+        admin = Usuario.query.filter_by(empresa_id=session.get('empresa_id'), papel='Admin').first()
         if admin: default_supervisor = {'id': admin.id, 'nome': admin.nome, 'email': admin.email}
     except Exception: pass
 
@@ -262,7 +268,8 @@ def get_supervisor_chain_for_user(user):
 @auth_bp.get('/supervisores')
 @login_required
 def lista_supervisores():
-    users = Usuario.query.order_by(Usuario.nome.asc()).all()
+    empresa_id = session.get('empresa_id')
+    users = Usuario.query.filter_by(empresa_id=empresa_id).order_by(Usuario.nome.asc()).all()
     result = [{'id': u.id, 'nome': u.nome, 'papel': u.papel, 'email': u.email} for u in users]
     return jsonify(result)
 
