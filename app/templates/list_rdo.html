@@ -3,160 +3,882 @@
 {% block title %}Lista de RDOs{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
 
+<!-- DataTables CSS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<!-- Cálculos de Contagem -->
 {% set count_total = rdos | length %}
 {% set count_aprovado = rdos | selectattr('status', 'equalto', 'APROVADO') | list | length %}
 {% set count_pendente = rdos | selectattr('status', 'equalto', 'PENDENTE') | list | length %}
 {% set count_rejeitado = rdos | selectattr('status', 'equalto', 'REJEITADO') | list | length %}
 
-{% set user_id_int = session['user_id'] | int %}
 {% set ns = namespace(count_minhas_pendencias=0) %}
 
-{# Conta RDOs em que a primeira assinatura pendente é do usuário (fluxo sequencial) #}
-{% for rdo in rdos %}
-  {% set rdo_status = namespace(found_first=false, is_my_turn=false) %}
-  {% if rdo.assinaturas %}
-    {% for ass in rdo.assinaturas %}
-      {% if not rdo_status.found_first %}
-        {% if ass.status == 'PENDENTE' %}
-          {% set rdo_status.found_first = true %}
-          {% if ass.id_usuario | int == user_id_int %}
-            {% set rdo_status.is_my_turn = true %}
-          {% endif %}
-        {% elif ass.status == 'REJEITADO' %}
-          {% set rdo_status.found_first = true %}
-        {% endif %}
-      {% endif %}
-    {% endfor %}
-  {% endif %}
-  {% if rdo_status.is_my_turn %}
-    {% set ns.count_minhas_pendencias = ns.count_minhas_pendencias + 1 %}
-  {% endif %}
+{# Usar diretamente o que o back-end já retorna (evita depender de rdo.assinaturas) #}
+{% set ns.count_minhas_pendencias = count_minhas_pendencias if count_minhas_pendencias is defined else (lista_pendencias
+| length if lista_pendencias is defined else 0) %}
+
+{# Conjunto com os IDs dos RDOs em que o usuário atual possui pendência de assinatura #}
+{% set meus_rdo_ids_pendentes = [] %}
+{% if lista_pendencias is defined %}
+{% for pend in lista_pendencias %}
+{% if pend and pend.rdo_id %}
+{% set _ = meus_rdo_ids_pendentes.append(pend.rdo_id) %}
+{% endif %}
 {% endfor %}
+{% endif %}
+{% set meus_rdo_ids_pendentes = meus_rdo_ids_pendentes | unique %}
 
 <style>
-  .rdo-kpi{display:flex;gap:12px;flex-wrap:wrap;margin:16px 0 18px}
-  .rdo-kpi .card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px 14px;min-width:160px;cursor:pointer}
-  .rdo-kpi .card.active{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.10)}
-  .rdo-kpi .val{font-weight:800;font-size:20px;line-height:1}
-  .rdo-kpi .lab{font-size:11px;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-top:6px}
-  .badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:800;letter-spacing:.02em}
-  .b-ok{background:#ecfdf5;color:#047857}
-  .b-wa{background:#fffbeb;color:#b45309}
-  .b-er{background:#fef2f2;color:#b91c1c}
-  .b-in{background:#eef2ff;color:#4338ca}
-  .b-ca{background:#f3f4f6;color:#374151}
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background-color: #f8fafc;
+  }
+
+  /* --- Animações --- */
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-up {
+    animation: fadeInUp 0.4s ease-out forwards;
+  }
+
+  /* --- DataTables Custom --- */
+  .dataTables_wrapper .dataTables_length select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    background-size: 1.2em 1.2em;
+    padding: 0.35rem 2rem 0.35rem 0.75rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    color: #475569;
+    outline: none;
+    transition: all 0.2s;
+  }
+
+  .dataTables_wrapper .dataTables_paginate {
+    margin-top: 1rem;
+    display: flex;
+    justify-content: center;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+  }
+
+  @media (min-width: 640px) {
+    .dataTables_wrapper .dataTables_paginate {
+      justify-content: flex-end;
+    }
+  }
+
+  .dataTables_wrapper .dataTables_paginate .paginate_button {
+    padding: 0.3rem 0.6rem;
+    border-radius: 0.5rem;
+    border: 1px solid transparent;
+    color: #64748b !important;
+    font-size: 0.8rem;
+    font-weight: 500;
+  }
+
+  .dataTables_wrapper .dataTables_paginate .paginate_button.current,
+  .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+    background: #3b82f6 !important;
+    border-color: #3b82f6 !important;
+    color: white !important;
+  }
+
+  /* --- CLEAN CARDS (Estilo KPI Moderno) --- */
+  .kpi-card {
+    background: white;
+    border: 1px solid #f1f5f9;
+    border-radius: 12px;
+    padding: 16px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+  }
+
+  .kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+    border-color: #e2e8f0;
+  }
+
+  .kpi-card.active-filter {
+    border-color: #3b82f6;
+    background-color: #eff6ff;
+    /* Azul bem claro no fundo */
+    box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.1);
+  }
+
+  .kpi-value {
+    font-size: 1.5rem;
+    /* 24px */
+    font-weight: 700;
+    color: #1e293b;
+    line-height: 1;
+    margin-top: 8px;
+  }
+
+  .kpi-label {
+    font-size: 0.75rem;
+    /* 12px */
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+  }
+
+  .kpi-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    margin-bottom: 4px;
+  }
+
+  /* Cores Específicas por Tipo */
+  .kpi-card[data-type="total"] .kpi-icon {
+    background: #f1f5f9;
+    color: #475569;
+  }
+
+  .kpi-card[data-type="aprovado"] .kpi-icon {
+    background: #ecfdf5;
+    color: #059669;
+  }
+
+  .kpi-card[data-type="aprovado"].active-filter {
+    background: #ecfdf5;
+    border-color: #059669;
+  }
+
+  .kpi-card[data-type="pendente"] .kpi-icon {
+    background: #fffbeb;
+    color: #d97706;
+  }
+
+  .kpi-card[data-type="pendente"].active-filter {
+    background: #fffbeb;
+    border-color: #d97706;
+  }
+
+  .kpi-card[data-type="rejeitado"] .kpi-icon {
+    background: #fef2f2;
+    color: #dc2626;
+  }
+
+  .kpi-card[data-type="rejeitado"].active-filter {
+    background: #fef2f2;
+    border-color: #dc2626;
+  }
+
+  /* CARD DE AÇÃO/PENDÊNCIA */
+  .action-card {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.3);
+  }
+
+  .action-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.4);
+  }
+
+  .action-card.active-filter {
+    ring: 2px;
+    ring-offset: 2px;
+    ring-color: #8b5cf6;
+  }
+
+  .action-card .icon-wrapper {
+    background: rgba(255, 255, 255, 0.2);
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    backdrop-filter: blur(4px);
+  }
+
+  /* Mobile Adjustments for Cards */
+  @media (max-width: 640px) {
+    .kpi-card {
+      padding: 10px 12px;
+      border-radius: 10px;
+      flex-direction: row;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .kpi-content {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .kpi-value {
+      font-size: 1.125rem;
+      margin-top: 0;
+    }
+
+    .kpi-label {
+      font-size: 0.65rem;
+    }
+
+    .kpi-icon {
+      width: 28px;
+      height: 28px;
+      font-size: 0.75rem;
+      margin-bottom: 0;
+    }
+
+    .action-card {
+      padding: 12px;
+    }
+
+    .action-card .icon-wrapper {
+      width: 32px;
+      height: 32px;
+      font-size: 0.9rem;
+    }
+  }
+
+  /* Overlay */
+  #advancedFilterOverlay {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateX(100%);
+    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
+  }
+
+  #advancedFilterOverlay.open {
+    transform: translateX(0);
+  }
+
+  @media (max-width: 640px) {
+    #advancedFilterOverlay {
+      width: 100%;
+      max-width: 100%;
+    }
+  }
+
+  /* --- TABELA RESPONSIVA TIPO CARD (Mobile GRID SYSTEM) --- */
+  @media (max-width: 768px) {
+
+    /* Esconde elementos nativos de tabela */
+    table#dataTableRDO,
+    table#dataTableRDO thead,
+    table#dataTableRDO tbody,
+    table#dataTableRDO th,
+    table#dataTableRDO td,
+    table#dataTableRDO tr {
+      display: block;
+    }
+
+    table#dataTableRDO thead {
+      display: none;
+    }
+
+    /* Card Container (Grid Layout) */
+    table#dataTableRDO tbody tr {
+      display: grid !important;
+      /* Força Grid */
+      grid-template-columns: 1fr 1fr;
+      /* Duas colunas iguais */
+      grid-template-rows: auto auto auto auto;
+      /* Linhas automáticas */
+      gap: 8px;
+      /* Espaçamento fixo e pequeno */
+
+      background: #fff;
+      border: 1px solid #f1f5f9;
+      border-radius: 12px;
+      margin-bottom: 12px;
+      padding: 12px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+      position: relative;
+    }
+
+    /* Reset de Células */
+    table#dataTableRDO tbody td {
+      border: none !important;
+      padding: 0;
+      white-space: normal;
+    }
+
+    /* --- Posicionamento dos Elementos no Grid --- */
+
+    /* 1. Status (Topo Esquerda) */
+    table#dataTableRDO tbody td:nth-child(1) {
+      grid-column: 1 / 2;
+      grid-row: 1;
+      display: flex;
+      align-items: center;
+    }
+
+    /* 2. ID (Topo Direita) */
+    table#dataTableRDO tbody td:nth-child(2) {
+      grid-column: 2 / 3;
+      grid-row: 1;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+    }
+
+    /* 4. Obra (Linha 2 - Largura Total) */
+    table#dataTableRDO tbody td:nth-child(4) {
+      grid-column: 1 / 3;
+      grid-row: 2;
+      font-weight: 700;
+      color: #1e293b;
+      font-size: 0.95rem;
+      line-height: 1.3;
+      margin-top: 4px;
+      margin-bottom: 4px;
+    }
+
+    /* 3. Data (Linha 3 - Esquerda) */
+    table#dataTableRDO tbody td:nth-child(3) {
+      grid-column: 1 / 2;
+      grid-row: 3;
+      font-size: 0.75rem;
+      color: #64748b;
+      display: flex;
+      align-items: center;
+    }
+
+    table#dataTableRDO tbody td:nth-child(3)::before {
+      content: '\f133';
+      /* Calendar Icon FontAwesome */
+      font-family: "Font Awesome 5 Free";
+      font-weight: 400;
+      margin-right: 6px;
+      color: #94a3b8;
+    }
+
+    /* 5. Responsável (Linha 3 - Direita) */
+    table#dataTableRDO tbody td:nth-child(5) {
+      grid-column: 2 / 3;
+      grid-row: 3;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      font-size: 0.75rem;
+      color: #64748b;
+    }
+
+    /* Ajuste fino para o avatar/texto no mobile */
+    table#dataTableRDO tbody td:nth-child(5) .h-8 {
+      width: 24px;
+      height: 24px;
+      font-size: 9px;
+    }
+
+    table#dataTableRDO tbody td:nth-child(5) .text-sm {
+      font-size: 0.75rem;
+    }
+
+    table#dataTableRDO tbody td:nth-child(5) .text-\[10px\] {
+      display: none;
+    }
+
+    /* Esconde data criação no card mini */
+
+    /* 6. Ações (Linha 4 - Largura Total - Rodapé) */
+    table#dataTableRDO tbody td:nth-child(6) {
+      grid-column: 1 / 3;
+      grid-row: 4;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px dashed #f1f5f9 !important;
+    }
+
+    /* Ajustes dos botões de ação mobile */
+    .action-btn {
+      width: 32px;
+      height: 32px;
+      font-size: 0.85rem;
+    }
+
+    /* Ajuste do container DataTables */
+    .dataTables_wrapper {
+      padding: 0;
+    }
+  }
 </style>
 
-<h2 class="text-xl font-black text-slate-900">RDOs</h2>
+<div class="space-y-5 max-w-[1600px] mx-auto px-2 sm:px-0">
 
-<div class="rdo-kpi">
-  <div class="card active" data-type="total" onclick="filtrarTabelaPorStatus('', this)">
-    <div class="val">{{ count_total }}</div>
-    <div class="lab">Total</div>
-  </div>
-  <div class="card" data-type="aprovado" onclick="filtrarTabelaPorStatus('Aprovado', this)">
-    <div class="val">{{ count_aprovado }}</div>
-    <div class="lab">Aprovados</div>
-  </div>
-  <div class="card" data-type="pendente" onclick="filtrarTabelaPorStatus('Pendente', this)">
-    <div class="val">{{ count_pendente }}</div>
-    <div class="lab">Pendentes</div>
-  </div>
-  <div class="card" data-type="rejeitado" onclick="filtrarTabelaPorStatus('Rejeitado', this)">
-    <div class="val">{{ count_rejeitado }}</div>
-    <div class="lab">Rejeitados</div>
-  </div>
-  {% if ns.count_minhas_pendencias > 0 %}
-    <div class="card" data-type="assinar" onclick="filtrarTabelaPorStatus('minhas_pendencias', this)">
-      <div class="val">{{ ns.count_minhas_pendencias }}</div>
-      <div class="lab">Minhas pendências</div>
+  <!-- 1. Cabeçalho -->
+  <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 animate-fade-up">
+    <div>
+      <h1 class="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">Relatórios Diários</h1>
+      <p class="text-slate-500 mt-1 text-xs md:text-sm">Visão geral e gerenciamento.</p>
     </div>
+    <div class="flex flex-wrap gap-3">
+      <a href="{{ url_for('auth.validar_documento_publico') }}"
+        class="w-full md:w-auto inline-flex justify-center items-center px-4 py-2.5 bg-gray-600 hover:bg-gray-700 text-white text-sm font-semibold rounded-lg shadow-sm shadow-gray-500/30 transition-all hover:-translate-y-0.5">
+        <i class="fas fa-qrcode mr-2"></i> Validar RDO
+      </a>
+      <a href="{{ url_for('auth.criar_rdo') }}"
+        class="w-full md:w-auto inline-flex justify-center items-center px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-sm shadow-blue-500/30 transition-all hover:-translate-y-0.5">
+        <i class="fas fa-plus mr-2"></i> Novo RDO
+      </a>
+    </div>
+  </div>
+
+  <!-- AREA DE DESTAQUE: Ação PENDENTE -->
+  {% if ns.count_minhas_pendencias > 0 %}
+  <div class="animate-fade-up" style="animation-delay: 50ms;">
+    <div onclick="filtrarTabelaPorStatus('minhas_pendencias', this)" data-type="assinar"
+      class="action-card w-full md:w-auto md:inline-flex md:min-w-[300px] stat-card">
+      <div class="flex items-center gap-4">
+        <div class="icon-wrapper">
+          <i class="fas fa-pen-nib"></i>
+        </div>
+        <div>
+          <h3 class="font-bold text-lg leading-tight">{{ ns.count_minhas_pendencias }} Pendência{{ 's' if
+            ns.count_minhas_pendencias > 1 else '' }}</h3>
+          <p class="text-xs text-indigo-100 font-medium uppercase tracking-wide">Aguardando sua assinatura</p>
+        </div>
+      </div>
+      <div class="bg-white/20 rounded-full p-1.5 ml-4">
+        <i class="fas fa-arrow-right text-sm"></i>
+      </div>
+    </div>
+  </div>
   {% endif %}
-</div>
 
-<div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden">
-  <div style="padding:12px 14px;border-bottom:1px solid #e5e7eb;display:flex;gap:12px;flex-wrap:wrap;align-items:center">
-    <input id="customSearch" class="form-control" style="max-width:340px" placeholder="Buscar...">
+  <!-- 2. Cards de Filtro (KPIs) -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 animate-fade-up" style="animation-delay: 100ms;">
+    <!-- Total -->
+    <div onclick="filtrarTabelaPorStatus('', this)" data-type="total" class="kpi-card active-filter group stat-card">
+      <div class="kpi-icon"><i class="fas fa-layer-group"></i></div>
+      <div class="kpi-content">
+        <div class="kpi-label">Total</div>
+        <div class="kpi-value group-hover:text-blue-600 transition-colors">{{ count_total }}</div>
+      </div>
+    </div>
+    <!-- APROVADOs -->
+    <div onclick="filtrarTabelaPorStatus('APROVADO', this)" data-type="aprovado" class="kpi-card group stat-card">
+      <div class="kpi-icon"><i class="fas fa-check-circle"></i></div>
+      <div class="kpi-content">
+        <div class="kpi-label">APROVADOs</div>
+        <div class="kpi-value group-hover:text-emerald-600 transition-colors">{{ count_aprovado }}</div>
+      </div>
+    </div>
+    <!-- PENDENTEs -->
+    <div onclick="filtrarTabelaPorStatus('PENDENTE', this)" data-type="pendente" class="kpi-card group stat-card">
+      <div class="kpi-icon"><i class="fas fa-clock"></i></div>
+      <div class="kpi-content">
+        <div class="kpi-label">Análise</div>
+        <div class="kpi-value group-hover:text-amber-600 transition-colors">{{ count_pendente }}</div>
+      </div>
+    </div>
+    <!-- REJEITADOs -->
+    <div onclick="filtrarTabelaPorStatus('REJEITADO', this)" data-type="rejeitado" class="kpi-card group stat-card">
+      <div class="kpi-icon"><i class="fas fa-times-circle"></i></div>
+      <div class="kpi-content">
+        <div class="kpi-label">REJEITADOs</div>
+        <div class="kpi-value group-hover:text-red-600 transition-colors">{{ count_rejeitado }}</div>
+      </div>
+    </div>
   </div>
 
-  <div style="overflow:auto">
-    <table id="dataTableRDO" class="display" style="width:100%">
-      <thead>
-        <tr>
-          <th>Status</th>
-          <th>Documento</th>
-          <th>Data Ref.</th>
-          <th>Obra</th>
-          <th>Criado por</th>
-          <th>Ações</th>
-        </tr>
-      </thead>
-      <tbody>
-      {% for rdo in rdos %}
-        {% set s = (rdo.status | default('PENDENTE')) | upper | trim %}
-        {% set s_label = 'Aprovado' if s=='APROVADO' else ('Rejeitado' if s=='REJEITADO' else ('Cancelado' if s=='CANCELADO' else ('Rascunho' if s=='RASCUNHO' else 'Pendente'))) %}
-        {% set badge_class = 'b-ok' if s=='APROVADO' else ('b-er' if s=='REJEITADO' else ('b-ca' if s=='CANCELADO' else ('b-in' if s=='RASCUNHO' else 'b-wa'))) %}
+  <!-- 3. Container da Tabela -->
+  <div class="bg-white border border-slate-200 rounded-xl shadow-sm animate-fade-up flex flex-col"
+    style="animation-delay: 200ms;">
 
-        {% set rdo_row = namespace(is_my_turn=false, found_first=false) %}
-        {% if rdo.assinaturas %}
-          {% for ass in rdo.assinaturas %}
-            {% if not rdo_row.found_first %}
-              {% if ass.status == 'PENDENTE' %}
-                {% set rdo_row.found_first = true %}
-                {% if ass.id_usuario | int == user_id_int %}
-                  {% set rdo_row.is_my_turn = true %}
+    <!-- Toolbar -->
+    <div
+      class="p-4 border-b border-slate-100 flex flex-col md:flex-row gap-3 justify-between items-center bg-white rounded-t-xl">
+      <div class="relative w-full md:w-80 group">
+        <input type="text" id="customSearch"
+          class="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-lg bg-slate-50 text-sm focus:bg-white focus:ring-2 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all placeholder:text-slate-400"
+          placeholder="Buscar RDO, obra ou ID...">
+      </div>
+
+      <div class="flex w-full md:w-auto gap-2">
+        <button onclick="toggleAdvancedFilter()"
+          class="flex-1 md:flex-none inline-flex justify-center items-center px-4 py-2.5 border border-slate-200 rounded-lg text-sm font-semibold text-slate-600 bg-white hover:bg-slate-50 hover:text-slate-900 transition-all shadow-sm">
+          <i class="fas fa-sliders-h mr-2"></i> Filtros
+        </button>
+        <button onclick="resetTableState()"
+          class="inline-flex justify-center items-center w-10 h-10 border border-slate-200 rounded-lg text-slate-500 bg-white hover:bg-slate-50 hover:text-blue-600 transition-all shadow-sm"
+          title="Recarregar">
+          <i class="fas fa-sync-alt"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Tabela -->
+    <div class="w-full px-0">
+      <table id="dataTableRDO" class="w-full text-left border-collapse">
+        <thead class="bg-slate-50/80 border-b border-slate-200 backdrop-blur">
+          <tr>
+            <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+            <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Documento</th>
+            <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Data Ref.</th>
+            <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Obra</th>
+            <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Criação</th>
+            <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Ações
+            </th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 bg-white">
+          {% for rdo in rdos %}
+          {% set s = (rdo.status | default('PENDENTE')) | trim %}
+
+          {% set rdo_row = namespace(is_my_turn=false) %}
+          {% if lista_pendencias is defined and rdo.id in meus_rdo_ids_pendentes %}
+          {% set rdo_row.is_my_turn = true %}
+          {% endif %}
+
+          <tr class="hover:bg-slate-50/80 transition-colors group"
+            data-minha-pendencia="{{ 'true' if rdo_row.is_my_turn else 'false' }}">
+
+            <!-- Status (Coluna 1) -->
+            <td class="px-6 py-4 whitespace-nowrap">
+              <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border
+                                {% if s == 'APROVADO' %} bg-emerald-50 text-emerald-700 border-emerald-200
+                                {% elif s == 'PENDENTE' %} bg-amber-50 text-amber-700 border-amber-200
+                                {% elif s == 'REJEITADO' %} bg-red-50 text-red-700 border-red-200
+                                {% else %} bg-slate-50 text-slate-600 border-slate-200 {% endif %}">
+                <span class="w-1.5 h-1.5 rounded-full mr-2
+                                    {% if s == 'APROVADO' %} bg-emerald-500
+                                    {% elif s == 'PENDENTE' %} bg-amber-500
+                                    {% elif s == 'REJEITADO' %} bg-red-500
+                                    {% else %} bg-slate-400 {% endif %}"></span>
+                {{ s }}
+              </span>
+            </td>
+
+            <!-- ID (Coluna 2) -->
+            <td class="px-6 py-4 whitespace-nowrap">
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-bold text-slate-700">#{{ '%03d' % (rdo.id_sequencial | int)
+                  }}</span>
+                <span
+                  class="text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">v{{
+                  rdo.id_revisao }}</span>
+                {% if rdo_row.is_my_turn %}
+                <div class="w-2 h-2 rounded-full bg-purple-500 animate-pulse ml-1" title="Sua Vez">
+                </div>
                 {% endif %}
-              {% elif ass.status == 'REJEITADO' %}
-                {% set rdo_row.found_first = true %}
-              {% endif %}
-            {% endif %}
-          {% endfor %}
-        {% endif %}
+              </div>
+            </td>
 
-        <tr data-minha-pendencia="{{ 'true' if rdo_row.is_my_turn else 'false' }}">
-          <td><span class="badge {{ badge_class }}">{{ s_label }}</span></td>
-          <td>#{{ '%03d' % (rdo.id_sequencial | int) if rdo.id_sequencial else rdo.id }}</td>
-          <td>{{ rdo.data.strftime('%d/%m/%Y') if rdo.data else '-' }}</td>
-          <td>{{ rdo.obra.nome if rdo.obra else 'Sem obra' }}</td>
-          <td>{{ rdo.usuario.nome if rdo.usuario else 'Sistema' }}</td>
-          <td>
-            <a href="{{ url_for('auth.visualizar_rdo', rdo_id=rdo.id) }}">Ver</a>
-            |
-            <a href="{{ url_for('auth.gerar_pdf_rdo_view', rdo_id=rdo.id) }}" target="_blank">PDF</a>
-            {% if s != 'APROVADO' %}
-              | <a href="{{ url_for('auth.editar_rdo', rdo_id=rdo.id) }}">Editar</a>
-            {% endif %}
-          </td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
+            <!-- Data Ref (Coluna 3) -->
+            <td class="px-6 py-4 whitespace-nowrap" data-order="{{ rdo.data.strftime('%Y%m%d') if rdo.data }}">
+              <div class="text-sm text-slate-600 font-medium">
+                {{ rdo.data.strftime('%d/%m/%Y') if rdo.data else '-' }}
+              </div>
+            </td>
+
+            <!-- Obra (Coluna 4) -->
+            <td class="px-6 py-4">
+              <div class="text-sm font-bold text-slate-800 truncate max-w-[180px]" title="{{ rdo.obra.nome }}">
+                {{ rdo.obra.nome if rdo.obra else 'Sem Obra' }}
+              </div>
+              <!-- Subtítulo só visível em desktop -->
+              <div class="text-[11px] text-slate-500 truncate max-w-[180px] hidden md:block">
+                {{ rdo.obra.cliente if rdo.obra else '-' }}
+              </div>
+            </td>
+
+            <!-- Criação (Coluna 5) -->
+            <td class="px-6 py-4 whitespace-nowrap"
+              data-order="{{ rdo.criado.strftime('%Y%m%d%H%M%S') if rdo.criado else '0' }}">
+              <div class="flex items-center gap-2 md:gap-3 justify-end md:justify-start">
+                <div
+                  class="h-8 w-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-xs font-bold border border-blue-100 uppercase">
+                  {{ rdo.usuario.nome[:2] if rdo.usuario and rdo.usuario.nome else 'SI' }}
+                </div>
+                <div class="text-right md:text-left">
+                  <div class="text-xs md:text-sm font-medium text-slate-700">{{
+                    rdo.usuario.nome.split()[0] if rdo.usuario else 'Sistema' }}</div>
+                  <div class="text-[10px] text-slate-400 hidden md:block">Criado em: {{
+                    rdo.criado.strftime('%d/%m/%y %H:%M') if rdo.criado }}</div>
+                </div>
+              </div>
+            </td>
+
+            <!-- Ações (Coluna 6) -->
+            <td class="px-6 py-4 whitespace-nowrap text-right">
+              <div class="flex justify-end items-center gap-1">
+                <a href="{{ url_for('auth.gerar_pdf_rdo_view', rdo_id=rdo.id) }}" target="_blank"
+                  class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors action-btn"
+                  title="PDF">
+                  <i class="fas fa-file-pdf"></i>
+                </a>
+                <a href="{{ url_for('auth.visualizar_rdo', rdo_id=rdo.id) }}"
+                  class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors action-btn"
+                  title="Ver">
+                  <i class="fas fa-eye"></i>
+                </a>
+                {% if s != 'APROVADO' %}
+                <a href="{{ url_for('auth.editar_rdo', rdo_id=rdo.id) }}"
+                  class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors action-btn"
+                  title="Editar">
+                  <i class="fas fa-pen"></i>
+                </a>
+                {% endif %}
+                <button onclick="excluirItem('{{ rdo.id }}')"
+                  class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors action-btn"
+                  title="Excluir">
+                  <i class="fas fa-trash-alt"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <!-- Empty State -->
+      {% if not rdos %}
+      <div class="py-16 text-center">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-50 mb-4">
+          <i class="fas fa-search text-slate-300 text-2xl"></i>
+        </div>
+        <h3 class="text-slate-800 font-bold">Nenhum RDO encontrado</h3>
+        <p class="text-sm text-slate-500 mt-1">Tente ajustar seus filtros ou crie um novo.</p>
+      </div>
+      {% endif %}
+    </div>
   </div>
 </div>
 
+<!-- OVERLAY DE FILTROS -->
+<div id="filterBackdrop"
+  class="fixed inset-0 bg-slate-900/50 z-[9998] hidden backdrop-blur-sm transition-opacity duration-300"
+  onclick="toggleAdvancedFilter()"></div>
+
+<div id="advancedFilterOverlay"
+  class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl z-[9999] flex flex-col transform transition-transform duration-300 translate-x-full">
+
+  <!-- Cabeçalho do Filtro -->
+  <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+    <h3 class="font-bold text-slate-800 flex items-center gap-2">
+      <i class="fas fa-sliders-h text-blue-600"></i> Filtros Avançados
+    </h3>
+    <button onclick="toggleAdvancedFilter()"
+      class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-full transition-colors">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+
+  <!-- Corpo do Filtro -->
+  <div class="p-6 flex-1 overflow-y-auto space-y-6">
+
+    <!-- Obra e Responsável -->
+    <div class="space-y-4">
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Obra / Contrato</label>
+        <input type="text" id="filterObra"
+          class="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all placeholder:text-slate-300"
+          placeholder="Digite o nome da obra...">
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Responsável</label>
+        <input type="text" id="filterUser"
+          class="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all placeholder:text-slate-300"
+          placeholder="Quem criou o RDO...">
+      </div>
+    </div>
+
+    <hr class="border-slate-100">
+
+    <!-- Data do RDO (Referência) -->
+    <div>
+      <label class="block text-xs font-bold text-slate-500 uppercase mb-3 flex items-center gap-2">
+        <i class="far fa-calendar text-blue-500"></i> Período (Data RDO)
+      </label>
+      <div class="space-y-3">
+        <div class="relative">
+          <input type="hidden" id="minDate">
+          <input type="text" id="minDateVisual"
+            class="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-600 focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none pr-10"
+            placeholder="De: DD/MM/AAAA" maxlength="10" oninput="mascaraData(this, 'minDate')">
+          <div class="absolute inset-y-0 right-0 flex items-center pr-3 z-10">
+            <i class="far fa-calendar-alt text-slate-400 hover:text-blue-600 cursor-pointer"
+              onclick="document.getElementById('minDatePicker').showPicker()"></i>
+            <input type="date" id="minDatePicker" class="absolute w-0 h-0 opacity-0 pointer-events-none" tabindex="-1"
+              onchange="aplicarDataPicker(this, 'minDate', 'minDateVisual')">
+          </div>
+        </div>
+        <div class="relative">
+          <input type="hidden" id="maxDate">
+          <input type="text" id="maxDateVisual"
+            class="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-600 focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none pr-10"
+            placeholder="Até: DD/MM/AAAA" maxlength="10" oninput="mascaraData(this, 'maxDate')">
+          <div class="absolute inset-y-0 right-0 flex items-center pr-3 z-10">
+            <i class="far fa-calendar-alt text-slate-400 hover:text-blue-600 cursor-pointer"
+              onclick="document.getElementById('maxDatePicker').showPicker()"></i>
+            <input type="date" id="maxDatePicker" class="absolute w-0 h-0 opacity-0 pointer-events-none" tabindex="-1"
+              onchange="aplicarDataPicker(this, 'maxDate', 'maxDateVisual')">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="border-slate-100">
+
+    <!-- Data de Criação -->
+    <div>
+      <label class="block text-xs font-bold text-slate-500 uppercase mb-3 flex items-center gap-2">
+        <i class="fas fa-history text-purple-500"></i> Data de Criação
+      </label>
+      <div class="space-y-3">
+        <div class="relative">
+          <input type="hidden" id="minCreateDate">
+          <input type="text" id="minCreateDateVisual"
+            class="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-600 focus:ring-2 focus:ring-purple-100 focus:border-purple-500 outline-none pr-10"
+            placeholder="Criado De: DD/MM/AAAA" maxlength="10" oninput="mascaraData(this, 'minCreateDate')">
+          <div class="absolute inset-y-0 right-0 flex items-center pr-3 z-10">
+            <i class="far fa-calendar-plus text-slate-400 hover:text-purple-600 cursor-pointer"
+              onclick="document.getElementById('minCreateDatePicker').showPicker()"></i>
+            <input type="date" id="minCreateDatePicker" class="absolute w-0 h-0 opacity-0 pointer-events-none"
+              tabindex="-1" onchange="aplicarDataPicker(this, 'minCreateDate', 'minCreateDateVisual')">
+          </div>
+        </div>
+        <div class="relative">
+          <input type="hidden" id="maxCreateDate">
+          <input type="text" id="maxCreateDateVisual"
+            class="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-600 focus:ring-2 focus:ring-purple-100 focus:border-purple-500 outline-none pr-10"
+            placeholder="Criado Até: DD/MM/AAAA" maxlength="10" oninput="mascaraData(this, 'maxCreateDate')">
+          <div class="absolute inset-y-0 right-0 flex items-center pr-3 z-10">
+            <i class="far fa-calendar-plus text-slate-400 hover:text-purple-600 cursor-pointer"
+              onclick="document.getElementById('maxCreateDatePicker').showPicker()"></i>
+            <input type="date" id="maxCreateDatePicker" class="absolute w-0 h-0 opacity-0 pointer-events-none"
+              tabindex="-1" onchange="aplicarDataPicker(this, 'maxCreateDate', 'maxCreateDateVisual')">
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Footer do Filtro -->
+  <div class="p-5 border-t border-slate-100 bg-slate-50 flex gap-3">
+    <button onclick="clearAdvancedFilters()"
+      class="flex-1 py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100 transition-colors shadow-sm">
+      Limpar
+    </button>
+    <button onclick="applyAdvancedFilters()"
+      class="flex-1 py-3 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-colors">
+      Aplicar Filtros
+    </button>
+  </div>
+</div>
+
+<!-- Scripts -->
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-<script>
-  let table = null;
-  let filterMyPending = false;
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
 
-  $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
-    if (!table) return true;
-    if (!filterMyPending) return true;
-    const tr = table.row(dataIndex).node();
-    if (!tr) return true;
-    return tr.getAttribute('data-minha-pendencia') === 'true';
-  });
+<script>
+  let table;
+
+  // Filtros Customizados do DataTables
+  $.fn.dataTable.ext.search.push(
+    function (settings, data, dataIndex) {
+
+      // 1. Filtro Data do RDO (Coluna 2 - índice 2)
+      let min = $('#minDate').val(); // YYYY-MM-DD
+      let max = $('#maxDate').val(); // YYYY-MM-DD
+      // Remove traços para comparar com YYYYMMDD
+      let minInt = min ? parseInt(min.replace(/-/g, "")) : null;
+      let maxInt = max ? parseInt(max.replace(/-/g, "")) : null;
+      let dateStr = table ? table.row(dataIndex).node().cells[2].getAttribute('data-order') : null;
+      let dateInt = dateStr ? parseInt(dateStr) : 0;
+
+      if (minInt && dateInt < minInt) return false;
+      if (maxInt && dateInt > maxInt) return false;
+
+      // 2. Filtro Data de CRIAÇÃO (Coluna 4 - índice 4)
+      // A coluna 4 tem data-order="YYYYMMDDHHMMSS". Vamos comparar apenas YYYYMMDD.
+      let minCreate = $('#minCreateDate').val();
+      let maxCreate = $('#maxCreateDate').val();
+      let minCreateInt = minCreate ? parseInt(minCreate.replace(/-/g, "")) : null;
+      let maxCreateInt = maxCreate ? parseInt(maxCreate.replace(/-/g, "")) : null;
+
+      let createStrFull = table ? table.row(dataIndex).node().cells[4].getAttribute('data-order') : null;
+      // Pega apenas os primeiros 8 dígitos (YYYYMMDD)
+      let createDateInt = createStrFull ? parseInt(createStrFull.substring(0, 8)) : 0;
+
+      if (minCreateInt && createDateInt < minCreateInt) return false;
+      if (maxCreateInt && createDateInt > maxCreateInt) return false;
+
+      // 3. Filtro Cards (Status)
+      // Nota: Adicionamos a classe 'stat-card' aos elementos clicáveis (kpi-card e action-card) para manter compatibilidade
+      const activeCard = document.querySelector('.active-filter.stat-card');
+      if (activeCard && activeCard.dataset.type === 'assinar') {
+        const tr = table.row(dataIndex).node();
+        const isMyPending = tr.getAttribute('data-minha-pendencia') === 'true';
+        if (!isMyPending) return false;
+      }
+
+      return true;
+    }
+  );
 
   $(document).ready(function () {
+    // Fix z-index modal
+    const backdrop = document.getElementById('filterBackdrop');
+    const overlay = document.getElementById('advancedFilterOverlay');
+    if (backdrop && overlay) {
+      document.body.appendChild(backdrop);
+      document.body.appendChild(overlay);
+    }
+
     table = $('#dataTableRDO').DataTable({
+      responsive: false, // Custom CSS responsivo
+      stateSave: false,
       pageLength: 50,
-      order: [[2, 'desc']],
-      language: {
-        url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json"
-      }
+      lengthMenu: [[10, 25, 50, -1], ["10", "25", "50", "Todos"]],
+      order: [[2, 'desc']], // Ordenar por Data (Index 2)
+      language: { url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json", search: "", searchPlaceholder: "Buscar..." },
+      dom: 'rt<"flex flex-col sm:flex-row justify-between items-center px-4 py-4 gap-4"li p>'
     });
 
     $('#customSearch').on('keyup', function () {
@@ -164,18 +886,98 @@
     });
   });
 
-  function filtrarTabelaPorStatus(status, el) {
-    document.querySelectorAll('.rdo-kpi .card').forEach(c => c.classList.remove('active'));
-    if (el) el.classList.add('active');
+  // Funções de Data
+  function mascaraData(input, hiddenId) {
+    let v = input.value;
+    v = v.replace(/\D/g, "");
+    v = v.replace(/^(\d{2})(\d)/, "$1/$2");
+    v = v.replace(/\/(\d{2})(\d)/, "/$1/$2");
+    input.value = v;
 
-    if (status === 'minhas_pendencias') {
-      filterMyPending = true;
-      table.column(0).search('').draw();
-      return;
+    const hiddenInput = document.getElementById(hiddenId);
+    if (v.length === 10) {
+      const parts = v.split('/');
+      hiddenInput.value = `${parts[2]}-${parts[1]}-${parts[0]}`;
+    } else if (v.length === 0) {
+      hiddenInput.value = '';
     }
-    filterMyPending = false;
-    table.column(0).search(status || '').draw();
+  }
+
+  function aplicarDataPicker(picker, hiddenId, visualId) {
+    if (!picker.value) return;
+    const [ano, mes, dia] = picker.value.split('-');
+    document.getElementById(visualId).value = `${dia}/${mes}/${ano}`;
+    document.getElementById(hiddenId).value = picker.value;
+  }
+
+  // UI Logic
+  function toggleAdvancedFilter() {
+    const overlay = document.getElementById('advancedFilterOverlay');
+    const backdrop = document.getElementById('filterBackdrop');
+    const body = document.body;
+
+    if (overlay.classList.contains('open')) {
+      overlay.classList.remove('open');
+      backdrop.classList.add('hidden');
+      body.classList.remove('overflow-hidden');
+    } else {
+      overlay.classList.add('open');
+      backdrop.classList.remove('hidden');
+      body.classList.add('overflow-hidden');
+    }
+  }
+
+  function applyAdvancedFilters() {
+    const obra = $('#filterObra').val();
+    const user = $('#filterUser').val();
+    table.column(3).search(obra);
+    table.column(4).search(user);
+    table.draw();
+    toggleAdvancedFilter();
+  }
+
+  function clearAdvancedFilters() {
+    $('#advancedFilterOverlay input').val('');
+    table.columns().search('');
+    table.search('');
+    $('#customSearch').val('');
+
+    $('.kpi-card, .action-card').removeClass('active-filter');
+    $('.kpi-card[data-type="total"]').addClass('active-filter');
+
+    table.draw();
+    toggleAdvancedFilter();
+  }
+
+  function filtrarTabelaPorStatus(status, element) {
+    // Remove active de todos os elementos clicáveis
+    $('.kpi-card, .action-card').removeClass('active-filter');
+    $(element).addClass('active-filter');
+
+    const type = element.dataset.type;
+    if (type === 'assinar') {
+      table.column(0).search('');
+    } else if (status === "") {
+      table.column(0).search("");
+    } else {
+      table.column(0).search(status);
+    }
+    table.draw();
+  }
+
+  function resetTableState() {
+    clearAdvancedFilters();
+  }
+
+  function excluirItem(id) {
+    if (!confirm("Tem certeza que deseja excluir este RDO? A ação não pode ser desfeita.")) return;
+    fetch(`/auth/excluir-rdo/${id}`, { method: "POST" })
+      .then(res => {
+        if (res.ok) window.location.reload();
+        else alert("Erro ao excluir.");
+      })
+      .catch(err => alert("Erro de conexão."));
   }
 </script>
-{% endblock %}
 
+{% endblock %}
