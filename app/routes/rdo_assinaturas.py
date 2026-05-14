@@ -28,20 +28,26 @@ def salvar_workflow_assinaturas(rdo_id):
         novos_assinantes_ids.insert(0, owner_id)
 
     try:
-        RDOAprovacao.query.filter_by(rdo_id=rdo_id).delete()
-        for index, user_id in enumerate(novos_assinantes_ids):
-            nova_ass = RDOAprovacao(
-                empresa_id=session.get('empresa_id'),
-                rdo_id=rdo_id,
-                aprovador_id=user_id,
-                nivel=index + 1,
-                status='PENDENTE',
-                ativo=True
-            )
-            db.session.add(nova_ass)
-        rdo.status = 'PENDENTE'
-        db.session.commit()
-        return jsonify({"success": True})
+        with db.session.begin():
+            # Soft delete das assinaturas atuais
+            for ass in RDOAprovacao.query.filter_by(rdo_id=rdo_id, ativo=True).all():
+                ass.soft_delete(usuario=current_user, motivo="alteração de workflow")
+
+            for index, user_id in enumerate(novos_assinantes_ids):
+                nova_ass = RDOAprovacao(
+                    empresa_id=session.get('empresa_id'),
+                    rdo_id=rdo_id,
+                    aprovador_id=user_id,
+                    nivel=index + 1,
+                    status='PENDENTE',
+                    ativo=True
+                )
+                db.session.add(nova_ass)
+
+            rdo.status = 'PENDENTE'
+            return jsonify({"success": True})
+        
+
         
     except Exception as e:
         db.session.rollback()
