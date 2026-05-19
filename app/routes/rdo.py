@@ -1,4 +1,7 @@
 ﻿from app.routes.auth_common import *
+from app.routes.auth_common import _build_clima_automatico_payload
+from app.services.auditoria_service import AuditoriaService
+from app.utils.serializers import safe_model_to_dict
 
 @auth_bp.get("/criar-rdo")
 @login_required
@@ -176,7 +179,10 @@ def gerar_rdo():
             item_rdo = RDO.query.filter_by(id=rdo_id_original, empresa_id=empresa_id).first()
             if not item_rdo:
                 abort(404)
-            
+
+            # snapshot antes (auditoria before/after)
+            antes_snapshot = safe_model_to_dict(item_rdo)
+
             # Se já aprovado, apenas Admin/Gestor podem revisar (Operador não revisa aprovado, cria novo geralmente)
             if item_rdo.status == 'APROVADO' and session.get("user_role") == ROLE_OPERADOR:
                  flash("Operadores não podem alterar RDOs já aprovados. Solicite ao Gestor.", "danger")
@@ -221,6 +227,24 @@ def gerar_rdo():
             db.session.add(item_rdo)
         
         db.session.flush()
+
+        # Auditoria de criação de RDO
+        if not rdo_id_original:
+            depois_snapshot = safe_model_to_dict(item_rdo)
+            AuditoriaService.registrar_operacao(
+                acao="CREATE",
+                entidade="RDO",
+                entidade_id=item_rdo.id,
+                antes=None,
+                depois=depois_snapshot,
+                empresa_id=session.get("empresa_id"),
+                usuario_id=session.get("user_id"),
+                ip=request.headers.get('X-Forwarded-For', request.remote_addr),
+                user_agent=request.headers.get('User-Agent'),
+                endpoint=request.endpoint,
+                metodo_http=request.method,
+                payload={"rdo_id": item_rdo.id},
+            )
 
         # [Criação] Assinatura do criador
         if not rdo_id_original:
@@ -390,6 +414,24 @@ def gerar_rdo():
                     ))
                     idx_file += 1
 
+        # snapshot depois (auditoria before/after) apenas para UPDATE/revisão
+        if rdo_id_original:
+            depois_snapshot = safe_model_to_dict(item_rdo)
+            # Registra auditoria de forma determinística (sem locals()).
+            AuditoriaService.registrar_operacao(
+                acao="UPDATE",
+                entidade="RDO",
+                entidade_id=item_rdo.id,
+                antes=antes_snapshot,
+                depois=depois_snapshot,
+                empresa_id=session.get("empresa_id"),
+                usuario_id=session.get("user_id"),
+                ip=request.headers.get('X-Forwarded-For', request.remote_addr),
+                user_agent=request.headers.get('User-Agent'),
+                endpoint=request.endpoint,
+                metodo_http=request.method,
+            )
+
         db.session.commit()
         msg_acao = "revisado" if rdo_id_original else "salvo"
         flash(f"RDO #{item_rdo.id} {msg_acao} com sucesso!", "success")
@@ -528,16 +570,32 @@ def excluir_rdo(rdo_id):
     try:
         empresa_id = session.get("empresa_id")
         item_rdo = RDO.query.filter_by(id=rdo_id, empresa_id=empresa_id).first_or_404()
-        
+
         # SECURITY: Scoping Check
         scope_ids = get_user_scope_ids()
         if scope_ids is not None and item_rdo.obra_id not in scope_ids:
             abort(403)
 
+        antes_snapshot = safe_model_to_dict(item_rdo)
+
         with db.session.begin():
             # Exclusão lógica em transação
             item_rdo.soft_delete(usuario=current_user, motivo="exclusão RDO")
+            depois_snapshot = safe_model_to_dict(item_rdo)
 
+            AuditoriaService.registrar_operacao(
+                acao="SOFT_DELETE",
+                entidade="RDO",
+                entidade_id=item_rdo.id,
+                antes=antes_snapshot,
+                depois=depois_snapshot,
+                empresa_id=session.get("empresa_id"),
+                usuario_id=session.get("user_id"),
+                ip=request.headers.get('X-Forwarded-For', request.remote_addr),
+                user_agent=request.headers.get('User-Agent'),
+                endpoint=request.endpoint,
+                metodo_http=request.method,
+            )
 
         flash(f"RDO #{item_rdo.id} enviado para lixeira com sucesso!", "success")
         return redirect(url_for('auth.inicio'))

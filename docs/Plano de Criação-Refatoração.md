@@ -497,8 +497,10 @@ Resultado esperado:
 
 - Multiempresa consistente.
 - RBAC real aplicado.
-- Auditoria e sessoes gravadas.
-- Deletes logicos.
+- Auditoria e sessoes gravadas (Branch `feat/auditoria-sessoes`).
+- Operações críticas de RDO com snapshots before/after em `gerar_rdo` (UPDATE) e `excluir_rdo` (SOFT_DELETE) via `AuditoriaService`.
+- Helper central único `registrar_auditoria_entidade(...)` aplicado para centralizar serialização e contexto.
+- Validação automatizada: `python -m pytest -q` → **4 passed, 1 warning** (warning pré-existente em `test_login.py::test_login`).
 
 
 ### Marco 3 - RDO enterprise

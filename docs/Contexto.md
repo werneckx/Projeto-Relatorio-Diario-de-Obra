@@ -751,6 +751,13 @@ Feito até o momento:
 - Marco 1 - Base saudável concluído em 2026-05-12.
 - Compatibilidade do schema novo com rotas principais e templates (Branch `fix/schema-route-compat`) aplicada.
 - Verificação (2026-05-12): Branches 1, 2 e 3 revisadas em `app/routes` e `app/templates`; compatibilização inclui alias de aprovações (`rdo.assinaturas` / `ass.id_usuario`) e correção do template `app/templates/list_rdo.html` para manter navegação e filtros operacionais.
+- Marco 2 - Auditoria & Sessoes (Branch `feat/auditoria-sessoes`) integradas no fluxo real de RDO:
+  - `app/services/auditoria_service.py`: centralização do serviço de auditoria (sem commit/rollback), incluindo helper único `registrar_auditoria_entidade(...)`.
+  - `app/routes/auth.py`: gravação de `session_uuid`/contexto de sessão e suporte a trilha de login/logout.
+  - `app/routes/rdo.py`:
+    - `gerar_rdo()` agora registra `UPDATE` com snapshot **before/after** determinístico (sem `locals()`).
+    - `excluir_rdo()` registra `SOFT_DELETE` com snapshot **before/after** dentro da mesma transação da operação principal.
+  - Validação automatizada: `python -m pytest -q` → **4 passed, 1 warning** (warning pré-existente `PytestReturnNotNoneWarning` em `test_login.py::test_login`).
 
 ## Checkpoint em 2026-05-11
 
