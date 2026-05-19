@@ -636,7 +636,7 @@
                   <div class="text-xs md:text-sm font-medium text-slate-700">{{
                     rdo.usuario.nome.split()[0] if rdo.usuario else 'Sistema' }}</div>
                   <div class="text-[10px] text-slate-400 hidden md:block">Criado em: {{
-                    rdo.criado.strftime('%d/%m/%y %H:%M') if rdo.criado }}</div>
+                    rdo.criado | fmt_dt(obra_id=rdo.obra_id, fmt='%d/%m/%y %H:%M') if rdo.criado }}</div>
                 </div>
               </div>
             </td>

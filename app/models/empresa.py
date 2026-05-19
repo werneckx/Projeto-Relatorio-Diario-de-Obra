@@ -1,5 +1,6 @@
 from datetime import datetime
-from app import db 
+from app import db
+from app.utils.datetime_utils import utcnow_naive
 
 class Empresa(db.Model):
     __tablename__ = "empresa"
@@ -12,8 +13,8 @@ class Empresa(db.Model):
 
     criado_por = db.Column(db.Integer, nullable=True)
     modificado_por = db.Column(db.Integer, nullable=True)
-    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
-    modificado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    criado_em = db.Column(db.DateTime, default=utcnow_naive)
+    modificado_em = db.Column(db.DateTime, default=utcnow_naive, onupdate=utcnow_naive)
 
     def __repr__(self):
         return f'<Empresa {self.id}: {self.nome}>'

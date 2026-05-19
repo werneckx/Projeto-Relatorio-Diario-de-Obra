@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
+from app.utils.datetime_utils import utcnow_naive
+
 
 class CRUDMixin:
     """Mixin de persistência com Soft Delete e suporte a restore (futuro)."""
@@ -24,7 +26,7 @@ class CRUDMixin:
             setattr(self, "ativo", False)
 
         if hasattr(self, "deletado_em"):
-            setattr(self, "deletado_em", datetime.utcnow())
+            setattr(self, "deletado_em", utcnow_naive())
 
         if hasattr(self, "deletado_por") and usuario is not None:
             setattr(self, "deletado_por", getattr(usuario, "id", usuario))
@@ -35,7 +37,7 @@ class CRUDMixin:
         if hasattr(self, "modificado_em"):
             # Alguns models usam onupdate no DB, mas aqui deixamos explícito.
             # Se o model não tiver coluna, o hasattr evita quebra.
-            setattr(self, "modificado_em", datetime.utcnow())
+            setattr(self, "modificado_em", utcnow_naive())
 
     def restore(self, usuario=None):
         """Restauração futura (não exigida agora), quando existir `ativo`."""
@@ -54,7 +56,7 @@ class CRUDMixin:
             setattr(self, "modificado_por", getattr(usuario, "id", usuario))
 
         if hasattr(self, "modificado_em"):
-            setattr(self, "modificado_em", datetime.utcnow())
+            setattr(self, "modificado_em", utcnow_naive())
 
 
 def supports_soft_delete(obj) -> bool:

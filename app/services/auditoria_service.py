@@ -11,6 +11,7 @@ from app.models.auditoria import AuditoriaLog
 from app.utils.serializers import SENSITIVE_FIELDS
 from app.utils.serializers import safe_model_to_dict
 from app.utils.request_context import capturar_request_context
+from app.utils.datetime_utils import utcnow_naive
 
 
 class AuditoriaService:
@@ -146,7 +147,7 @@ class AuditoriaService:
             dados_depois={"meta": dados_payload, **(depois or {})} if (depois or payload is not None) else None,
             ip=ip,
             user_agent=user_agent,
-            criado_em=criado_em_utc or datetime.now(timezone.utc).replace(tzinfo=None),
+            criado_em=criado_em_utc or utcnow_naive(),
         )
 
         db.session.add(log)

@@ -714,9 +714,9 @@
         <div class="h-center">
             <h1 class="h-title">Relatório Diário de Obra</h1>
             <div class="h-meta">
-                Emissão: {{ rdo.criado.strftime('%d/%m/%Y %H:%M') if rdo.criado else '—' }}
+                Emissão: {{ rdo.criado | fmt_dt(obra_id=rdo.obra_id, fmt='%d/%m/%Y %H:%M') if rdo.criado else '—' }}
                 &nbsp;·&nbsp;
-                Modificado: {{ rdo.modificado.strftime('%d/%m/%Y %H:%M') if rdo.modificado else '—' }}
+                Modificado: {{ rdo.modificado | fmt_dt(obra_id=rdo.obra_id, fmt='%d/%m/%Y %H:%M') if rdo.modificado else '—' }}
             </div>
         </div>
         <div class="h-spacer"></div>
@@ -1132,7 +1132,7 @@
 
                             {% if ass.criado %}
                             <div class="sig-meta">
-                                <div><strong>Data:</strong> {{ ass.criado.strftime('%d/%m/%Y %H:%M') }}</div>
+                                <div><strong>Data:</strong> {{ ass.criado | fmt_dt(obra_id=rdo.obra_id, fmt='%d/%m/%Y %H:%M') }}</div>
                                 <div><strong>IP:</strong> {{ ass.ip_endereco or '—' }}</div>
                                 {% if ass.latitude and ass.longitude %}
                                 <div><a href="https://www.google.com/maps?q={{ ass.latitude }},{{ ass.longitude }}"

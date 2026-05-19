@@ -1,5 +1,6 @@
 from datetime import datetime
 from app import db
+from app.utils.datetime_utils import utcnow_naive
 
 class Obra(db.Model):
     __tablename__ = "obras"
@@ -38,8 +39,8 @@ class Obra(db.Model):
 
     criado_por = db.Column(db.Integer, nullable=True)
     modificado_por = db.Column(db.Integer, nullable=True)
-    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
-    modificado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    criado_em = db.Column(db.DateTime, default=utcnow_naive)
+    modificado_em = db.Column(db.DateTime, default=utcnow_naive, onupdate=utcnow_naive)
 
     # Relacionamentos
     empresa = db.relationship('Empresa', backref='obras')
@@ -110,8 +111,8 @@ class FrenteTrabalho(db.Model):
 
     criado_por = db.Column(db.Integer, nullable=True)
     modificado_por = db.Column(db.Integer, nullable=True)
-    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
-    modificado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    criado_em = db.Column(db.DateTime, default=utcnow_naive)
+    modificado_em = db.Column(db.DateTime, default=utcnow_naive, onupdate=utcnow_naive)
 
     obra = db.relationship('Obra', backref='frentes_trabalho')
     nome_frente = db.synonym("nome")
@@ -155,8 +156,8 @@ class FrenteColaborador(db.Model):
 
     criado_por = db.Column(db.Integer, nullable=True)
     modificado_por = db.Column(db.Integer, nullable=True)
-    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
-    modificado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    criado_em = db.Column(db.DateTime, default=utcnow_naive)
+    modificado_em = db.Column(db.DateTime, default=utcnow_naive, onupdate=utcnow_naive)
 
     frente = db.relationship('FrenteTrabalho', backref='colaboradores_alocados')
     colaborador = db.relationship('Colaborador')
@@ -177,8 +178,8 @@ class ObraUsuario(db.Model):
 
     criado_por = db.Column(db.Integer, nullable=True)
     modificado_por = db.Column(db.Integer, nullable=True)
-    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
-    modificado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    criado_em = db.Column(db.DateTime, default=utcnow_naive)
+    modificado_em = db.Column(db.DateTime, default=utcnow_naive, onupdate=utcnow_naive)
 
     empresa = db.relationship('Empresa')
     obra = db.relationship('Obra', backref='usuarios_alocados')

@@ -63,8 +63,7 @@
                         </li>
                         <li class="flex justify-between">
                             <span class="text-slate-500">Membro desde</span>
-                            <span class="font-medium text-slate-700">{{ current_user.data_cadastro.strftime('%d/%m/%Y')
-                                }}</span>
+                            <span class="font-medium text-slate-700">{{ current_user.data_cadastro | fmt_dt(fmt='%d/%m/%Y') }}</span>
                         </li>
                     </ul>
                 </div>

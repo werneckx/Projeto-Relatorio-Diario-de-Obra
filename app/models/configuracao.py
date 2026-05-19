@@ -1,6 +1,7 @@
 import json
 from datetime import datetime
 from app import db
+from app.utils.datetime_utils import utcnow_naive
 
 class ConfigDefinicao(db.Model):
     __tablename__ = "config_definicoes"
@@ -11,7 +12,7 @@ class ConfigDefinicao(db.Model):
     tipo = db.Column(db.Enum('BOOLEAN', 'STRING', 'INT', 'JSON'), nullable=False)
     valor_padrao = db.Column(db.Text, nullable=True)
     is_system = db.Column(db.Boolean, nullable=False, default=True)
-    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
+    criado_em = db.Column(db.DateTime, default=utcnow_naive)
 
     def cast_value(self, raw_value):
         if raw_value is None:

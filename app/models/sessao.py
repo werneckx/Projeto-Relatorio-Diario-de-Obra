@@ -1,5 +1,6 @@
 from datetime import datetime
 from app import db
+from app.utils.datetime_utils import utcnow_naive
 
 
 class SessaoUsuario(db.Model):
@@ -11,7 +12,7 @@ class SessaoUsuario(db.Model):
     token_hash = db.Column(db.String(255), nullable=False, unique=True)
     ip = db.Column(db.String(45), nullable=True)
     user_agent = db.Column(db.String(255), nullable=True)
-    iniciada_em = db.Column(db.DateTime, default=datetime.utcnow)
+    iniciada_em = db.Column(db.DateTime, default=utcnow_naive)
     expira_em = db.Column(db.DateTime, nullable=False, index=True)
     encerrada_em = db.Column(db.DateTime, nullable=True)
     encerrada_por = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=True)
@@ -24,7 +25,7 @@ class SessaoUsuario(db.Model):
 
     def encerrar(self, usuario_id=None, motivo=None):
         self.ativa = False
-        self.encerrada_em = datetime.utcnow()
+        self.encerrada_em = utcnow_naive()
         self.encerrada_por = usuario_id
         self.motivo_encerramento = motivo
 
@@ -53,7 +54,7 @@ class AcessoLog(db.Model):
     ip = db.Column(db.String(45), nullable=True)
     user_agent = db.Column(db.String(255), nullable=True)
     detalhes = db.Column(db.JSON, nullable=True)
-    criado_em = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    criado_em = db.Column(db.DateTime, default=utcnow_naive, index=True)
 
     empresa = db.relationship('Empresa', backref='acessos_log')
     usuario = db.relationship('Usuario', backref='acessos_log')

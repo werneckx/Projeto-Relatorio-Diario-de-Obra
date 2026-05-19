@@ -1,5 +1,6 @@
 from datetime import datetime
 from app import db
+from app.utils.datetime_utils import utcnow_naive
 
 class AuxClima(db.Model):
     __tablename__ = "aux_clima"
@@ -12,8 +13,8 @@ class AuxClima(db.Model):
 
     criado_por = db.Column(db.Integer, nullable=True)
     modificado_por = db.Column(db.Integer, nullable=True)
-    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
-    modificado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    criado_em = db.Column(db.DateTime, default=utcnow_naive)
+    modificado_em = db.Column(db.DateTime, default=utcnow_naive, onupdate=utcnow_naive)
 
     empresa = db.relationship('Empresa', backref='aux_climas')
     nome = db.synonym("descricao")
@@ -42,8 +43,8 @@ class AuxFuncoes(db.Model):
 
     criado_por = db.Column(db.Integer, nullable=True)
     modificado_por = db.Column(db.Integer, nullable=True)
-    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
-    modificado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    criado_em = db.Column(db.DateTime, default=utcnow_naive)
+    modificado_em = db.Column(db.DateTime, default=utcnow_naive, onupdate=utcnow_naive)
 
     empresa = db.relationship('Empresa', backref='aux_funcoes')
     nome = db.synonym("descricao")
@@ -72,8 +73,8 @@ class AuxEquipamentos(db.Model):
 
     criado_por = db.Column(db.Integer, nullable=True)
     modificado_por = db.Column(db.Integer, nullable=True)
-    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
-    modificado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    criado_em = db.Column(db.DateTime, default=utcnow_naive)
+    modificado_em = db.Column(db.DateTime, default=utcnow_naive, onupdate=utcnow_naive)
 
     empresa = db.relationship('Empresa', backref='aux_equipamentos')
     nome = db.synonym("descricao")
@@ -102,8 +103,8 @@ class AuxTagOcorrencia(db.Model):
 
     criado_por = db.Column(db.Integer, nullable=True)
     modificado_por = db.Column(db.Integer, nullable=True)
-    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
-    modificado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    criado_em = db.Column(db.DateTime, default=utcnow_naive)
+    modificado_em = db.Column(db.DateTime, default=utcnow_naive, onupdate=utcnow_naive)
 
     empresa = db.relationship('Empresa', backref='aux_tags_ocorrencia')
     nome = db.synonym("descricao")
@@ -132,8 +133,8 @@ class AuxTipoObra(db.Model):
 
     criado_por = db.Column(db.Integer, nullable=True)
     modificado_por = db.Column(db.Integer, nullable=True)
-    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
-    modificado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    criado_em = db.Column(db.DateTime, default=utcnow_naive)
+    modificado_em = db.Column(db.DateTime, default=utcnow_naive, onupdate=utcnow_naive)
 
     empresa = db.relationship('Empresa', backref='aux_tipos_obra')
 

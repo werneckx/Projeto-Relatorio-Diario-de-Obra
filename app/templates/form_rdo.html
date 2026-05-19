@@ -418,13 +418,10 @@
                 {% if item and (item.criado or item.modificado) %}
                 <div class="flex gap-4 text-xs mt-1 sm:mt-0">
                     {% if item.criado %}
-                    <span><i class="far fa-calendar mr-1"></i>Criado: {{ item.criado.strftime('%d/%m/%Y %H:%M')
-                        }}</span>
+                    <span><i class="far fa-calendar mr-1"></i>Criado: {{ item.criado | fmt_dt(obra_id=item.obra_id, fmt='%d/%m/%Y %H:%M') }}</span>
                     {% endif %}
                     {% if item.modificado %}
-                    <span><i class="far fa-calendar-alt mr-1"></i>Modificado: {{ item.modificado.strftime('%d/%m/%Y
-                        %H:%M')
-                        }}</span>
+                    <span><i class="far fa-calendar-alt mr-1"></i>Modificado: {{ item.modificado | fmt_dt(obra_id=item.obra_id, fmt='%d/%m/%Y %H:%M') }}</span>
                     {% endif %}
                 </div>
                 {% endif %}
@@ -1206,14 +1203,13 @@
                                 <div class="text-[10px] text-slate-500 leading-tight">
                                     <p class="font-bold text-green-600 mb-0.5"><i
                                             class="fas fa-check-circle mr-1"></i>Assinado</p>
-                                    <p>{{ ass.criado.strftime('%d/%m/%Y às %H:%M') if ass.criado else '-' }}</p>
+                                    <p>{{ ass.criado | fmt_dt(obra_id=item.obra_id, fmt='%d/%m/%Y às %H:%M') if ass.criado else '-' }}</p>
                                 </div>
                             </div>
                             {% elif ass.status == 'REJEITADO' %}
                             <div class="text-xs text-red-700 bg-red-50 p-3 rounded-lg border border-red-100">
                                 <strong>Motivo:</strong> {{ ass.motivo_rejeicao }}
-                                <div class="text-[10px] text-slate-500 mt-1 text-right">{{ ass.criado.strftime('%d/%m/%Y
-                                    %H:%M') if ass.criado else '-' }}</div>
+                                <div class="text-[10px] text-slate-500 mt-1 text-right">{{ ass.criado | fmt_dt(obra_id=item.obra_id, fmt='%d/%m/%Y %H:%M') if ass.criado else '-' }}</div>
                             </div>
                             {% elif can_sign %}
                             {% if is_locked %}

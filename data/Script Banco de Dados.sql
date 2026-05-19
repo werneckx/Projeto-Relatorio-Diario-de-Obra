@@ -4,6 +4,10 @@ COLLATE utf8mb4_unicode_ci;
 
 USE rdo_platform_db;
 
+-- Padrão do sistema: persistir timestamps em UTC.
+-- A conversão para o timezone da empresa/obra é feita na aplicação via empresa_config/obra_config.
+SET time_zone = '+00:00';
+
 SET FOREIGN_KEY_CHECKS = 0;
 
 /* =========================
@@ -1320,6 +1324,7 @@ INSERT INTO config_definicoes (chave, descricao, tipo, valor_padrao) VALUES
 ('workflow.aprovacao.sla_horas', 'SLA padrao de aprovacao em horas', 'INT', '48'),
 ('sessao.timeout_minutos', 'Tempo padrao para expiracao de sessao', 'INT', '480'),
 ('upload.storage_provider', 'Provedor padrao para armazenamento de arquivos', 'STRING', 'LOCAL'),
+('timezone', 'Timezone IANA da empresa/obra (ex.: America/Sao_Paulo)', 'STRING', 'UTC'),
 ('empresa.tema_cor_primaria', 'Cor primaria padrao do tema da empresa', 'STRING', '#0F766E'),
 ('empresa.tema_cor_secundaria', 'Cor secundaria padrao do tema da empresa', 'STRING', '#1F2937'),
 ('empresa.dark_mode', 'Habilitar modo escuro por padrao', 'BOOLEAN', 'false');
@@ -1390,6 +1395,7 @@ INSERT INTO empresa_config (empresa_id, chave, valor) VALUES
 (2, 'workflow.aprovacao.sla_horas', '24'),
 (2, 'sessao.timeout_minutos', '600'),
 (2, 'upload.storage_provider', 'LOCAL'),
+(2, 'timezone', 'America/Sao_Paulo'),
 (2, 'empresa.tema_cor_primaria', '#005F73'),
 (2, 'empresa.tema_cor_secundaria', '#0A9396'),
 (2, 'empresa.dark_mode', 'false');
