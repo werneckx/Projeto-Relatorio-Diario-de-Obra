@@ -55,7 +55,7 @@
                         {% endif %}
                     </td>
                     <td style="color:var(--text-muted);font-size:0.85rem;">
-                        {{ emp.criado_em.strftime('%d/%m/%Y') if emp.criado_em else '—' }}
+                        {{ emp.criado_em | fmt_dt(empresa_id=emp.id, fmt='%d/%m/%Y') if emp.criado_em else '—' }}
                     </td>
                     <td>
                         <a href="{{ url_for('admin.editar_empresa', empresa_id=emp.id) }}"

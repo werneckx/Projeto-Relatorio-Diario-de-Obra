@@ -425,7 +425,7 @@
 
                     {% if ass.status == 'APROVADO' %}
                     <div style="font-size: 6pt; margin-top: 2px; color: #444;">
-                        {{ ass.criado.strftime('%d/%m/%y %H:%M') }}
+                        {{ ass.criado | fmt_dt(obra_id=rdo.obra_id, fmt='%d/%m/%y %H:%M') }}
                     </div>
 
                     <div
