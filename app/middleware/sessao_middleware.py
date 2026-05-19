@@ -48,32 +48,19 @@ def init_sessao_middleware(app):
 
 
 
-        # Compat: token_hash é armazenado como UUID (string) no banco.
-        # Diagnóstico: mesmo com login sucesso, o middleware estava invalidando.
-        # Para evitar falsos negativos por timezone/tipo, validamos em etapas:
-        # 1) token existe
-        # 2) token está ativa
-        # 3) somente então checamos expiração
+
+        # Valida sessão ativa e não expirada.
         try:
-            token_obj = (
+            sessao = (
                 SessaoUsuario.query.filter(
                     SessaoUsuario.token_hash == session_uuid,
+                    SessaoUsuario.ativa.is_(True),
+                    SessaoUsuario.expira_em > now,
                 ).first()
             )
-
-            if not token_obj or not token_obj.ativa:
-                sessao = None
-            else:
-                if token_obj.expira_em and token_obj.expira_em > now:
-                    sessao = token_obj
-                else:
-                    sessao = None
-
-        except Exception as e:
-            # query falhou; considera sessão inválida
-            pass
-
+        except Exception:
             sessao = None
+
 
         if not sessao:
             try:
