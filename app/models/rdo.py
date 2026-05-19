@@ -205,7 +205,7 @@ class RDOAprovacao(CRUDMixin, db.Model):
     rdo_id = db.Column(db.Integer, db.ForeignKey('rdo.id'), nullable=False, index=True)
     aprovador_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=False)
     nivel = db.Column(db.Integer, nullable=True)
-    status = db.Column(db.Enum('PENDENTE', 'APROVADO', 'REJEITADO'), default='PENDENTE', index=True)
+    status = db.Column(db.Enum('PENDENTE', 'APROVADO', 'REJEITADO', 'CANCELADO'), default='PENDENTE', index=True)
     data_aprovacao = db.Column(db.DateTime, nullable=True)
     comentario = db.Column(db.Text, nullable=True)
     endereco_ip = db.Column(db.String(45), nullable=True)
@@ -264,7 +264,13 @@ class RDOAssinatura(CRUDMixin, db.Model):
 class RDOVersao(CRUDMixin, db.Model):
     __tablename__ = "rdo_versoes"
 
-    id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    # SQLite só aplica autoincrement/ROWID corretamente quando a PK é INTEGER.
+    # Em produção (MySQL) mantemos BIGINT; em testes (SQLite) usamos Integer.
+    id = db.Column(
+        db.BigInteger().with_variant(db.Integer, "sqlite"),
+        primary_key=True,
+        autoincrement=True,
+    )
     empresa_id = db.Column(db.Integer, db.ForeignKey('empresa.id'), nullable=False, index=True)
     rdo_id = db.Column(db.Integer, db.ForeignKey('rdo.id'), nullable=False, index=True)
     numero_versao = db.Column(db.Integer, nullable=False)
@@ -280,6 +286,8 @@ class RDOVersao(CRUDMixin, db.Model):
 
     __table_args__ = (
         db.UniqueConstraint('rdo_id', 'numero_versao', name='uk_rdo_versao'),
+        # Garante comportamento de AUTOINCREMENT no SQLite quando aplicável.
+        {"sqlite_autoincrement": True},
     )
 
     def __repr__(self):
