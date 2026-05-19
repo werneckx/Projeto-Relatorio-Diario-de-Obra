@@ -113,33 +113,105 @@ def login_post():
 
     # 2. Verificar se o usuário existe e se a senha está correta
     if not user or not user.check_senha(senha):
-        flash("E-mail, senha ou status de usuário inválido.", "error")
-        return redirect(url_for("auth.login"))
-    
-    # --- NOVO: REGISTRAR LOG DE ACESSO ---
-    try:
-        # Captura o IP real, mesmo se estiver atrás de Proxy (Nginx/Cloudflare)
+        # Auditoria + acesso log de falha
         user_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
         if user_ip and ',' in user_ip:
             user_ip = user_ip.split(',')[0].strip()
 
-        # Atualiza os campos no objeto usuário
-        # IMPORTANTE: Seu model Usuario deve ter as colunas 'ultimo_acesso' e 'ip_ultimo_acesso'
-        user.ultimo_login = datetime.now()
-        user.ultimo_login_ip = user_ip
-        
-        # Salva no banco de dados
-        db.session.commit()
-    except Exception as e:
-        # Se der erro ao salvar o log (ex: coluna não existe), faz rollback mas permite o login
-        db.session.rollback()
-        print(f"Erro ao salvar log de acesso: {e}")
-    # -------------------------------------
+        try:
+            from app.models.sessao import AcessoLog
+            from app.services.auditoria_service import AuditoriaService
+
+            acesso = AcessoLog(
+                empresa_id=getattr(user, "empresa_id", None),
+                usuario_id=getattr(user, "id", None),
+                email=email,
+                acao='LOGIN_FALHA',
+                ip=user_ip,
+                user_agent=request.headers.get('User-Agent'),
+                detalhes={"sucesso": False, "motivo": "credenciais inválidas"},
+            )
+            db.session.add(acesso)
+
+            AuditoriaService.registrar_login(
+                sucesso=False,
+                motivo="credenciais inválidas",
+                login_informado=email,
+                ip=user_ip,
+                user_agent=request.headers.get('User-Agent'),
+                endpoint=request.endpoint,
+                metodo_http=request.method,
+                empresa_id=getattr(user, "empresa_id", None),
+                usuario_id=getattr(user, "id", None),
+            )
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+        flash("E-mail, senha ou status de usuário inválido.", "error")
+        return redirect(url_for("auth.login"))
+
     
+    # --- Captura de contexto (sem commit fragmentado) ---
+    user_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+    if user_ip and ',' in user_ip:
+        user_ip = user_ip.split(',')[0].strip()
+
+    # --- Atualiza usuário e cria auditoria/acesso/sessão (transação única) ---
+    user.ultimo_login = datetime.now()
+    user.ultimo_login_ip = user_ip
+
+    from uuid import uuid4
+    from app.models.sessao import SessaoUsuario, AcessoLog
+    from app.services.auditoria_service import AuditoriaService
+
+    session_uuid = str(uuid4())
+    acesso = AcessoLog(
+        empresa_id=getattr(user, "empresa_id", None),
+        usuario_id=user.id,
+        email=user.email,
+        acao='LOGIN_SUCESSO',
+        ip=user_ip,
+        user_agent=request.headers.get('User-Agent'),
+        detalhes={"success": True},
+    )
+    db.session.add(acesso)
+
+    sessao = SessaoUsuario(
+        empresa_id=user.empresa_id,
+        usuario_id=user.id,
+        token_hash=session_uuid,
+        ip=user_ip,
+        user_agent=request.headers.get('User-Agent'),
+        iniciada_em=datetime.utcnow(),
+        expira_em=datetime.utcnow() + timedelta(hours=24),
+        ativa=True,
+    )
+    db.session.add(sessao)
+
+    # Auditoria (before/after não aplicável aqui; registramos evento de login)
+    AuditoriaService.registrar_login(
+        sucesso=True,
+        empresa_id=user.empresa_id,
+        usuario_id=user.id,
+        ip=user_ip,
+        user_agent=request.headers.get('User-Agent'),
+        endpoint=request.endpoint,
+        metodo_http=request.method,
+        login_informado=email,
+    )
+
+    db.session.add(user)
+    db.session.commit()
+
     # --- LOGIN NO FLASK-LOGIN ---
     login_user(user)
+
+
     
+    session["session_uuid"] = session_uuid
     session["user_id"] = user.id
+
     session["empresa_id"] = user.empresa_id
     session["user_name"] = user.nome
     session["user_email"] = user.email
@@ -169,9 +241,49 @@ def login_post():
 
 @auth_bp.get("/logout")
 def logout():
+    # Logout normal: encerra a sessão corporativa e registra trilha
+    current_session_uuid = session.get("session_uuid")
+    try:
+        from app.models.sessao import SessaoUsuario, AcessoLog
+        from app.services.auth_service import AuthService
+        from app.services.auditoria_service import AuditoriaService
+
+        if current_session_uuid:
+            # encerra via serviço (operação transacional; não faz commit internamente)
+            AuthService.revogar_sessao(current_session_uuid, motivo="logout")
+
+            # registra AcessoLog LOGOUT (opcional; trilha operacional)
+            try:
+                sessao = (
+                    SessaoUsuario.query.filter(
+                        SessaoUsuario.token_hash == current_session_uuid
+                    ).first()
+                )
+                if sessao:
+                    acesso = AcessoLog(
+                        empresa_id=sessao.empresa_id,
+                        usuario_id=sessao.usuario_id,
+                        email=None,
+                        acao='LOGOUT',
+                        ip=None,
+                        user_agent=None,
+                        detalhes={"motivo": "logout"},
+                    )
+                    db.session.add(acesso)
+            except Exception:
+                pass
+
+            try:
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+    except Exception:
+        pass
+
     session.clear()
     flash("Você foi desconectado com sucesso.", "info")
     return redirect(url_for("auth.login"))
+
 
 # --- ROTAS DE RECUPERAÇÃO DE SENHA ---
 

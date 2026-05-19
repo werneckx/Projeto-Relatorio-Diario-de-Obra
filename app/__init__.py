@@ -1,4 +1,4 @@
-from flask import Flask, redirect, url_for
+from flask import Flask, redirect, url_for, current_app
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_migrate import Migrate
@@ -21,6 +21,18 @@ def create_app():
     login_manager.init_app(app)
     csrf.init_app(app)
     Migrate(app, db) # A ordem de inicialização está correta
+
+    # Gatilho de flush para auditoria/transações
+    from sqlalchemy import event
+    from app.models.auditoria import AuditoriaLog
+    from app.models.sessao import AcessoLog
+
+    def _audit_before_flush(session, flush_context, instances):
+        audit_objects = [obj for obj in session.new if getattr(obj, '__tablename__', None) in {'auditoria_log', 'acesso_log'}]
+        if audit_objects:
+            current_app.logger.debug(f"[auditoria] {len(audit_objects)} objetos de auditoria pendentes antes do flush")
+
+    event.listen(db.session.__class__, 'before_flush', _audit_before_flush)
 
     # Onde o usuário será redirecionado ao tentar acessar sem login
     # O nome da view 'auth.login' está correto.
@@ -48,10 +60,15 @@ def create_app():
     # Registrar blueprints
     from app.routes.auth import auth_bp
     from app.routes.admin import admin_bp
-    
+
     # Boas Práticas: Sempre registrar Blueprints APÓS os Models e Configs
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(admin_bp)
+
+    # Middleware corporativo de sessão
+    from app.middleware.sessao_middleware import init_sessao_middleware
+    init_sessao_middleware(app)
+
     app.jinja_env.filters['from_json'] = json.loads
     
     # Excluir rota de login do CSRF para facilitar testes
