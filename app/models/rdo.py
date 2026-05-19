@@ -1,6 +1,7 @@
 from datetime import datetime
 from app import db
 from app.models.crud_mixin import CRUDMixin
+from app.utils.datetime_utils import utcnow_naive
 
 class RDO(CRUDMixin, db.Model):
     __tablename__ = "rdo"
@@ -34,8 +35,8 @@ class RDO(CRUDMixin, db.Model):
 
     criado_por = db.Column(db.Integer, nullable=True)
     modificado_por = db.Column(db.Integer, nullable=True)
-    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
-    modificado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    criado_em = db.Column(db.DateTime, default=utcnow_naive)
+    modificado_em = db.Column(db.DateTime, default=utcnow_naive, onupdate=utcnow_naive)
 
     # Relacionamentos
     obra = db.relationship('Obra', backref='rdos')
@@ -101,8 +102,8 @@ class RDOMaoObra(CRUDMixin, db.Model):
 
     criado_por = db.Column(db.Integer, nullable=True)
     modificado_por = db.Column(db.Integer, nullable=True)
-    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
-    modificado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    criado_em = db.Column(db.DateTime, default=utcnow_naive)
+    modificado_em = db.Column(db.DateTime, default=utcnow_naive, onupdate=utcnow_naive)
 
     rdo = db.relationship('RDO', backref=db.backref('maos_obra', cascade='all, delete-orphan', lazy='dynamic'))
     colaborador = db.relationship('Colaborador')
@@ -132,8 +133,8 @@ class RDOEquipamento(CRUDMixin, db.Model):
 
     criado_por = db.Column(db.Integer, nullable=True)
     modificado_por = db.Column(db.Integer, nullable=True)
-    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
-    modificado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    criado_em = db.Column(db.DateTime, default=utcnow_naive)
+    modificado_em = db.Column(db.DateTime, default=utcnow_naive, onupdate=utcnow_naive)
 
     rdo = db.relationship('RDO', backref=db.backref('equipamentos', cascade='all, delete-orphan', lazy='dynamic'))
     equipamento = db.relationship('AuxEquipamentos')
@@ -156,8 +157,8 @@ class RDOOcorrencia(CRUDMixin, db.Model):
 
     criado_por = db.Column(db.Integer, nullable=True)
     modificado_por = db.Column(db.Integer, nullable=True)
-    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
-    modificado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    criado_em = db.Column(db.DateTime, default=utcnow_naive)
+    modificado_em = db.Column(db.DateTime, default=utcnow_naive, onupdate=utcnow_naive)
 
     rdo = db.relationship('RDO', backref=db.backref('ocorrencias', cascade='all, delete-orphan', lazy='dynamic'))
     tag_ocorrencia = db.relationship('AuxTagOcorrencia')
@@ -175,8 +176,8 @@ class RDOAtividade(CRUDMixin, db.Model):
 
     criado_por = db.Column(db.Integer, nullable=True)
     modificado_por = db.Column(db.Integer, nullable=True)
-    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
-    modificado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    criado_em = db.Column(db.DateTime, default=utcnow_naive)
+    modificado_em = db.Column(db.DateTime, default=utcnow_naive, onupdate=utcnow_naive)
 
     rdo = db.relationship('RDO', backref=db.backref('atividades', cascade='all, delete-orphan', lazy='dynamic'))
 
@@ -192,8 +193,8 @@ class RDOFoto(CRUDMixin, db.Model):
 
     criado_por = db.Column(db.Integer, nullable=True)
     modificado_por = db.Column(db.Integer, nullable=True)
-    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
-    modificado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    criado_em = db.Column(db.DateTime, default=utcnow_naive)
+    modificado_em = db.Column(db.DateTime, default=utcnow_naive, onupdate=utcnow_naive)
 
     rdo = db.relationship('RDO', backref=db.backref('fotos', cascade='all, delete-orphan', lazy='dynamic'))
 
@@ -215,8 +216,8 @@ class RDOAprovacao(CRUDMixin, db.Model):
 
     criado_por = db.Column(db.Integer, nullable=True)
     modificado_por = db.Column(db.Integer, nullable=True)
-    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
-    modificado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    criado_em = db.Column(db.DateTime, default=utcnow_naive)
+    modificado_em = db.Column(db.DateTime, default=utcnow_naive, onupdate=utcnow_naive)
 
     rdo = db.relationship('RDO', backref=db.backref('aprovacoes', cascade='all, delete-orphan', lazy='dynamic'))
     aprovador = db.relationship('Usuario')
@@ -250,7 +251,7 @@ class RDOAssinatura(CRUDMixin, db.Model):
     ip = db.Column(db.String(45), nullable=True)
     user_agent = db.Column(db.String(255), nullable=True)
 
-    assinado_em = db.Column(db.DateTime, default=datetime.utcnow)
+    assinado_em = db.Column(db.DateTime, default=utcnow_naive)
 
     # Relacionamentos
     rdo = db.relationship('RDO', backref=db.backref('assinaturas_formais', cascade='all, delete-orphan', lazy='dynamic'))
@@ -278,7 +279,7 @@ class RDOVersao(CRUDMixin, db.Model):
     dados_snapshot = db.Column(db.JSON, nullable=False)
     hash_snapshot = db.Column(db.String(255), nullable=True)
     criado_por = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=True)
-    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
+    criado_em = db.Column(db.DateTime, default=utcnow_naive)
 
     rdo = db.relationship('RDO', backref=db.backref('versoes_historico', lazy='dynamic'))
     usuario_criador = db.relationship('Usuario')

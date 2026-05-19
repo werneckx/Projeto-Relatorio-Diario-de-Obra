@@ -120,7 +120,9 @@ def assinar_rdo(rdo_id):
     try:
         header, encoded = img_data.split(",", 1)
         file_data = base64.b64decode(encoded)
-        filename = f"sig_{rdo_id}_{user_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}.png"
+        from app.utils.datetime_utils import utcnow_naive
+
+        filename = f"sig_{rdo_id}_{user_id}_{utcnow_naive().strftime('%Y%m%d%H%M%S')}.png"
         
         upload_folder = os.path.join(current_app.root_path, 'static', 'uploads', 'assinaturas')
         if not os.path.exists(upload_folder):
@@ -133,11 +135,11 @@ def assinar_rdo(rdo_id):
         if user_ip and ',' in user_ip:
             user_ip = user_ip.split(',')[0].strip()
 
-        hash_string = f"{rdo_id}:{user_id}:{datetime.utcnow()}:{current_app.config['SECRET_KEY']}"
+        hash_string = f"{rdo_id}:{user_id}:{utcnow_naive()}:{current_app.config['SECRET_KEY']}"
         document_hash = hashlib.sha256(hash_string.encode()).hexdigest()
 
         assinatura_pendente.imagem_assinatura = filename
-        assinatura_pendente.data_aprovacao = datetime.now()
+        assinatura_pendente.data_aprovacao = utcnow_naive()
         assinatura_pendente.status = 'APROVADO'
         assinatura_pendente.endereco_ip = user_ip
         # RDOAprovacao não possui latitude e longitude

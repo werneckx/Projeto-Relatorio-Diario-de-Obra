@@ -11,7 +11,7 @@ Responsabilidades:
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 from typing import Any, Dict, List, Optional, Tuple
 from flask_login import current_user
 
@@ -20,6 +20,7 @@ from app.models.workflow import WorkflowDefinicao, WorkflowEtapa
 from app.models.rdo import RDO, RDOAprovacao, RDOVersao
 from app.models.usuario import Usuario
 from app.services.auditoria_service import AuditoriaService
+from app.utils.datetime_utils import utcnow_naive
 from app.utils.serializers import safe_model_to_dict
 
 
@@ -230,12 +231,12 @@ class WorkflowService:
 
             # Marcar como aprovado
             aprovacao.status = 'APROVADO'
-            aprovacao.data_aprovacao = datetime.now(timezone.utc).replace(tzinfo=None)
+            aprovacao.data_aprovacao = utcnow_naive()
             aprovacao.comentario = comentario
             aprovacao.endereco_ip = ip
             aprovacao.hash = hash_doc
             aprovacao.modificado_por = current_user.id if current_user else None
-            aprovacao.modificado_em = datetime.now(timezone.utc).replace(tzinfo=None)
+            aprovacao.modificado_em = utcnow_naive()
 
             db.session.add(aprovacao)
             db.session.flush()
@@ -299,11 +300,11 @@ class WorkflowService:
 
             # Marcar como rejeitado
             aprovacao.status = 'REJEITADO'
-            aprovacao.data_aprovacao = datetime.now(timezone.utc).replace(tzinfo=None)
+            aprovacao.data_aprovacao = utcnow_naive()
             aprovacao.comentario = motivo
             aprovacao.endereco_ip = ip
             aprovacao.modificado_por = current_user.id if current_user else None
-            aprovacao.modificado_em = datetime.now(timezone.utc).replace(tzinfo=None)
+            aprovacao.modificado_em = utcnow_naive()
 
             db.session.add(aprovacao)
 
@@ -324,7 +325,7 @@ class WorkflowService:
                 # Retorna RDO para RASCUNHO
                 rdo.status = 'RASCUNHO'
                 rdo.modificado_por = current_user.id if current_user else None
-                rdo.modificado_em = datetime.now(timezone.utc).replace(tzinfo=None)
+                rdo.modificado_em = utcnow_naive()
                 db.session.add(rdo)
 
                 AuditoriaService.registrar_auditoria_entidade(
@@ -369,10 +370,10 @@ class WorkflowService:
         # 1. Bloqueia RDO
         rdo.status = 'APROVADO'
         # Não alteramos FRENTE/TRABALHO aqui (FK NOT NULL em SQLite)
-        rdo.bloqueado_em = datetime.now(timezone.utc).replace(tzinfo=None)
+        rdo.bloqueado_em = utcnow_naive()
         rdo.bloqueado_por = current_user.id if current_user else None
         rdo.modificado_por = current_user.id if current_user else None
-        rdo.modificado_em = datetime.now(timezone.utc).replace(tzinfo=None)
+        rdo.modificado_em = utcnow_naive()
 
         db.session.add(rdo)
 
@@ -411,10 +412,10 @@ class WorkflowService:
 
         for aprov in pendentes:
             aprov.status = 'CANCELADO'
-            aprov.data_aprovacao = datetime.now(timezone.utc).replace(tzinfo=None)
+            aprov.data_aprovacao = utcnow_naive()
             aprov.comentario = motivo or 'Fluxo cancelado por rejeição anterior'
             aprov.modificado_por = current_user.id if current_user else None
-            aprov.modificado_em = datetime.now(timezone.utc).replace(tzinfo=None)
+            aprov.modificado_em = utcnow_naive()
             db.session.add(aprov)
 
     # =========================================================================
@@ -505,7 +506,7 @@ class WorkflowService:
             return {'sla_horas': None, 'vencimento': None, 'vencido': False}
 
         vencimento = criado_em + timedelta(hours=etapa.sla_horas)
-        agora = datetime.now(timezone.utc).replace(tzinfo=None)
+        agora = utcnow_naive()
         vencido = agora > vencimento
 
         return {
