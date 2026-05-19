@@ -1,4 +1,6 @@
 ﻿from app.routes.auth_common import *
+from app.services.auditoria_service import AuditoriaService
+from app.utils.serializers import safe_model_to_dict
 
 #######################################################################################################
 ####################################################################################################### Assinaturas RDO
@@ -29,10 +31,13 @@ def salvar_workflow_assinaturas(rdo_id):
 
     try:
         with db.session.begin():
+            assinaturas_antes = [safe_model_to_dict(ass) for ass in RDOAprovacao.query.filter_by(rdo_id=rdo_id, ativo=True).all()]
+
             # Soft delete das assinaturas atuais
             for ass in RDOAprovacao.query.filter_by(rdo_id=rdo_id, ativo=True).all():
                 ass.soft_delete(usuario=current_user, motivo="alteração de workflow")
 
+            novas_assinaturas = []
             for index, user_id in enumerate(novos_assinantes_ids):
                 nova_ass = RDOAprovacao(
                     empresa_id=session.get('empresa_id'),
@@ -43,8 +48,25 @@ def salvar_workflow_assinaturas(rdo_id):
                     ativo=True
                 )
                 db.session.add(nova_ass)
+                novas_assinaturas.append(nova_ass)
 
             rdo.status = 'PENDENTE'
+
+            AuditoriaService.registrar_operacao(
+                acao="UPDATE_WORKFLOW",
+                entidade="RDO_WORKFLOW",
+                entidade_id=rdo_id,
+                antes=assinaturas_antes,
+                depois=[safe_model_to_dict(ass) for ass in novas_assinaturas],
+                empresa_id=session.get('empresa_id'),
+                usuario_id=session.get('user_id'),
+                ip=request.headers.get('X-Forwarded-For', request.remote_addr),
+                user_agent=request.headers.get('User-Agent'),
+                endpoint=request.endpoint,
+                metodo_http=request.method,
+                payload={"usuarios_ids": novos_assinantes_ids},
+            )
+
             return jsonify({"success": True})
         
 
@@ -74,6 +96,8 @@ def assinar_rdo(rdo_id):
 
     if not assinatura_pendente:
         return jsonify({"success": False, "message": "Você não tem assinaturas pendentes para este RDO."}), 400
+
+    antes_assinatura = safe_model_to_dict(assinatura_pendente)
 
     passo_anterior_pendente = RDOAprovacao.query.filter(
         RDOAprovacao.rdo_id == rdo_id,
@@ -133,6 +157,22 @@ def assinar_rdo(rdo_id):
         else:
             rdo.status = 'PENDENTE'
 
+        depois_assinatura = safe_model_to_dict(assinatura_pendente)
+        AuditoriaService.registrar_operacao(
+            acao="APPROVE",
+            entidade="RDO_APROVACAO",
+            entidade_id=assinatura_pendente.id,
+            antes=antes_assinatura,
+            depois=depois_assinatura,
+            empresa_id=session.get('empresa_id'),
+            usuario_id=session.get('user_id'),
+            ip=user_ip,
+            user_agent=request.headers.get('User-Agent'),
+            endpoint=request.endpoint,
+            metodo_http=request.method,
+            payload={"rdo_id": rdo_id, "restantes": restantes, "novo_status_rdo": rdo.status},
+        )
+
         db.session.commit()
         return jsonify({"success": True})
 
@@ -152,11 +192,30 @@ def rejeitar_assinatura(id_assinatura):
         return jsonify({"success": False, "message": "Não autorizado."}), 403
 
     try:
+        antes_assinatura = safe_model_to_dict(ass)
+
         ass.status = 'REJEITADO'
         ass.comentario = motivo
         ass.data_aprovacao = datetime.now()
         rdo = RDO.query.get(ass.rdo_id)
         rdo.status = 'REJEITADO'
+
+        depois_assinatura = safe_model_to_dict(ass)
+        AuditoriaService.registrar_operacao(
+            acao="REJECT",
+            entidade="RDO_APROVACAO",
+            entidade_id=ass.id,
+            antes=antes_assinatura,
+            depois=depois_assinatura,
+            empresa_id=session.get('empresa_id'),
+            usuario_id=session.get('user_id'),
+            ip=request.headers.get('X-Forwarded-For', request.remote_addr),
+            user_agent=request.headers.get('User-Agent'),
+            endpoint=request.endpoint,
+            metodo_http=request.method,
+            payload={"rdo_id": ass.rdo_id, "motivo": motivo},
+        )
+
         db.session.commit()
         return jsonify({"success": True})
     except Exception as e:
