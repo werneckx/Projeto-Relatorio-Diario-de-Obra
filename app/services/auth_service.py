@@ -8,6 +8,7 @@ from flask_login import logout_user
 from app import db
 from app.models.sessao import SessaoUsuario, AcessoLog
 from app.services.auditoria_service import AuditoriaService
+from app.utils.datetime_utils import utcnow_naive
 
 
 class AuthService:
@@ -23,7 +24,7 @@ class AuthService:
         if not session_uuid:
             return
 
-        now = datetime.utcnow()
+        now = utcnow_naive()
 
         # localiza sessão ativa por token_hash
         sessao = (

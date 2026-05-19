@@ -5,6 +5,8 @@ from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 import bcrypt
 
+from app.utils.datetime_utils import utcnow_naive
+
 # =========================
 # RBAC
 # empresa_id = NULL → escopo global (is_system)
@@ -23,8 +25,8 @@ class Permissao(db.Model):
 
     criado_por = db.Column(db.Integer, nullable=True)
     modificado_por = db.Column(db.Integer, nullable=True)
-    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
-    modificado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    criado_em = db.Column(db.DateTime, default=utcnow_naive)
+    modificado_em = db.Column(db.DateTime, default=utcnow_naive, onupdate=utcnow_naive)
 
     def __repr__(self):
         return f'<Permissao {self.chave}>'
@@ -52,8 +54,8 @@ class Papel(db.Model):
 
     criado_por = db.Column(db.Integer, nullable=True)
     modificado_por = db.Column(db.Integer, nullable=True)
-    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
-    modificado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    criado_em = db.Column(db.DateTime, default=utcnow_naive)
+    modificado_em = db.Column(db.DateTime, default=utcnow_naive, onupdate=utcnow_naive)
 
     permissoes = db.relationship(
         'Permissao',
@@ -95,8 +97,8 @@ class Colaborador(db.Model):
 
     criado_por = db.Column(db.Integer, nullable=True)
     modificado_por = db.Column(db.Integer, nullable=True)
-    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
-    modificado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    criado_em = db.Column(db.DateTime, default=utcnow_naive)
+    modificado_em = db.Column(db.DateTime, default=utcnow_naive, onupdate=utcnow_naive)
 
     @property
     def is_terceiro(self):  
@@ -137,8 +139,8 @@ class Usuario(db.Model, UserMixin):
 
     criado_por = db.Column(db.Integer, nullable=True)
     modificado_por = db.Column(db.Integer, nullable=True)
-    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
-    modificado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    criado_em = db.Column(db.DateTime, default=utcnow_naive)
+    modificado_em = db.Column(db.DateTime, default=utcnow_naive, onupdate=utcnow_naive)
 
     colaborador = db.relationship('Colaborador', backref='usuarios')
     empresa = db.relationship('Empresa', backref='usuarios')

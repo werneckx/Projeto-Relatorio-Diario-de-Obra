@@ -157,8 +157,10 @@ def login_post():
     if user_ip and ',' in user_ip:
         user_ip = user_ip.split(',')[0].strip()
 
+    from app.utils.datetime_utils import utcnow_naive
+
     # --- Atualiza usuário e cria auditoria/acesso/sessão (transação única) ---
-    user.ultimo_login = datetime.now()
+    user.ultimo_login = utcnow_naive()
     user.ultimo_login_ip = user_ip
 
     from uuid import uuid4
@@ -183,8 +185,8 @@ def login_post():
         token_hash=session_uuid,
         ip=user_ip,
         user_agent=request.headers.get('User-Agent'),
-        iniciada_em=datetime.utcnow(),
-        expira_em=datetime.utcnow() + timedelta(hours=24),
+        iniciada_em=utcnow_naive(),
+        expira_em=utcnow_naive() + timedelta(hours=24),
         ativa=True,
     )
     db.session.add(sessao)

@@ -70,6 +70,12 @@ def create_app():
     init_sessao_middleware(app)
 
     app.jinja_env.filters['from_json'] = json.loads
+
+    # Filtro para converter datetimes UTC (naive) para timezone local da empresa/obra.
+    # Import aqui para evitar import circular durante bootstrap do app.
+    from app.utils.timezone_service import to_local_time, fmt_dt
+    app.jinja_env.filters['to_local_time'] = to_local_time
+    app.jinja_env.filters['fmt_dt'] = fmt_dt
     
     # Excluir rota de login do CSRF para facilitar testes
     csrf.exempt(auth_bp)

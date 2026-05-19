@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime
+
+from app.utils.datetime_utils import utcnow_naive
 
 from flask import current_app, request, session, redirect, url_for, has_request_context
 from flask_login import logout_user
@@ -10,10 +12,10 @@ from app.models.sessao import SessaoUsuario
 
 
 
-def _utcnow_naive() -> datetime:
-    """Retorna datetime UTC sem tzinfo (compatível com modelos atuais)."""
+def _now_naive() -> datetime:
+    """Retorna datetime UTC sem tzinfo."""
 
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return utcnow_naive()
 
 
 def init_sessao_middleware(app):
@@ -41,7 +43,7 @@ def init_sessao_middleware(app):
         session_uuid = str(session_uuid)
 
 
-        now = _utcnow_naive()
+        now = _now_naive()
 
 
 
@@ -112,7 +114,7 @@ def init_sessao_middleware(app):
         try:
             session_uuid = session.get("session_uuid")
             if session_uuid:
-                now = _utcnow_naive()
+                now = _now_naive()
                 sessao = SessaoUsuario.query.filter(
                     SessaoUsuario.token_hash == session_uuid,
                     SessaoUsuario.ativa.is_(True),
