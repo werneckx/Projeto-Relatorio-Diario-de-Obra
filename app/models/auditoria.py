@@ -1,5 +1,6 @@
 from datetime import datetime
 from app import db
+from app.utils.datetime_utils import utcnow_naive
 
 class AuditoriaLog(db.Model):
     __tablename__ = "auditoria_log"
@@ -19,7 +20,7 @@ class AuditoriaLog(db.Model):
     ip = db.Column(db.String(45), nullable=True)
     user_agent = db.Column(db.String(255), nullable=True)
 
-    criado_em = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    criado_em = db.Column(db.DateTime, default=utcnow_naive, index=True)
 
     # Relacionamentos
     empresa = db.relationship('Empresa')

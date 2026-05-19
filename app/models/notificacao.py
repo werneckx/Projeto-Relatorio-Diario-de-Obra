@@ -1,5 +1,6 @@
 from datetime import datetime
 from app import db
+from app.utils.datetime_utils import utcnow_naive
 
 
 class Notificacao(db.Model):
@@ -29,7 +30,7 @@ class Notificacao(db.Model):
     ativo = db.Column(db.Boolean, nullable=False, default=True)
 
     criado_por = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=True)
-    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
+    criado_em = db.Column(db.DateTime, default=utcnow_naive)
 
     empresa = db.relationship('Empresa', backref='notificacoes')
     usuario = db.relationship('Usuario', foreign_keys=[usuario_id], backref='notificacoes')
@@ -39,7 +40,7 @@ class Notificacao(db.Model):
 
     def marcar_como_lida(self):
         self.lida = True
-        self.lida_em = datetime.utcnow()
+        self.lida_em = utcnow_naive()
 
     def __repr__(self):
         return f'<Notificacao {self.tipo}: {self.titulo}>'
