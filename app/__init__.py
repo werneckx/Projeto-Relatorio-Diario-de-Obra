@@ -11,10 +11,12 @@ db = SQLAlchemy()
 login_manager = LoginManager()
 
 
-def create_app():
+def create_app(config_overrides=None):
     app = Flask(__name__)
     # Boas Práticas: Usar caminhos relativos para configuração
-    app.config.from_object("config.Config") 
+    app.config.from_object("config.Config")
+    if config_overrides:
+        app.config.update(config_overrides)
 
     # Inicializar extensões
     db.init_app(app)
