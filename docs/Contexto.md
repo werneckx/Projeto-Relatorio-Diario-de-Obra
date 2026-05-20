@@ -191,6 +191,20 @@ Responsável por:
 
 ---
 
+## Marco Atual — Exportação Inteligente e BI
+
+A partir de 20/05/2026 foi implementada a fase inicial de exportação corporativa e geração de indicadores.
+
+- Exportar visualização atual: respeita filtros ativos, colunas visíveis e paginação atual.
+- Exportar conjunto completo: respeita filtros ativos e escopo de dados, mas inclui todas as colunas.
+- Formatos suportados: `CSV`, `XLSX`, `PDF` para listas principais.
+- Indicadores operacionais iniciais: produtividade, SLA, lead time e histórico operacional.
+- Camadas centrais criadas em:
+  - `app/utils/export_service.py`
+  - `app/services/bi_service.py`
+
+---
+
 # Modelos Existentes
 
 ## Modelos Auxiliares
