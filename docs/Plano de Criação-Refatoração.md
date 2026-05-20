@@ -547,6 +547,52 @@ Resultado esperado:
 - Uploads rastreaveis.
 
 ### Marco 4 - Operacao e qualidade
+### Marco 3.1 - Arquivos Rastreáveis (Upload/Download)
+
+**Status:** concluído em 2026-05-20
+
+#### Verificação (2026-05-20)
+
+- Implementado serviço de armazenamento em `app/services/arquivo_service.py` com provider `LOCAL`, incluindo cálculo automático de:
+  - `hash_arquivo` (SHA-256)
+  - `tamanho_bytes`
+  - `mime_type`
+
+- Criada rota de upload e download rastreável em `app/routes/arquivos.py`:
+  - `POST /arquivos/upload`
+    - Realiza upload do arquivo
+    - Persiste metadados na tabela `arquivos`
+
+  - `GET /arquivos/<int:arquivo_id>/download`
+    - Aplica *scoping* por `empresa_id`
+    - Valida o provider utilizado
+    - Retorna `send_file` com:
+      - `Content-Disposition`
+      - `Content-Type`
+
+- Integrado ao fluxo de imagens do RDO (`app/routes/rdo.py`) utilizando:
+
+```python
+ArquivoService.save_local_file(...)
+```
+
+- Arquivos enviados passam a ser registrados no catálogo central `arquivos`.
+
+- Testes adicionados em `tests/test_arquivos.py`, cobrindo:
+  - Criação rastreável de arquivos
+  - Persistência de metadados
+  - Download seguro via rota
+
+#### Resultado esperado
+
+- Uploads rastreáveis com metadados persistidos.
+- Download seguro utilizando provider `LOCAL`.
+- Catálogo centralizado de arquivos integrado ao módulo RDO.
+- Base preparada para expansão futura para novos providers (`S3`, `Azure Blob`, `MinIO`, etc.).
+
+#### Branches
+
+- `feat/arquivos-documentos`
 
 ### Marco 4.1 - Navegação por permissões (RBAC)
 
