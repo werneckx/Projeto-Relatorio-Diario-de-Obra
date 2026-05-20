@@ -1,4 +1,4 @@
-﻿from app.routes.auth_common import *
+from app.routes.auth_common import *
 from app.services.auditoria_service import AuditoriaService
 from app.utils.serializers import safe_model_to_dict
 
@@ -23,7 +23,8 @@ def salvar_workflow_assinaturas(rdo_id):
     data = request.get_json()
     novos_assinantes_ids = [int(uid) for uid in data.get('usuarios_ids', [])] 
     
-    owner_id = rdo.obra.criado_por if rdo.obra and rdo.obra.criado_por else rdo.id_criado_por
+    # Lógica corrigida para vincular ao Criador do RDO
+    owner_id = rdo.criado_por
     if owner_id in novos_assinantes_ids:
         novos_assinantes_ids.remove(owner_id)
     if owner_id:
@@ -52,6 +53,23 @@ def salvar_workflow_assinaturas(rdo_id):
 
             rdo.status = 'PENDENTE'
 
+            # Notificar o primeiro aprovador da fila (Nível 1)
+            first_approver = next((ass for ass in novas_assinaturas if ass.nivel == 1), None)
+            if first_approver:
+                from app.services.notificacao_service import NotificacaoService
+                from app.models.notificacao import TipoNotificacao
+                NotificacaoService.criar_notificacao(
+                    empresa_id=session.get('empresa_id'),
+                    usuario_id=first_approver.aprovador_id,
+                    tipo=TipoNotificacao.APROVACAO_PENDENTE,
+                    titulo=f"Aprovação Pendente: RDO #{rdo.numero_sequencial or rdo.id}",
+                    mensagem=f"O RDO #{rdo.numero_sequencial or rdo.id} da obra '{rdo.obra.nome}' aguarda sua aprovação.",
+                    link=url_for('auth.visualizar_rdo', rdo_id=rdo.id),
+                    obra_id=rdo.obra_id,
+                    rdo_id=rdo.id,
+                    criado_por=session.get('user_id')
+                )
+
             AuditoriaService.registrar_operacao(
                 acao="UPDATE_WORKFLOW",
                 entidade="RDO_WORKFLOW",
@@ -68,9 +86,7 @@ def salvar_workflow_assinaturas(rdo_id):
             )
 
             return jsonify({"success": True})
-        
 
-        
     except Exception as e:
         db.session.rollback()
         return jsonify({"success": False, "message": str(e)}), 500
@@ -142,9 +158,6 @@ def assinar_rdo(rdo_id):
         assinatura_pendente.data_aprovacao = utcnow_naive()
         assinatura_pendente.status = 'APROVADO'
         assinatura_pendente.endereco_ip = user_ip
-        # RDOAprovacao não possui latitude e longitude
-        # assinatura_pendente.latitude = latitude
-        # assinatura_pendente.longitude = longitude
         assinatura_pendente.hash = document_hash 
         
         restantes = RDOAprovacao.query.filter(
@@ -156,8 +169,46 @@ def assinar_rdo(rdo_id):
         
         if restantes == 0:
             rdo.status = 'APROVADO'
+            
+            # RDO Aprovado: Notificar o criador do RDO
+            if rdo.criado_por:
+                from app.services.notificacao_service import NotificacaoService
+                from app.models.notificacao import TipoNotificacao
+                NotificacaoService.criar_notificacao(
+                    empresa_id=session.get('empresa_id'),
+                    usuario_id=rdo.criado_por,
+                    tipo=TipoNotificacao.RDO_APROVADO,
+                    titulo=f"RDO #{rdo.numero_sequencial or rdo.id} Aprovado",
+                    mensagem=f"O RDO #{rdo.numero_sequencial or rdo.id} da obra '{rdo.obra.nome}' foi totalmente aprovado.",
+                    link=url_for('auth.visualizar_rdo', rdo_id=rdo.id),
+                    obra_id=rdo.obra_id,
+                    rdo_id=rdo.id,
+                    criado_por=session.get('user_id')
+                )
         else:
             rdo.status = 'PENDENTE'
+            
+            # RDO Pendente: Notificar o próximo aprovador da fila
+            next_approver = RDOAprovacao.query.filter_by(
+                rdo_id=rdo_id,
+                status='PENDENTE',
+                ativo=True
+            ).order_by(RDOAprovacao.nivel).first()
+            
+            if next_approver:
+                from app.services.notificacao_service import NotificacaoService
+                from app.models.notificacao import TipoNotificacao
+                NotificacaoService.criar_notificacao(
+                    empresa_id=session.get('empresa_id'),
+                    usuario_id=next_approver.aprovador_id,
+                    tipo=TipoNotificacao.APROVACAO_PENDENTE,
+                    titulo=f"Aprovação Pendente: RDO #{rdo.numero_sequencial or rdo.id}",
+                    mensagem=f"O RDO #{rdo.numero_sequencial or rdo.id} da obra '{rdo.obra.nome}' aguarda sua aprovação.",
+                    link=url_for('auth.visualizar_rdo', rdo_id=rdo.id),
+                    obra_id=rdo.obra_id,
+                    rdo_id=rdo.id,
+                    criado_por=session.get('user_id')
+                )
 
         depois_assinatura = safe_model_to_dict(assinatura_pendente)
         AuditoriaService.registrar_operacao(
@@ -188,7 +239,11 @@ def assinar_rdo(rdo_id):
 def rejeitar_assinatura(id_assinatura):
     dados = request.get_json()
     motivo = dados.get('motivo')
-    ass = RDOAprovacao.query.get_or_404(id_assinatura)
+    
+    # SQLAlchemy 2.0: Substituição de query.get por db.session.get
+    ass = db.session.get(RDOAprovacao, id_assinatura)
+    if not ass or not ass.ativo:
+        abort(404)
     
     if ass.aprovador_id != session.get('user_id'):
         return jsonify({"success": False, "message": "Não autorizado."}), 403
@@ -199,8 +254,27 @@ def rejeitar_assinatura(id_assinatura):
         ass.status = 'REJEITADO'
         ass.comentario = motivo
         ass.data_aprovacao = datetime.now()
-        rdo = RDO.query.get(ass.rdo_id)
-        rdo.status = 'REJEITADO'
+        
+        # SQLAlchemy 2.0: Substituição de query.get por db.session.get
+        rdo = db.session.get(RDO, ass.rdo_id)
+        if rdo:
+            rdo.status = 'REJEITADO'
+
+            # Notificar o criador do RDO sobre a rejeição
+            if rdo.criado_por:
+                from app.services.notificacao_service import NotificacaoService
+                from app.models.notificacao import TipoNotificacao
+                NotificacaoService.criar_notificacao(
+                    empresa_id=session.get('empresa_id'),
+                    usuario_id=rdo.criado_por,
+                    tipo=TipoNotificacao.REJEICAO,
+                    titulo=f"RDO #{rdo.numero_sequencial or rdo.id} Rejeitado",
+                    mensagem=f"O RDO #{rdo.numero_sequencial or rdo.id} da obra '{rdo.obra.nome}' foi rejeitado por {current_user.nome}. Motivo: {motivo}",
+                    link=url_for('auth.editar_rdo', rdo_id=rdo.id),
+                    obra_id=rdo.obra_id,
+                    rdo_id=rdo.id,
+                    criado_por=session.get('user_id')
+                )
 
         depois_assinatura = safe_model_to_dict(ass)
         AuditoriaService.registrar_operacao(

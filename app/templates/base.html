@@ -2,6 +2,9 @@
 <html lang="pt-BR" class="h-full antialiased">
 
 <head>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    {% set use_fontawesome = true %} {# Font Awesome is loaded globally in the project #}
+
     <script>
         (function () {
             const urlParams = new URLSearchParams(window.location.search);
@@ -136,6 +139,19 @@
 
         .toast-enter {
             animation: slideInRight .4s ease forwards;
+        }
+
+        /* Animação de saída das notificações */
+        .notif-leave {
+            transition: transform .26s ease, opacity .26s ease, max-height .26s ease, padding .26s ease, margin .26s ease;
+            transform: translateX(12px);
+            opacity: 0;
+            max-height: 0 !important;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+            overflow: hidden;
         }
     </style>
 </head>
@@ -625,7 +641,7 @@
                             <i class="fas fa-bell text-sm"></i>
 
                             {% if total_nao_lidas > 0 %}
-                            <span
+                            <span id="notif-count-desktop"
                                 class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center">
                                 {{ total_nao_lidas }}
                             </span>
@@ -658,7 +674,8 @@
 
                                     {% for n in notificacoes_nao_lidas %}
 
-                                    <div class="px-5 py-4 border-b border-slate-100 hover:bg-slate-50 transition">
+                                    <div class="px-5 py-4 border-b border-slate-100 hover:bg-slate-50 transition"
+                                        data-notif-item="{{ n.id }}">
 
                                         <div class="flex items-start justify-between gap-3">
 
@@ -676,7 +693,10 @@
                                             </div>
 
                                             {% if n.link %}
-                                            <a href="{{ n.link }}"
+                                            {# Usa a rota salva no BD; garante barra inicial se estiver faltando #}
+                                            <a href="{{ n.link if (n.link.startswith('/') or n.link.startswith('http')) else ('/' + n.link) }}"
+                                                data-notif-id="{{ n.id }}"
+                                                onclick="markNotificacaoLidaFromElement(event, this)"
                                                 class="shrink-0 h-9 w-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-100 transition">
 
                                                 <i class="fas fa-arrow-right text-xs"></i>
@@ -825,7 +845,7 @@
                         <i class="fas fa-bell text-sm"></i>
 
                         {% if total_nao_lidas > 0 %}
-                        <span
+                        <span id="notif-count-mobile"
                             class="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 rounded-full bg-blue-600 text-white text-[9px] font-bold flex items-center justify-center">
                             {{ total_nao_lidas }}
                         </span>
@@ -1100,6 +1120,67 @@
                 }
             });
         });
+    </script>
+
+    <script>
+        function markNotificacaoLidaFromElement(event, el) {
+            try { event.preventDefault(); } catch (e) { }
+
+            const id = el.dataset.notifId;
+            const href = el.href;
+
+            // Anima e remove visualmente o item depois da transição
+            try {
+                const item = el.closest('[data-notif-item]');
+                if (item) {
+                    item.classList.add('notif-leave');
+                }
+
+                // Atualiza contadores (desktop e mobile) imediatamente
+                const dec = (elId) => {
+                    const elCount = document.getElementById(elId);
+                    if (!elCount) return;
+                    let val = parseInt(elCount.textContent || '0') || 0;
+                    val = Math.max(0, val - 1);
+                    if (val === 0) {
+                        elCount.remove();
+                    } else {
+                        elCount.textContent = val;
+                    }
+                };
+
+                dec('notif-count-desktop');
+                dec('notif-count-mobile');
+
+                // Remove o item do DOM após a duração da animação (ms)
+                const ANIM_MS = 260;
+                if (item && item.parentElement) {
+                    setTimeout(() => {
+                        try { item.parentElement.removeChild(item); } catch (e) { }
+                    }, ANIM_MS);
+                }
+            } catch (e) {
+                console.warn('Erro ao atualizar UI de notificação', e);
+            }
+
+            if (!id) {
+                window.location = href;
+                return;
+            }
+
+            const meta = document.querySelector('meta[name="csrf-token"]');
+            const csrf = meta ? meta.getAttribute('content') : null;
+
+            // Marca no servidor e navega após curta espera para permitir animação
+            const ANIM_MS = 260;
+            fetch(`/notificacoes/${id}/lida`, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: csrf ? { 'X-CSRFToken': csrf } : {}
+            }).catch(() => { });
+
+            setTimeout(() => { window.location = href; }, ANIM_MS);
+        }
     </script>
 
 </body>

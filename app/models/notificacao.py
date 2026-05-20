@@ -3,6 +3,12 @@ from app import db
 from app.utils.datetime_utils import utcnow_naive
 
 
+class TipoNotificacao:
+    APROVACAO_PENDENTE = "APROVACAO_PENDENTE"
+    RDO_APROVADO = "RDO_APROVADO"
+    REJEICAO = "REJEICAO"
+
+
 class Notificacao(db.Model):
     __tablename__ = "notificacoes"
 
@@ -11,18 +17,8 @@ class Notificacao(db.Model):
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=True, index=True)
     obra_id = db.Column(db.Integer, db.ForeignKey('obras.id'), nullable=True, index=True)
     rdo_id = db.Column(db.Integer, db.ForeignKey('rdo.id'), nullable=True, index=True)
-    tipo = db.Column(
-        db.Enum(
-            'APROVACAO_PENDENTE',
-            'NOVO_RDO',
-            'ALERTA',
-            'REJEICAO',
-            'AVISO_OPERACIONAL',
-            'SISTEMA',
-        ),
-        nullable=False,
-    )
-    titulo = db.Column(db.String(150), nullable=False)
+    tipo = db.Column(db.String(50), nullable=False)
+    titulo = db.Column(db.String(255), nullable=False)
     mensagem = db.Column(db.Text, nullable=True)
     link = db.Column(db.String(255), nullable=True)
     lida = db.Column(db.Boolean, nullable=False, default=False)
@@ -37,6 +33,10 @@ class Notificacao(db.Model):
     obra = db.relationship('Obra', backref='notificacoes')
     rdo = db.relationship('RDO', backref='notificacoes')
     criador = db.relationship('Usuario', foreign_keys=[criado_por])
+
+    __table_args__ = (
+        db.Index("idx_notificacao_usuario_empresa_lida", "usuario_id", "empresa_id", "lida"),
+    )
 
     def marcar_como_lida(self):
         self.lida = True
