@@ -1,5 +1,80 @@
 ﻿from app.routes.auth_common import *
 from app.models.cliente import Cliente
+from app.utils.export_service import make_csv_response, make_xlsx_response, make_pdf_response
+
+OBRA_EXPORT_COLUMNS = [
+    ("id", "ID"),
+    ("nome", "Projeto"),
+    ("cnpj", "CNPJ"),
+    ("cliente", "Cliente"),
+    ("cidade", "Cidade"),
+    ("estado", "Estado"),
+    ("endereco", "Endereço"),
+    ("tipo", "Tipo"),
+    ("progresso", "Progresso"),
+    ("status", "Status"),
+]
+
+
+def _parse_export_columns(default_columns):
+    requested = request.args.get("columns", "")
+    if not requested:
+        return [key for key, _ in default_columns]
+
+    requested_keys = [key.strip() for key in requested.split(",") if key.strip()]
+    selected = [key for key, _ in default_columns if key in requested_keys]
+    return selected or [key for key, _ in default_columns]
+
+
+def _parse_export_ids():
+    raw_ids = request.args.get("ids", "")
+    if not raw_ids:
+        return []
+
+    ids = []
+    for part in raw_ids.split(","):
+        try:
+            ids.append(int(part))
+        except ValueError:
+            continue
+    return ids
+
+
+def _calculate_progress(obra):
+    total = 0
+    count = 0
+    for frente in obra.frentes_trabalho or []:
+        plan = frente.qtd_planejada or 0
+        real = frente.qtd_realizada or 0
+        if plan > 0:
+            total += min(100, (real / plan) * 100)
+            count += 1
+    return int(total / count) if count else 0
+
+
+def _build_obra_export_cell(obra, key):
+    if key == "id":
+        return obra.id
+    if key == "nome":
+        return obra.nome
+    if key == "cnpj":
+        return obra.cnpj or ""
+    if key == "cliente":
+        return obra.contratante or ""
+    if key == "cidade":
+        return obra.cidade or ""
+    if key == "estado":
+        return obra.estado or ""
+    if key == "endereco":
+        return obra.endereco or ""
+    if key == "progresso":
+        return f"{_calculate_progress(obra)}%"
+    if key == "status":
+        return "Ativa" if obra.status == 1 else "Inativa"
+    if key == "tipo":
+        return "Matriz" if obra.id_matriz is None or obra.id_matriz == 0 else "Subsidiária"
+    return ""
+
 
 @auth_bp.get("/lista-obras")
 @login_required
@@ -33,6 +108,41 @@ def lista_obras():
         obras_formatadas.append(obra_dict)
     
     return render_template("list_obras.html", opcoes=obras_formatadas, categoria="obra")
+
+
+@auth_bp.get('/lista-obras/export/<string:export_format>')
+@login_required
+def export_lista_obras(export_format):
+    empresa_id = session.get("empresa_id")
+    user = Usuario.query.get(session.get("user_id"))
+    ids = _parse_export_ids()
+    requested_columns = _parse_export_columns(OBRA_EXPORT_COLUMNS)
+
+    query = Obra.query.filter_by(empresa_id=empresa_id).order_by(Obra.nome.asc())
+    if user.papel != ROLE_ADMIN:
+        meus_ids = [o.id for o in Obra.query.filter_by(empresa_id=empresa_id).all()]
+        query = query.filter(Obra.id.in_(meus_ids))
+
+    if ids:
+        query = query.filter(Obra.id.in_(ids))
+
+    obras = query.all()
+    headers = [label for key, label in OBRA_EXPORT_COLUMNS if key in requested_columns]
+    rows = [[_build_obra_export_cell(obra, key) for key in requested_columns] for obra in obras]
+
+    if export_format == 'csv':
+        return make_csv_response(headers, rows, prefix='obras')
+    if export_format == 'xlsx':
+        return make_xlsx_response(headers, rows, prefix='obras')
+    if export_format == 'pdf':
+        return make_pdf_response(
+            'export_generic_table.html',
+            {'title': 'Cadastro de Obras', 'headers': headers, 'rows': rows},
+            prefix='obras',
+        )
+
+    abort(404)
+
 
 @auth_bp.get("/criar-obra")
 @login_required

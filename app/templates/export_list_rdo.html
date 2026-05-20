@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Exportação de RDOs</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; color: #111; }
+    h1 { font-size: 24px; margin-bottom: 12px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; font-size: 12px; }
+    th { background: #f2f2f2; }
+  </style>
+</head>
+<body>
+  <h1>Relatórios Diários de Obra</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Data RDO</th>
+        <th>Obra</th>
+        <th>Frente</th>
+        <th>Status</th>
+        <th>Criado Em</th>
+        <th>Responsável</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for rdo in rdos %}
+      <tr>
+        <td>{{ rdo.id }}</td>
+        <td>{{ rdo.data_rdo.strftime('%d/%m/%Y') if rdo.data_rdo else '' }}</td>
+        <td>{{ rdo.obra.nome if rdo.obra else '' }}</td>
+        <td>{{ rdo.frente_trabalho.nome if rdo.frente_trabalho else '' }}</td>
+        <td>{{ rdo.status }}</td>
+        <td>{{ rdo.criado_em.strftime('%d/%m/%Y %H:%M') if rdo.criado_em else '' }}</td>
+        <td>{{ rdo.usuario.nome if rdo.usuario else '' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>
