@@ -60,10 +60,12 @@ def create_app():
     # Registrar blueprints
     from app.routes.auth import auth_bp
     from app.routes.admin import admin_bp
+    from app.routes.notificacoes import notificacoes_bp
 
     # Boas Práticas: Sempre registrar Blueprints APÓS os Models e Configs
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(admin_bp)
+    app.register_blueprint(notificacoes_bp)
 
     # Middleware corporativo de sessão
     from app.middleware.sessao_middleware import init_sessao_middleware

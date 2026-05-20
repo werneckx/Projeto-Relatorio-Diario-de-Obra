@@ -377,6 +377,13 @@ Deve possuir:
 - Usuário logado
 - Menu dropdown
 
+Implementação recente (2026-05-20):
+
+- Notificações integradas no cabeçalho com contador de pendências (`app/templates/base.html`).
+- Modal lista até 10 notificações não lidas injetadas pelo `app/routes/notificacoes.py` via `NotificacaoService.listar_nao_lidas`.
+- Ao clicar na notificação a UI marca como lida via `POST /notificacoes/<id>/lida`, decrementa o contador e anima a saída antes de navegar para o link salvo (suporta links relativos e absolutos).
+- Serviço e endpoints principais: `app/services/notificacao_service.py`, `app/models/notificacao.py`, `app/routes/notificacoes.py`, integrações em `app/routes/rdo.py` e `app/routes/rdo_assinaturas.py` para geração de eventos.
+
 ---
 
 ## Menu Principal

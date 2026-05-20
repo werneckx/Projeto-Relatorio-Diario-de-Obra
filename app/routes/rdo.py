@@ -1,6 +1,8 @@
 ﻿from app.routes.auth_common import *
 from app.routes.auth_common import _build_clima_automatico_payload
 from app.services.auditoria_service import AuditoriaService
+from app.services.notificacao_service import NotificacaoService
+from app.models.notificacao import TipoNotificacao
 from app.utils.serializers import safe_model_to_dict
 
 @auth_bp.get("/criar-rdo")
@@ -262,6 +264,18 @@ def gerar_rdo():
                     ativo=True
                 )
                 db.session.add(assinatura_criador)
+
+                NotificacaoService.criar_notificacao(
+                    empresa_id=session.get('empresa_id'),
+                    usuario_id=aprovador_padrao_id,
+                    tipo=TipoNotificacao.APROVACAO_PENDENTE,
+                    titulo=f"Aprovação Pendente: RDO #{item_rdo.numero_sequencial or item_rdo.id}",
+                    mensagem=f"O RDO #{item_rdo.numero_sequencial or item_rdo.id} da obra '{obra_rdo.nome if obra_rdo else ''}' aguarda sua aprovação.",
+                    link=url_for('auth.visualizar_rdo', rdo_id=item_rdo.id),
+                    obra_id=item_rdo.obra_id,
+                    rdo_id=item_rdo.id,
+                    criado_por=current_user_id
+                )
 
         # Limpeza de filhos para recriação
         if rdo_id_original:

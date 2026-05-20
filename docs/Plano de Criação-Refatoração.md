@@ -505,7 +505,35 @@ Resultado esperado:
 
 ### Marco 3 - RDO enterprise
 
+Status: concluído em 2026-05-20
+
+Verificação (2026-05-20):
+
+- Branch `feat/notificacoes` aplicada com integração completa no fluxo de workflow de RDO.
+- Implementado serviço central: `app/services/notificacao_service.py` com:
+  - `NotificacaoService.criar_notificacao(...)` (auditoria `CREATE` + normalização de link).
+  - `NotificacaoService.listar_nao_lidas(...)` (filtro por `usuario_id`, `empresa_id`, `lida=False`, `ativo=True`, limit por performance).
+  - `NotificacaoService.marcar_como_lida(...)` (validação estrita de propriedade + `lida_em`).
+- Implementada API/endpoint: `POST /notificacoes/<int:id>/lida` em `app/routes/notificacoes.py`, com:
+  - proteção via `login_required`.
+  - auditoria racionalizada via `AuditoriaService.registrar_auditoria_entidade(acao="UPDATE" ...)`.
+  - retorno JSON com atualização de contadores.
+- Notificações renderizadas no layout global:
+  - contexto via `@notificacoes_bp.app_context_processor` e `notifications.nao_lidas`.
+  - header/botão de sino com contador (desktop e mobile) e dropdown no `app/templates/base.html`.
+  - marcação como lida com UX/animação e persistência via fetch para `/notificacoes/<id>/lida`.
+- Eventos de workflow geram notificações:
+  - pendência de aprovação e aprovadores no `app/routes/rdo.py`.
+  - geração de notificações em `app/routes/rdo_assinaturas.py` para aprovação/rejeição.
+
+Resultado esperado:
+
+- Notificações operacionais no cabeçalho.
+- Integração por eventos do workflow (pendência/resultado).
+- Marcação como lida com rastreabilidade em auditoria.
+
 Branches:
+
 
 - `feat/workflow-aprovacao`
 - `feat/notificacoes`
