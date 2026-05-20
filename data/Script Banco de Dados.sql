@@ -1385,7 +1385,7 @@ INSERT INTO cad_listas (titulo, nome_interno, slug, modulo, tipo_lista, origem_d
 
 -- Empresa
 INSERT INTO empresa (id, nome, logo_empresa, icone_empresa, ativo, criado_em) VALUES
-(2, 'Enfil Saneamento e Engenharia S.A.', '/static/logo/logo.png', '/static/logo/icone.png', TRUE, NOW());
+(2, 'Enfil SA Controle Ambiental', 'uploads/logos/logo_empresa_2.png', 'uploads/logos/icone_empresa_2.png', TRUE, NOW());
 
 -- Configuracoes da empresa
 INSERT INTO empresa_config (empresa_id, chave, valor) VALUES
@@ -1453,9 +1453,9 @@ INSERT INTO colaboradores (id, empresa_id, fornecedor_id, cliente_id, tipo, cada
 (26, 2, NULL, 20, 'CLIENTE', '771.441.992-10', 'Marina Andrade - Fiscal SANECAMP', TRUE);
 
 INSERT INTO usuarios (id, empresa_id, colaborador_id, email, senha_hash, ativo, ultimo_login, ultimo_login_ip) VALUES
-(20, 2, 20, 'diretoria@enfil.example', 'scrypt:32768:8:1$NMXQmJ4GCOJVmNoe$c62100d1b8d581dddc096ec887df55f1a716ab08c8cbd8f6ff16eae875822597681b6b29e4633ef098f281d3b7ab47c7b8540be065efe25605c1ac82a441dbf8', TRUE, NOW() - INTERVAL 2 HOUR, '10.10.1.10'),
-(21, 2, 21, 'camila.rocha@enfil.example', 'scrypt:32768:8:1$NMXQmJ4GCOJVmNoe$c62100d1b8d581dddc096ec887df55f1a716ab08c8cbd8f6ff16eae875822597681b6b29e4633ef098f281d3b7ab47c7b8540be065efe25605c1ac82a441dbf8', TRUE, NOW() - INTERVAL 35 MINUTE, '10.10.1.21'),
-(22, 2, 22, 'rafael.nunes@enfil.example', 'scrypt:32768:8:1$NMXQmJ4GCOJVmNoe$c62100d1b8d581dddc096ec887df55f1a716ab08c8cbd8f6ff16eae875822597681b6b29e4633ef098f281d3b7ab47c7b8540be065efe25605c1ac82a441dbf8', TRUE, NOW() - INTERVAL 10 MINUTE, '10.10.2.22'),
+(20, 2, 20, 'diretoria@enfil.com.br', 'scrypt:32768:8:1$NMXQmJ4GCOJVmNoe$c62100d1b8d581dddc096ec887df55f1a716ab08c8cbd8f6ff16eae875822597681b6b29e4633ef098f281d3b7ab47c7b8540be065efe25605c1ac82a441dbf8', TRUE, NOW() - INTERVAL 2 HOUR, '10.10.1.10'),
+(21, 2, 21, 'camila.rocha@enfil.com.br', 'scrypt:32768:8:1$NMXQmJ4GCOJVmNoe$c62100d1b8d581dddc096ec887df55f1a716ab08c8cbd8f6ff16eae875822597681b6b29e4633ef098f281d3b7ab47c7b8540be065efe25605c1ac82a441dbf8', TRUE, NOW() - INTERVAL 35 MINUTE, '10.10.1.21'),
+(22, 2, 22, 'rafael.nunes@enfil.com.br', 'scrypt:32768:8:1$NMXQmJ4GCOJVmNoe$c62100d1b8d581dddc096ec887df55f1a716ab08c8cbd8f6ff16eae875822597681b6b29e4633ef098f281d3b7ab47c7b8540be065efe25605c1ac82a441dbf8', TRUE, NOW() - INTERVAL 10 MINUTE, '10.10.2.22'),
 (23, 2, 26, 'fiscal@sanecamp.example', 'scrypt:32768:8:1$NMXQmJ4GCOJVmNoe$c62100d1b8d581dddc096ec887df55f1a716ab08c8cbd8f6ff16eae875822597681b6b29e4633ef098f281d3b7ab47c7b8540be065efe25605c1ac82a441dbf8', TRUE, NOW() - INTERVAL 1 DAY, '177.10.20.30');
 
 INSERT INTO usuario_papel (empresa_id, usuario_id, papel_id, ativo) VALUES
@@ -1563,18 +1563,18 @@ INSERT INTO arquivos (id, empresa_id, obra_id, rdo_id, entidade, entidade_id, ca
 (22, 2, 20, 20, 'rdo_fotos', 20, 'IMAGEM', 'vala_trecho_03.jpg', 'vala_trecho_03.jpg', 'image/jpeg', 384120, 'LOCAL', '/static/uploads/rdo/20/vala_trecho_03.jpg', SHA2('foto-vala-trecho-03', 256), FALSE, TRUE, 22);
 
 INSERT INTO notificacoes (id, empresa_id, usuario_id, obra_id, rdo_id, tipo, titulo, mensagem, link, lida, lida_em, ativo, criado_por, criado_em) VALUES
-(20, 2, 21, 20, 21, 'APROVACAO_PENDENTE', 'RDO pendente de aprovacao', 'O RDO de 2026-05-09 aguarda aprovacao do gestor de contrato.', '/rdo/21', FALSE, NULL, TRUE, 22, NOW()),
-(21, 2, 23, 20, 20, 'NOVO_RDO', 'RDO aprovado disponivel', 'O RDO de 2026-05-08 foi aprovado e esta disponivel para consulta.', '/rdo/20', TRUE, NOW() - INTERVAL 1 HOUR, TRUE, 21, NOW() - INTERVAL 2 HOUR),
-(22, 2, 22, 20, 21, 'ALERTA', 'Liberacao de area pendente', 'Aguardando liberacao da concessionaria para continuidade dos servicos.', '/rdo/21', FALSE, NULL, TRUE, 23, NOW());
+(20, 2, 21, 20, 21, 'APROVACAO_PENDENTE', 'RDO pendente de aprovacao', 'O RDO de 2026-05-09 aguarda aprovacao do gestor de contrato.', 'auth/visualizar-rdo/21', FALSE, NULL, TRUE, 22, NOW()),
+(21, 2, 23, 20, 20, 'NOVO_RDO', 'RDO aprovado disponivel', 'O RDO de 2026-05-08 foi aprovado e esta disponivel para consulta.', 'auth/visualizar-rdo/20', TRUE, NOW() - INTERVAL 1 HOUR, TRUE, 21, NOW() - INTERVAL 2 HOUR),
+(22, 2, 22, 20, 21, 'ALERTA', 'Liberacao de area pendente', 'Aguardando liberacao da concessionaria para continuidade dos servicos.', 'auth/visualizar-rdo/21', FALSE, NULL, TRUE, 23, NOW());
 
 INSERT INTO sessoes_usuario (id, empresa_id, usuario_id, token_hash, ip, user_agent, iniciada_em, expira_em, encerrada_em, encerrada_por, motivo_encerramento, ativa) VALUES
 (20, 2, 21, SHA2('sessao-camila-ativa', 256), '10.10.1.21', 'Mozilla/5.0 RDO Seed', NOW() - INTERVAL 35 MINUTE, NOW() + INTERVAL 565 MINUTE, NULL, NULL, NULL, TRUE),
 (21, 2, 22, SHA2('sessao-rafael-encerrada', 256), '10.10.2.22', 'Mozilla/5.0 RDO Seed', NOW() - INTERVAL 2 DAY, NOW() - INTERVAL 1 DAY, NOW() - INTERVAL 1 DAY, 22, 'SESSAO_EXPIRADA', FALSE);
 
 INSERT INTO acesso_log (id, empresa_id, usuario_id, email, acao, ip, user_agent, detalhes, criado_em) VALUES
-(20, 2, 21, 'camila.rocha@enfil.example', 'LOGIN_SUCESSO', '10.10.1.21', 'Mozilla/5.0 RDO Seed', JSON_OBJECT('origem', 'seed', 'mfa', true), NOW() - INTERVAL 35 MINUTE),
-(21, 2, 22, 'rafael.nunes@enfil.example', 'LOGOUT', '10.10.2.22', 'Mozilla/5.0 RDO Seed', JSON_OBJECT('origem', 'seed'), NOW() - INTERVAL 1 DAY),
-(22, 2, NULL, 'tentativa.invalida@enfil.example', 'LOGIN_FALHA', '200.10.10.10', 'Mozilla/5.0 RDO Seed', JSON_OBJECT('motivo', 'senha_invalida'), NOW() - INTERVAL 3 HOUR);
+(20, 2, 21, 'camila.rocha@enfil.com.br', 'LOGIN_SUCESSO', '10.10.1.21', 'Mozilla/5.0 RDO Seed', JSON_OBJECT('origem', 'seed', 'mfa', true), NOW() - INTERVAL 35 MINUTE),
+(21, 2, 22, 'rafael.nunes@enfil.com.br', 'LOGOUT', '10.10.2.22', 'Mozilla/5.0 RDO Seed', JSON_OBJECT('origem', 'seed'), NOW() - INTERVAL 1 DAY),
+(22, 2, NULL, 'tentativa.invalida@enfil.com.br', 'LOGIN_FALHA', '200.10.10.10', 'Mozilla/5.0 RDO Seed', JSON_OBJECT('motivo', 'senha_invalida'), NOW() - INTERVAL 3 HOUR);
 
 INSERT INTO auditoria_log (id, empresa_id, usuario_id, colaborador_id, acao, entidade, entidade_id, dados_antes, dados_depois, ip, user_agent, criado_em) VALUES
 (20, 2, 22, 22, 'CREATE', 'rdo', 20, NULL, JSON_OBJECT('status', 'PENDENTE', 'obra_id', 20, 'data_rdo', '2026-05-08'), '10.10.2.22', 'Mozilla/5.0 RDO Seed', '2026-05-08 17:10:00'),
