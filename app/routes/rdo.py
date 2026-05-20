@@ -1,5 +1,7 @@
 ﻿from app.routes.auth_common import *
 from app.routes.auth_common import _build_clima_automatico_payload
+from app.models.arquivo import Arquivo
+from app.services.arquivo_service import ArquivoService
 from app.services.auditoria_service import AuditoriaService
 from app.services.notificacao_service import NotificacaoService
 from app.models.notificacao import TipoNotificacao
@@ -378,6 +380,13 @@ def gerar_rdo():
                             caminho_arquivo = os.path.join(UPLOAD_FOLDER, foto_del.arquivo)
                             if os.path.exists(caminho_arquivo): os.remove(caminho_arquivo)
                         except Exception: pass
+                        Arquivo.query.filter_by(
+                            empresa_id=session.get('empresa_id'),
+                            rdo_id=item_rdo.id,
+                            nome_armazenado=foto_del.arquivo,
+                            storage_provider='LOCAL',
+                            ativo=True,
+                        ).update({"ativo": False})
                         # Soft delete da foto
                         foto_del.soft_delete(usuario=current_user, motivo="remover foto")
 
@@ -403,30 +412,53 @@ def gerar_rdo():
             if arquivo and arquivo.filename:
                 fname = secure_filename(arquivo.filename)
                 ext = os.path.splitext(fname)[1].lower()
-                if ext in ['.jpg', '.jpeg', '.png', '.webp']:
-                    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S%f')
-                    novo_nome = f"{timestamp}_{idx_file}{ext}"
-                    caminho_salvar = os.path.join(UPLOAD_FOLDER, novo_nome)
+                arquivo.stream.seek(0)
+                raw_bytes = arquivo.read()
 
+                if ext in ['.jpg', '.jpeg', '.png', '.webp']:
                     try:
-                        img = Image.open(arquivo)
+                        img = Image.open(BytesIO(raw_bytes))
                         if img.mode in ("RGBA", "P"):
                             img = img.convert("RGB")
-                        img.thumbnail((1920, 1080), Image.LANCZOS)
-                        img.save(caminho_salvar, optimize=True, quality=75)
-                    except Exception:
-                        arquivo.stream.seek(0)
-                        arquivo.save(caminho_salvar)
 
-                    comentario = legendas[idx_file] if idx_file < len(legendas) else ""
-                    db.session.add(RDOFoto(
-                        empresa_id=session.get('empresa_id'),
-                        rdo_id=item_rdo.id,
-                        arquivo=novo_nome,
-                        comentario=comentario,
-                        ativo=True,
-                    ))
-                    idx_file += 1
+                        save_kwargs = {"optimize": True}
+                        save_format = "JPEG"
+                        if ext == '.png':
+                            save_format = "PNG"
+                        elif ext == '.webp':
+                            save_format = "WEBP"
+
+                        optimized = BytesIO()
+                        img.thumbnail((1920, 1080), Image.LANCZOS)
+                        img.save(optimized, format=save_format, **save_kwargs)
+                        raw_bytes = optimized.getvalue()
+                    except Exception:
+                        pass
+
+                arquivo_catalogo = ArquivoService.save_local_file(
+                    raw_bytes=raw_bytes,
+                    filename=fname,
+                    content_type=arquivo.mimetype,
+                    empresa_id=session.get('empresa_id'),
+                    usuario_id=current_user_id,
+                    categoria='IMAGEM' if ext in ['.jpg', '.jpeg', '.png', '.webp'] else 'DOCUMENTO',
+                    entidade='RDO',
+                    entidade_id=item_rdo.id,
+                    obra_id=item_rdo.obra_id,
+                    rdo_id=item_rdo.id,
+                    publico=False,
+                    subfolder='rdo',
+                )
+
+                comentario = legendas[idx_file] if idx_file < len(legendas) else ""
+                db.session.add(RDOFoto(
+                    empresa_id=session.get('empresa_id'),
+                    rdo_id=item_rdo.id,
+                    arquivo=arquivo_catalogo.nome_armazenado,
+                    comentario=comentario,
+                    ativo=True,
+                ))
+                idx_file += 1
 
         # snapshot depois (auditoria before/after) apenas para UPDATE/revisão
         if rdo_id_original:
