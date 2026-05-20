@@ -369,22 +369,33 @@ Commits sugeridos:
 
 ```text
 feat(exports): crie camada comum de exportacao
-feat(rdo): exporte lista em csv
-feat(rdo): exporte lista em xlsx
-feat(obras): exporte cadastros principais
-feat(bi): adicione consultas de produtividade
-feat(bi): adicione indicadores de sla
+feat(rdo): exporte lista em csv/xlsx/pdf com visualizacao atual
+feat(obras): exporte cadastros em csv/xlsx/pdf com visualizacao atual
+feat(bi): adicione indicadores de produtividade, SLA e lead time
 test(exports): cubra exportacoes principais
+docs(context): registre marco exports-bi e BI
 ```
 
 Checklist:
 
-- PDF, XLSX, CSV e impressao para listagens principais.
+- Exportar visualizacao atual mantendo filtros e pagina atual.
+- Exportar conjunto completo mantendo filtros mas todas as colunas.
+- Suportar PDF, XLSX e CSV para listagens principais.
 - Indicadores:
   - produtividade
   - SLA
   - lead time
   - historico operacional
+
+Status: concluído em 2026-05-20
+
+Resultado entregue:
+
+- Camada comum de exportação centralizada.
+- Exportação de `list_rdo` e `list_obras` com suporte a visualização atual e conjunto completo.
+- Exportação em `CSV`, `XLSX` e `PDF`.
+- Indicadores operacionais básicos implementados.
+- Documentação do marco registrada em `docs/Contexto.md`.
 
 ## Branch 11 - Testes e Hardening
 

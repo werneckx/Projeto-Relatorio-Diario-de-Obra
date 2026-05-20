@@ -6,6 +6,58 @@ from app.services.auditoria_service import AuditoriaService
 from app.services.notificacao_service import NotificacaoService
 from app.models.notificacao import TipoNotificacao
 from app.utils.serializers import safe_model_to_dict
+from app.utils.export_service import make_csv_response, make_xlsx_response, make_pdf_response
+
+RDO_EXPORT_COLUMNS = [
+    ("status", "Status"),
+    ("id", "Documento"),
+    ("data_ref", "Data Ref."),
+    ("obra", "Obra"),
+    ("criado", "Criação"),
+    ("responsavel", "Responsável"),
+]
+
+
+def _parse_export_columns(default_columns):
+    requested = request.args.get("columns", "")
+    if not requested:
+        return [key for key, _ in default_columns]
+
+    requested_keys = [key.strip() for key in requested.split(",") if key.strip()]
+    selected = [key for key, _ in default_columns if key in requested_keys]
+    return selected or [key for key, _ in default_columns]
+
+
+def _parse_export_ids():
+    raw_ids = request.args.get("ids", "")
+    if not raw_ids:
+        return []
+
+    ids = []
+    for part in raw_ids.split(","):
+        try:
+            ids.append(int(part))
+        except ValueError:
+            continue
+    return ids
+
+
+def _build_rdo_export_cell(rdo, key):
+    if key == "status":
+        return rdo.status or ""
+    if key == "id":
+        return rdo.id
+    if key == "data_ref":
+        return rdo.data.strftime("%d/%m/%Y") if rdo.data else ""
+    if key == "obra":
+        return rdo.obra.nome if rdo.obra else ""
+    if key == "criado":
+        created = rdo.criado.strftime("%d/%m/%Y %H:%M") if rdo.criado else ""
+        owner = rdo.usuario.nome if rdo.usuario else "Sistema"
+        return f"{owner} / {created}" if created else owner
+    if key == "responsavel":
+        return rdo.usuario.nome if rdo.usuario else ""
+    return ""
 
 @auth_bp.get("/criar-rdo")
 @login_required
@@ -684,3 +736,43 @@ def lista_rdo():
     ).count()
 
     return render_template("list_rdo.html", rdos=rdos, count_minhas_pendencias=minhas_pendencias, lista_pendencias=lista_pendencias)
+
+
+@auth_bp.get('/lista-rdo/export/<string:export_format>')
+@login_required
+def export_lista_rdo(export_format):
+    empresa_id = session.get("empresa_id")
+    current_user_id = session.get("user_id")
+    user = Usuario.query.get(current_user_id)
+
+    ids = _parse_export_ids()
+    requested_columns = _parse_export_columns(RDO_EXPORT_COLUMNS)
+
+    query = RDO.query.filter(
+        RDO.ativo == True,
+        RDO.empresa_id == empresa_id,
+    )
+
+    if user and user.papel != ROLE_ADMIN:
+        ids_obras_permitidas = [obra.id for obra in user.obras_permitidas] if user else []
+        query = query.filter(RDO.obra_id.in_(ids_obras_permitidas))
+
+    if ids:
+        query = query.filter(RDO.id.in_(ids))
+
+    rdos = query.order_by(RDO.data_rdo.desc()).all()
+    headers = [label for key, label in RDO_EXPORT_COLUMNS if key in requested_columns]
+    rows = [[_build_rdo_export_cell(rdo, key) for key in requested_columns] for rdo in rdos]
+
+    if export_format == 'csv':
+        return make_csv_response(headers, rows, prefix='rdos')
+    if export_format == 'xlsx':
+        return make_xlsx_response(headers, rows, prefix='rdos')
+    if export_format == 'pdf':
+        return make_pdf_response(
+            'export_generic_table.html',
+            {'title': 'Relatórios Diários de Obra', 'headers': headers, 'rows': rows},
+            prefix='rdos',
+        )
+
+    abort(404)

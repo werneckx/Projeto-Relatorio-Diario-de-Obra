@@ -1,4 +1,5 @@
 from app.routes.auth_common import *
+from app.services.bi_service import BIService
 
 #######################################################################################################
 ####################################################################################################### Rota Raiz
@@ -285,6 +286,14 @@ def logout():
     session.clear()
     flash("Você foi desconectado com sucesso.", "info")
     return redirect(url_for("auth.login"))
+
+
+@auth_bp.get('/indicadores')
+@login_required
+def indicadores_operacionais():
+    empresa_id = session.get('empresa_id')
+    indicadores = BIService.indicadores(empresa_id=empresa_id)
+    return render_template('bi_indicadores.html', indicadores=indicadores)
 
 
 # --- ROTAS DE RECUPERAÇÃO DE SENHA ---

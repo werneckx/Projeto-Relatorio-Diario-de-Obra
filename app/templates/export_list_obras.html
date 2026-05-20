@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Exportação de Obras</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; color: #111; }
+    h1 { font-size: 24px; margin-bottom: 12px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; font-size: 12px; }
+    th { background: #f2f2f2; }
+  </style>
+</head>
+<body>
+  <h1>Cadastro de Obras</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Projeto</th>
+        <th>CNPJ</th>
+        <th>Cliente</th>
+        <th>Cidade</th>
+        <th>Estado</th>
+        <th>Endereço</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for obra in obras %}
+      <tr>
+        <td>{{ obra.id }}</td>
+        <td>{{ obra.nome }}</td>
+        <td>{{ obra.cnpj }}</td>
+        <td>{{ obra.contratante }}</td>
+        <td>{{ obra.cidade }}</td>
+        <td>{{ obra.estado }}</td>
+        <td>{{ obra.endereco }}</td>
+        <td>{{ 'Ativo' if obra.ativo else 'Inativo' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>
