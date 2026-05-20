@@ -371,6 +371,7 @@ def suporte():
 from app.routes import dashboard  # noqa: F401,E402
 from app.routes import empresa  # noqa: F401,E402
 from app.routes import documentos  # noqa: F401,E402
+from app.routes import arquivos  # noqa: F401,E402
 from app.routes import rdo  # noqa: F401,E402
 from app.routes import rdo_assinaturas  # noqa: F401,E402
 from app.routes import usuarios  # noqa: F401,E402

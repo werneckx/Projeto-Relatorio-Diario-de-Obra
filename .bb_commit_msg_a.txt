@@ -1,0 +1,1 @@
+feat(arquivos-documentos): adicionar upload/download rastreavel com hash e provider local 
