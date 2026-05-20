@@ -361,14 +361,18 @@
                 <thead class="bg-slate-50/80 border-b border-slate-200 backdrop-blur">
                     <tr>
                         <!-- Definindo larguras fixas para Desktop -->
-                        <th data-export-key="id" class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-16">ID</th>
-                        <th data-export-key="nome" class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Projeto</th>
-                        <th data-export-key="cnpj" class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-36">CNPJ</th>
-                        <th data-export-key="tipo" class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-24">Tipo</th>
-                        <th data-export-key="progresso" class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-32">Progresso
+                        <th data-export-key="id"
+                            class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-16">ID</th>
+                        <th data-export-key="nome"
+                            class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Projeto</th>
+                        <th data-export-key="cnpj"
+                            class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-36">CNPJ</th>
+                        <th data-export-key="tipo"
+                            class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-24">Tipo</th>
+                        <th data-export-key="progresso"
+                            class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-32">Progresso
                         </th>
-                        <th
-                            class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center w-28"
+                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center w-28"
                             data-export-key="status">
                             Status</th>
                         <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right w-36">
@@ -395,8 +399,7 @@
                     {% endif %}
                     {% set progress_val = (ns.total_pct / ns.count) if ns.count > 0 else 0 %}
 
-                    <tr id="row-{{ obra.id }}"
-                        data-id="{{ obra.id }}"
+                    <tr id="row-{{ obra.id }}" data-id="{{ obra.id }}"
                         class="hover:bg-slate-50/80 transition-colors group {{ 'opacity-60 grayscale bg-slate-50' if obra.status == 0 else '' }}">
 
                         <!-- 1. ID (Classe td-id) -->

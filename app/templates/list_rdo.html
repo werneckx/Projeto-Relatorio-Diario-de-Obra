@@ -582,11 +582,16 @@
       <table id="dataTableRDO" class="w-full text-left border-collapse">
         <thead class="bg-slate-50/80 border-b border-slate-200 backdrop-blur">
           <tr>
-            <th data-export-key="status" class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
-            <th data-export-key="id" class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Documento</th>
-            <th data-export-key="data_ref" class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Data Ref.</th>
-            <th data-export-key="obra" class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Obra</th>
-            <th data-export-key="criado" class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Criação</th>
+            <th data-export-key="status" class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
+              Status</th>
+            <th data-export-key="id" class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
+              Documento</th>
+            <th data-export-key="data_ref" class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
+              Data Ref.</th>
+            <th data-export-key="obra" class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Obra
+            </th>
+            <th data-export-key="criado" class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
+              Criação</th>
             <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Ações
             </th>
           </tr>
@@ -600,8 +605,7 @@
           {% set rdo_row.is_my_turn = true %}
           {% endif %}
 
-          <tr class="hover:bg-slate-50/80 transition-colors group"
-            data-id="{{ rdo.id }}"
+          <tr class="hover:bg-slate-50/80 transition-colors group" data-id="{{ rdo.id }}"
             data-minha-pendencia="{{ 'true' if rdo_row.is_my_turn else 'false' }}">
 
             <!-- Status (Coluna 1) -->

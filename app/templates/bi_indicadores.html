@@ -4,63 +4,71 @@
 
 {% block content %}
 <div class="py-6 px-4 max-w-[1400px] mx-auto">
-  <div class="flex flex-col md:flex-row justify-between items-start gap-4 mb-6">
-    <div>
-      <h1 class="text-2xl font-bold text-slate-900">Indicadores Operacionais</h1>
-      <p class="text-slate-500 mt-2">Visão de produtividade, SLA, lead time e histórico operacional.</p>
+    <div class="flex flex-col md:flex-row justify-between items-start gap-4 mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-900">Indicadores Operacionais</h1>
+            <p class="text-slate-500 mt-2">Visão de produtividade, SLA, lead time e histórico operacional.</p>
+        </div>
+        <div class="flex gap-2 flex-wrap">
+            <a href="{{ url_for('auth.lista_rdo') }}" class="px-4 py-2 rounded-lg bg-blue-600 text-white">Voltar para
+                RDO</a>
+            <a href="{{ url_for('auth.lista_obras') }}" class="px-4 py-2 rounded-lg bg-slate-700 text-white">Lista de
+                Obras</a>
+        </div>
     </div>
-    <div class="flex gap-2 flex-wrap">
-      <a href="{{ url_for('auth.lista_rdo') }}" class="px-4 py-2 rounded-lg bg-blue-600 text-white">Voltar para RDO</a>
-      <a href="{{ url_for('auth.lista_obras') }}" class="px-4 py-2 rounded-lg bg-slate-700 text-white">Lista de Obras</a>
-    </div>
-  </div>
 
-  <div class="grid gap-4 md:grid-cols-4 mb-6">
-    <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
-      <p class="text-xs uppercase tracking-[0.16em] text-slate-500">Total de RDOs</p>
-      <p class="mt-3 text-3xl font-semibold text-slate-900">{{ indicadores.produtividade.total_rdos }}</p>
-      <p class="text-sm text-slate-500 mt-2">Registros ativos</p>
+    <div class="grid gap-4 md:grid-cols-4 mb-6">
+        <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
+            <p class="text-xs uppercase tracking-[0.16em] text-slate-500">Total de RDOs</p>
+            <p class="mt-3 text-3xl font-semibold text-slate-900">{{ indicadores.produtividade.total_rdos }}</p>
+            <p class="text-sm text-slate-500 mt-2">Registros ativos</p>
+        </div>
+        <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
+            <p class="text-xs uppercase tracking-[0.16em] text-slate-500">Horas lançadas</p>
+            <p class="mt-3 text-3xl font-semibold text-slate-900">{{ indicadores.produtividade.total_horas|round(2) }}
+            </p>
+            <p class="text-sm text-slate-500 mt-2">Horas de mão de obra registradas</p>
+        </div>
+        <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
+            <p class="text-xs uppercase tracking-[0.16em] text-slate-500">Lead time</p>
+            <p class="mt-3 text-3xl font-semibold text-slate-900">{{
+                indicadores.lead_time.lead_time_medio_horas|round(1) }}h</p>
+            <p class="text-sm text-slate-500 mt-2">Média de aprovação</p>
+        </div>
+        <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
+            <p class="text-xs uppercase tracking-[0.16em] text-slate-500">SLA pendente</p>
+            <p class="mt-3 text-3xl font-semibold text-slate-900">{{ indicadores.sla.pendentes }}</p>
+            <p class="text-sm text-slate-500 mt-2">Pendências a serem atendidas</p>
+        </div>
     </div>
-    <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
-      <p class="text-xs uppercase tracking-[0.16em] text-slate-500">Horas lançadas</p>
-      <p class="mt-3 text-3xl font-semibold text-slate-900">{{ indicadores.produtividade.total_horas|round(2) }}</p>
-      <p class="text-sm text-slate-500 mt-2">Horas de mão de obra registradas</p>
-    </div>
-    <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
-      <p class="text-xs uppercase tracking-[0.16em] text-slate-500">Lead time</p>
-      <p class="mt-3 text-3xl font-semibold text-slate-900">{{ indicadores.lead_time.lead_time_medio_horas|round(1) }}h</p>
-      <p class="text-sm text-slate-500 mt-2">Média de aprovação</p>
-    </div>
-    <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
-      <p class="text-xs uppercase tracking-[0.16em] text-slate-500">SLA pendente</p>
-      <p class="mt-3 text-3xl font-semibold text-slate-900">{{ indicadores.sla.pendentes }}</p>
-      <p class="text-sm text-slate-500 mt-2">Pendências a serem atendidas</p>
-    </div>
-  </div>
 
-  <div class="grid gap-4 md:grid-cols-2">
-    <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
-      <h2 class="text-lg font-semibold mb-3">SLA</h2>
-      <p class="text-slate-600 leading-relaxed">Pendências atrasadas: <strong>{{ indicadores.sla.pendentes_atrasados }}</strong></p>
-      <p class="text-slate-600 leading-relaxed mt-2">Percentual de SLA atrasado: <strong>{{ indicadores.sla.percentual_atraso|round(1) }}%</strong></p>
+    <div class="grid gap-4 md:grid-cols-2">
+        <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
+            <h2 class="text-lg font-semibold mb-3">SLA</h2>
+            <p class="text-slate-600 leading-relaxed">Pendências atrasadas: <strong>{{
+                    indicadores.sla.pendentes_atrasados }}</strong></p>
+            <p class="text-slate-600 leading-relaxed mt-2">Percentual de SLA atrasado: <strong>{{
+                    indicadores.sla.percentual_atraso|round(1) }}%</strong></p>
+        </div>
+        <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
+            <h2 class="text-lg font-semibold mb-3">Produtividade</h2>
+            <p class="text-slate-600 leading-relaxed">Média de horas por RDO: <strong>{{
+                    indicadores.produtividade.media_horas_por_rdo|round(2) }}</strong></p>
+            <p class="text-slate-600 leading-relaxed mt-2">Registros totais de mão de obra: <strong>{{
+                    indicadores.produtividade.total_horas|round(2) }}</strong></p>
+        </div>
     </div>
-    <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
-      <h2 class="text-lg font-semibold mb-3">Produtividade</h2>
-      <p class="text-slate-600 leading-relaxed">Média de horas por RDO: <strong>{{ indicadores.produtividade.media_horas_por_rdo|round(2) }}</strong></p>
-      <p class="text-slate-600 leading-relaxed mt-2">Registros totais de mão de obra: <strong>{{ indicadores.produtividade.total_horas|round(2) }}</strong></p>
-    </div>
-  </div>
 
-  <div class="mt-6 p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
-    <h2 class="text-lg font-semibold mb-3">Histórico Operacional</h2>
-    <div class="grid gap-3 md:grid-cols-3">
-      {% for status, count in indicadores.historico_operacional.items() %}
-      <div class="p-4 rounded-xl bg-slate-50 border border-slate-100">
-        <p class="text-xs uppercase tracking-[0.16em] text-slate-500">{{ status }}</p>
-        <p class="mt-2 text-2xl font-semibold text-slate-900">{{ count }}</p>
-      </div>
-      {% endfor %}
+    <div class="mt-6 p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
+        <h2 class="text-lg font-semibold mb-3">Histórico Operacional</h2>
+        <div class="grid gap-3 md:grid-cols-3">
+            {% for status, count in indicadores.historico_operacional.items() %}
+            <div class="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                <p class="text-xs uppercase tracking-[0.16em] text-slate-500">{{ status }}</p>
+                <p class="mt-2 text-2xl font-semibold text-slate-900">{{ count }}</p>
+            </div>
+            {% endfor %}
+        </div>
     </div>
-  </div>
 </div>
 {% endblock %}
