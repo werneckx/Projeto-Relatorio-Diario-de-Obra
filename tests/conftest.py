@@ -245,6 +245,192 @@ def usuario3(app, empresa, papel):
 
 
 @pytest.fixture
+def empresa1(app):
+    """Cria primeira empresa para testes multiempresa."""
+    emp = Empresa(nome="Empresa Teste 1", ativo=True)
+    db.session.add(emp)
+    db.session.commit()
+    yield emp
+    db.session.rollback()
+
+
+@pytest.fixture
+def empresa2(app):
+    """Cria segunda empresa para testes multiempresa."""
+    emp = Empresa(nome="Empresa Teste 2", ativo=True)
+    db.session.add(emp)
+    db.session.commit()
+    yield emp
+    db.session.rollback()
+
+
+@pytest.fixture
+def cliente_empresa1(app, empresa1):
+    """Cria um cliente para a empresa 1."""
+    from app.models.cliente import Cliente
+    cli = Cliente(
+        nome="Cliente Empresa 1",
+        empresa_id=empresa1.id,
+        ativo=True,
+    )
+    db.session.add(cli)
+    db.session.commit()
+    yield cli
+    db.session.delete(cli)
+    db.session.commit()
+
+
+@pytest.fixture
+def usuario_empresa1(app, empresa1):
+    """Cria usuário da empresa 1."""
+    papel = Papel(nome="Admin", empresa_id=empresa1.id, ativo=True)
+    db.session.add(papel)
+    db.session.flush()
+
+    usr = Usuario(
+        nome="Usuário Empresa 1",
+        email="usuario1@empresa1.com",
+        empresa_id=empresa1.id,
+        ativo=True,
+    )
+    usr.set_senha("senha123")
+    db.session.add(usr)
+    db.session.flush()
+
+    from app.models.usuario import UsuarioPapel
+    usuario_papel = UsuarioPapel(
+        empresa_id=empresa1.id,
+        usuario_id=usr.id,
+        papel_id=papel.id,
+        ativo=True,
+    )
+    db.session.add(usuario_papel)
+    db.session.commit()
+    yield usr
+    db.session.delete(usr)
+    db.session.commit()
+
+
+@pytest.fixture
+def usuario_empresa2(app, empresa2):
+    """Cria usuário da empresa 2."""
+    papel = Papel(nome="Admin", empresa_id=empresa2.id, ativo=True)
+    db.session.add(papel)
+    db.session.flush()
+
+    usr = Usuario(
+        nome="Usuário Empresa 2",
+        email="usuario2@empresa2.com",
+        empresa_id=empresa2.id,
+        ativo=True,
+    )
+    usr.set_senha("senha123")
+    db.session.add(usr)
+    db.session.flush()
+
+    from app.models.usuario import UsuarioPapel
+    usuario_papel = UsuarioPapel(
+        empresa_id=empresa2.id,
+        usuario_id=usr.id,
+        papel_id=papel.id,
+        ativo=True,
+    )
+    db.session.add(usuario_papel)
+    db.session.commit()
+    yield usr
+    db.session.delete(usr)
+    db.session.commit()
+
+
+@pytest.fixture
+def obra_empresa1(app, empresa1, usuario_empresa1):
+    """Cria obra para empresa 1."""
+    obr = Obra(
+        nome="Obra Empresa 1",
+        empresa_id=empresa1.id,
+        status=1,
+        criado_por=usuario_empresa1.id,
+        cliente_id=0,
+    )
+    db.session.add(obr)
+    db.session.commit()
+    yield obr
+    RDO.query.filter_by(obra_id=obr.id).delete(synchronize_session=False)
+    db.session.delete(obr)
+    db.session.commit()
+
+
+@pytest.fixture
+def obra_empresa2(app, empresa2, usuario_empresa2):
+    """Cria obra para empresa 2."""
+    obr = Obra(
+        nome="Obra Empresa 2",
+        empresa_id=empresa2.id,
+        status=1,
+        criado_por=usuario_empresa2.id,
+        cliente_id=0,
+    )
+    db.session.add(obr)
+    db.session.commit()
+    yield obr
+    RDO.query.filter_by(obra_id=obr.id).delete(synchronize_session=False)
+    db.session.delete(obr)
+    db.session.commit()
+
+
+@pytest.fixture
+def rdo_empresa1(app, empresa1, obra_empresa1):
+    """Cria RDO para empresa 1."""
+    frente = FrenteTrabalho(
+        nome="Frente Empresa 1",
+        empresa_id=empresa1.id,
+        obra_id=obra_empresa1.id,
+    )
+    db.session.add(frente)
+    db.session.commit()
+
+    rdo = RDO(
+        empresa_id=empresa1.id,
+        obra_id=obra_empresa1.id,
+        frente_trabalho_id=frente.id,
+        status='RASCUNHO',
+    )
+    db.session.add(rdo)
+    db.session.commit()
+    yield rdo
+
+    db.session.delete(rdo)
+    db.session.delete(frente)
+    db.session.commit()
+
+
+@pytest.fixture
+def rdo_empresa2(app, empresa2, obra_empresa2):
+    """Cria RDO para empresa 2."""
+    frente = FrenteTrabalho(
+        nome="Frente Empresa 2",
+        empresa_id=empresa2.id,
+        obra_id=obra_empresa2.id,
+    )
+    db.session.add(frente)
+    db.session.commit()
+
+    rdo = RDO(
+        empresa_id=empresa2.id,
+        obra_id=obra_empresa2.id,
+        frente_trabalho_id=frente.id,
+        status='RASCUNHO',
+    )
+    db.session.add(rdo)
+    db.session.commit()
+    yield rdo
+
+    db.session.delete(rdo)
+    db.session.delete(frente)
+    db.session.commit()
+
+
+@pytest.fixture
 def obra(app, empresa, usuario):
     """Cria uma obra para testes."""
     obr = Obra(

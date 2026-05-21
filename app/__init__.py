@@ -4,6 +4,7 @@ from flask_login import LoginManager
 from flask_migrate import Migrate
 from flask_wtf import CSRFProtect
 import json
+from sqlalchemy.engine import Engine
 
 # Extensões
 csrf = CSRFProtect()
@@ -24,10 +25,17 @@ def create_app(config_overrides=None):
     csrf.init_app(app)
     Migrate(app, db) # A ordem de inicialização está correta
 
-    # Gatilho de flush para auditoria/transações
+    # Ativa foreign key em SQLite para ON DELETE CASCADE funcionar.
     from sqlalchemy import event
     from app.models.auditoria import AuditoriaLog
     from app.models.sessao import AcessoLog
+
+    @event.listens_for(Engine, "connect")
+    def _enable_sqlite_foreign_keys(dbapi_connection, connection_record):
+        if db.engine.url.drivername.startswith("sqlite"):
+            cursor = dbapi_connection.cursor()
+            cursor.execute("PRAGMA foreign_keys=ON")
+            cursor.close()
 
     def _audit_before_flush(session, flush_context, instances):
         audit_objects = [obj for obj in session.new if getattr(obj, '__tablename__', None) in {'auditoria_log', 'acesso_log'}]

@@ -71,8 +71,6 @@ def _build_obra_export_cell(obra, key):
         return f"{_calculate_progress(obra)}%"
     if key == "status":
         return "Ativa" if obra.status == 1 else "Inativa"
-    if key == "tipo":
-        return "Matriz" if obra.id_matriz is None or obra.id_matriz == 0 else "Subsidiária"
     return ""
 
 

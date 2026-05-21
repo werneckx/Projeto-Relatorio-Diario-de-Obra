@@ -182,8 +182,8 @@ class ObraUsuario(db.Model):
     modificado_em = db.Column(db.DateTime, default=utcnow_naive, onupdate=utcnow_naive)
 
     empresa = db.relationship('Empresa')
-    obra = db.relationship('Obra', backref='usuarios_alocados')
-    usuario = db.relationship('Usuario', backref='obras_alocadas')
+    obra = db.relationship('Obra', backref=db.backref('usuarios_alocados', cascade='all, delete-orphan'))
+    colaborador = db.relationship('Usuario', backref=db.backref('obras_alocadas', cascade='all, delete-orphan'))
     papel = db.relationship('Papel')
 
     def __repr__(self):

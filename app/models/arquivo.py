@@ -6,7 +6,11 @@ from app.utils.datetime_utils import utcnow_naive
 class Arquivo(db.Model):
     __tablename__ = "arquivos"
 
-    id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    id = db.Column(
+        db.BigInteger().with_variant(db.Integer, "sqlite"),
+        primary_key=True,
+        autoincrement=True,
+    )
     empresa_id = db.Column(db.Integer, db.ForeignKey('empresa.id'), nullable=False, index=True)
     obra_id = db.Column(db.Integer, db.ForeignKey('obras.id'), nullable=True, index=True)
     rdo_id = db.Column(db.Integer, db.ForeignKey('rdo.id'), nullable=True, index=True)

@@ -237,7 +237,11 @@ class RDOAprovacao(CRUDMixin, db.Model):
 class RDOAssinatura(CRUDMixin, db.Model):
     __tablename__ = "rdo_assinaturas"
 
-    id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    id = db.Column(
+        db.BigInteger().with_variant(db.Integer, "sqlite"),
+        primary_key=True,
+        autoincrement=True,
+    )
     empresa_id = db.Column(db.Integer, db.ForeignKey('empresa.id'), nullable=False, index=True)
     rdo_id = db.Column(db.Integer, db.ForeignKey('rdo.id'), nullable=False, index=True)
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=False, index=True)
@@ -273,7 +277,7 @@ class RDOVersao(CRUDMixin, db.Model):
         autoincrement=True,
     )
     empresa_id = db.Column(db.Integer, db.ForeignKey('empresa.id'), nullable=False, index=True)
-    rdo_id = db.Column(db.Integer, db.ForeignKey('rdo.id'), nullable=False, index=True)
+    rdo_id = db.Column(db.Integer, db.ForeignKey('rdo.id', ondelete='CASCADE'), nullable=False, index=True)
     numero_versao = db.Column(db.Integer, nullable=False)
     motivo = db.Column(db.String(255), nullable=True)
     dados_snapshot = db.Column(db.JSON, nullable=False)
@@ -281,7 +285,11 @@ class RDOVersao(CRUDMixin, db.Model):
     criado_por = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=True)
     criado_em = db.Column(db.DateTime, default=utcnow_naive)
 
-    rdo = db.relationship('RDO', backref=db.backref('versoes_historico', lazy='dynamic'))
+    rdo = db.relationship(
+        'RDO',
+        backref=db.backref('versoes_historico', lazy='dynamic', cascade='all, delete-orphan'),
+        passive_deletes=True,
+    )
     usuario_criador = db.relationship('Usuario')
     empresa = db.relationship('Empresa')
 

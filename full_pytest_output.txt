@@ -1,0 +1,1562 @@
+﻿python : 
+No linha:1 caractere:1
++ python -m pytest -q 2>&1 | Out-File -Encoding utf8 full_pytest_output ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+(process:21764): GLib-GIO-WARNING **: 14:06:58.467: Unexpectedly, UWP app 
+`Microsoft.OutlookForWindows_1.2026.512.400_x64__8wekyb3d8bbwe' (AUMId 
+`Microsoft.OutlookForWindows_8wekyb3d8bbwe!Microsoft.OutlookforWindows') 
+supports 4 extensions but has no verbs
+.....E..FFF.F.........EF.....................FFFFFFF.F..F..EE........... [ 89%]
+.......F                                                                 [100%]
+=================================== ERRORS ====================================
+________ ERROR at teardown of test_download_arquivo_route_returns_file ________
+  + Exception Group Traceback (most recent call last):
+  |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\_pytest\runner.py", line 353, in from_call
+  |     result: TResult | None = func()
+  |                              ^^^^^^
+  |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\_pytest\runner.py", line 245, in <lambda>
+  |     lambda: runtest_hook(item=item, **kwds),
+  |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\pluggy\_hooks.py", line 512, in __call__
+  |     return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\pluggy\_manager.py", line 120, in _hookexec
+  |     return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\pluggy\_callers.py", line 167, in _multicall
+  |     raise exception
+  |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\pluggy\_callers.py", line 139, in _multicall
+  |     teardown.throw(exception)
+  |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\_pytest\logging.py", line 858, in pytest_runtest_teardown
+  |     yield
+  |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\pluggy\_callers.py", line 139, in _multicall
+  |     teardown.throw(exception)
+  |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\_pytest\capture.py", line 905, in pytest_runtest_teardown
+  |     return (yield)
+  |             ^^^^^
+  |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\pluggy\_callers.py", line 121, in _multicall
+  |     res = hook_impl.function(*args)
+  |           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\_pytest\runner.py", line 194, in pytest_runtest_teardown
+  |     item.session._setupstate.teardown_exact(nextitem)
+  |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\_pytest\runner.py", line 566, in teardown_exact
+  |     raise exceptions[0]
+  | ExceptionGroup: errors while tearing down <Function test_download_arquivo_route_returns_file> (2 sub-exceptions)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\_pytest\runner.py", line 555, in teardown_exact
+    |     fin()
+    |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\_pytest\fixtures.py", line 1053, in finish
+    |     raise exceptions[0]
+    |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\_pytest\fixtures.py", line 1042, in finish
+    |     fin()
+    |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\_pytest\fixtures.py", line 924, in _teardown_yield_fixture
+    |     next(it)
+    |   File "C:\Users\edson.rodrigues\Documents\MeusProjetos\Projeto-Relatorio-Diario-de-Obra---Enfil-SA\tests\conftest.py", line 162, in papel
+    |     db.session.commit()
+    |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\scoping.py", line 598, in commit
+    |     return self._proxied.commit()
+    |            ^^^^^^^^^^^^^^^^^^^^^^
+    |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py", line 1969, in commit
+    |     trans.commit(_to_root=True)
+    |   File "<string>", line 2, in commit
+    |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\state_changes.py", line 103, in _go
+    |     self._raise_for_prerequisite_state(fn.__name__, current_state)
+    |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py", line 929, in _raise_for_prerequisite_state
+    |     raise sa_exc.PendingRollbackError(
+    | sqlalchemy.exc.PendingRollbackError: This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (sqlite3.IntegrityError) NOT NULL constraint failed: sessoes_usuario.usuario_id
+    | [SQL: UPDATE sessoes_usuario SET usuario_id=? WHERE sessoes_usuario.id = ?]
+    | [parameters: (None, 1)]
+    | (Background on this error at: https://sqlalche.me/e/20/gkpj) (Background on this error at: https://sqlalche.me/e/20/7s2a)
+    +---------------- 2 ----------------
+    | Traceback (most recent call last):
+    |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\base.py", line 1969, in _exec_single_context
+    |     self.dialect.do_execute(
+    |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\default.py", line 922, in do_execute
+    |     cursor.execute(statement, parameters)
+    | sqlite3.IntegrityError: NOT NULL constraint failed: sessoes_usuario.usuario_id
+    | 
+    | The above exception was the direct cause of the following exception:
+    | 
+    | Traceback (most recent call last):
+    |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\_pytest\runner.py", line 555, in teardown_exact
+    |     fin()
+    |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\_pytest\fixtures.py", line 1053, in finish
+    |     raise exceptions[0]
+    |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\_pytest\fixtures.py", line 1042, in finish
+    |     fin()
+    |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\_pytest\fixtures.py", line 924, in _teardown_yield_fixture
+    |     next(it)
+    |   File "C:\Users\edson.rodrigues\Documents\MeusProjetos\Projeto-Relatorio-Diario-de-Obra---Enfil-SA\tests\conftest.py", line 190, in usuario
+    |     db.session.commit()
+    |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\scoping.py", line 598, in commit
+    |     return self._proxied.commit()
+    |            ^^^^^^^^^^^^^^^^^^^^^^
+    |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py", line 1969, in commit
+    |     trans.commit(_to_root=True)
+    |   File "<string>", line 2, in commit
+    |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    |     ret_value = fn(self, *arg, **kw)
+    |                 ^^^^^^^^^^^^^^^^^^^^
+    |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py", line 1256, in commit
+    |     self._prepare_impl()
+    |   File "<string>", line 2, in _prepare_impl
+    |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    |     ret_value = fn(self, *arg, **kw)
+    |                 ^^^^^^^^^^^^^^^^^^^^
+    |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py", line 1231, in _prepare_impl
+    |     self.session.flush()
+    |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py", line 4312, in flush
+    |     self._flush(objects)
+    |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py", line 4447, in _flush
+    |     with util.safe_reraise():
+    |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\util\langhelpers.py", line 146, in __exit__
+    |     raise exc_value.with_traceback(exc_tb)
+    |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py", line 4408, in _flush
+    |     flush_context.execute()
+    |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\unitofwork.py", line 466, in execute
+    |     rec.execute(self)
+    |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\unitofwork.py", line 642, in execute
+    |     util.preloaded.orm_persistence.save_obj(
+    |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\persistence.py", line 85, in save_obj
+    |     _emit_update_statements(
+    |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\persistence.py", line 909, in _emit_update_statements
+    |     c = connection.execute(
+    |         ^^^^^^^^^^^^^^^^^^^
+    |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\base.py", line 1416, in execute
+    |     return meth(
+    |            ^^^^^
+    |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\sql\elements.py", line 516, in _execute_on_connection
+    |     return connection._execute_clauseelement(
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\base.py", line 1639, in _execute_clauseelement
+    |     ret = self._execute_context(
+    |           ^^^^^^^^^^^^^^^^^^^^^^
+    |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\base.py", line 1848, in _execute_context
+    |     return self._exec_single_context(
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\base.py", line 1988, in _exec_single_context
+    |     self._handle_dbapi_exception(
+    |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\base.py", line 2343, in _handle_dbapi_exception
+    |     raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+    |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\base.py", line 1969, in _exec_single_context
+    |     self.dialect.do_execute(
+    |   File "C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\default.py", line 922, in do_execute
+    |     cursor.execute(statement, parameters)
+    | sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint failed: sessoes_usuario.usuario_id
+    | [SQL: UPDATE sessoes_usuario SET usuario_id=? WHERE sessoes_usuario.id = ?]
+    | [parameters: (None, 1)]
+    | (Background on this error at: https://sqlalche.me/e/20/gkpj)
+    +------------------------------------
+_ ERROR at teardown of TestPermissoesPorRota.test_usuario_com_permissao_pode_acessar_rota _
+
+self = <sqlalchemy.engine.base.Connection object at 0x00000204DDF36210>
+dialect = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x00000204D9444910>
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x00000204DDEB7290>
+statement = <sqlalchemy.dialects.sqlite.base.SQLiteCompiler object at 0x00000204DCDFA150>
+parameters = [(None, 1)]
+
+    def _exec_single_context(
+        self,
+        dialect: Dialect,
+        context: ExecutionContext,
+        statement: Union[str, Compiled],
+        parameters: Optional[_AnyMultiExecuteParams],
+    ) -> CursorResult[Any]:
+        """continue the _execute_context() method for a single DBAPI
+        cursor.execute() or cursor.executemany() call.
+    
+        """
+        if dialect.bind_typing is BindTyping.SETINPUTSIZES:
+            generic_setinputsizes = context._prepare_set_input_sizes()
+    
+            if generic_setinputsizes:
+                try:
+                    dialect.do_set_input_sizes(
+                        context.cursor, generic_setinputsizes, context
+                    )
+                except BaseException as e:
+                    self._handle_dbapi_exception(
+                        e, str(statement), parameters, None, context
+                    )
+    
+        cursor, str_statement, parameters = (
+            context.cursor,
+            context.statement,
+            context.parameters,
+        )
+    
+        effective_parameters: Optional[_AnyExecuteParams]
+    
+        if not context.executemany:
+            effective_parameters = parameters[0]
+        else:
+            effective_parameters = parameters
+    
+        if self._has_events or self.engine._has_events:
+            for fn in self.dispatch.before_cursor_execute:
+                str_statement, effective_parameters = fn(
+                    self,
+                    cursor,
+                    str_statement,
+                    effective_parameters,
+                    context,
+                    context.executemany,
+                )
+    
+        if self._echo:
+            self._log_info(str_statement)
+    
+            stats = context._get_cache_stats()
+    
+            if not self.engine.hide_parameters:
+                self._log_info(
+                    "[%s] %r",
+                    stats,
+                    sql_util._repr_params(
+                        effective_parameters,
+                        batches=10,
+                        ismulti=context.executemany,
+                    ),
+                )
+            else:
+                self._log_info(
+                    "[%s] [SQL parameters hidden due to hide_parameters=True]",
+                    stats,
+                )
+    
+        evt_handled: bool = False
+        try:
+            if context.execute_style is ExecuteStyle.EXECUTEMANY:
+                effective_parameters = cast(
+                    "_CoreMultiExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_executemany:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_executemany(
+                        cursor,
+                        str_statement,
+                        effective_parameters,
+                        context,
+                    )
+            elif not effective_parameters and context.no_parameters:
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute_no_params:
+                        if fn(cursor, str_statement, context):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_execute_no_params(
+                        cursor, str_statement, context
+                    )
+            else:
+                effective_parameters = cast(
+                    "_CoreSingleExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+>                   self.dialect.do_execute(
+                        cursor, str_statement, effective_parameters, context
+                    )
+
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\base.py:1969: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x00000204D9444910>
+cursor = <sqlite3.Cursor object at 0x00000204DDC09F40>
+statement = 'UPDATE sessoes_usuario SET usuario_id=? WHERE sessoes_usuario.id = ?'
+parameters = (None, 1)
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x00000204DDEB7290>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlite3.IntegrityError: NOT NULL constraint failed: sessoes_usuario.usuario_id
+
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\default.py:922: IntegrityError
+
+The above exception was the direct cause of the following exception:
+
+app = <Flask 'app'>
+empresa1 = <[DetachedInstanceError('Instance <Empresa at 0x204d9b951d0> is not bound to a Session; attribute refresh operation cannot proceed') raised in repr()] Empresa object at 0x204d9b951d0>
+
+    @pytest.fixture
+    def usuario_empresa1(app, empresa1):
+        """Cria usußrio da empresa 1."""
+        papel = Papel(nome="Admin", empresa_id=empresa1.id, ativo=True)
+        db.session.add(papel)
+        db.session.flush()
+    
+        usr = Usuario(
+            nome="Usußrio Empresa 1",
+            email="usuario1@empresa1.com",
+            empresa_id=empresa1.id,
+            ativo=True,
+        )
+        usr.set_senha("senha123")
+        db.session.add(usr)
+        db.session.flush()
+    
+        from app.models.usuario import UsuarioPapel
+        usuario_papel = UsuarioPapel(
+            empresa_id=empresa1.id,
+            usuario_id=usr.id,
+            papel_id=papel.id,
+            ativo=True,
+        )
+        db.session.add(usuario_papel)
+        db.session.commit()
+        yield usr
+        db.session.delete(usr)
+>       db.session.commit()
+
+tests\conftest.py:311: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\scoping.py:598: in commit
+    return self._proxied.commit()
+           ^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py:1969: in commit
+    trans.commit(_to_root=True)
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\state_changes.py:139: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py:1256: in commit
+    self._prepare_impl()
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\state_changes.py:139: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py:1231: in _prepare_impl
+    self.session.flush()
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py:4312: in flush
+    self._flush(objects)
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py:4447: in _flush
+    with util.safe_reraise():
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\util\langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py:4408: in _flush
+    flush_context.execute()
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\unitofwork.py:466: in execute
+    rec.execute(self)
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\unitofwork.py:642: in execute
+    util.preloaded.orm_persistence.save_obj(
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\persistence.py:85: in save_obj
+    _emit_update_statements(
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\persistence.py:909: in _emit_update_statements
+    c = connection.execute(
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\base.py:1416: in execute
+    return meth(
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\sql\elements.py:516: in _execute_on_connection
+    return connection._execute_clauseelement(
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\base.py:1639: in _execute_clauseelement
+    ret = self._execute_context(
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\base.py:1848: in _execute_context
+    return self._exec_single_context(
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\base.py:1988: in _exec_single_context
+    self._handle_dbapi_exception(
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\base.py:2343: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\base.py:1969: in _exec_single_context
+    self.dialect.do_execute(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x00000204D9444910>
+cursor = <sqlite3.Cursor object at 0x00000204DDC09F40>
+statement = 'UPDATE sessoes_usuario SET usuario_id=? WHERE sessoes_usuario.id = ?'
+parameters = (None, 1)
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x00000204DDEB7290>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint failed: sessoes_usuario.usuario_id
+E       [SQL: UPDATE sessoes_usuario SET usuario_id=? WHERE sessoes_usuario.id = ?]
+E       [parameters: (None, 1)]
+E       (Background on this error at: https://sqlalche.me/e/20/gkpj)
+
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\default.py:922: IntegrityError
+_ ERROR at setup of TestIsolamentoMultiempresa.test_usuario_nao_ve_dados_outra_empresa _
+
+app = <Flask 'app'>, empresa1 = <Empresa 41: Empresa Teste 1>
+
+    @pytest.fixture
+    def cliente_empresa1(app, empresa1):
+        """Cria um cliente para a empresa 1."""
+        from app.models.cliente import Cliente
+>       cli = Cliente(
+            nome="Cliente Empresa 1",
+            empresa_id=empresa1.id,
+            ativo=True,
+        )
+
+tests\conftest.py:271: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\state.py:566: in _initialize_instance
+    with util.safe_reraise():
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\util\langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\state.py:564: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <Cliente None: None>
+kwargs = {'ativo': True, 'empresa_id': 41, 'nome': 'Cliente Empresa 1'}
+cls_ = <class 'app.models.cliente.Cliente'>, k = 'nome'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'nome' is an invalid keyword argument for Cliente
+
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\decl_base.py:2142: TypeError
+_ ERROR at setup of TestIsolamentoMultiempresa.test_query_com_filtro_empresa_obrigatorio _
+
+app = <Flask 'app'>, empresa1 = <Empresa 42: Empresa Teste 1>
+
+    @pytest.fixture
+    def cliente_empresa1(app, empresa1):
+        """Cria um cliente para a empresa 1."""
+        from app.models.cliente import Cliente
+>       cli = Cliente(
+            nome="Cliente Empresa 1",
+            empresa_id=empresa1.id,
+            ativo=True,
+        )
+
+tests\conftest.py:271: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\state.py:566: in _initialize_instance
+    with util.safe_reraise():
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\util\langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\state.py:564: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <Cliente None: None>
+kwargs = {'ativo': True, 'empresa_id': 42, 'nome': 'Cliente Empresa 1'}
+cls_ = <class 'app.models.cliente.Cliente'>, k = 'nome'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'nome' is an invalid keyword argument for Cliente
+
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\decl_base.py:2142: TypeError
+================================== FAILURES ===================================
+_______________ test_valid_login_creates_acesso_log_and_session _______________
+
+client = <FlaskClient <Flask 'app'>>, app = <Flask 'app'>
+
+    def test_valid_login_creates_acesso_log_and_session(client, app):
+        with app.app_context():
+            user = create_admin_user()
+            user_id = user.id
+    
+        # Obter csrf_token via GET e enviar no POST para simular browser
+>       csrf_token = client.get('/auth/login').data.decode('utf-8')
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_auth_logs.py:52: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\werkzeug\test.py:1162: in get
+    return self.open(*args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\testing.py:235: in open
+    response = super().open(
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\werkzeug\test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\werkzeug\test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\werkzeug\test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py:1536: in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py:1514: in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py:1511: in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py:919: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py:917: in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py:902: in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+app\routes\auth.py:97: in login
+    return render_template("login.html")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\templating.py:150: in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\templating.py:127: in _render
+    app.update_template_context(context)
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py:530: in update_template_context
+    context.update(self.ensure_sync(func)())
+                   ^^^^^^^^^^^^^^^^^^^^^^^^
+app\routes\empresa.py:10: in inject_company_info
+    empresa = getattr(current_user, 'empresa', None)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\attributes.py:566: in __get__
+    return self.impl.get(state, dict_)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\attributes.py:1086: in get
+    value = self._fire_loader_callables(state, key, passive)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\attributes.py:1121: in _fire_loader_callables
+    return self.callable_(state, passive)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.orm.strategies.LazyLoader object at 0x00000204DCA11460>
+state = <sqlalchemy.orm.state.InstanceState object at 0x00000204DCBDA0F0>
+passive = symbol('PASSIVE_OFF'), loadopt = None, extra_criteria = ()
+extra_options = (), alternate_effective_path = None
+execution_options = immutabledict({})
+
+    def _load_for_state(
+        self,
+        state,
+        passive,
+        loadopt=None,
+        extra_criteria=(),
+        extra_options=(),
+        alternate_effective_path=None,
+        execution_options=util.EMPTY_DICT,
+    ):
+        if not state.key and (
+            (
+                not self.parent_property.load_on_pending
+                and not state._load_pending
+            )
+            or not state.session_id
+        ):
+            return LoaderCallableStatus.ATTR_EMPTY
+    
+        pending = not state.key
+        primary_key_identity = None
+    
+        use_get = self.use_get and (not loadopt or not loadopt._extra_criteria)
+    
+        if (not passive & PassiveFlag.SQL_OK and not use_get) or (
+            not passive & attributes.NON_PERSISTENT_OK and pending
+        ):
+            return LoaderCallableStatus.PASSIVE_NO_RESULT
+    
+        if (
+            # we were given lazy="raise"
+            self._raise_always
+            # the no_raise history-related flag was not passed
+            and not passive & PassiveFlag.NO_RAISE
+            and (
+                # if we are use_get and related_object_ok is disabled,
+                # which means we are at most looking in the identity map
+                # for history purposes or otherwise returning
+                # PASSIVE_NO_RESULT, don't raise.  This is also a
+                # history-related flag
+                not use_get
+                or passive & PassiveFlag.RELATED_OBJECT_OK
+            )
+        ):
+            self._invoke_raise_load(state, passive, "raise")
+    
+        session = _state_session(state)
+        if not session:
+            if passive & PassiveFlag.NO_RAISE:
+                return LoaderCallableStatus.PASSIVE_NO_RESULT
+    
+>           raise orm_exc.DetachedInstanceError(
+                "Parent instance %s is not bound to a Session; "
+                "lazy load operation of attribute '%s' cannot proceed"
+                % (orm_util.state_str(state), self.key)
+            )
+E           sqlalchemy.orm.exc.DetachedInstanceError: Parent instance <Usuario at 0x204dc886910> is not bound to a Session; lazy load operation of attribute 'empresa' cannot proceed (Background on this error at: https://sqlalche.me/e/20/bhk3)
+
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\strategies.py:918: DetachedInstanceError
+___________________ test_invalid_login_creates_failure_log ____________________
+
+client = <FlaskClient <Flask 'app'>>, app = <Flask 'app'>
+
+    def test_invalid_login_creates_failure_log(client, app):
+        with app.app_context():
+            create_admin_user()
+    
+        # Obter csrf_token via GET e enviar no POST para simular browser
+>       csrf_token = client.get('/auth/login').data.decode('utf-8')
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_auth_logs.py:80: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\werkzeug\test.py:1162: in get
+    return self.open(*args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\testing.py:235: in open
+    response = super().open(
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\werkzeug\test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\werkzeug\test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\werkzeug\test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py:1536: in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py:1514: in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py:1511: in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py:919: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py:917: in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py:902: in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+app\routes\auth.py:97: in login
+    return render_template("login.html")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\templating.py:150: in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\templating.py:127: in _render
+    app.update_template_context(context)
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py:530: in update_template_context
+    context.update(self.ensure_sync(func)())
+                   ^^^^^^^^^^^^^^^^^^^^^^^^
+app\routes\empresa.py:10: in inject_company_info
+    empresa = getattr(current_user, 'empresa', None)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\attributes.py:566: in __get__
+    return self.impl.get(state, dict_)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\attributes.py:1086: in get
+    value = self._fire_loader_callables(state, key, passive)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\attributes.py:1121: in _fire_loader_callables
+    return self.callable_(state, passive)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.orm.strategies.LazyLoader object at 0x00000204DCA11460>
+state = <sqlalchemy.orm.state.InstanceState object at 0x00000204DCBDA0F0>
+passive = symbol('PASSIVE_OFF'), loadopt = None, extra_criteria = ()
+extra_options = (), alternate_effective_path = None
+execution_options = immutabledict({})
+
+    def _load_for_state(
+        self,
+        state,
+        passive,
+        loadopt=None,
+        extra_criteria=(),
+        extra_options=(),
+        alternate_effective_path=None,
+        execution_options=util.EMPTY_DICT,
+    ):
+        if not state.key and (
+            (
+                not self.parent_property.load_on_pending
+                and not state._load_pending
+            )
+            or not state.session_id
+        ):
+            return LoaderCallableStatus.ATTR_EMPTY
+    
+        pending = not state.key
+        primary_key_identity = None
+    
+        use_get = self.use_get and (not loadopt or not loadopt._extra_criteria)
+    
+        if (not passive & PassiveFlag.SQL_OK and not use_get) or (
+            not passive & attributes.NON_PERSISTENT_OK and pending
+        ):
+            return LoaderCallableStatus.PASSIVE_NO_RESULT
+    
+        if (
+            # we were given lazy="raise"
+            self._raise_always
+            # the no_raise history-related flag was not passed
+            and not passive & PassiveFlag.NO_RAISE
+            and (
+                # if we are use_get and related_object_ok is disabled,
+                # which means we are at most looking in the identity map
+                # for history purposes or otherwise returning
+                # PASSIVE_NO_RESULT, don't raise.  This is also a
+                # history-related flag
+                not use_get
+                or passive & PassiveFlag.RELATED_OBJECT_OK
+            )
+        ):
+            self._invoke_raise_load(state, passive, "raise")
+    
+        session = _state_session(state)
+        if not session:
+            if passive & PassiveFlag.NO_RAISE:
+                return LoaderCallableStatus.PASSIVE_NO_RESULT
+    
+>           raise orm_exc.DetachedInstanceError(
+                "Parent instance %s is not bound to a Session; "
+                "lazy load operation of attribute '%s' cannot proceed"
+                % (orm_util.state_str(state), self.key)
+            )
+E           sqlalchemy.orm.exc.DetachedInstanceError: Parent instance <Usuario at 0x204dc886910> is not bound to a Session; lazy load operation of attribute 'empresa' cannot proceed (Background on this error at: https://sqlalche.me/e/20/bhk3)
+
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\strategies.py:918: DetachedInstanceError
+________________ test_solicitar_recuperacao_senha_loga_evento _________________
+
+client = <FlaskClient <Flask 'app'>>, app = <Flask 'app'>
+
+    def test_solicitar_recuperacao_senha_loga_evento(client, app):
+        """SolicitaþÒo de recuperaþÒo de senha gera log."""
+        with app.app_context():
+            user = create_admin_user()
+    
+        # Acessar pßgina de recuperaþÒo
+>       response = client.get("/auth/esqueci-senha")
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_auth_logs.py:110: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\werkzeug\test.py:1162: in get
+    return self.open(*args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\testing.py:235: in open
+    response = super().open(
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\werkzeug\test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\werkzeug\test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\werkzeug\test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py:1536: in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py:1514: in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py:1511: in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py:919: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py:917: in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py:902: in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+app\routes\auth.py:306: in esqueci_senha
+    return render_template("esqueci_senha.html", admin=admin_contato)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\templating.py:150: in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\templating.py:127: in _render
+    app.update_template_context(context)
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py:530: in update_template_context
+    context.update(self.ensure_sync(func)())
+                   ^^^^^^^^^^^^^^^^^^^^^^^^
+app\routes\empresa.py:10: in inject_company_info
+    empresa = getattr(current_user, 'empresa', None)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\attributes.py:566: in __get__
+    return self.impl.get(state, dict_)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\attributes.py:1086: in get
+    value = self._fire_loader_callables(state, key, passive)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\attributes.py:1121: in _fire_loader_callables
+    return self.callable_(state, passive)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.orm.strategies.LazyLoader object at 0x00000204DCA11460>
+state = <sqlalchemy.orm.state.InstanceState object at 0x00000204DCBDA0F0>
+passive = symbol('PASSIVE_OFF'), loadopt = None, extra_criteria = ()
+extra_options = (), alternate_effective_path = None
+execution_options = immutabledict({})
+
+    def _load_for_state(
+        self,
+        state,
+        passive,
+        loadopt=None,
+        extra_criteria=(),
+        extra_options=(),
+        alternate_effective_path=None,
+        execution_options=util.EMPTY_DICT,
+    ):
+        if not state.key and (
+            (
+                not self.parent_property.load_on_pending
+                and not state._load_pending
+            )
+            or not state.session_id
+        ):
+            return LoaderCallableStatus.ATTR_EMPTY
+    
+        pending = not state.key
+        primary_key_identity = None
+    
+        use_get = self.use_get and (not loadopt or not loadopt._extra_criteria)
+    
+        if (not passive & PassiveFlag.SQL_OK and not use_get) or (
+            not passive & attributes.NON_PERSISTENT_OK and pending
+        ):
+            return LoaderCallableStatus.PASSIVE_NO_RESULT
+    
+        if (
+            # we were given lazy="raise"
+            self._raise_always
+            # the no_raise history-related flag was not passed
+            and not passive & PassiveFlag.NO_RAISE
+            and (
+                # if we are use_get and related_object_ok is disabled,
+                # which means we are at most looking in the identity map
+                # for history purposes or otherwise returning
+                # PASSIVE_NO_RESULT, don't raise.  This is also a
+                # history-related flag
+                not use_get
+                or passive & PassiveFlag.RELATED_OBJECT_OK
+            )
+        ):
+            self._invoke_raise_load(state, passive, "raise")
+    
+        session = _state_session(state)
+        if not session:
+            if passive & PassiveFlag.NO_RAISE:
+                return LoaderCallableStatus.PASSIVE_NO_RESULT
+    
+>           raise orm_exc.DetachedInstanceError(
+                "Parent instance %s is not bound to a Session; "
+                "lazy load operation of attribute '%s' cannot proceed"
+                % (orm_util.state_str(state), self.key)
+            )
+E           sqlalchemy.orm.exc.DetachedInstanceError: Parent instance <Usuario at 0x204dc886910> is not bound to a Session; lazy load operation of attribute 'empresa' cannot proceed (Background on this error at: https://sqlalche.me/e/20/bhk3)
+
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\strategies.py:918: DetachedInstanceError
+_________________________ test_logout_registra_evento _________________________
+
+client = <FlaskClient <Flask 'app'>>, app = <Flask 'app'>
+
+    def test_logout_registra_evento(client, app):
+        """Logout registra evento no acesso_log."""
+        with app.app_context():
+            user = create_admin_user()
+            user_id = user.id
+    
+        # Login
+        csrf_token = client.get('/auth/login').data.decode('utf-8')
+        from re import search
+        m = search(r'name="csrf_token" value="([^"]+)"', csrf_token)
+        token = m.group(1) if m else None
+    
+        response = client.post(
+            "/auth/login",
+            data={"email": "admin@test.com", "senha": "Senha123", "csrf_token": token},
+            follow_redirects=True,
+        )
+        assert response.status_code == 200
+    
+        # Logout
+        response = client.get("/auth/logout", follow_redirects=True)
+        assert response.status_code == 200
+    
+        with app.app_context():
+            # Verificar que logout foi registrado
+            acesso_log = AcessoLog.query.filter_by(
+                acao='LOGOUT'
+            ).first()
+    
+            if acesso_log is not None:
+>               assert acesso_log.usuario_id == user_id
+E               assert 2 == 6
+E                +  where 2 = <AcessoLog LOGOUT 2>.usuario_id
+
+tests\test_auth_logs.py:212: AssertionError
+_______ TestPermissoesPorRota.test_usuario_sem_permissao_acesso_negado ________
+
+self = <test_rbac.TestPermissoesPorRota object at 0x00000204D91D8250>
+client = <FlaskClient <Flask 'app'>>, app = <Flask 'app'>
+empresa1 = <Empresa 7: Empresa Teste 1>
+
+    def test_usuario_sem_permissao_acesso_negado(self, client, app, empresa1):
+        """Usußrio sem papel apropriado recebe acesso negado."""
+        with app.app_context():
+            usuario = Usuario(
+                nome="Usußrio Visitante",
+                email="visitante@test.com",
+                empresa_id=empresa1.id,
+                ativo=True,
+            )
+            usuario.set_senha("senha123")
+            db.session.add(usuario)
+            db.session.commit()
+    
+        # Login com usußrio sem papÚis
+        resp = client.post(
+            "/auth/login",
+>           data={"email": usuario.email, "senha": "senha123"},
+                           ^^^^^^^^^^^^^
+            follow_redirects=True,
+        )
+
+tests\test_rbac.py:114: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\attributes.py:566: in __get__
+    return self.impl.get(state, dict_)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\attributes.py:1086: in get
+    value = self._fire_loader_callables(state, key, passive)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\attributes.py:1116: in _fire_loader_callables
+    return state._load_expired(state, passive)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\state.py:798: in _load_expired
+    self.manager.expired_attribute_loader(self, toload, passive)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+mapper = <Mapper at 0x204d8ed7190; Usuario>
+state = <sqlalchemy.orm.state.InstanceState object at 0x00000204DDED6870>
+attribute_names = {'acessos_log', 'ativo', 'colaborador', 'colaborador_id', 'criado_em', 'criado_por', ...}
+passive = symbol('PASSIVE_OFF')
+
+    def load_scalar_attributes(mapper, state, attribute_names, passive):
+        """initiate a column-based attribute refresh operation."""
+    
+        # assert mapper is _state_mapper(state)
+        session = state.session
+        if not session:
+>           raise orm_exc.DetachedInstanceError(
+                "Instance %s is not bound to a Session; "
+                "attribute refresh operation cannot proceed" % (state_str(state))
+            )
+E           sqlalchemy.orm.exc.DetachedInstanceError: Instance <Usuario at 0x204ddfeb9d0> is not bound to a Session; attribute refresh operation cannot proceed (Background on this error at: https://sqlalche.me/e/20/bhk3)
+
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\loading.py:1582: DetachedInstanceError
+____________ TestRecuperacaoSenha.test_solicitar_recuperacao_senha ____________
+
+self = <test_recovery_senha.TestRecuperacaoSenha object at 0x00000204D91F2A90>
+app = <Flask 'app'>, usuario_empresa1 = <Usuario usuario1@empresa1.com>
+
+    def test_solicitar_recuperacao_senha(self, app, usuario_empresa1):
+        """Usußrio pode solicitar recuperaþÒo de senha."""
+        with app.app_context():
+            # Simular solicitaþÒo de recuperaþÒo
+            import hashlib
+            import secrets
+    
+            token = secrets.token_urlsafe(32)
+            token_hash = hashlib.sha256(token.encode()).hexdigest()
+    
+>           recuperacao = RecuperacaoSenha(
+                          ^^^^^^^^^^^^^^^^
+                usuario_id=usuario_empresa1.id,
+                token_hash=token_hash,
+                expira_em=datetime.utcnow() + timedelta(hours=24),
+                utilizada=False,
+            )
+E           NameError: name 'RecuperacaoSenha' is not defined
+
+tests\test_recovery_senha.py:25: NameError
+_____________ TestRecuperacaoSenha.test_token_recuperacao_expira ______________
+
+self = <test_recovery_senha.TestRecuperacaoSenha object at 0x00000204D91F2E10>
+app = <Flask 'app'>, usuario_empresa1 = <Usuario usuario1@empresa1.com>
+
+    def test_token_recuperacao_expira(self, app, usuario_empresa1):
+        """Token de recuperaþÒo expira ap¾s 24 horas."""
+        with app.app_context():
+            import hashlib
+    
+            token_hash = hashlib.sha256(b"test_token").hexdigest()
+    
+            # Criar token expirado
+>           recuperacao = RecuperacaoSenha(
+                          ^^^^^^^^^^^^^^^^
+                usuario_id=usuario_empresa1.id,
+                token_hash=token_hash,
+                expira_em=datetime.utcnow() - timedelta(hours=1),  # Expirado
+                utilizada=False,
+            )
+E           NameError: name 'RecuperacaoSenha' is not defined
+
+tests\test_recovery_senha.py:50: NameError
+____ TestRecuperacaoSenha.test_usar_token_recuperacao_marca_como_utilizado ____
+
+self = <test_recovery_senha.TestRecuperacaoSenha object at 0x00000204D91F3190>
+app = <Flask 'app'>, usuario_empresa1 = <Usuario usuario1@empresa1.com>
+
+    def test_usar_token_recuperacao_marca_como_utilizado(self, app, usuario_empresa1):
+        """Usar token de recuperaþÒo marca como utilizado."""
+        with app.app_context():
+            import hashlib
+    
+            token_hash = hashlib.sha256(b"test_token").hexdigest()
+    
+>           recuperacao = RecuperacaoSenha(
+                          ^^^^^^^^^^^^^^^^
+                usuario_id=usuario_empresa1.id,
+                token_hash=token_hash,
+                expira_em=datetime.utcnow() + timedelta(hours=24),
+                utilizada=False,
+            )
+E           NameError: name 'RecuperacaoSenha' is not defined
+
+tests\test_recovery_senha.py:70: NameError
+____________ TestRecuperacaoSenha.test_token_invalido_nao_funciona ____________
+
+self = <test_recovery_senha.TestRecuperacaoSenha object at 0x00000204D91F3590>
+app = <Flask 'app'>, usuario_empresa1 = <Usuario usuario1@empresa1.com>
+
+    def test_token_invalido_nao_funciona(self, app, usuario_empresa1):
+        """Token invßlido nÒo permite reset de senha."""
+        with app.app_context():
+            import hashlib
+    
+            token_valido_hash = hashlib.sha256(b"valido").hexdigest()
+            token_invalido_hash = hashlib.sha256(b"invalido").hexdigest()
+    
+>           recuperacao = RecuperacaoSenha(
+                          ^^^^^^^^^^^^^^^^
+                usuario_id=usuario_empresa1.id,
+                token_hash=token_valido_hash,
+                expira_em=datetime.utcnow() + timedelta(hours=24),
+                utilizada=False,
+            )
+E           NameError: name 'RecuperacaoSenha' is not defined
+
+tests\test_recovery_senha.py:98: NameError
+__________ TestRecuperacaoSenha.test_nao_pode_usar_token_duas_vezes ___________
+
+self = <test_recovery_senha.TestRecuperacaoSenha object at 0x00000204D91F3C10>
+app = <Flask 'app'>, usuario_empresa1 = <Usuario usuario1@empresa1.com>
+
+    def test_nao_pode_usar_token_duas_vezes(self, app, usuario_empresa1):
+        """Token de recuperaþÒo nÒo pode ser usado duas vezes."""
+        with app.app_context():
+            import hashlib
+    
+            token_hash = hashlib.sha256(b"test_token").hexdigest()
+    
+>           recuperacao = RecuperacaoSenha(
+                          ^^^^^^^^^^^^^^^^
+                usuario_id=usuario_empresa1.id,
+                token_hash=token_hash,
+                expira_em=datetime.utcnow() + timedelta(hours=24),
+                utilizada=False,
+            )
+E           NameError: name 'RecuperacaoSenha' is not defined
+
+tests\test_recovery_senha.py:121: NameError
+___________ TestRecuperacaoSenha.test_reset_senha_com_token_valido ____________
+
+self = <test_recovery_senha.TestRecuperacaoSenha object at 0x00000204D94042D0>
+app = <Flask 'app'>, usuario_empresa1 = <Usuario usuario1@empresa1.com>
+
+    def test_reset_senha_com_token_valido(self, app, usuario_empresa1):
+        """Resetar senha com token vßlido funciona."""
+        with app.app_context():
+            import hashlib
+    
+            token_hash = hashlib.sha256(b"test_token").hexdigest()
+    
+            # Criar token vßlido
+>           recuperacao = RecuperacaoSenha(
+                          ^^^^^^^^^^^^^^^^
+                usuario_id=usuario_empresa1.id,
+                token_hash=token_hash,
+                expira_em=datetime.utcnow() + timedelta(hours=24),
+                utilizada=False,
+            )
+E           NameError: name 'RecuperacaoSenha' is not defined
+
+tests\test_recovery_senha.py:150: NameError
+________ TestFluxoRecuperacaoEmail.test_esqueci_senha_get_renders_form ________
+
+self = <test_recovery_senha.TestFluxoRecuperacaoEmail object at 0x00000204D9404D90>
+client = <FlaskClient <Flask 'app'>>
+
+    def test_esqueci_senha_get_renders_form(self, client):
+        """A pßgina de esqueci senha deve ser acessÝvel."""
+>       response = client.get("/auth/esqueci-senha")
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_recovery_senha.py:176: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\werkzeug\test.py:1162: in get
+    return self.open(*args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\testing.py:235: in open
+    response = super().open(
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\werkzeug\test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\werkzeug\test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\werkzeug\test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py:1536: in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py:1514: in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py:1511: in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py:919: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py:917: in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py:902: in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+app\routes\auth.py:306: in esqueci_senha
+    return render_template("esqueci_senha.html", admin=admin_contato)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\templating.py:150: in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\templating.py:127: in _render
+    app.update_template_context(context)
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py:530: in update_template_context
+    context.update(self.ensure_sync(func)())
+                   ^^^^^^^^^^^^^^^^^^^^^^^^
+app\routes\empresa.py:10: in inject_company_info
+    empresa = getattr(current_user, 'empresa', None)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\attributes.py:566: in __get__
+    return self.impl.get(state, dict_)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\attributes.py:1086: in get
+    value = self._fire_loader_callables(state, key, passive)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\attributes.py:1121: in _fire_loader_callables
+    return self.callable_(state, passive)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.orm.strategies.LazyLoader object at 0x00000204DCA11460>
+state = <sqlalchemy.orm.state.InstanceState object at 0x00000204DD86A630>
+passive = symbol('PASSIVE_OFF'), loadopt = None, extra_criteria = ()
+extra_options = (), alternate_effective_path = None
+execution_options = immutabledict({})
+
+    def _load_for_state(
+        self,
+        state,
+        passive,
+        loadopt=None,
+        extra_criteria=(),
+        extra_options=(),
+        alternate_effective_path=None,
+        execution_options=util.EMPTY_DICT,
+    ):
+        if not state.key and (
+            (
+                not self.parent_property.load_on_pending
+                and not state._load_pending
+            )
+            or not state.session_id
+        ):
+            return LoaderCallableStatus.ATTR_EMPTY
+    
+        pending = not state.key
+        primary_key_identity = None
+    
+        use_get = self.use_get and (not loadopt or not loadopt._extra_criteria)
+    
+        if (not passive & PassiveFlag.SQL_OK and not use_get) or (
+            not passive & attributes.NON_PERSISTENT_OK and pending
+        ):
+            return LoaderCallableStatus.PASSIVE_NO_RESULT
+    
+        if (
+            # we were given lazy="raise"
+            self._raise_always
+            # the no_raise history-related flag was not passed
+            and not passive & PassiveFlag.NO_RAISE
+            and (
+                # if we are use_get and related_object_ok is disabled,
+                # which means we are at most looking in the identity map
+                # for history purposes or otherwise returning
+                # PASSIVE_NO_RESULT, don't raise.  This is also a
+                # history-related flag
+                not use_get
+                or passive & PassiveFlag.RELATED_OBJECT_OK
+            )
+        ):
+            self._invoke_raise_load(state, passive, "raise")
+    
+        session = _state_session(state)
+        if not session:
+            if passive & PassiveFlag.NO_RAISE:
+                return LoaderCallableStatus.PASSIVE_NO_RESULT
+    
+>           raise orm_exc.DetachedInstanceError(
+                "Parent instance %s is not bound to a Session; "
+                "lazy load operation of attribute '%s' cannot proceed"
+                % (orm_util.state_str(state), self.key)
+            )
+E           sqlalchemy.orm.exc.DetachedInstanceError: Parent instance <Usuario at 0x204dc8d2390> is not bound to a Session; lazy load operation of attribute 'empresa' cannot proceed (Background on this error at: https://sqlalche.me/e/20/bhk3)
+
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\strategies.py:918: DetachedInstanceError
+_____ TestFluxoRecuperacaoEmail.test_redefinir_senha_get_com_token_valido _____
+
+self = <test_recovery_senha.TestFluxoRecuperacaoEmail object at 0x00000204D9405B10>
+client = <FlaskClient <Flask 'app'>>, app = <Flask 'app'>
+usuario_empresa1 = <Usuario usuario1@empresa1.com>
+
+    def test_redefinir_senha_get_com_token_valido(self, client, app, usuario_empresa1):
+        """GET em redefinir senha com token vßlido mostra formulßrio."""
+        with app.app_context():
+            serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+            token = serializer.dumps(usuario_empresa1.email, salt='recuperacao-senha')
+    
+>       response = client.get(f"/auth/redefinir-senha/{token}")
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_recovery_senha.py:197: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\werkzeug\test.py:1162: in get
+    return self.open(*args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\testing.py:235: in open
+    response = super().open(
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\werkzeug\test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\werkzeug\test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\werkzeug\test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py:1536: in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py:1514: in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py:1511: in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py:919: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py:917: in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py:902: in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+app\routes\auth.py:340: in redefinir_senha
+    return render_template("redefinir_senha.html", token=token)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\templating.py:150: in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\templating.py:127: in _render
+    app.update_template_context(context)
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py:530: in update_template_context
+    context.update(self.ensure_sync(func)())
+                   ^^^^^^^^^^^^^^^^^^^^^^^^
+app\routes\empresa.py:10: in inject_company_info
+    empresa = getattr(current_user, 'empresa', None)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\attributes.py:566: in __get__
+    return self.impl.get(state, dict_)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\attributes.py:1086: in get
+    value = self._fire_loader_callables(state, key, passive)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\attributes.py:1121: in _fire_loader_callables
+    return self.callable_(state, passive)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.orm.strategies.LazyLoader object at 0x00000204DCA11460>
+state = <sqlalchemy.orm.state.InstanceState object at 0x00000204DD86A630>
+passive = symbol('PASSIVE_OFF'), loadopt = None, extra_criteria = ()
+extra_options = (), alternate_effective_path = None
+execution_options = immutabledict({})
+
+    def _load_for_state(
+        self,
+        state,
+        passive,
+        loadopt=None,
+        extra_criteria=(),
+        extra_options=(),
+        alternate_effective_path=None,
+        execution_options=util.EMPTY_DICT,
+    ):
+        if not state.key and (
+            (
+                not self.parent_property.load_on_pending
+                and not state._load_pending
+            )
+            or not state.session_id
+        ):
+            return LoaderCallableStatus.ATTR_EMPTY
+    
+        pending = not state.key
+        primary_key_identity = None
+    
+        use_get = self.use_get and (not loadopt or not loadopt._extra_criteria)
+    
+        if (not passive & PassiveFlag.SQL_OK and not use_get) or (
+            not passive & attributes.NON_PERSISTENT_OK and pending
+        ):
+            return LoaderCallableStatus.PASSIVE_NO_RESULT
+    
+        if (
+            # we were given lazy="raise"
+            self._raise_always
+            # the no_raise history-related flag was not passed
+            and not passive & PassiveFlag.NO_RAISE
+            and (
+                # if we are use_get and related_object_ok is disabled,
+                # which means we are at most looking in the identity map
+                # for history purposes or otherwise returning
+                # PASSIVE_NO_RESULT, don't raise.  This is also a
+                # history-related flag
+                not use_get
+                or passive & PassiveFlag.RELATED_OBJECT_OK
+            )
+        ):
+            self._invoke_raise_load(state, passive, "raise")
+    
+        session = _state_session(state)
+        if not session:
+            if passive & PassiveFlag.NO_RAISE:
+                return LoaderCallableStatus.PASSIVE_NO_RESULT
+    
+>           raise orm_exc.DetachedInstanceError(
+                "Parent instance %s is not bound to a Session; "
+                "lazy load operation of attribute '%s' cannot proceed"
+                % (orm_util.state_str(state), self.key)
+            )
+E           sqlalchemy.orm.exc.DetachedInstanceError: Parent instance <Usuario at 0x204dc8d2390> is not bound to a Session; lazy load operation of attribute 'empresa' cannot proceed (Background on this error at: https://sqlalche.me/e/20/bhk3)
+
+..\..\..\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\strategies.py:918: DetachedInstanceError
+________ TestSegurancaRecuperacao.test_token_nao_fica_visivel_em_logs _________
+
+self = <test_recovery_senha.TestSegurancaRecuperacao object at 0x00000204D91F33D0>
+app = <Flask 'app'>, usuario_empresa1 = <Usuario usuario1@empresa1.com>
+
+    def test_token_nao_fica_visivel_em_logs(self, app, usuario_empresa1):
+        """Token de recuperaþÒo nÒo fica em logs de acesso."""
+        with app.app_context():
+            # O token deve ser armazenado apenas como hash
+            import hashlib
+    
+            token = "super_secret_token_12345"
+            token_hash = hashlib.sha256(token.encode()).hexdigest()
+    
+            # Armazenar apenas hash
+>           recuperacao = RecuperacaoSenha(
+                          ^^^^^^^^^^^^^^^^
+                usuario_id=usuario_empresa1.id,
+                token_hash=token_hash,
+                expira_em=datetime.utcnow() + timedelta(hours=24),
+                utilizada=False,
+            )
+E           NameError: name 'RecuperacaoSenha' is not defined
+
+tests\test_recovery_senha.py:241: NameError
+________________ TestProgresso.test_obter_progresso_aprovacao _________________
+
+self = <test_workflow.TestProgresso object at 0x00000204D9427190>
+app = <Flask 'app'>
+db_session = <sqlalchemy.orm.scoping.scoped_session object at 0x00000204D574C890>
+empresa = <Empresa 1: Empresa Teste>, obra = <Obra 1: Obra Teste>
+frente_trabalho = <FrenteTrabalho 1: Frente Teste>
+usuario = <Usuario usuario1@teste.com>, usuario2 = <Usuario usuario2@teste.com>
+
+    def test_obter_progresso_aprovacao(self, app, db_session, empresa, obra, frente_trabalho, usuario, usuario2):
+        """Retorna progresso correto de aprovaþÒo."""
+        with app.app_context():
+            rdo = RDO(
+                empresa_id=empresa.id,
+                obra_id=obra.id,
+                frente_trabalho_id=frente_trabalho.id,
+            )
+            db.session.add(rdo)
+            db.session.flush()
+    
+            # 1 aprovada, 1 rejeitada, 1 pendente
+            RDOAprovacao.query.filter_by(rdo_id=rdo.id).delete()
+    
+            RDOAprovacao(
+                empresa_id=empresa.id, rdo_id=rdo.id, aprovador_id=usuario.id,
+                status='APROVADO', nivel=1, data_aprovacao=datetime.now(timezone.utc).replace(tzinfo=None)
+>           ).save()
+              ^^^^
+E           AttributeError: 'RDOAprovacao' object has no attribute 'save'
+
+tests\test_workflow.py:406: AttributeError
+============================== warnings summary ===============================
+tests/test_arquivos.py: 1 warning
+tests/test_auth_logs.py: 3 warnings
+tests/test_exports.py: 6 warnings
+tests/test_rbac.py: 1 warning
+tests/test_sessoes.py: 1 warning
+  C:\Users\edson.rodrigues\Documents\MeusProjetos\Projeto-Relatorio-Diario-de-Obra---Enfil-SA\app\routes\usuarios.py:280: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    user = Usuario.query.get(user_id)
+
+tests/test_arquivos.py::test_download_arquivo_route_returns_file
+  C:\Users\edson.rodrigues\Documents\MeusProjetos\Projeto-Relatorio-Diario-de-Obra---Enfil-SA\tests\conftest.py:145: SAWarning: Session's state has been changed on a non-active transaction - this state will be discarded.
+    db.session.rollback()
+
+tests/test_auth_logs.py::test_logout_registra_evento
+tests/test_rbac.py::TestPermissoesPorRota::test_usuario_com_permissao_pode_acessar_rota
+  C:\Users\edson.rodrigues\Documents\MeusProjetos\Projeto-Relatorio-Diario-de-Obra---Enfil-SA\app\routes\dashboard.py:16: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    user = Usuario.query.get(user_id)
+
+tests/test_exports.py::test_export_lista_rdo_csv_xlsx_pdf
+tests/test_exports.py::test_export_lista_rdo_csv_xlsx_pdf
+tests/test_exports.py::test_export_lista_rdo_csv_xlsx_pdf
+  C:\Users\edson.rodrigues\Documents\MeusProjetos\Projeto-Relatorio-Diario-de-Obra---Enfil-SA\app\routes\rdo.py:746: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    user = Usuario.query.get(current_user_id)
+
+tests/test_exports.py: 12 warnings
+  C:\Users\edson.rodrigues\Documents\MeusProjetos\Projeto-Relatorio-Diario-de-Obra---Enfil-SA\app\models\rdo.py:72: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    return Usuario.query.get(self.criado_por) if self.criado_por else None
+
+tests/test_exports.py::test_export_lista_obras_csv_pdf
+tests/test_exports.py::test_export_lista_obras_csv_pdf
+  C:\Users\edson.rodrigues\Documents\MeusProjetos\Projeto-Relatorio-Diario-de-Obra---Enfil-SA\app\routes\obras.py:118: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    user = Usuario.query.get(session.get("user_id"))
+
+tests/test_login.py::test_login
+  C:\Users\edson.rodrigues\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\_pytest\python.py:170: PytestReturnNotNoneWarning: Test functions should return None, but tests/test_login.py::test_login returned <class 'bool'>.
+  Did you mean to use `assert` instead of `return`?
+  See https://docs.pytest.org/en/stable/how-to/assert.html#return-not-none for more information.
+    warnings.warn(
+
+tests/test_workflow.py::TestGeracaoAprovacoes::test_gerar_aprovacoes_sequenciais
+tests/test_workflow.py::TestGeracaoAprovacoes::test_gerar_aprovacoes_paralelas
+  C:\Users\edson.rodrigues\Documents\MeusProjetos\Projeto-Relatorio-Diario-de-Obra---Enfil-SA\app\services\workflow_service.py:93: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    rdo = RDO.query.get(rdo_id)
+
+tests/test_workflow.py::TestGeracaoAprovacoes::test_gerar_aprovacoes_sequenciais
+tests/test_workflow.py::TestGeracaoAprovacoes::test_gerar_aprovacoes_paralelas
+  C:\Users\edson.rodrigues\Documents\MeusProjetos\Projeto-Relatorio-Diario-de-Obra---Enfil-SA\app\services\workflow_service.py:97: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    workflow = WorkflowDefinicao.query.get(workflow_id)
+
+tests/test_workflow.py::TestAprovacao::test_aprovar_etapa
+tests/test_workflow.py::TestAprovacao::test_aprovar_ultima_etapa_bloqueia_rdo
+  C:\Users\edson.rodrigues\Documents\MeusProjetos\Projeto-Relatorio-Diario-de-Obra---Enfil-SA\app\services\workflow_service.py:225: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    aprovacao = RDOAprovacao.query.get(aprovacao_id)
+
+tests/test_workflow.py::TestAprovacao::test_aprovar_etapa
+tests/test_workflow.py::TestAprovacao::test_aprovar_ultima_etapa_bloqueia_rdo
+  C:\Users\edson.rodrigues\Documents\MeusProjetos\Projeto-Relatorio-Diario-de-Obra---Enfil-SA\app\services\workflow_service.py:366: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    rdo = RDO.query.get(rdo_id)
+
+tests/test_workflow.py::TestRejeicao::test_rejeitar_etapa
+tests/test_workflow.py::TestRejeicao::test_rejeicao_cancela_fluxo
+  C:\Users\edson.rodrigues\Documents\MeusProjetos\Projeto-Relatorio-Diario-de-Obra---Enfil-SA\app\services\workflow_service.py:291: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    aprovacao = RDOAprovacao.query.get(aprovacao_id)
+
+tests/test_workflow.py::TestRejeicao::test_rejeitar_etapa
+tests/test_workflow.py::TestRejeicao::test_rejeicao_cancela_fluxo
+  C:\Users\edson.rodrigues\Documents\MeusProjetos\Projeto-Relatorio-Diario-de-Obra---Enfil-SA\app\services\workflow_service.py:298: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    rdo = RDO.query.get(aprovacao.rdo_id)
+
+tests/test_workflow.py::TestBloqueio::test_pode_editar_rdo_rascunho
+tests/test_workflow.py::TestBloqueio::test_pode_editar_rdo_aprovado
+  C:\Users\edson.rodrigues\Documents\MeusProjetos\Projeto-Relatorio-Diario-de-Obra---Enfil-SA\app\services\workflow_service.py:433: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    rdo = RDO.query.get(rdo_id)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_auth_logs.py::test_valid_login_creates_acesso_log_and_session
+FAILED tests/test_auth_logs.py::test_invalid_login_creates_failure_log - sqla...
+FAILED tests/test_auth_logs.py::test_solicitar_recuperacao_senha_loga_evento
+FAILED tests/test_auth_logs.py::test_logout_registra_evento - assert 2 == 6
+FAILED tests/test_rbac.py::TestPermissoesPorRota::test_usuario_sem_permissao_acesso_negado
+FAILED tests/test_recovery_senha.py::TestRecuperacaoSenha::test_solicitar_recuperacao_senha
+FAILED tests/test_recovery_senha.py::TestRecuperacaoSenha::test_token_recuperacao_expira
+FAILED tests/test_recovery_senha.py::TestRecuperacaoSenha::test_usar_token_recuperacao_marca_como_utilizado
+FAILED tests/test_recovery_senha.py::TestRecuperacaoSenha::test_token_invalido_nao_funciona
+FAILED tests/test_recovery_senha.py::TestRecuperacaoSenha::test_nao_pode_usar_token_duas_vezes
+FAILED tests/test_recovery_senha.py::TestRecuperacaoSenha::test_reset_senha_com_token_valido
+FAILED tests/test_recovery_senha.py::TestFluxoRecuperacaoEmail::test_esqueci_senha_get_renders_form
+FAILED tests/test_recovery_senha.py::TestFluxoRecuperacaoEmail::test_redefinir_senha_get_com_token_valido
+FAILED tests/test_recovery_senha.py::TestSegurancaRecuperacao::test_token_nao_fica_visivel_em_logs
+FAILED tests/test_workflow.py::TestProgresso::test_obter_progresso_aprovacao
+ERROR tests/test_arquivos.py::test_download_arquivo_route_returns_file - Exce...
+ERROR tests/test_rbac.py::TestPermissoesPorRota::test_usuario_com_permissao_pode_acessar_rota
+ERROR tests/test_security_multiempresa.py::TestIsolamentoMultiempresa::test_usuario_nao_ve_dados_outra_empresa
+ERROR tests/test_security_multiempresa.py::TestIsolamentoMultiempresa::test_query_com_filtro_empresa_obrigatorio
+15 failed, 61 passed, 47 warnings, 4 errors in 39.49s
