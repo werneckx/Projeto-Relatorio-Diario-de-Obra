@@ -3,12 +3,19 @@
 .env.*
 
 # Python environment and caches
+.venv/
 venv/
 env/
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+
+# Database dumps / backups (sensitive)
+data/**/*.sql
+data/backups/
+*.bak
+*.dump
 
 # Flask instance folder
 instance/

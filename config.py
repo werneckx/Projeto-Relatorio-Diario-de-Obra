@@ -5,8 +5,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Config:
-    # SECRET_KEY deve vir do ambiente para produção
-    SECRET_KEY = os.environ.get("SECRET_KEY", "MINHA_CHAVE_SECRETA_FIXA_123456789")
+    # SECRET_KEY deve vir do ambiente (NÃO usar fallback fixo)
+    SECRET_KEY = os.environ.get("SECRET_KEY")
+
+    if not SECRET_KEY:
+        raise RuntimeError("SECRET_KEY não configurada. Defina no arquivo .env.")
 
     # Configuração do banco
     DB_USER = os.environ.get("DB_USER", "root")
