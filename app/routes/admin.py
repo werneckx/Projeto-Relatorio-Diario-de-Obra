@@ -13,6 +13,9 @@ from app import db
 from app.models.empresa import Empresa
 from app.models.usuario import Usuario, Papel, Permissao, PapelPermissao, Colaborador, UsuarioPapel
 from app.models.fornecedor import Fornecedor
+from app.models.configuracao import ConfigDefinicao, EmpresaConfig, ObraConfig
+from app.models.obra import Obra
+from app.services.config_service import ConfigService
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -356,3 +359,149 @@ def _save_image(file_obj, folder, filename, thumb=None):
         file_obj.stream.seek(0)
         file_obj.save(path)
     return path
+
+
+# ---------------------------------------------------------------------------
+# CONFIGURAÇÕES POR EMPRESA / OBRA
+# ---------------------------------------------------------------------------
+
+
+@admin_bp.get('/configuracoes')
+@login_required
+@permission_required('config.manage')
+def listar_configuracoes():
+    empresa_id = session.get('empresa_id')
+    definicoes = ConfigDefinicao.query.order_by(ConfigDefinicao.chave).all()
+    # Carrega valores atuais para exibição
+    valores = {}
+    for d in definicoes:
+        emp_cfg = EmpresaConfig.query.filter_by(empresa_id=empresa_id, chave=d.chave).first()
+        valores[d.chave] = emp_cfg.valor if emp_cfg and emp_cfg.valor is not None else d.valor_padrao
+    return render_template('admin/configuracoes_empresa.html', definicoes=definicoes, valores=valores)
+
+
+@admin_bp.route('/configuracoes/<chave>/editar', methods=['GET', 'POST'])
+@login_required
+@permission_required('config.manage')
+def editar_configuracao(chave):
+    empresa_id = session.get('empresa_id')
+    definicao = ConfigDefinicao.query.filter_by(chave=chave).first_or_404()
+    emp_cfg = EmpresaConfig.query.filter_by(empresa_id=empresa_id, chave=chave).first()
+
+    if request.method == 'POST':
+        valor = request.form.get('valor')
+        # Validação básica pelo tipo
+        valid = True
+        if definicao.tipo == 'INT':
+            try:
+                int(valor)
+            except Exception:
+                valid = False
+        elif definicao.tipo == 'JSON':
+            try:
+                import json as _json
+                _json.loads(valor)
+            except Exception:
+                valid = False
+
+        if not valid:
+            flash('Valor inválido para o tipo definido.', 'danger')
+            return render_template('admin/configuracao_form.html', definicao=definicao, valor=valor)
+
+        try:
+            if not emp_cfg:
+                emp_cfg = EmpresaConfig(empresa_id=empresa_id, chave=chave, valor=valor)
+                db.session.add(emp_cfg)
+            else:
+                emp_cfg.valor = valor
+                emp_cfg.modificado_por = session.get('user_id')
+            db.session.commit()
+            # Invalidate cache for this company
+            try:
+                ConfigService.clear_cache(empresa_id)
+            except Exception:
+                pass
+            flash('Configuração salva com sucesso.', 'success')
+            return redirect(url_for('admin.listar_configuracoes'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao salvar: {e}', 'danger')
+
+    return render_template('admin/configuracao_form.html', definicao=definicao, valor=(emp_cfg.valor if emp_cfg else definicao.valor_padrao))
+
+
+@admin_bp.get('/obras/<int:obra_id>/configuracoes')
+@login_required
+@permission_required('config.manage')
+def listar_configuracoes_obra(obra_id):
+    empresa_id = session.get('empresa_id')
+    obra = Obra.query.filter_by(id=obra_id, empresa_id=empresa_id).first_or_404()
+    definicoes = ConfigDefinicao.query.order_by(ConfigDefinicao.chave).all()
+    valores = {}
+    for d in definicoes:
+        valores[d.chave] = ConfigService.obter_valor(empresa_id=empresa_id, obra_id=obra_id, chave=d.chave)
+    return render_template('admin/configuracoes_obra.html', definicoes=definicoes, valores=valores, obra=obra)
+
+
+@admin_bp.route('/obras/<int:obra_id>/configuracoes/<chave>/editar', methods=['GET', 'POST'])
+@login_required
+@permission_required('config.manage')
+def editar_configuracao_obra(obra_id, chave):
+    empresa_id = session.get('empresa_id')
+    obra = Obra.query.filter_by(id=obra_id, empresa_id=empresa_id).first_or_404()
+    definicao = ConfigDefinicao.query.filter_by(chave=chave).first_or_404()
+    ocfg = ObraConfig.query.filter_by(empresa_id=empresa_id, obra_id=obra_id, chave=chave).first()
+
+    if request.method == 'POST':
+        valor = request.form.get('valor')
+        # Validação básica
+        valid = True
+        if definicao.tipo == 'INT':
+            try:
+                int(valor)
+            except Exception:
+                valid = False
+        elif definicao.tipo == 'JSON':
+            try:
+                import json as _json
+                _json.loads(valor)
+            except Exception:
+                valid = False
+
+        if not valid:
+            flash('Valor inválido para o tipo definido.', 'danger')
+            return render_template('admin/configuracao_form.html', definicao=definicao, valor=valor, obra=obra)
+
+        try:
+            if not ocfg:
+                ocfg = ObraConfig(empresa_id=empresa_id, obra_id=obra_id, chave=chave, valor=valor)
+                db.session.add(ocfg)
+            else:
+                ocfg.valor = valor
+            db.session.commit()
+            try:
+                ConfigService.clear_cache(empresa_id, obra_id=obra_id)
+            except Exception:
+                pass
+            flash('Configuração da obra salva com sucesso.', 'success')
+            return redirect(url_for('admin.listar_configuracoes_obra', obra_id=obra_id))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao salvar: {e}', 'danger')
+
+    return render_template('admin/configuracao_form.html', definicao=definicao, valor=(ocfg.valor if ocfg else definicao.valor_padrao), obra=obra)
+
+
+# ---------------------------------------------------------------------------
+# RBAC: exibir papéis globais e personalizados
+# ---------------------------------------------------------------------------
+
+
+@admin_bp.get('/papeis')
+@login_required
+@permission_required('usuario.manage')
+def listar_papeis():
+    empresa_id = session.get('empresa_id')
+    papeis_globais = Papel.query.filter_by(empresa_id=None).order_by(Papel.nome).all()
+    papeis_empresa = Papel.query.filter_by(empresa_id=empresa_id).order_by(Papel.nome).all()
+    return render_template('admin/papeis_lista.html', papeis_globais=papeis_globais, papeis_empresa=papeis_empresa)

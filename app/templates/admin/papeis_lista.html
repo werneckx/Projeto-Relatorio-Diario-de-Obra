@@ -1,0 +1,51 @@
+{% extends 'admin/base.html' %}
+
+{% block title %}Papéis de Acesso{% endblock %}
+{% block page_title %}Papéis de Acesso{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="page-header">
+        <div>
+            <h2>Papéis</h2>
+            <p>Papéis globais do sistema e papéis personalizados da empresa.</p>
+        </div>
+    </div>
+
+    <h3 style="margin-top:0.5rem;">Papéis Globais</h3>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr><th>Nome</th><th>Descrição</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+                {% for p in papeis_globais %}
+                <tr>
+                    <td>{{ p.nome }}</td>
+                    <td>{{ p.descricao }}</td>
+                    <td>{% if p.is_system %}<span class="badge badge-muted">Sistema</span>{% else %}{% if p.ativo %}<span class="badge badge-success">Ativo</span>{% else %}<span class="badge badge-danger">Inativo</span>{% endif %}{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <h3 style="margin-top:1.5rem;">Papéis da Empresa</h3>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr><th>Nome</th><th>Descrição</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+                {% for p in papeis_empresa %}
+                <tr>
+                    <td>{{ p.nome }}</td>
+                    <td>{{ p.descricao }}</td>
+                    <td>{% if p.ativo %}<span class="badge badge-success">Ativo</span>{% else %}<span class="badge badge-danger">Inativo</span>{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

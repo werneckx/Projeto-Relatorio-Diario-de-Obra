@@ -16,24 +16,41 @@ class ConfigDefinicao(db.Model):
 
     def cast_value(self, raw_value):
         if raw_value is None:
-            raw_value = self.valor_padrao
+            return self.valor_padrao
         
+        # Normalize and cast according to type, but never raise
         if raw_value is None:
-            return None
+            return self.valor_padrao
 
+        # BOOLEAN
         if self.tipo == 'BOOLEAN':
-            return str(raw_value).lower() in ('true', '1', 't', 'y', 'yes')
-        elif self.tipo == 'INT':
+            v = str(raw_value).strip().lower()
+            if v in ('1', 'true', 't', 'y', 'yes'):
+                return True
+            if v in ('0', 'false', 'f', 'n', 'no'):
+                return False
+            # fallback: Python truthiness
+            return bool(raw_value)
+
+        # INT
+        if self.tipo == 'INT':
             try:
                 return int(raw_value)
-            except:
-                return 0
-        elif self.tipo == 'JSON':
+            except Exception:
+                return int(self.valor_padrao) if self.valor_padrao is not None else None
+
+        # JSON
+        if self.tipo == 'JSON':
             try:
-                return json.loads(raw_value)
-            except:
-                return {}
-        return raw_value
+                return json.loads(raw_value) if isinstance(raw_value, str) else raw_value
+            except Exception:
+                return json.loads(self.valor_padrao) if isinstance(self.valor_padrao, str) else self.valor_padrao
+
+        # STRING (default)
+        try:
+            return raw_value
+        except Exception:
+            return self.valor_padrao
 
     def __repr__(self):
         return f'<ConfigDefinicao {self.chave}>'

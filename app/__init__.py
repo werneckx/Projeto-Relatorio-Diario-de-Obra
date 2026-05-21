@@ -1,4 +1,4 @@
-from flask import Flask, redirect, url_for, current_app
+from flask import Flask, redirect, url_for, current_app, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_migrate import Migrate
@@ -91,6 +91,21 @@ def create_app(config_overrides=None):
     
     # Excluir rota de login do CSRF para facilitar testes
     csrf.exempt(auth_bp)
+
+    # Injetar configurações resolvidas em runtime para templates e views
+    from app.services.config_service import ConfigService
+
+    @app.context_processor
+    def inject_config():
+        empresa_id = session.get('empresa_id')
+        obra_id = session.get('obra_id')
+        if not empresa_id:
+            return {'config': {}}
+        try:
+            mapa = ConfigService.obter_mapa_config(empresa_id=empresa_id, obra_id=obra_id)
+        except Exception:
+            mapa = {}
+        return {'config': mapa}
     
     # ---------------------------
     # Redirecionamento da raiz

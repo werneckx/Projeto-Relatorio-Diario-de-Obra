@@ -430,228 +430,722 @@ Checklist:
 - Testes para auditoria.
 - Testes para upload.
 
-## Branch 12 - Definições
+# Branch 12 - Definições Corporativas e Configuração por Empresa
 
-Checklist:
+Branch:
 
-- Template de Ajuste das definições da Empresa
-- Ajuste Template de Obra para permitir personalização das definições
-- RBAC (Deve mostrar os padrões e os personalizados da empresa.)
+```text
+feat/configuracoes-empresa-rbac
+```
 
-## Branch 13 - Mão de Obra/Colaboradores
+## Objetivo
 
-Checklit:
+Criar uma camada central de definições por empresa, permitindo configurações customizadas, herança por obra e integração com RBAC.
 
-- Cadastrar Colaboradores
-  - Template deve ter opção de selecionar como Usuario ou não (Confirmar no Contexto.md)
-- Relacionar nas frentes de trabalho
-- Trazer Automaticamente em RDO a mão de obra cadastrada na Frente de Trabalho.
+## Escopo
 
-## Ordem Recomendada das Branches
+### Definições da Empresa
 
-1. `chore/baseline-validacao-ambiente`
-2. `refactor/split-auth-routes`
-3. `fix/schema-route-compat`
-4. `feat/security-rbac-multitenant`
-5. `refactor/persistence-soft-delete`
-6. `feat/auditoria-sessoes`
-7. `feat/workflow-aprovacao`
-8. `feat/notificacoes`
-9. `feat/arquivos-documentos`
-10. `feat/exports-bi`
-11. `test/hardening-suite`
+Criar tela central de configurações corporativas:
+
+- Nome fantasia
+- Logo
+- Timezone
+- Cores do sistema
+- Configurações do workflow
+- Configurações do RDO
+- Configurações de notificações
+- Configurações operacionais
+- Configurações gerais do sistema
+
+---
+
+### Definições por Obra
+
+Permitir herança de configurações:
+
+```text
+Empresa
+   ↓
+Obra
+```
+
+Exemplo:
+
+```text
+Empresa:
+- Workflow padrão: 3 aprovações
+
+Obra A:
+- Workflow customizado: 2 aprovações
+```
+
+Caso não exista configuração própria da obra:
+
+```text
+Obra → Empresa → Sistema
+```
+
+---
+
+### RBAC
+
+Permitir visualização e gerenciamento de:
+
+- Papéis globais
+- Papéis personalizados da empresa
+
+Exemplo:
+
+```text
+Sistema:
+- Admin
+- Operador
+- Leitor
+
+Empresa:
+- Gestor Obra
+- Fiscal Cliente
+- Supervisor Produção
+```
+
+---
+
+### Estrutura sugerida
+
+Tabelas:
+
+```text
+empresa_config
+obra_config
+papel
+papel_permissao
+```
+
+---
+
+## Commits sugeridos
+
+```text
+feat(config): crie tabela empresa_config
+feat(config): implemente configuracoes por obra
+feat(rbac): exiba papeis globais e personalizados
+feat(ui): implemente tela de definicoes corporativas
+fix(config): aplique heranca empresa-obra
+test(config): cubra configuracoes por empresa
+```
+
+---
+
+## Checklist
+
+- [ ] Criar configurações por empresa
+- [ ] Criar configurações por obra
+- [ ] Aplicar herança Empresa → Obra
+- [ ] Exibir papéis globais
+- [ ] Exibir papéis personalizados
+- [ ] Aplicar configurações em runtime
+- [ ] Adicionar testes
+
+
+---
+
+# Branch 13 - Gestão de Colaboradores e Mão de Obra
+
+Branch:
+
+```text
+feat/colaboradores-frente-rdo
+```
+
+## Objetivo
+
+Transformar colaboradores em entidade operacional integrada ao fluxo do RDO.
+
+## Escopo
+
+### Cadastro de colaboradores
+
+Campos sugeridos:
+
+```text
+nome
+cpf
+matricula
+funcao
+empresa_id
+ativo
+eh_usuario
+usuario_id
+```
+
+---
+
+### Integração com usuário
+
+Adicionar opção no formulário:
+
+```text
+[ ] Criar acesso ao sistema
+```
+
+Regras:
+
+Se marcado:
+
+```text
+Criar Usuario
+Criar UsuarioPapel
+Relacionar Colaborador.usuario_id
+```
+
+Se desmarcado:
+
+```text
+Criar apenas colaborador operacional
+```
+
+---
+
+### Integração com Frente de Trabalho
+
+Permitir vincular colaboradores:
+
+Exemplo:
+
+```text
+Frente Trabalho A
+
+- João
+- Pedro
+- Carlos
+```
+
+Tabela sugerida:
+
+```text
+frente_colaborador
+```
+
+---
+
+### Integração automática com RDO
+
+Fluxo:
+
+```text
+Frente Trabalho
+        ↓
+Colaboradores vinculados
+        ↓
+Criar RDO
+        ↓
+Mão de obra preenchida automaticamente
+```
+
+---
+
+## Commits sugeridos
+
+```text
+feat(colaborador): implemente cadastro operacional
+feat(usuario): permita criar usuario a partir de colaborador
+feat(frente): vincule colaboradores a frente
+feat(rdo): carregue mao de obra automaticamente
+test(colaborador): cubra integracao colaborador-rdo
+```
+
+---
+
+## Checklist
+
+- [ ] Criar cadastro operacional
+- [ ] Permitir vínculo opcional com usuário
+- [ ] Vincular colaboradores às frentes
+- [ ] Carregar mão de obra automaticamente no RDO
+- [ ] Adicionar testes
+
+
+---
+
+# Branch 14 - Revisão de Templates e Design System
+
+Branch:
+
+```text
+refactor/templates-design-system
+```
+
+## Objetivo
+
+Padronizar templates, remover inconsistências visuais, eliminar código legado e criar componentes reutilizáveis.
+
+## Escopo
+
+### Layout e UX
+
+Padronizar:
+
+- Espaçamentos
+- Tipografia
+- Tabelas
+- Botões
+- Formulários
+- Badges
+- Cards
+- Responsividade
+- Feedback visual
+
+---
+
+### Limpeza
+
+Remover:
+
+- HTML comentado
+- Código morto
+- Componentes duplicados
+- CSS repetido
+- Scripts inline desnecessários
+
+---
+
+### Componentização
+
+Estrutura sugerida:
+
+```text
+templates/components/
+
+badge.html
+table.html
+card.html
+modal.html
+pagination.html
+notification.html
+```
+
+---
+
+### Performance
+
+Melhorias:
+
+- Extrair JavaScript inline
+- Reduzir CSS repetido
+- Centralizar componentes reutilizáveis
+- Reduzir lógica dentro dos templates
+
+---
+
+## Commits sugeridos
+
+```text
+refactor(ui): padronize componentes visuais
+refactor(template): remova codigo legado
+refactor(layout): normalize formularios e tabelas
+refactor(js): extraia scripts inline
+style(ui): ajuste responsividade
+```
+
+---
+
+## Checklist
+
+- [ ] Criar componentes reutilizáveis
+- [ ] Padronizar layout
+- [ ] Melhorar responsividade
+- [ ] Remover código morto
+- [ ] Extrair scripts inline
+- [ ] Reduzir lógica nos templates
+- [ ] Adicionar testes
+
 
 ## Marcos de Entrega
 
-### Marco 1 - Base saudavel
+### Marco 1 - Base saudável
 
-Status: concluído em 2026-05-12
+**Status:** concluído em 2026-05-12
 
-Verificação (2026-05-12):
+#### Verificação (2026-05-12)
 
-- Branch 1: `app/__init__.py` importa os módulos de models na inicialização e existe `scripts/diagnostics/import_check.py` (validação de execução depende de Python local funcional).
-- Branch 2: separação de rotas aplicada com `app/routes/auth_common.py` e módulos por domínio registrados no mesmo `auth_bp` (importados em `app/routes/auth.py`).
-- Branch 3: compatibilidade de schema aplicada (status em maiúsculo, `cliente_id`/`cnpj_obra` em obras, remoção de dependência do modelo legado de equipe) e correções de templates/aliases para manter navegação.
+- Branch 1: `app/__init__.py` importa os módulos de models na inicialização e existe `scripts/diagnostics/import_check.py`.
+- Branch 2: separação de rotas aplicada com `app/routes/auth_common.py` e módulos por domínio registrados no mesmo `auth_bp`.
+- Branch 3: compatibilidade de schema aplicada:
+  - status em maiúsculo
+  - `cliente_id`
+  - `cnpj_obra`
+  - remoção de dependência do modelo legado de equipe
+  - correções de templates e aliases para manter navegação
 
-Branches:
+#### Branches
 
 - `chore/baseline-validacao-ambiente`
 - `refactor/split-auth-routes`
 - `fix/schema-route-compat`
 
-Resultado esperado:
+#### Resultado esperado
 
-- App inicia.
-- Rotas separadas.
-- Templates continuam navegaveis.
-- Schema novo conversa com rotas principais.
+- App inicia
+- Rotas separadas
+- Templates continuam navegáveis
+- Schema novo integrado às rotas principais
 
-### Marco 2 - Regras corporativas
+---
 
-Status: concluído em 2026-05-14
+### Marco 2 - Segurança, RBAC e regras corporativas
 
-Verificação (2026-05-14):
+**Status:** concluído em 2026-05-14
 
-- Branch `refactor/persistence-soft-delete` aplicada no fluxo de workflow de assinaturas de RDO.
-- Endpoint `POST /assinar-rdo/<int:rdo_id>/salvar-workflow` (`app/routes/rdo_assinaturas.py`):
-  - substituiu exclusão física das entradas `RDOAprovacao` por Soft Delete (via `ass.soft_delete(...)`, preservando histórico com `ativo=False`).
-  - agrupou a operação multi-step em transação (`with db.session.begin()`), garantindo rollback seguro.
-- Validação: `python -m py_compile app/routes/rdo_assinaturas.py`.
+#### Verificação (2026-05-14)
 
-Branches:
+##### Multiempresa e RBAC
+
+- Aplicado isolamento por `empresa_id`
+- Implementado RBAC baseado em permissões
+- Menu desacoplado de papéis fixos
+
+##### Soft Delete e transações
+
+Endpoint:
+
+```text
+POST /assinar-rdo/<int:rdo_id>/salvar-workflow
+```
+
+Arquivo:
+
+```text
+app/routes/rdo_assinaturas.py
+```
+
+Alterações:
+
+- Exclusão física substituída por Soft Delete:
+
+```python
+ass.soft_delete(...)
+```
+
+- Preservação do histórico:
+
+```text
+ativo=False
+```
+
+- Operações agrupadas em transação:
+
+```python
+with db.session.begin()
+```
+
+##### Auditoria
+
+Implementado:
+
+```text
+AuditoriaService
+```
+
+Eventos auditados:
+
+- UPDATE (`gerar_rdo`)
+- SOFT_DELETE (`excluir_rdo`)
+
+Centralização:
+
+```python
+registrar_auditoria_entidade(...)
+```
+
+##### Navegação por permissões (RBAC)
+
+Arquivo:
+
+```text
+app/templates/base.html
+```
+
+Substituído:
+
+```python
+session.user_role
+```
+
+por:
+
+```python
+session["permissions"]
+```
+
+Permissões aplicadas:
+
+- `obra.manage`
+- `usuario.manage`
+- `mao_obra.view`
+- `equipamento.view`
+- `clima.view`
+- `tag_ocorrencia.view`
+
+##### Testes
+
+Validação executada:
+
+```bash
+python -m pytest -q
+```
+
+Resultado:
+
+```text
+4 passed, 1 warning
+```
+
+Warning existente:
+
+```text
+test_login.py::test_login
+```
+
+#### Branches
 
 - `feat/security-rbac-multitenant`
 - `refactor/persistence-soft-delete`
 - `feat/auditoria-sessoes`
 
-Resultado esperado:
+#### Resultado esperado
 
-- Multiempresa consistente.
-- RBAC real aplicado.
-- Auditoria e sessoes gravadas (Branch `feat/auditoria-sessoes`).
-- Operações críticas de RDO com snapshots before/after em `gerar_rdo` (UPDATE) e `excluir_rdo` (SOFT_DELETE) via `AuditoriaService`.
-- Helper central único `registrar_auditoria_entidade(...)` aplicado para centralizar serialização e contexto.
-- Validação automatizada: `python -m pytest -q` → **4 passed, 1 warning** (warning pré-existente em `test_login.py::test_login`).
+- Multiempresa consistente
+- RBAC real aplicado
+- Auditoria operacional
+- Sessões rastreáveis
+- Rollback seguro
 
+---
 
-### Marco 3 - RDO enterprise
-
-Status: concluído em 2026-05-20
-
-Verificação (2026-05-20):
-
-- Branch `feat/notificacoes` aplicada com integração completa no fluxo de workflow de RDO.
-- Implementado serviço central: `app/services/notificacao_service.py` com:
-  - `NotificacaoService.criar_notificacao(...)` (auditoria `CREATE` + normalização de link).
-  - `NotificacaoService.listar_nao_lidas(...)` (filtro por `usuario_id`, `empresa_id`, `lida=False`, `ativo=True`, limit por performance).
-  - `NotificacaoService.marcar_como_lida(...)` (validação estrita de propriedade + `lida_em`).
-- Implementada API/endpoint: `POST /notificacoes/<int:id>/lida` em `app/routes/notificacoes.py`, com:
-  - proteção via `login_required`.
-  - auditoria racionalizada via `AuditoriaService.registrar_auditoria_entidade(acao="UPDATE" ...)`.
-  - retorno JSON com atualização de contadores.
-- Notificações renderizadas no layout global:
-  - contexto via `@notificacoes_bp.app_context_processor` e `notifications.nao_lidas`.
-  - header/botão de sino com contador (desktop e mobile) e dropdown no `app/templates/base.html`.
-  - marcação como lida com UX/animação e persistência via fetch para `/notificacoes/<id>/lida`.
-- Eventos de workflow geram notificações:
-  - pendência de aprovação e aprovadores no `app/routes/rdo.py`.
-  - geração de notificações em `app/routes/rdo_assinaturas.py` para aprovação/rejeição.
-
-Resultado esperado:
-
-- Notificações operacionais no cabeçalho.
-- Integração por eventos do workflow (pendência/resultado).
-- Marcação como lida com rastreabilidade em auditoria.
-
-Branches:
-
-
-- `feat/workflow-aprovacao`
-- `feat/notificacoes`
-- `feat/arquivos-documentos`
-
-Resultado esperado:
-
-- Workflow configuravel.
-- RDO aprovado imutavel e versionado.
-- Notificacoes operacionais.
-- Uploads rastreaveis.
-
-### Marco 4 - Operacao e qualidade
-### Marco 3.1 - Arquivos Rastreáveis (Upload/Download)
+### Marco 3 - RDO Enterprise e arquivos rastreáveis
 
 **Status:** concluído em 2026-05-20
 
 #### Verificação (2026-05-20)
 
-- Implementado serviço de armazenamento em `app/services/arquivo_service.py` com provider `LOCAL`, incluindo cálculo automático de:
-  - `hash_arquivo` (SHA-256)
-  - `tamanho_bytes`
-  - `mime_type`
+##### Workflow
 
-- Criada rota de upload e download rastreável em `app/routes/arquivos.py`:
-  - `POST /arquivos/upload`
-    - Realiza upload do arquivo
-    - Persiste metadados na tabela `arquivos`
+Implementado:
 
-  - `GET /arquivos/<int:arquivo_id>/download`
-    - Aplica *scoping* por `empresa_id`
-    - Valida o provider utilizado
-    - Retorna `send_file` com:
-      - `Content-Disposition`
-      - `Content-Type`
+- Workflow configurável
+- Aprovação sequencial
+- Aprovação paralela
+- Versionamento de RDO
+- Imutabilidade após aprovação
 
-- Integrado ao fluxo de imagens do RDO (`app/routes/rdo.py`) utilizando:
+---
+
+##### Notificações
+
+Serviço:
+
+```text
+app/services/notificacao_service.py
+```
+
+Métodos:
+
+```python
+NotificacaoService.criar_notificacao()
+NotificacaoService.listar_nao_lidas()
+NotificacaoService.marcar_como_lida()
+```
+
+Endpoint:
+
+```text
+POST /notificacoes/<int:id>/lida
+```
+
+Recursos:
+
+- autenticação obrigatória
+- auditoria
+- atualização automática de contador
+
+Eventos:
+
+- aprovação pendente
+- aprovação concluída
+- rejeição
+
+Arquivos:
+
+```text
+app/routes/rdo.py
+app/routes/rdo_assinaturas.py
+```
+
+---
+
+##### Arquivos rastreáveis
+
+Serviço:
+
+```text
+app/services/arquivo_service.py
+```
+
+Implementações:
+
+- `hash_arquivo` (SHA-256)
+- `tamanho_bytes`
+- `mime_type`
+
+Endpoints:
+
+```text
+POST /arquivos/upload
+GET /arquivos/<int:arquivo_id>/download
+```
+
+Recursos:
+
+- scoping por empresa
+- provider `LOCAL`
+- download seguro
+- persistência em catálogo central
+
+Integração:
 
 ```python
 ArquivoService.save_local_file(...)
 ```
 
-- Arquivos enviados passam a ser registrados no catálogo central `arquivos`.
+Testes:
 
-- Testes adicionados em `tests/test_arquivos.py`, cobrindo:
-  - Criação rastreável de arquivos
-  - Persistência de metadados
-  - Download seguro via rota
+```text
+tests/test_arquivos.py
+```
 
-#### Resultado esperado
+Cobertura:
 
-- Uploads rastreáveis com metadados persistidos.
-- Download seguro utilizando provider `LOCAL`.
-- Catálogo centralizado de arquivos integrado ao módulo RDO.
-- Base preparada para expansão futura para novos providers (`S3`, `Azure Blob`, `MinIO`, etc.).
+- persistência de metadados
+- download seguro
+- rastreabilidade
 
 #### Branches
 
+- `feat/workflow-aprovacao`
+- `feat/notificacoes`
 - `feat/arquivos-documentos`
 
-### Marco 4.1 - Navegação por permissões (RBAC)
+#### Resultado esperado
 
-Status: concluído em 2026-05-13
+- Workflow configurável
+- RDO imutável após aprovação
+- Versionamento automático
+- Notificações operacionais
+- Upload rastreável
+- Download seguro
+- Catálogo centralizado de arquivos
 
-Verificação (2026-05-13):
+---
 
-- `app/templates/base.html` atualizado para o menu **“Cadastros”** renderizar itens com base em `session["permissions"]` (em vez de `session.user_role`).
-- Condicional por permissões principais (exemplos):
-  - `obra.manage` → Obras e Projetos
-  - `usuario.manage` → Usuários
-  - `mao_obra.view` → Mão de Obra
-  - `equipamento.view` → Equipamentos
-  - `clima.view` → Climas
-  - `tag_ocorrencia.view` → Tags de Ocorrências
-- Objetivo: garantir que a navegação acompanhe RBAC real (por permissão) e não apenas o papel nominal.
+### Marco 4 - Operação, qualidade e hardening
 
+**Status:** concluído em 2026-05-21
 
-Branches:
+#### Verificação (2026-05-21)
+
+##### Exportações e indicadores
+
+Implementado:
+
+- camada comum de exportação
+- exportação CSV
+- exportação XLSX
+- exportação PDF
+- exportação da visualização atual
+- exportação completa mantendo filtros
+- indicadores operacionais iniciais
+
+Indicadores:
+
+- produtividade
+- SLA
+- lead time
+- histórico operacional
+
+---
+
+##### Hardening Suite
+
+Commit:
+
+```text
+cb69a1e
+```
+
+Descrição:
+
+```text
+feat: hardening suite (auditoria/notificações/rbac/multiempresa)
+```
+
+Implementado:
+
+- fortalecimento da auditoria
+- reforço das notificações
+- ajustes de sessão e usuário
+- melhorias de segurança
+- melhorias em RBAC
+- expansão da cobertura de testes
+- testes de fluxo completo
+- validação de imutabilidade
+- inclusão de artefatos:
+
+```text
+uploads/testes/
+```
+
+- reorganização dos testes existentes
+
+#### Branches
 
 - `feat/exports-bi`
 - `test/hardening-suite`
 
-Resultado esperado:
+#### Resultado esperado
 
-- Exportacoes principais.
-- Indicadores iniciais.
-- Testes de seguranca e fluxo critico.
-- README atualizado.
+- Exportações principais
+- Indicadores operacionais
+- Cobertura de segurança
+- Cobertura de fluxos críticos
+- README atualizado
 
-# Contexto / Plano de Criação e Refatoração
+---
 
 ## Novo marco (Commit por features)
 
 ### 2026-05-21
-- **Commit:** `cb69a1e` — `feat: hardening suite (auditoria/notificações/rbac/multiempresa)`
-- **O que foi feito (resumo):**
-  - Fortalecimento de auditoria e notificações.
-  - Ajustes de sessão/usuário e rotas relacionadas a obras.
-  - Adequações de segurança/RBAC e cobertura de testes (incluindo fluxos completos e imutabilidade).
-  - Inclusão de artefatos de testes em `uploads/testes/` para suportar cenários de verificação.
-  - Remoção/renomeações de arquivos de teste previamente existentes conforme o novo suite.
 
----
+**Commit**
 
-> Observação: este arquivo foi criado automaticamente por não ter sido encontrado um registro prévio no caminho solicitado (`Contexto/ Plano de Criação Refatoração.md`).
+```text
+cb69a1e
+```
 
+**Descrição**
 
+```text
+feat: hardening suite (auditoria/notificações/rbac/multiempresa)
+```
+
+**Resumo**
+
+- Fortalecimento de auditoria
+- Ajustes de sessão e usuário
+- Melhorias de segurança
+- Expansão de testes automatizados
+- Inclusão de artefatos de validação
+- Reorganização do suite de testes
 
 ## Observacoes Importantes
 
