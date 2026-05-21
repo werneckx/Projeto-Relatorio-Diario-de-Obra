@@ -716,7 +716,8 @@
             <div class="h-meta">
                 Emissão: {{ rdo.criado | fmt_dt(obra_id=rdo.obra_id, fmt='%d/%m/%Y %H:%M') if rdo.criado else '—' }}
                 &nbsp;·&nbsp;
-                Modificado: {{ rdo.modificado | fmt_dt(obra_id=rdo.obra_id, fmt='%d/%m/%Y %H:%M') if rdo.modificado else '—' }}
+                Modificado: {{ rdo.modificado | fmt_dt(obra_id=rdo.obra_id, fmt='%d/%m/%Y %H:%M') if rdo.modificado else
+                '—' }}
             </div>
         </div>
         <div class="h-spacer"></div>
@@ -817,16 +818,6 @@
                     <span class="val">{{ rdo.frente_trabalho.nome_frente if rdo.frente_trabalho else 'Geral /
                         Administrativo' }}</span>
                 </td>
-                <td width="13%">
-                    <span class="lbl">Meta</span>
-                    <span class="val">{{ rdo.frente_trabalho.qtd_planejada if rdo.frente_trabalho else '0' }} {{
-                        rdo.frente_trabalho.unidade if rdo.frente_trabalho else '' }}</span>
-                </td>
-                <td width="15%">
-                    <span class="lbl">Realizado no dia</span>
-                    <span class="val">{{ rdo.qtd_produzida if rdo.qtd_produzida else '0.00' }} {{
-                        rdo.frente_trabalho.unidade if rdo.frente_trabalho else '' }}</span>
-                </td>
                 <td width="15%">
                     <span class="lbl">Clima Manhã</span>
                     <span class="val">{{ rdo.clima_manha_obj.nome if rdo.clima_manha_obj else '—' }}</span>
@@ -911,17 +902,15 @@
             <thead>
                 <tr>
                     <th style="width:3%">#</th>
-                    <th style="width:25%">Cargo / Função</th>
-                    <th style="width:5%" class="tc">P</th>
-                    <th style="width:5%" class="tc">T</th>
-                    <th style="width:5%" class="tc">TT</th>
-                    <th style="width:7%" class="tc">Tipo</th>
+                    <th style="width:25%">Nome</th>
+                    <th style="width:5%" class="tc">Função</th>
+                    <th style="width:5%" class="tc">Tipo</th>
+                    <th style="width:7%" class="tc">Qtd Horas</th>
                     <th class="mo-sep" style="width:3%">#</th>
-                    <th style="width:25%">Cargo / Função</th>
-                    <th style="width:5%" class="tc">P</th>
-                    <th style="width:5%" class="tc">T</th>
-                    <th style="width:5%" class="tc">TT</th>
-                    <th style="width:7%" class="tc">Tipo</th>
+                    <th style="width:25%">Nome</th>
+                    <th style="width:5%" class="tc">Função</th>
+                    <th style="width:5%" class="tc">Tipo</th>
+                    <th style="width:7%" class="tc">Qtd Horas</th>
                 </tr>
             </thead>
             <tbody>
@@ -1132,7 +1121,8 @@
 
                             {% if ass.criado %}
                             <div class="sig-meta">
-                                <div><strong>Data:</strong> {{ ass.criado | fmt_dt(obra_id=rdo.obra_id, fmt='%d/%m/%Y %H:%M') }}</div>
+                                <div><strong>Data:</strong> {{ ass.criado | fmt_dt(obra_id=rdo.obra_id, fmt='%d/%m/%Y
+                                    %H:%M') }}</div>
                                 <div><strong>IP:</strong> {{ ass.ip_endereco or '—' }}</div>
                                 {% if ass.latitude and ass.longitude %}
                                 <div><a href="https://www.google.com/maps?q={{ ass.latitude }},{{ ass.longitude }}"

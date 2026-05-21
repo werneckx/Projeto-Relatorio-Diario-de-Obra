@@ -104,3 +104,25 @@ def test_auth_service_revogar_sessao_marks_session_inactive(app):
         assert sessao.ativa is False
         assert sessao.motivo_encerramento == "teste remoto"
         assert AcessoLog.query.filter_by(acao='LOGOUT_REMOTO').count() == 1
+
+
+def test_delete_usuario_removes_sessoes(app):
+    with app.app_context():
+        usuario = create_admin_user()
+        sessao = SessaoUsuario(
+            empresa_id=usuario.empresa_id,
+            usuario_id=usuario.id,
+            token_hash="delete-token",
+            ip="127.0.0.1",
+            user_agent="pytest",
+            iniciada_em=datetime.utcnow(),
+            expira_em=datetime.utcnow() + timedelta(hours=1),
+            ativa=True,
+        )
+        db.session.add(sessao)
+        db.session.commit()
+
+        db.session.delete(usuario)
+        db.session.commit()
+
+        assert SessaoUsuario.query.filter_by(token_hash="delete-token").count() == 0

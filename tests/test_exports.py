@@ -1,4 +1,5 @@
 import pytest
+from datetime import date
 
 from app import db
 from app.models.rdo import RDO
@@ -16,12 +17,14 @@ def test_export_lista_rdo_csv_xlsx_pdf(client, app, db_session, usuario, obra, f
         obra_id=obra.id,
         frente_trabalho_id=frente_trabalho.id,
         numero_sequencial=1,
-        data_rdo="2025-01-01",
+        data_rdo=date(2025, 1, 1),
         status='APROVADO',
         criado_por=usuario.id,
         ativo=True,
     )
     db_session.add(rdo)
+    db_session.commit()
+    usuario.obras_permitidas = [obra]
     db_session.commit()
 
     _authenticate(client, usuario)
@@ -29,7 +32,8 @@ def test_export_lista_rdo_csv_xlsx_pdf(client, app, db_session, usuario, obra, f
     response = client.get('/auth/lista-rdo/export/csv')
     assert response.status_code == 200
     assert response.content_type.startswith('text/csv')
-    assert str(rdo.id).encode() in response.data
+    assert b'APROVADO' in response.data
+    assert obra.nome.encode() in response.data
 
     response = client.get('/auth/lista-rdo/export/xlsx')
     assert response.status_code == 200

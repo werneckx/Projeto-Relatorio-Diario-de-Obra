@@ -381,7 +381,6 @@
                 </thead>
                 <tbody class="divide-y divide-slate-100 bg-white">
                     {% for obra in opcoes %}
-                    {% set is_matriz = obra.id_matriz == None or obra.id_matriz == 0 %}
 
                     <!-- Cálculo de Progresso Simples (Média das Frentes) -->
                     {% set ns = namespace(total_pct=0, count=0) %}
@@ -411,11 +410,7 @@
                         <td data-export-key="nome" class="td-info px-6 py-4">
                             <!-- Nome -->
                             <div class="obra-nome flex items-center gap-2">
-                                {% if is_matriz %}
-                                <i class="fas fa-sitemap text-indigo-500 text-xs shrink-0" title="Matriz Principal"></i>
-                                {% else %}
-                                <i class="fas fa-building text-slate-400 text-xs shrink-0" title="Subsidiária"></i>
-                                {% endif %}
+                                <i class="fas fa-building text-slate-400 text-xs shrink-0" title="Obra"></i>
                                 <span class="font-bold">{{ obra.nome | truncate(30)}}</span>
                             </div>
 
@@ -451,23 +446,6 @@
                             {% endif %}
                             {% else %}
                             -
-                            {% endif %}
-                        </td>
-
-                        <!-- 4. Tipo / Matriz (Classe td-tipo) -->
-                        <td data-export-key="estado" class="td-tipo px-6 py-4 whitespace-nowrap">
-                            {% if is_matriz %}
-                            <span
-                                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
-                                Matriz
-                            </span>
-                            {% else %}
-                            <div class="flex flex-col md:items-start">
-                                <span
-                                    class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200 w-fit">
-                                    Subsidiária
-                                </span>
-                            </div>
                             {% endif %}
                         </td>
 

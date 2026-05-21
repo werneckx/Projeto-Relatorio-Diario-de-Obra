@@ -89,7 +89,11 @@ class ArquivoService:
 
         hash_arquivo = cls.compute_hash(raw_bytes)
         mime_type = cls.guess_mime_type(filename, content_type)
-        storage_path = os.path.join(subfolder or cls.DEFAULT_SUBFOLDER, nome_armazenado).replace("\\", "/")
+        storage_path_parts = [subfolder or cls.DEFAULT_SUBFOLDER]
+        if empresa_id is not None:
+            storage_path_parts.append(str(empresa_id))
+        storage_path_parts.append(nome_armazenado)
+        storage_path = os.path.join(*storage_path_parts).replace("\\", "/")
 
         arquivo = Arquivo(
             empresa_id=empresa_id,

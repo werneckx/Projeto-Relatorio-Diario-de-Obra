@@ -5,7 +5,11 @@ from app.utils.datetime_utils import utcnow_naive
 class AuditoriaLog(db.Model):
     __tablename__ = "auditoria_log"
 
-    id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    id = db.Column(
+        db.BigInteger().with_variant(db.Integer, "sqlite"),
+        primary_key=True,
+        autoincrement=True,
+    )
     empresa_id = db.Column(db.Integer, db.ForeignKey('empresa.id'), nullable=False, index=True)
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=True, index=True)
     colaborador_id = db.Column(db.Integer, db.ForeignKey('colaboradores.id'), nullable=True, index=True)

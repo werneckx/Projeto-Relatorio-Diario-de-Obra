@@ -145,6 +145,13 @@ class Usuario(db.Model, UserMixin):
     colaborador = db.relationship('Colaborador', backref='usuarios')
     empresa = db.relationship('Empresa', backref='usuarios')
     papeis = db.relationship('Papel', secondary='usuario_papel', backref=db.backref('usuarios', lazy='dynamic'))
+    sessoes = db.relationship(
+        'SessaoUsuario',
+        foreign_keys='SessaoUsuario.usuario_id',
+        back_populates='usuario',
+        cascade='all, delete-orphan',
+        passive_deletes=True,
+    )
     status = db.synonym("ativo")
     senha = db.synonym("senha_hash")
     data_cadastro = db.synonym("criado_em")
@@ -256,6 +263,12 @@ class Usuario(db.Model, UserMixin):
     def obras_permitidas(self, obras):
         from app.models.obra import ObraUsuario
 
+        if self.id is None:
+            self.obras_alocadas = []
+            return
+
+        # Remove existing assignments cleanly before reassigning.
+        db.session.query(ObraUsuario).filter_by(usuario_id=self.id).delete(synchronize_session=False)
         self.obras_alocadas = [
             ObraUsuario(
                 empresa_id=self.empresa_id,
