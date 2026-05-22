@@ -116,4 +116,21 @@ def create_app(config_overrides=None):
         # Se for apenas para redirecionar para o login, está correto.
         return redirect(url_for("auth.login"))
 
+    # Garantir que roles/permissões do sistema existam (idempotente)
+    try:
+        from sqlalchemy import inspect
+        with app.app_context():
+            # somente rodar o seed se a tabela de permissões existir (DB migrado)
+            if inspect(db.engine).has_table('permissoes'):
+                from app.routes.admin import seed_system_roles_and_permissions
+                try:
+                    seed_system_roles_and_permissions()
+                except Exception:
+                    app.logger.exception('Falha ao garantir roles/perms do sistema')
+            else:
+                app.logger.debug('Tabela permissoes ausente — pulando seed de roles/perms')
+    except Exception:
+        # Ambiente sem DB pronto — ignorar
+        app.logger.exception('Erro ao verificar existência de tabelas para seed')
+
     return app

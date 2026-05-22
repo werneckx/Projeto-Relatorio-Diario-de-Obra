@@ -186,6 +186,22 @@ def usuario(app, empresa, papel):
     db.session.add(usuario_papel)
     db.session.commit()
     yield usr
+    from app.models.usuario import UsuarioPapel
+    from app.models.arquivo import Arquivo
+    from app.models.sessao import SessaoUsuario, AcessoLog
+    from app.models.auditoria import AuditoriaLog
+
+    db.session.query(UsuarioPapel).filter(UsuarioPapel.usuario_id == usr.id).delete(synchronize_session=False)
+    db.session.query(Arquivo).filter(
+        (Arquivo.criado_por == usr.id) | (Arquivo.modificado_por == usr.id)
+    ).delete(synchronize_session=False)
+    db.session.query(SessaoUsuario).filter(
+        (SessaoUsuario.usuario_id == usr.id) | (SessaoUsuario.encerrada_por == usr.id)
+    ).delete(synchronize_session=False)
+    db.session.query(AcessoLog).filter(AcessoLog.usuario_id == usr.id).delete(synchronize_session=False)
+    db.session.query(AuditoriaLog).filter(AuditoriaLog.usuario_id == usr.id).delete(synchronize_session=False)
+    db.session.flush()
+    db.session.expire_all()
     db.session.delete(usr)
     db.session.commit()
 
@@ -213,6 +229,20 @@ def usuario2(app, empresa, papel):
     db.session.add(usuario_papel)
     db.session.commit()
     yield usr
+    from app.models.usuario import UsuarioPapel
+    from app.models.arquivo import Arquivo
+    from app.models.sessao import SessaoUsuario, AcessoLog
+    from app.models.auditoria import AuditoriaLog
+
+    db.session.query(UsuarioPapel).filter(UsuarioPapel.usuario_id == usr.id).delete(synchronize_session=False)
+    db.session.query(Arquivo).filter(
+        (Arquivo.criado_por == usr.id) | (Arquivo.modificado_por == usr.id)
+    ).delete(synchronize_session=False)
+    db.session.query(SessaoUsuario).filter(
+        (SessaoUsuario.usuario_id == usr.id) | (SessaoUsuario.encerrada_por == usr.id)
+    ).delete(synchronize_session=False)
+    db.session.query(AcessoLog).filter(AcessoLog.usuario_id == usr.id).delete(synchronize_session=False)
+    db.session.query(AuditoriaLog).filter(AuditoriaLog.usuario_id == usr.id).delete(synchronize_session=False)
     db.session.delete(usr)
     db.session.commit()
 
@@ -269,8 +299,28 @@ def cliente_empresa1(app, empresa1):
     """Cria um cliente para a empresa 1."""
     from app.models.cliente import Cliente
     cli = Cliente(
-        nome="Cliente Empresa 1",
+        razao_social="Cliente Empresa 1",
+        nome_fantasia="Cliente Empresa 1",
+        cnpj="12345678000199",
         empresa_id=empresa1.id,
+        ativo=True,
+    )
+    db.session.add(cli)
+    db.session.commit()
+    yield cli
+    db.session.delete(cli)
+    db.session.commit()
+
+
+@pytest.fixture
+def cliente_empresa2(app, empresa2):
+    """Cria um cliente para a empresa 2."""
+    from app.models.cliente import Cliente
+    cli = Cliente(
+        razao_social="Cliente Empresa 2",
+        nome_fantasia="Cliente Empresa 2",
+        cnpj="98765432000199",
+        empresa_id=empresa2.id,
         ativo=True,
     )
     db.session.add(cli)
@@ -343,14 +393,14 @@ def usuario_empresa2(app, empresa2):
 
 
 @pytest.fixture
-def obra_empresa1(app, empresa1, usuario_empresa1):
+def obra_empresa1(app, empresa1, usuario_empresa1, cliente_empresa1):
     """Cria obra para empresa 1."""
     obr = Obra(
         nome="Obra Empresa 1",
         empresa_id=empresa1.id,
         status=1,
         criado_por=usuario_empresa1.id,
-        cliente_id=0,
+        cliente_id=cliente_empresa1.id,
     )
     db.session.add(obr)
     db.session.commit()
@@ -361,14 +411,14 @@ def obra_empresa1(app, empresa1, usuario_empresa1):
 
 
 @pytest.fixture
-def obra_empresa2(app, empresa2, usuario_empresa2):
+def obra_empresa2(app, empresa2, usuario_empresa2, cliente_empresa2):
     """Cria obra para empresa 2."""
     obr = Obra(
         nome="Obra Empresa 2",
         empresa_id=empresa2.id,
         status=1,
         criado_por=usuario_empresa2.id,
-        cliente_id=0,
+        cliente_id=cliente_empresa2.id,
     )
     db.session.add(obr)
     db.session.commit()
@@ -431,14 +481,32 @@ def rdo_empresa2(app, empresa2, obra_empresa2):
 
 
 @pytest.fixture
-def obra(app, empresa, usuario):
+def cliente(app, empresa):
+    """Cria um cliente base para testes (empresa padrão)."""
+    from app.models.cliente import Cliente
+    cli = Cliente(
+        razao_social="Cliente Teste",
+        nome_fantasia="Cliente Teste",
+        cnpj="12345678000199",
+        empresa_id=empresa.id,
+        ativo=True,
+    )
+    db.session.add(cli)
+    db.session.commit()
+    yield cli
+    db.session.delete(cli)
+    db.session.commit()
+
+
+@pytest.fixture
+def obra(app, empresa, usuario, cliente):
     """Cria uma obra para testes."""
     obr = Obra(
         nome="Obra Teste",
         empresa_id=empresa.id,
         status=1,
         criado_por=usuario.id,
-        cliente_id=0,
+        cliente_id=cliente.id,
     )
     db.session.add(obr)
     db.session.commit()

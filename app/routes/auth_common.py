@@ -110,6 +110,8 @@ def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         if "user_id" not in session:
+            if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return jsonify({'ok': False, 'error': 'Você precisa estar logado para acessar esta página.'}), 401
             flash("Você precisa estar logado para acessar esta página.", "warning")
             return redirect(url_for("auth.login"))
         return f(*args, **kwargs)
@@ -179,6 +181,8 @@ def permission_required(chave: str):
 
             user = get_current_user()
             if not user or not user.ativo:
+                if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                    return jsonify({'ok': False, 'error': 'Sessão inválida.'}), 403
                 flash("Sessão inválida.", "danger")
                 return redirect(url_for('auth.inicio'))
 
@@ -200,6 +204,8 @@ def permission_required(chave: str):
 
             # Se não existe permissão no banco para essa chave (global ou empresa), bloqueia por segurança.
             if not perm_global and not perm_empresa:
+                if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                    return jsonify({'ok': False, 'error': 'Permissão não configurada para esta ação.'}), 403
                 flash("Permissão não configurada para esta ação.", "danger")
                 return redirect(url_for('auth.inicio'))
 
@@ -244,6 +250,8 @@ def permission_required(chave: str):
                 if has_empresa:
                     return f(*args, **kwargs)
 
+            if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return jsonify({'ok': False, 'error': 'Você não tem permissão para executar esta ação.'}), 403
             flash("Você não tem permissão para executar esta ação.", "danger")
             return redirect(url_for('auth.inicio'))
         return decorated_function

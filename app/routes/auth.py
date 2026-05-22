@@ -252,29 +252,32 @@ def logout():
         from app.services.auditoria_service import AuditoriaService
 
         if current_session_uuid:
+            # Captura os dados da sessão ANTES de revogar, para não depender
+            # do estado/remoção da SessaoUsuario depois do logout.
+            sessao = (
+                SessaoUsuario.query.filter(
+                    SessaoUsuario.token_hash == current_session_uuid
+                ).first()
+            )
+
+            empresa_id = sessao.empresa_id if sessao else None
+            usuario_id = sessao.usuario_id if sessao else None
+
             # encerra via serviço (operação transacional; não faz commit internamente)
             AuthService.revogar_sessao(current_session_uuid, motivo="logout")
 
             # registra AcessoLog LOGOUT (opcional; trilha operacional)
-            try:
-                sessao = (
-                    SessaoUsuario.query.filter(
-                        SessaoUsuario.token_hash == current_session_uuid
-                    ).first()
+            if usuario_id is not None and empresa_id is not None:
+                acesso = AcessoLog(
+                    empresa_id=empresa_id,
+                    usuario_id=usuario_id,
+                    email=None,
+                    acao='LOGOUT',
+                    ip=None,
+                    user_agent=None,
+                    detalhes={"motivo": "logout"},
                 )
-                if sessao:
-                    acesso = AcessoLog(
-                        empresa_id=sessao.empresa_id,
-                        usuario_id=sessao.usuario_id,
-                        email=None,
-                        acao='LOGOUT',
-                        ip=None,
-                        user_agent=None,
-                        detalhes={"motivo": "logout"},
-                    )
-                    db.session.add(acesso)
-            except Exception:
-                pass
+                db.session.add(acesso)
 
             try:
                 db.session.commit()

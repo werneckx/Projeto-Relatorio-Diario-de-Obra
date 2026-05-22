@@ -27,5 +27,21 @@ class Cliente(db.Model):
     empresa = db.relationship('Empresa', backref='clientes')
     obras = db.relationship("Obra", back_populates="cliente")
 
+    def __init__(self, *args, **kwargs):
+        """
+        Compatibilidade retroativa para chamadas que ainda usam `nome=...`.
+
+        Alguns testes/camadas antigas podem instanciar:
+            Cliente(nome="X", ...)
+        enquanto o model atual espera:
+            Cliente(razao_social="X", ...)
+
+        Esta adaptação mantém a estrutura do banco intacta.
+        """
+        nome = kwargs.pop("nome", None)
+        if nome and "razao_social" not in kwargs:
+            kwargs["razao_social"] = nome
+        super().__init__(*args, **kwargs)
+
     def __repr__(self):
         return f'<Cliente {self.id}: {self.razao_social}>'

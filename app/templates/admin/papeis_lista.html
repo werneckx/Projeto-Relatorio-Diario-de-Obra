@@ -16,14 +16,20 @@
     <div class="table-wrapper">
         <table>
             <thead>
-                <tr><th>Nome</th><th>Descrição</th><th>Status</th></tr>
+                <tr>
+                    <th>Nome</th>
+                    <th>Descrição</th>
+                    <th>Status</th>
+                </tr>
             </thead>
             <tbody>
                 {% for p in papeis_globais %}
                 <tr>
                     <td>{{ p.nome }}</td>
                     <td>{{ p.descricao }}</td>
-                    <td>{% if p.is_system %}<span class="badge badge-muted">Sistema</span>{% else %}{% if p.ativo %}<span class="badge badge-success">Ativo</span>{% else %}<span class="badge badge-danger">Inativo</span>{% endif %}{% endif %}</td>
+                    <td>{% if p.is_system %}<span class="badge badge-muted">Sistema</span>{% else %}{% if p.ativo
+                        %}<span class="badge badge-success">Ativo</span>{% else %}<span
+                            class="badge badge-danger">Inativo</span>{% endif %}{% endif %}</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -34,14 +40,19 @@
     <div class="table-wrapper">
         <table>
             <thead>
-                <tr><th>Nome</th><th>Descrição</th><th>Status</th></tr>
+                <tr>
+                    <th>Nome</th>
+                    <th>Descrição</th>
+                    <th>Status</th>
+                </tr>
             </thead>
             <tbody>
                 {% for p in papeis_empresa %}
                 <tr>
                     <td>{{ p.nome }}</td>
                     <td>{{ p.descricao }}</td>
-                    <td>{% if p.ativo %}<span class="badge badge-success">Ativo</span>{% else %}<span class="badge badge-danger">Inativo</span>{% endif %}</td>
+                    <td>{% if p.ativo %}<span class="badge badge-success">Ativo</span>{% else %}<span
+                            class="badge badge-danger">Inativo</span>{% endif %}</td>
                 </tr>
                 {% endfor %}
             </tbody>

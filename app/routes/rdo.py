@@ -96,6 +96,7 @@ def criar_rdo():
 
 @auth_bp.get("/api/obra/<int:id>")
 @login_required
+@permission_required('rdo.view')
 def get_obra_api(id):
     # SECURITY: Escopo por empresa
     empresa_id = session.get("empresa_id")
@@ -136,6 +137,7 @@ def get_obra_api(id):
 
 @auth_bp.get("/api/obra/<int:id>/clima")
 @login_required
+@permission_required('rdo.view')
 def get_obra_clima_api(id):
     empresa_id = session.get("empresa_id")
     scope_ids = get_user_scope_ids()
@@ -163,6 +165,7 @@ def get_obra_clima_api(id):
 
 @auth_bp.get("/api/frente/<int:id>")
 @login_required
+@permission_required('rdo.view')
 def get_frente_api(id):
     # SECURITY: Validação básica + escopo por empresa
     empresa_id = session.get("empresa_id")
@@ -545,6 +548,7 @@ def gerar_rdo():
     
 @auth_bp.get("/visualizar-rdo/<int:rdo_id>")
 @login_required
+@permission_required('rdo.view')
 def visualizar_rdo(rdo_id):
     empresa_id = session.get("empresa_id")
     item = RDO.query.filter_by(id=rdo_id, empresa_id=empresa_id, ativo=True).first_or_404()
@@ -704,6 +708,7 @@ def excluir_rdo(rdo_id):
 
 @auth_bp.get("/lista-rdo")
 @login_required
+@permission_required('rdo.view')
 def lista_rdo():
     empresa_id = session.get("empresa_id")
     current_user_id = session.get("user_id")
@@ -740,6 +745,7 @@ def lista_rdo():
 
 @auth_bp.get('/lista-rdo/export/<string:export_format>')
 @login_required
+@permission_required('rdo.view')
 def export_lista_rdo(export_format):
     empresa_id = session.get("empresa_id")
     current_user_id = session.get("user_id")

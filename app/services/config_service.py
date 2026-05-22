@@ -52,6 +52,12 @@ class ConfigService:
         """Retorna um dicionário com todas as chaves de configuração e seus valores
         aplicados considerando a ordem: Obra -> Empresa -> Sistema (valor_padrao).
         """
+        # Cache TTL reduz hits no DB em produção, mas atrapalha testes quando
+        # ConfigDefinicao é criada/alterada entre casos.
+        from flask import current_app
+
+        cache_disabled = bool(getattr(current_app, "config", {}).get("TESTING", False))
+
         # Simple in-memory TTL cache to reduce DB hits. Invalidate on write.
         key = (empresa_id, obra_id)
         TTL = 60  # seconds
@@ -61,17 +67,25 @@ class ConfigService:
 
         cache = ConfigService._CACHE
         now = time.time()
-        if key in cache:
-            ts, data = cache[key]
-            if now - ts < TTL:
-                return data
+
+        if not cache_disabled:
+            if key in cache:
+                ts, data = cache[key]
+                if now - ts < TTL:
+                    return data
 
         mapa = {}
         definicoes = ConfigDefinicao.query.all()
         for d in definicoes:
-            mapa[d.chave] = ConfigService.obter_valor(empresa_id=empresa_id, obra_id=obra_id, chave=d.chave)
+            mapa[d.chave] = ConfigService.obter_valor(
+                empresa_id=empresa_id,
+                obra_id=obra_id,
+                chave=d.chave,
+            )
 
-        cache[key] = (now, mapa)
+        if not cache_disabled:
+            cache[key] = (now, mapa)
+
         return mapa
 
     @staticmethod

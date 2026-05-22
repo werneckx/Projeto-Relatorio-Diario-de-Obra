@@ -10,7 +10,44 @@ def test_list_and_edit_empresa_config(client, app, db_session, empresa, usuario)
     db_session.add(defin)
     db_session.commit()
 
-    # Garante permissão 'config.manage' para o papel do usuário
+    # Garante permissões necessárias para o papel do usuário
+    from app.models.usuario import Permissao, PapelPermissao
+    papel = usuario.papeis[0]
+    perm_config = Permissao(empresa_id=empresa.id, chave='config.manage', descricao='Gerenciar configs', is_system=False, ativo=True)
+    perm_empresa = Permissao(empresa_id=empresa.id, chave='empresa.manage', descricao='Gerenciar empresa', is_system=False, ativo=True)
+    db_session.add_all([perm_config, perm_empresa])
+    db_session.flush()
+    db_session.add(PapelPermissao(empresa_id=empresa.id, papel_id=papel.id, permissao_id=perm_config.id, ativo=True))
+    db_session.add(PapelPermissao(empresa_id=empresa.id, papel_id=papel.id, permissao_id=perm_empresa.id, ativo=True))
+    db_session.commit()
+
+    # Simula sessão de usuário logado
+    with client.session_transaction() as sess:
+        sess['user_id'] = usuario.id
+        sess['empresa_id'] = empresa.id
+
+    # GET lista via UI de empresa
+    resp = client.get('/auth/empresa')
+    assert resp.status_code == 200
+    assert b'test.boolean' in resp.data
+
+    # Save via AJAX API
+    resp = client.post('/auth/empresa/api_config', json={'chave': defin.chave, 'valor': 'true'})
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data['ok'] is True
+
+    # Valor aplicado
+    with app.app_context():
+        val = ConfigService.obter_valor(empresa_id=empresa.id, chave=defin.chave)
+        assert val is True
+
+
+def test_api_update_empresa_config(client, app, db_session, empresa, usuario):
+    defin = ConfigDefinicao(chave='test.api', descricao='Teste API', tipo='STRING', valor_padrao='default')
+    db_session.add(defin)
+    db_session.commit()
+
     from app.models.usuario import Permissao, PapelPermissao
     papel = usuario.papeis[0]
     perm = Permissao(empresa_id=empresa.id, chave='config.manage', descricao='Gerenciar configs', is_system=False, ativo=True)
@@ -19,23 +56,57 @@ def test_list_and_edit_empresa_config(client, app, db_session, empresa, usuario)
     db_session.add(PapelPermissao(empresa_id=empresa.id, papel_id=papel.id, permissao_id=perm.id, ativo=True))
     db_session.commit()
 
-    # Simula sessão de usuário logado
     with client.session_transaction() as sess:
         sess['user_id'] = usuario.id
         sess['empresa_id'] = empresa.id
 
-    # GET lista
+    resp = client.post('/auth/empresa/api_config', json={'chave': defin.chave, 'valor': 'abc'})
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data['ok'] is True
+    assert data['valor'] == 'abc'
+
+    with app.app_context():
+        assert ConfigService.obter_valor(empresa_id=empresa.id, chave=defin.chave) == 'abc'
+
+
+def test_admin_blueprint_access_with_global_admin_role(client, db_session, empresa, usuario):
+    from app.models.usuario import Papel, Permissao, PapelPermissao, UsuarioPapel
+
+    papel_global = Papel(nome='ADMIN', empresa_id=None, ativo=True, is_system=True)
+    db_session.add(papel_global)
+    db_session.flush()
+
+    perm = Permissao(
+        empresa_id=None,
+        chave='config.manage',
+        descricao='Gerenciar configs',
+        is_system=True,
+        ativo=True,
+    )
+    db_session.add(perm)
+    db_session.flush()
+
+    db_session.add(PapelPermissao(
+        empresa_id=None,
+        papel_id=papel_global.id,
+        permissao_id=perm.id,
+        ativo=True,
+    ))
+    db_session.add(UsuarioPapel(
+        empresa_id=empresa.id,
+        usuario_id=usuario.id,
+        papel_id=papel_global.id,
+        ativo=True,
+    ))
+    db_session.commit()
+
+    with client.session_transaction() as sess:
+        sess['user_id'] = usuario.id
+        sess['empresa_id'] = empresa.id
+
     resp = client.get('/admin/configuracoes')
     assert resp.status_code == 200
-    assert b'test.boolean' in resp.data
-
-    # POST editar
-    resp = client.post(f'/admin/configuracoes/{defin.chave}/editar', data={'valor': 'true'}, follow_redirects=True)
-    assert resp.status_code == 200
-    # Valor aplicado
-    with app.app_context():
-        val = ConfigService.obter_valor(empresa_id=empresa.id, chave=defin.chave)
-        assert val is True
 
 
 def test_edit_obra_config(client, app, db_session, empresa1, usuario_empresa1):
@@ -54,12 +125,18 @@ def test_edit_obra_config(client, app, db_session, empresa1, usuario_empresa1):
     db_session.commit()
 
     # Garante permissão
-    from app.models.usuario import Permissao, PapelPermissao
+    from app.models.usuario import Papel, Permissao, PapelPermissao, UsuarioPapel
     papel = usuario_empresa1.papeis[0]
     perm = Permissao(empresa_id=empresa1.id, chave='config.manage', descricao='Gerenciar configs', is_system=False, ativo=True)
     db_session.add(perm)
     db_session.flush()
     db_session.add(PapelPermissao(empresa_id=empresa1.id, papel_id=papel.id, permissao_id=perm.id, ativo=True))
+
+    # Cria role global do tipo ADMIN para permitir acesso ao blueprint /admin
+    papel_global = Papel(nome='ADMIN', empresa_id=None, ativo=True, is_system=True)
+    db_session.add(papel_global)
+    db_session.flush()
+    db_session.add(UsuarioPapel(empresa_id=empresa1.id, usuario_id=usuario_empresa1.id, papel_id=papel_global.id, ativo=True))
     db_session.commit()
 
     with client.session_transaction() as sess:
