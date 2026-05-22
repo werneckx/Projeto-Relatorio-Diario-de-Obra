@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2>Upload de lote de planilhas</h2>
+  <p>Selecione vários arquivos <strong>.xlsx</strong> ou um diretório contendo planilhas para processar em lote.</p>
+
+  <form method="post" action="{{ url_for('auth.upload_arquivos_batch') }}" enctype="multipart/form-data">
+    <div class="form-group">
+      <label for="files">Arquivos</label>
+      <input id="files" name="files" type="file" multiple webkitdirectory directory accept=".xlsx" class="form-control-file" />
+    </div>
+
+    <button type="submit" class="btn btn-primary mt-3">Enviar lote</button>
+  </form>
+
+  <div class="alert alert-info mt-4">
+    Observação: apenas arquivos XLSX válidos serão processados. O resultado será retornado em JSON.
+  </div>
+</div>
+{% endblock %}
