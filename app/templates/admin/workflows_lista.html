@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Workflows{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="flex justify-between items-center mb-4">
+        <h1 class="text-2xl font-bold">Workflows</h1>
+        <a href="{{ url_for('admin.novo_workflow') }}" class="btn btn-primary">Novo Workflow</a>
+    </div>
+
+    <div class="space-y-3">
+        {% for w in workflows %}
+        <div class="bg-white p-4 rounded border flex justify-between items-center">
+            <div>
+                <div class="font-semibold">{{ w.nome }}</div>
+                <div class="text-sm text-slate-500">{{ w.descricao }}</div>
+                <div class="text-xs text-slate-400 mt-1">Obra: {{ w.obra.nome if w.obra else 'Empresa' }}</div>
+            </div>
+            <div class="flex items-center gap-2">
+                <a href="{{ url_for('admin.editar_workflow', workflow_id=w.id) }}" class="btn btn-sm btn-primary">Editar</a>
+                <form action="{{ url_for('admin.excluir_workflow', workflow_id=w.id) }}" method="POST" onsubmit="return confirm('Confirma desativar este workflow?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-sm btn-danger">Desativar</button>
+                </form>
+            </div>
+        </div>
+        {% else %}
+        <div class="text-sm text-slate-500">Nenhum workflow configurado para esta empresa.</div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
