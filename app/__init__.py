@@ -1,4 +1,4 @@
-from flask import Flask, redirect, url_for, current_app
+from flask import Flask, redirect, url_for, current_app, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_migrate import Migrate
@@ -91,6 +91,21 @@ def create_app(config_overrides=None):
     
     # Excluir rota de login do CSRF para facilitar testes
     csrf.exempt(auth_bp)
+
+    # Injetar configurações resolvidas em runtime para templates e views
+    from app.services.config_service import ConfigService
+
+    @app.context_processor
+    def inject_config():
+        empresa_id = session.get('empresa_id')
+        obra_id = session.get('obra_id')
+        if not empresa_id:
+            return {'config': {}}
+        try:
+            mapa = ConfigService.obter_mapa_config(empresa_id=empresa_id, obra_id=obra_id)
+        except Exception:
+            mapa = {}
+        return {'config': mapa}
     
     # ---------------------------
     # Redirecionamento da raiz
@@ -100,5 +115,22 @@ def create_app(config_overrides=None):
         # Boa prática: Use 'index' ou 'dashboard' aqui, se o login for bem-sucedido
         # Se for apenas para redirecionar para o login, está correto.
         return redirect(url_for("auth.login"))
+
+    # Garantir que roles/permissões do sistema existam (idempotente)
+    try:
+        from sqlalchemy import inspect
+        with app.app_context():
+            # somente rodar o seed se a tabela de permissões existir (DB migrado)
+            if inspect(db.engine).has_table('permissoes'):
+                from app.routes.admin import seed_system_roles_and_permissions
+                try:
+                    seed_system_roles_and_permissions()
+                except Exception:
+                    app.logger.exception('Falha ao garantir roles/perms do sistema')
+            else:
+                app.logger.debug('Tabela permissoes ausente — pulando seed de roles/perms')
+    except Exception:
+        # Ambiente sem DB pronto — ignorar
+        app.logger.exception('Erro ao verificar existência de tabelas para seed')
 
     return app

@@ -1,0 +1,25 @@
+{% extends 'admin/base.html' %}
+
+{% block title %}Editar Configuração{% endblock %}
+{% block page_title %}Editar Configuração{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h3>{{ definicao.chave }}</h3>
+    <p style="color:var(--text-muted);">{{ definicao.descricao }}</p>
+
+    <form method="post">
+        <div class="form-grid single">
+            <div class="form-group">
+                <label>Valor</label>
+                <input name="valor" value="{{ valor }}">
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <a href="{{ url_for('admin.listar_configuracoes') }}" class="btn btn-secondary">Cancelar</a>
+            <button class="btn btn-primary" type="submit">Salvar</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

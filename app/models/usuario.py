@@ -1,5 +1,6 @@
 from datetime import datetime
 from app import db, login_manager
+from sqlalchemy import or_, select
 from sqlalchemy.orm import validates
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -287,16 +288,57 @@ class Usuario(db.Model, UserMixin):
             return self.papeis[0].nome
         return None
 
+    @property
+    def is_system(self):
+        """Usuário é considerado system quando possui ao menos um papel global ativo."""
+        return any(
+            papel is not None and papel.ativo and papel.empresa_id is None
+            for papel in (self.papeis or [])
+        )
+
     def tem_permissao(self, chave: str) -> bool:
         """
         Verifica se o usuário possui uma determinada permissão.
-        Busca nos papéis atribuídos ao usuário, incluindo papéis globais (is_system).
+        Busca nos papéis atribuídos ao usuário, incluindo papéis globais (is_system)
+        e respeitando escopo por empresa.
         """
-        for papel in self.papeis:
-            for perm in papel.permissoes:
-                if perm.chave == chave and perm.ativo:
-                    return True
-        return False
+        if not self.id:
+            return False
+
+        empresa_id = self.empresa_id
+        permissao_ids = (
+            select(Permissao.id)
+            .where(
+                Permissao.chave == chave,
+                Permissao.ativo.is_(True),
+                or_(
+                    Permissao.empresa_id.is_(None),
+                    Permissao.empresa_id == empresa_id,
+                ),
+            )
+            .scalar_subquery()
+        )
+
+        papel_ids = (
+            select(UsuarioPapel.papel_id)
+            .where(
+                UsuarioPapel.usuario_id == self.id,
+                UsuarioPapel.ativo.is_(True),
+            )
+            .scalar_subquery()
+        )
+
+        has_perm = db.session.query(PapelPermissao).filter(
+            PapelPermissao.papel_id.in_(papel_ids),
+            PapelPermissao.permissao_id.in_(permissao_ids),
+            PapelPermissao.ativo.is_(True),
+            or_(
+                PapelPermissao.empresa_id.is_(None),
+                PapelPermissao.empresa_id == empresa_id,
+            ),
+        ).first()
+
+        return bool(has_perm)
 
     def __repr__(self):
         return f'<Usuario {self.email}>'

@@ -1,4 +1,5 @@
 import io
+from openpyxl import Workbook
 from werkzeug.datastructures import FileStorage
 from app.models.arquivo import Arquivo
 from app.services.arquivo_service import ArquivoService
@@ -78,3 +79,46 @@ def test_download_arquivo_route_returns_file(client, app, db_session, empresa, u
     assert response.headers["Content-Disposition"].startswith("attachment;")
     assert "download.txt" in response.headers["Content-Disposition"]
     assert response.headers["Content-Type"].startswith("text/plain")
+
+
+def _build_excel_file(content_rows, filename="teste.xlsx"):
+    workbook = Workbook()
+    sheet = workbook.active
+    for row in content_rows:
+        sheet.append(row)
+
+    buffer = io.BytesIO()
+    workbook.save(buffer)
+    buffer.seek(0)
+    return FileStorage(
+        stream=io.BytesIO(buffer.getvalue()),
+        filename=filename,
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
+
+def test_upload_batch_route_processes_multiple_xlsx_files(client, app, empresa, usuario):
+    login_resp = client.post(
+        "/auth/login",
+        data={"email": usuario.email, "senha": "senha123"},
+        follow_redirects=False,
+    )
+    assert login_resp.status_code == 302
+
+    file1 = _build_excel_file([("Coluna1", "Coluna2"), (1, 2)], filename="planilha1.xlsx")
+    file2 = _build_excel_file([("A", "B"), (3, 4)], filename="planilha2.xlsx")
+
+    response = client.post(
+        "/auth/arquivos/upload/batch",
+        data={"files": [file1, file2]},
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["arquivos_processados"] == 2
+    assert payload["sucesso"] == 2
+    assert payload["falhas"] == 0
+    assert len(payload["detalhes"]) == 2
+    assert payload["detalhes"][0]["sucesso"] is True
+    assert payload["detalhes"][1]["sucesso"] is True

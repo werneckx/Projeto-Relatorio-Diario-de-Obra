@@ -360,6 +360,7 @@ CREATE TABLE usuarios (
     colaborador_id INT,
     email VARCHAR(150) NOT NULL,
     senha_hash VARCHAR(255) NOT NULL,
+    is_system BOOLEAN DEFAULT FALSE,
     ativo BOOLEAN DEFAULT TRUE,
     ultimo_login DATETIME,
     ultimo_login_ip VARCHAR(45),
@@ -971,18 +972,23 @@ INSERT INTO colaboradores (id, empresa_id, cliente_id, tipo, nome) VALUES
 (6, 1, 1, 'CLIENTE', 'Supervisor Bella Vista (Cliente)');
 
 -- 5. Inserir Usuários (Acesso ao Sistema)
--- Senha padrão para demo: 'password123' (hash simplificado para exemplo)
-INSERT INTO usuarios (id, empresa_id, colaborador_id, email, senha_hash) VALUES
-(1, 1, 1, 'gestor@horizonte.com.br', 'scrypt:32768:8:1$NMXQmJ4GCOJVmNoe$c62100d1b8d581dddc096ec887df55f1a716ab08c8cbd8f6ff16eae875822597681b6b29e4633ef098f281d3b7ab47c7b8540be065efe25605c1ac82a441dbf8'),
-(2, 1, 3, 'operador@horizonte.com.br', 'scrypt:32768:8:1$NMXQmJ4GCOJVmNoe$c62100d1b8d581dddc096ec887df55f1a716ab08c8cbd8f6ff16eae875822597681b6b29e4633ef098f281d3b7ab47c7b8540be065efe25605c1ac82a441dbf8'),
-(3, 1, 6, 'supervisor@bellavista.com.br', 'scrypt:32768:8:1$NMXQmJ4GCOJVmNoe$c62100d1b8d581dddc096ec887df55f1a716ab08c8cbd8f6ff16eae875822597681b6b29e4633ef098f281d3b7ab47c7b8540be065efe25605c1ac82a441dbf8');
+-- Senha padrão para demo: 'admin' (hash simplificado para exemplo)
+-- Ajuste de IDs para criar ADMIN MASTER com id=1
+-- antes: 1=gestor(ADMIN), 2=operador, 3=supervisor
+-- agora: 1=admin master, 2=ex-usuario 1, 3=ex-usuario 2, 4=ex-usuario 3
+INSERT INTO usuarios (id, empresa_id, colaborador_id, email, senha_hash, is_system) VALUES
+(1, 2, 1, 'admin@nosde.com.br', 'scrypt:32768:8:1$NMXQmJ4GCOJVmNoe$c62100d1b8d581dddc096ec887df55f1a716ab08c8cbd8f6ff16eae875822597681b6b29e4633ef098f281d3b7ab47c7b8540be065efe25605c1ac82a441dbf8', TRUE), -- ADMIN MASTER (Acesso Total, sem vínculo com empresa específica)
+(2, 1, 3, 'operador@horizonte.com.br', 'scrypt:32768:8:1$NMXQmJ4GCOJVmNoe$c62100d1b8d581dddc096ec887df55f1a716ab08c8cbd8f6ff16eae875822597681b6b29e4633ef098f281d3b7ab47c7b8540be065efe25605c1ac82a441dbf8', FALSE),
+(3, 1, 6, 'supervisor@bellavista.com.br', 'scrypt:32768:8:1$NMXQmJ4GCOJVmNoe$c62100d1b8d581dddc096ec887df55f1a716ab08c8cbd8f6ff16eae875822597681b6b29e4633ef098f281d3b7ab47c7b8540be065efe25605c1ac82a441dbf8', FALSE),
+(4, 1, 1, 'gestor@horizonte.com.br', 'scrypt:32768:8:1$NMXQmJ4GCOJVmNoe$c62100d1b8d581dddc096ec887df55f1a716ab08c8cbd8f6ff16eae875822597681b6b29e4633ef098f281d3b7ab47c7b8540be065efe25605c1ac82a441dbf8', FALSE);
 
 -- 6. Atribuir Papéis aos Usuários
--- Assumindo IDs do script original: 1=ADMIN, 2=GESTOR, 3=OPERADOR
+-- Após ajuste: 1=ADMIN MASTER, 2=ex-usuario 1, 3=ex-usuario 2
 INSERT INTO usuario_papel (empresa_id, usuario_id, papel_id) VALUES
-(1, 1, 1), -- Ricardo é ADMIN (Acesso Total)
-(1, 2, 3), -- Ana é OPERADOR
-(1, 3, 3); -- Supervisor do Cliente com papel OPERADOR (ou um novo papelStakeholder)
+(1, 1, 1), -- admin.master é ADMIN (Acesso Total)
+(1, 2, 3), -- operador
+(1, 3, 3), -- supervisor
+(1, 4, 3); -- gestor legado vira operador (mantém FKs do seed)
 
 -- 7. Inserir Obras
 INSERT INTO obras (id, empresa_id, nome, data_inicio, data_fim_planejada, tipo_obra_id, usuario_responsavel_id, cliente_id, cidade, estado, hora_entrada_padrao, hora_saida_padrao) VALUES

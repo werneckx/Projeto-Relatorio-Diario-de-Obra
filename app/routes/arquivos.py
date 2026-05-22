@@ -1,6 +1,7 @@
 import os
 from app.routes.auth_common import *
 from app.services.arquivo_service import ArquivoService
+from app.services.excel_batch_service import ExcelBatchService
 from app.models.arquivo import Arquivo
 
 
@@ -43,6 +44,28 @@ def upload_arquivo():
         flash(f"Falha ao salvar arquivo: {str(exc)}", "danger")
 
     return redirect(request.referrer or url_for("auth.inicio"))
+
+
+@auth_bp.get("/arquivos/upload/batch")
+@login_required
+def upload_arquivos_batch_form():
+    return render_template("arquivos/upload_batch.html")
+
+
+@auth_bp.post("/arquivos/upload/batch")
+@login_required
+def upload_arquivos_batch():
+    arquivos = request.files.getlist("files")
+    if not arquivos:
+        return jsonify({"success": False, "message": "Nenhum arquivo enviado."}), 400
+
+    empresa_id = session.get("empresa_id")
+    usuario_id = session.get("user_id")
+    if empresa_id is None or usuario_id is None:
+        return jsonify({"success": False, "message": "Usuário ou empresa não identificados."}), 400
+
+    resultado = ExcelBatchService.process_batch(arquivos, empresa_id, usuario_id)
+    return jsonify(resultado), 200
 
 
 @auth_bp.get("/arquivos/<int:arquivo_id>/download")

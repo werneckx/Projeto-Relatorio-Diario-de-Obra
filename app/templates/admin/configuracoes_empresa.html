@@ -1,0 +1,44 @@
+{% extends 'admin/base.html' %}
+
+{% block title %}Configurações da Empresa{% endblock %}
+{% block page_title %}Configurações da Empresa{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="page-header">
+        <div>
+            <h2>Configurações</h2>
+            <p>Edite as definições aplicadas à sua empresa.</p>
+        </div>
+        <div>
+            <a href="{{ url_for('admin.listar_empresas') }}" class="btn btn-secondary">Voltar</a>
+        </div>
+    </div>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Chave</th>
+                    <th>Descrição</th>
+                    <th>Valor Atual</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in definicoes %}
+                <tr>
+                    <td>{{ d.chave }}</td>
+                    <td>{{ d.descricao or '-' }}</td>
+                    <td>{{ valores.get(d.chave) }}</td>
+                    <td style="text-align:right;">
+                        <a class="btn btn-sm btn-primary"
+                            href="{{ url_for('admin.editar_configuracao', chave=d.chave) }}">Editar</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

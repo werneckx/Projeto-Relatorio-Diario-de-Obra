@@ -753,11 +753,13 @@
                             <div class="min-w-0 text-left">
 
                                 <p class="text-sm font-bold text-slate-800 truncate-safe max-w-[150px]">
-                                    {{ (session.get('user_name', '')[:20]) ~ ('...' if (session.get('user_name','')|length > 20) else '') }}
+                                    {{ (session.get('user_name', '')[:20]) ~ ('...' if
+                                    (session.get('user_name','')|length > 20) else '') }}
                                 </p>
 
                                 <p class="text-xs text-slate-400 truncate-safe max-w-[150px]">
-                                    {{ (session.get('user_role', '')[:18]) ~ ('...' if (session.get('user_role','')|length > 18) else '') }}
+                                    {{ (session.get('user_role', '')[:18]) ~ ('...' if
+                                    (session.get('user_role','')|length > 18) else '') }}
                                 </p>
 
                             </div>
@@ -996,7 +998,7 @@
     </nav>
 
     <!-- MAIN -->
-    <main class="flex-grow w-full max-w-7xl mx-auto px-5 sm:px-7 lg:px-9">
+    <main class="flex-grow w-full max-w-7xl mx-auto px-5 sm:px-7 lg:px-9 py-5">
         {% block content %}{% endblock %}
     </main>
 

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Workflow{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <h1 class="text-2xl font-bold mb-4">{% if workflow %}Editar{% else %}Novo{% endif %} Workflow</h1>
+
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="grid grid-cols-1 gap-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Nome</label>
+                <input name="nome" value="{{ workflow.nome if workflow else '' }}" class="w-full px-3 py-2 border rounded">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Descrição</label>
+                <textarea name="descricao" class="w-full px-3 py-2 border rounded">{{ workflow.descricao if workflow else '' }}</textarea>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Obra (opcional)</label>
+                <select name="obra_id" class="w-full px-3 py-2 border rounded">
+                    <option value="">Empresa (sem obra)</option>
+                    {% for o in obras %}
+                    <option value="{{ o.id }}" {% if workflow and workflow.obra_id == o.id %}selected{% endif %}>{{ o.nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="grid grid-cols-3 gap-3">
+                <label class="flex items-center gap-2"><input type="checkbox" name="aprovacao_paralela" {% if workflow and workflow.aprovacao_paralela %}checked{% endif %}> Aprovação Paralela</label>
+                <label class="flex items-center gap-2"><input type="checkbox" name="rejeicao_cancela_fluxo" {% if workflow and workflow.rejeicao_cancela_fluxo %}checked{% endif %}> Rejeição cancela fluxo</label>
+                <label class="flex items-center gap-2">SLA (horas): <input type="number" name="sla_horas" value="{{ workflow.sla_horas if workflow and workflow.sla_horas is not none else '' }}" class="ml-2 w-24 px-2 py-1 border rounded"></label>
+            </div>
+
+            <div class="flex justify-end gap-2">
+                <a href="{{ url_for('admin.listar_workflows') }}" class="btn btn-secondary">Voltar</a>
+                <button class="btn btn-primary">Salvar</button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
