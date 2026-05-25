@@ -763,6 +763,59 @@ CREATE TABLE rdo_versoes (
     CONSTRAINT fk_rdo_versao_usuario FOREIGN KEY (criado_por) REFERENCES usuarios(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE documentos_sistema {
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    empresa_id INT NOT NULL,
+    tipo ENUM(
+        'TERMOS_USO',
+        'POLITICA_PRIVACIDADE',
+        'SUPORTE',
+        'POLITICA_COOKIES',
+        'FAQ',
+        'MANUAL',
+        'OUTRO'
+    ) NOT NULL,
+    titulo VARCHAR(255) NOT NULL,
+    conteudo TEXT NOT NULL,
+    versao VARCHAR(20) NOT NULL DEFAULT 'v1.0',
+    publicado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+    is_system BOOLEAN NOT NULL DEFAULT TRUE,
+    criado_por INT NULL,
+    modificado_por INT NULL,
+    criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+    modificado_em DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_documento_empresa
+        FOREIGN KEY (empresa_id)
+        REFERENCES empresa(id),
+
+    CONSTRAINT fk_documento_criado_por
+        FOREIGN KEY (criado_por)
+        REFERENCES usuario(id),
+
+    CONSTRAINT fk_documento_modificado_por
+        FOREIGN KEY (modificado_por)
+        REFERENCES usuario(id)
+};
+
+CREATE TABLE usuario_documento_aceite (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+
+    usuario_id BIGINT NOT NULL,
+    documento_id BIGINT NOT NULL,
+
+    ip VARCHAR(50),
+    aceito_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_aceite_usuario
+        FOREIGN KEY (usuario_id)
+        REFERENCES usuario(id),
+
+    CONSTRAINT fk_aceite_documento
+        FOREIGN KEY (documento_id)
+        REFERENCES documentos_sistema(id)
+);
+
 /* =========================
    TRIGGERS
 ========================= */
