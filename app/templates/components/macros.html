@@ -1,0 +1,60 @@
+{# Centraliza macros leves para reduzir includes repetitivos #}
+
+{% macro badge(text, variant='default') %}
+  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold
+    {% if variant == 'success' %}bg-emerald-50 text-emerald-700 border border-emerald-200{% endif %}
+    {% if variant == 'danger' %}bg-red-50 text-red-700 border border-red-200{% endif %}
+    {% if variant == 'warning' %}bg-amber-50 text-amber-700 border border-amber-200{% endif %}
+    {% if variant == 'info' %}bg-blue-50 text-blue-700 border border-blue-200{% endif %}
+    {% if variant == 'neutral' %}bg-slate-50 text-slate-700 border border-slate-200{% endif %}">
+    {{ text }}
+  </span>
+{% endmacro %}
+
+{% macro button(label, variant='primary', href=None, type='button', disabled=False, icon=None, size='md') %}
+  {# Uso:
+     {% import "components/macros.html" as ui %}
+     {{ ui.button('Salvar','primary', href=url_for(...)) }}
+  #}
+  {% set size_map = {
+      'sm': 'px-3 py-2 text-sm',
+      'md': 'px-4 py-2.5 text-sm',
+      'lg': 'px-5 py-3 text-base'
+  } %}
+  {% set size_classes = size_map.get(size, size_map['md']) %}
+
+  {% set base = 'inline-flex items-center justify-center gap-2 rounded-2xl font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-200' %}
+
+  {% if variant == 'primary' %}
+    {% set v = 'bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-400' %}
+  {% elif variant == 'secondary' %}
+    {% set v = 'bg-slate-100 text-slate-800 hover:bg-slate-200 disabled:bg-slate-100 disabled:text-slate-400' %}
+  {% elif variant == 'danger' %}
+    {% set v = 'bg-red-600 text-white hover:bg-red-700 disabled:bg-red-400' %}
+  {% elif variant == 'success' %}
+    {% set v = 'bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-emerald-400' %}
+  {% elif variant == 'outline' %}
+    {% set v = 'bg-transparent border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:text-slate-300' %}
+  {% else %}
+    {% set v = 'bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-400' %}
+  {% endif %}
+
+  {% set disabled_attr = 'disabled' if disabled else '' %}
+
+  {% if href %}
+    <a href="{{ href }}" class="{{ base }} {{ v }} {{ size_classes }}" {{ disabled_attr }}>
+      {% if icon %}
+        <i class="{{ icon }} text-xs"></i>
+      {% endif %}
+      {{ label }}
+    </a>
+  {% else %}
+    <button type="{{ type }}" class="{{ base }} {{ v }} {{ size_classes }}" {{ disabled_attr }}>
+      {% if icon %}
+        <i class="{{ icon }} text-xs"></i>
+      {% endif %}
+      {{ label }}
+    </button>
+  {% endif %}
+{% endmacro %}
+

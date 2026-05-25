@@ -1,0 +1,23 @@
+{# Badge padronizado para status e elementos de destaque #}
+
+{% set _text = text if text is defined else '' %}
+{% set _variant = variant if variant is defined else 'default' %}
+
+{# Mapeamento de variants para manter consistência #}
+{% if _variant == 'success' %}
+{% set cls = 'bg-emerald-50 text-emerald-700 border border-emerald-200' %}
+{% elif _variant == 'danger' %}
+{% set cls = 'bg-red-50 text-red-700 border border-red-200' %}
+{% elif _variant == 'warning' %}
+{% set cls = 'bg-amber-50 text-amber-700 border border-amber-200' %}
+{% elif _variant == 'info' %}
+{% set cls = 'bg-blue-50 text-blue-700 border border-blue-200' %}
+{% elif _variant == 'neutral' %}
+{% set cls = 'bg-slate-50 text-slate-700 border border-slate-200' %}
+{% else %}
+{% set cls = 'bg-slate-50 text-slate-700 border border-slate-200' %}
+{% endif %}
+
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold {{ cls }}">
+    {{ _text }}
+</span>
