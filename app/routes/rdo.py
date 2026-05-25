@@ -287,6 +287,14 @@ def gerar_rdo():
         
         db.session.flush()
 
+        # Integração automática Frente -> Mão de obra (somente em RDO novo)
+        if not rdo_id_original and item_rdo.frente_trabalho_id:
+            from app.services.rdo_mao_obra_service import RDOMaoObraService
+            RDOMaoObraService.preencher_por_frente(
+                rdo_id=item_rdo.id,
+                frente_id=item_rdo.frente_trabalho_id
+            )
+
         # Auditoria de criação de RDO
         if not rdo_id_original:
             depois_snapshot = safe_model_to_dict(item_rdo)
