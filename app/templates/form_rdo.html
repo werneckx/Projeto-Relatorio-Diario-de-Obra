@@ -368,24 +368,8 @@
 </style>
 
 <div class="max-w-7xl mx-auto">
-    {# --- MENSAGENS FLASH --- #}
-    {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-    <div class="mb-6 space-y-3">
-        {% for category, message in messages %}
-        <div
-            class="p-4 rounded-xl flex items-start gap-4 border shadow-sm {{ 'bg-red-50 text-red-800 border-red-200' if category == 'danger' else 'bg-emerald-50 text-emerald-800 border-emerald-200' }}">
-            <i
-                class="fas {{ 'fa-exclamation-circle' if category == 'danger' else 'fa-check-circle' }} mt-1 text-lg"></i>
-            <div>
-                <h4 class="font-bold text-sm">{{ 'Erro' if category == 'danger' else 'Sucesso' }}</h4>
-                <p class="text-sm opacity-90">{{ message }}</p>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-    {% endwith %}
+    {# --- MENSAGENS FLASH (padronizado) --- #}
+    {% include "partials/flash_messages.html" %}
 
     {# --- CABEÇALHO --- #}
     <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-5 mb-8">
