@@ -161,7 +161,7 @@
             </div>
         </div>
 
-        {% call ui_table.wrapper('px-4 sm:px-0') %}
+        {% call ui_table.table_container('px-4 sm:px-0') %}
             <table id="dataTableMaoObra" class="w-full text-left border-collapse ds-mobile-cards">
                 <thead class="bg-slate-50 border-b border-slate-200">
                     <tr>
@@ -308,7 +308,7 @@
     function confirmDeleteMaoObra(id) {
         if (!confirm('Deseja realmente excluir esta Função? Esta operação removerá o registro de forma permanente.')) return;
 
-        fetch(`/auth/excluir-mao-obra/${id}`, { method: 'POST' })
+        fetch(`/auth/excluir-funcao/${id}`, { method: 'POST' })
             .then(res => {
                 if (!res.ok) throw new Error('Erro ao processar requisição');
 
