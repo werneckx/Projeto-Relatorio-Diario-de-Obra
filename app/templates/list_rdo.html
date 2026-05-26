@@ -3,6 +3,7 @@
 {% block title %}Lista de RDOs{% endblock %}
 
 {% block content %}
+{% import "components/table.html" as ui_table %}
 
 <!-- DataTables CSS -->
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
@@ -668,7 +669,7 @@
     </div>
 
     <!-- Tabela -->
-    <div class="w-full px-0">
+    {% call ui_table.wrapper('px-0') %}
       <table id="dataTableRDO" class="w-full text-left border-collapse">
         <thead class="bg-slate-50/80 border-b border-slate-200 backdrop-blur">
           <tr>
@@ -806,7 +807,7 @@
         <p class="text-sm text-slate-500 mt-1">Tente ajustar seus filtros ou crie um novo.</p>
       </div>
       {% endif %}
-    </div>
+    {% endcall %}
   </div>
 </div>
 
