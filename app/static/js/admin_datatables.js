@@ -20,9 +20,9 @@
 
   window.AdminTables = window.AdminTables || {};
   window.AdminTables.initWithSearch = function (cfg) {
-    const table = initDataTable(cfg.tableSelector, cfg.dataTableOptions);
+    const dtOptions = cfg.dataTableOptions || cfg.options;
+    const table = initDataTable(cfg.tableSelector, dtOptions);
     bindSearch(cfg.searchInputSelector, table);
     return table;
   };
 })();
-
