@@ -1,0 +1,103 @@
+/* Reusable DataTables + admin listings styling (enterprise baseline). */
+
+/* Keep DataTables controls aligned with Tailwind visual language. */
+.dataTables_wrapper .dataTables_length select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 0.5rem center;
+  background-repeat: no-repeat;
+  background-size: 1.2em 1.2em;
+  padding: 0.4rem 2rem 0.4rem 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  font-size: 0.8125rem;
+  color: #475569;
+  outline: none;
+  background-color: #fff;
+}
+
+.dataTables_wrapper .dataTables_paginate {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+  display: flex;
+  gap: 0.25rem;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+  padding: 0.4rem 0.75rem !important;
+  border-radius: 0.5rem !important;
+  border: 1px solid #e2e8f0 !important;
+  background: #ffffff !important;
+  color: #475569 !important;
+  font-size: 0.8125rem !important;
+  font-weight: 500 !important;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+  background: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.current,
+.dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+  background: #2563eb !important;
+  border-color: #2563eb !important;
+  color: #ffffff !important;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.dataTables_wrapper .dataTables_info {
+  padding-top: 0 !important;
+  font-size: 0.8125rem;
+  color: #64748b;
+}
+
+/* Mobile cards: apply when the table has `.ds-mobile-cards`. */
+@media (max-width: 768px) {
+  table.ds-mobile-cards thead {
+    display: none !important;
+  }
+
+  table.ds-mobile-cards tbody tr {
+    display: block !important;
+    background: #ffffff;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 0.75rem;
+    margin-bottom: 0.75rem;
+    padding: 1rem;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+    position: relative;
+  }
+
+  table.ds-mobile-cards tbody td {
+    display: block !important;
+    padding: 0 !important;
+    border: none !important;
+    text-align: left !important;
+  }
+
+  /* ID badge top-right */
+  table.ds-mobile-cards tbody td:nth-child(1) {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+  }
+
+  /* Main content */
+  table.ds-mobile-cards tbody td:nth-child(2) {
+    margin-right: 4.5rem;
+  }
+
+  /* Actions footer */
+  table.ds-mobile-cards tbody td:nth-child(3) {
+    margin-top: 1rem;
+    padding-top: 0.75rem !important;
+    border-top: 1px solid #f1f5f9 !important;
+    display: flex !important;
+    justify-content: flex-end;
+  }
+}
+

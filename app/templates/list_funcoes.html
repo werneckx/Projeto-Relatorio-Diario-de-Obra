@@ -1,0 +1,333 @@
+{% extends "base.html" %}
+{% block title %}Cadastro de Funções{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin_datatables.css') }}">
+
+{% import "components/table/macros.html" as ui_table %}
+
+<style>
+    /* moved to static/css/admin_datatables.css */
+
+    /*
+    /* Customizações Avançadas do DataTables para alinhar com Tailwind */
+    .dataTables_wrapper .dataTables_length select {
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+        background-position: right 0.5rem center;
+        background-repeat: no-repeat;
+        background-size: 1.2em 1.2em;
+        padding: 0.4rem 2rem 0.4rem 0.75rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.5rem;
+        font-size: 0.8125rem;
+        color: #475569;
+        outline: none;
+        background-color: #fff;
+    }
+
+    .dataTables_wrapper .dataTables_paginate {
+        padding-top: 0 !important;
+        margin-top: 0 !important;
+        display: flex;
+        gap: 0.25rem;
+    }
+
+    .dataTables_wrapper .dataTables_paginate .paginate_button {
+        padding: 0.4rem 0.75rem !important;
+        border-radius: 0.5rem !important;
+        border: 1px solid #e2e8f0 !important;
+        background: #ffffff !important;
+        color: #475569 !important;
+        font-size: 0.8125rem !important;
+        font-weight: 500 !important;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+
+    .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+        background: #f1f5f9 !important;
+        border-color: #cbd5e1 !important;
+        color: #0f172a !important;
+    }
+
+    .dataTables_wrapper .dataTables_paginate .paginate_button.current,
+    .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+        background: #2563eb !important;
+        border-color: #2563eb !important;
+        color: #ffffff !important;
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    }
+
+    .dataTables_wrapper .dataTables_info {
+        padding-top: 0 !important;
+        font-size: 0.8125rem;
+        color: #64748b;
+    }
+
+    /* Estilização Responsiva Mobile (Transformação de Linhas em Cards) */
+    @media (max-width: 768px) {
+        table#dataTableMaoObra thead {
+            display: none !important;
+        }
+
+        table#dataTableMaoObra tbody tr {
+            display: block !important;
+            background: #ffffff;
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 0.75rem;
+            margin-bottom: 0.75rem;
+            padding: 1rem;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+            position: relative;
+        }
+
+        table#dataTableMaoObra tbody td {
+            display: block !important;
+            padding: 0 !important;
+            border: none !important;
+            text-align: left !important;
+        }
+
+        /* ID Badge posicionado no canto superior direito do Card */
+        table#dataTableMaoObra tbody td:nth-child(1) {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+        }
+
+        /* Conteúdo Principal (Nome e Badges) */
+        table#dataTableMaoObra tbody td:nth-child(2) {
+            margin-right: 4.5rem;
+            /* Evita sobreposição com o ID */
+        }
+
+        /* Ações do Card no rodapé com linha divisória */
+        table#dataTableMaoObra tbody td:nth-child(3) {
+            margin-top: 1rem;
+            padding-top: 0.75rem !important;
+            border-top: 1px solid #f1f5f9 !important;
+            display: flex !important;
+            justify-content: flex-end;
+        }
+    }
+    */
+</style>
+
+<div>
+
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-5">
+        <div>
+            <h1 class="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                <span class="p-2 bg-blue-50 text-blue-600 rounded-lg text-base">
+                    <i class="fas fa-users-cog"></i>
+                </span>
+                Cadastro de Funções
+            </h1>
+            <p class="text-xs text-slate-500 mt-1">
+                Gestão e parametrização centralizada dos cargos e atribuições da mão de obra do sistema.
+            </p>
+        </div>
+        <div>
+            <a href="{{ url_for('auth.criar_funcao') }}"
+                class="w-full sm:w-auto inline-flex justify-center items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow-sm shadow-blue-500/10 transition-all hover:-translate-y-0.5 gap-2">
+                <i class="fas fa-plus text-xs"></i> Nova Função
+            </a>
+        </div>
+    </div>
+
+    <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
+
+        <div
+            class="p-4 border-b border-slate-100 flex flex-col sm:flex-row gap-3 justify-between items-center bg-slate-50/50">
+            <div class="relative w-full sm:w-80 group">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <i class="fas fa-search text-xs"></i>
+                </span>
+                <input type="text" id="maoObraInputSearch"
+                    class="block w-full pl-9 pr-3 py-1.5 border border-slate-200 rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all placeholder:text-slate-400"
+                    placeholder="Filtrar funções cadastradas...">
+            </div>
+
+            <div class="flex w-full sm:w-auto justify-end gap-2">
+                <button onclick="window.location.reload()"
+                    class="inline-flex justify-center items-center w-9 h-9 border border-slate-200 rounded-lg text-slate-500 bg-white hover:bg-slate-100 hover:text-slate-800 transition-all shadow-sm"
+                    title="Recarregar Lista">
+                    <i class="fas fa-sync-alt text-xs"></i>
+                </button>
+            </div>
+        </div>
+
+        {% call ui_table.wrapper('px-4 sm:px-0') %}
+            <table id="dataTableMaoObra" class="w-full text-left border-collapse ds-mobile-cards">
+                <thead class="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                        <th class="px-6 py-3.5 text-xs font-semibold text-slate-600 uppercase tracking-wider w-24">
+                            Código</th>
+                        <th class="px-6 py-3.5 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                            Identificação da Função</th>
+                        <th
+                            class="px-6 py-3.5 text-xs font-semibold text-slate-600 uppercase tracking-wider text-right w-36">
+                            Ações</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 bg-white">
+                    {% for mao in opcoes %}
+                    <tr id="mao-obra-row-{{ mao.id }}" class="hover:bg-slate-50/50 transition-colors group">
+
+                        <td
+                            class="px-6 py-4 whitespace-nowrap text-xs font-mono font-medium text-slate-400 sm:text-slate-500">
+                            <span class="bg-slate-100 px-2 py-1 rounded-md sm:bg-transparent sm:p-0">
+                                #{{ '%03d' % mao.id }}
+                            </span>
+                        </td>
+
+                        <td class="px-6 py-4">
+                            <div class="flex items-center gap-2">
+                                <span
+                                    class="text-sm font-semibold text-slate-800 group-hover:text-blue-600 transition-colors">
+                                    {{ mao.nome }}
+                                </span>
+                            </div>
+
+                            <div class="mt-1.5 flex flex-wrap items-center gap-2">
+                                {% if mao.tipo %}
+                                <span
+                                    class="inline-flex items-center gap-1 rounded-md bg-blue-50 text-blue-700 px-2 py-0.5 text-xs font-medium ring-1 ring-inset ring-blue-700/10">
+                                    <i class="far fa-folder text-[10px] opacity-70"></i> {{ mao.tipo }}
+                                </span>
+                                {% endif %}
+
+                                {% if mao.ativo %}
+                                <span
+                                    class="inline-flex items-center gap-1.5 rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/10">
+                                    <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                                    Ativo
+                                </span>
+                                {% else %}
+                                <span
+                                    class="inline-flex items-center gap-1.5 rounded-md bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700 ring-1 ring-inset ring-rose-600/10">
+                                    <span class="h-1.5 w-1.5 rounded-full bg-rose-400"></span>
+                                    Inativo
+                                </span>
+                                {% endif %}
+                            </div>
+                        </td>
+
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
+                            <div class="flex justify-end items-center gap-1">
+                                <a href="{{ url_for('auth.visualizar_funcao', id=mao.id) }}"
+                                    class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
+                                    title="Visualizar Detalhes">
+                                    <i class="fas fa-eye text-xs"></i>
+                                </a>
+                                <a href="{{ url_for('auth.editar_funcao', id=mao.id) }}"
+                                    class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all"
+                                    title="Editar Registro">
+                                    <i class="fas fa-pen text-xs"></i>
+                                </a>
+                                <button onclick="confirmDeleteMaoObra({{ mao.id }})"
+                                    class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
+                                    title="Remover Registro">
+                                    <i class="fas fa-trash-alt text-xs"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            {% if not opcoes %}
+            <div class="py-16 text-center max-w-sm mx-auto">
+                <div
+                    class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-slate-50 text-slate-400 mb-4 border border-slate-200 shadow-sm">
+                    <i class="fas fa-layer-group text-base"></i>
+                </div>
+                <h3 class="text-sm font-semibold text-slate-900">Nenhuma função localizada</h3>
+                <p class="text-xs text-slate-500 mt-1">A base de dados de cargos e funções está vazia no momento.</p>
+                <div class="mt-4">
+                    <a href="{{ url_for('auth.criar_funcao') }}"
+                        class="inline-flex items-center gap-2 text-xs font-medium text-blue-600 hover:text-blue-700 bg-blue-50/50 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors">
+                        Cadastrar primeira função
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        {% endcall %}
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="{{ url_for('static', filename='js/admin_datatables.js') }}"></script>
+
+<script>
+    var dataTableMaoObra = null;
+    $(document).ready(function () {
+        const dataTableOptions = {
+            responsive: false,
+            paging: true,
+            searching: true,
+            pageLength: 10,
+            lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "Todos"]],
+            order: [[0, 'desc']],
+            language: {
+                url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json",
+                search: "",
+                searchPlaceholder: "Filtrar resultados...",
+                paginate: {
+                    previous: '<i class="fas fa-chevron-left text-[10px]"></i>',
+                    next: '<i class="fas fa-chevron-right text-[10px]"></i>'
+                }
+            },
+            // Estilização do container inferior de paginação do DataTables com classes nativas do Tailwind
+            dom: 'rt<"px-4 py-4 border-t border-slate-200 bg-slate-50 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs font-medium text-slate-500"li p>',
+            initComplete: function () {
+                $(this.api().table().container()).removeClass('dt-container');
+            }
+        };
+
+        if (window.AdminTables && window.AdminTables.initWithSearch) {
+            dataTableMaoObra = window.AdminTables.initWithSearch({
+                tableSelector: '#dataTableMaoObra',
+                searchInputSelector: '#maoObraInputSearch',
+                dataTableOptions: dataTableOptions,
+            });
+        } else {
+            dataTableMaoObra = $('#dataTableMaoObra').DataTable(dataTableOptions);
+            $('#maoObraInputSearch').on('keyup', function () {
+                dataTableMaoObra.search(this.value).draw();
+            });
+        }
+    });
+
+    function confirmDeleteMaoObra(id) {
+        if (!confirm('Deseja realmente excluir esta Função? Esta operação removerá o registro de forma permanente.')) return;
+
+        fetch(`/auth/excluir-mao-obra/${id}`, { method: 'POST' })
+            .then(res => {
+                if (!res.ok) throw new Error('Erro ao processar requisição');
+
+                if (dataTableMaoObra) {
+                    const row = document.getElementById('mao-obra-row-' + id);
+                    if (row) {
+                        row.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+                        row.style.opacity = '0';
+                        row.style.transform = 'scale(0.95)';
+                        setTimeout(() => {
+                            dataTableMaoObra.row(row).remove().draw(false);
+                        }, 300);
+                    }
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Ocorreu um erro interno ao tentar remover a função.');
+            });
+    }
+</script>
+{% endblock %}

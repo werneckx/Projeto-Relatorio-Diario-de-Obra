@@ -1,0 +1,13 @@
+{# Enterprise table building blocks (wrappers/macros). #}
+
+{# Usage:
+   {% import "components/table/macros.html" as ui_table %}
+   {% call ui_table.wrapper('px-0') %}
+     <table id="..." ...>...</table>
+   {% endcall %}
+#}
+{% macro wrapper(extra_class='') %}
+<div class="w-full overflow-x-auto {{ extra_class }}">
+  {{ caller() }}
+</div>
+{% endmacro %}
