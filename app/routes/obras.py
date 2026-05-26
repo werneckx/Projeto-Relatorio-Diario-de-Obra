@@ -67,6 +67,8 @@ def _build_obra_export_cell(obra, key):
         return obra.estado or ""
     if key == "endereco":
         return obra.endereco or ""
+    if key == "tipo":
+        return obra.tipo_obra.nome if getattr(obra, "tipo_obra", None) else ""
     if key == "progresso":
         return f"{_calculate_progress(obra)}%"
     if key == "status":
@@ -86,6 +88,19 @@ def lista_obras():
         query = query.filter(Obra.id.in_(meus_ids))
         
     resultados = query.all()
+
+    user_ids = set()
+    for obra_obj in resultados:
+        if obra_obj.criado_por:
+            user_ids.add(obra_obj.criado_por)
+        if obra_obj.modificado_por:
+            user_ids.add(obra_obj.modificado_por)
+
+    user_name_by_id = {}
+    if user_ids:
+        for u in Usuario.query.filter(Usuario.id.in_(list(user_ids))).all():
+            user_name_by_id[u.id] = u.nome
+
     obras_formatadas = []
     for obra_obj in resultados:
         obra_dict = {
@@ -100,8 +115,15 @@ def lista_obras():
             'complemento': obra_obj.complemento,
             'bairro': obra_obj.bairro,
             'cep': obra_obj.cep,
+            'tipo': obra_obj.tipo_obra.nome if obra_obj.tipo_obra else None,
             'status': obra_obj.status,
-            'frentes_trabalho': obra_obj.frentes_trabalho
+            'frentes_trabalho': obra_obj.frentes_trabalho,
+            'criado_em': obra_obj.criado_em,
+            'modificado_em': obra_obj.modificado_em,
+            'criado_por': obra_obj.criado_por,
+            'modificado_por': obra_obj.modificado_por,
+            'criado_por_nome': user_name_by_id.get(obra_obj.criado_por) if obra_obj.criado_por else None,
+            'modificado_por_nome': user_name_by_id.get(obra_obj.modificado_por) if obra_obj.modificado_por else None,
         }
         obras_formatadas.append(obra_dict)
     
