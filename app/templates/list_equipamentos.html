@@ -6,6 +6,22 @@
 <!-- DataTables CSS -->
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin_datatables.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/enterprise_theme.css') }}">
+
+{% import "components/table/macros.html" as ui_table %}
+
+{% set table_config = {
+    'title': 'Cadastro de Equipamentos',
+    'icon': 'fa-tools',
+    'create_url': url_for('auth.criar_equipamento'),
+    'create_label': 'Novo Equipamento',
+    'search_input_id': 'equipamentoInputSearch',
+    'search_placeholder': 'Buscar equipamento...',
+    'datatable_id': 'dataTableEquipamentos',
+    'mobile_cards': true,
+    'mode': 'comfortable'
+} %}
 
 <style>
     /* Estilos globais e animações */
@@ -170,30 +186,11 @@
     </div>
 
     <!-- Tabela Container -->
-    <div class="bg-white border border-slate-200 rounded-xl shadow-sm animate-fade-up flex flex-col"
-        style="animation-delay: 100ms;">
+    {% call ui_table.wrapper(config=table_config, extra_class='animate-fade-up') %}
+        {% call ui_table.toolbar(config=table_config) %}{% endcall %}
 
-        <!-- Toolbar -->
-        <div
-            class="p-4 border-b border-slate-100 flex flex-col md:flex-row gap-3 justify-between items-center bg-white rounded-t-xl">
-            <div class="relative w-full md:w-80 group">
-                <input type="text" id="equipamentoInputSearch"
-                    class="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-lg bg-slate-50 text-sm focus:bg-white focus:ring-2 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all placeholder:text-slate-400"
-                    placeholder="Buscar equipamento...">
-            </div>
-
-            <div class="flex w-full md:w-auto gap-2">
-                <button onclick="window.location.reload()"
-                    class="inline-flex justify-center items-center w-10 h-10 border border-slate-200 rounded-lg text-slate-500 bg-white hover:bg-slate-50 hover:text-blue-600 transition-all shadow-sm"
-                    title="Recarregar">
-                    <i class="fas fa-sync-alt"></i>
-                </button>
-            </div>
-        </div>
-
-        <!-- Tabela -->
-        <div class="w-full px-0">
-            <table id="dataTableEquipamentos" class="w-full text-left border-collapse">
+        {% call ui_table.table_container('px-0') %}
+            <table id="dataTableEquipamentos" class="w-full text-left border-collapse ds-mobile-cards ds-mobile-cards--grid">
                 <thead class="bg-slate-50/80 border-b border-slate-200 backdrop-blur">
                     <tr>
                         <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-20">ID</th>
@@ -246,7 +243,8 @@
                 </tbody>
             </table>
 
-            {% if not opcoes %}
+            {{ ui_table.empty_state(not opcoes, icon='fa-hammer', title='Nenhum Equipamento encontrado', description='Clique em \"Novo Equipamento\" para comeÃ§ar.') }}
+            {% if false %}
             <div class="py-16 text-center">
                 <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-50 mb-4">
                     <i class="fas fa-hammer text-slate-300 text-2xl"></i>
@@ -255,17 +253,18 @@
                 <p class="text-sm text-slate-500 mt-1">Clique em "Novo Equipamento" para começar.</p>
             </div>
             {% endif %}
-        </div>
-    </div>
+        {% endcall %}
+    {% endcall %}
 </div>
 
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="{{ url_for('static', filename='js/admin_datatables.js') }}"></script>
 
 <script>
     var dataTableEquipamentos = null;
     $(document).ready(function () {
-        dataTableEquipamentos = $('#dataTableEquipamentos').DataTable({
+        const dataTableOptions = {
             responsive: false,
             paging: true,
             searching: true,
@@ -285,11 +284,20 @@
             initComplete: function () {
                 $(this.api().table().container()).removeClass('dt-container');
             }
-        });
+        };
 
-        $('#equipamentoInputSearch').on('keyup', function () {
-            dataTableEquipamentos.search(this.value).draw();
-        });
+        if (window.AdminTables && window.AdminTables.initWithSearch) {
+            dataTableEquipamentos = window.AdminTables.initWithSearch({
+                tableSelector: '#dataTableEquipamentos',
+                searchInputSelector: '#equipamentoInputSearch',
+                dataTableOptions: dataTableOptions
+            });
+        } else {
+            dataTableEquipamentos = $('#dataTableEquipamentos').DataTable(dataTableOptions);
+            $('#equipamentoInputSearch').on('keyup', function () {
+                dataTableEquipamentos.search(this.value).draw();
+            });
+        }
     });
 
     function confirmDeleteEquipamento(id) {
