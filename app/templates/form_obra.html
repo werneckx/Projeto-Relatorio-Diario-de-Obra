@@ -73,19 +73,7 @@ shadow-sm placeholder:text-slate-400" %}
 
     <div class="page-shell animate-fade-in-up">
 
-        <!-- Flash Messages -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-        {% for category, message in messages %}
-        <div
-            class="mb-6 p-4 rounded-xl flex items-start gap-3 border shadow-sm transition-all
-                {{ 'bg-red-50 text-red-700 border-red-100' if category == 'danger' else 'bg-emerald-50 text-emerald-700 border-emerald-100' }}">
-            <i class="fas {{ 'fa-exclamation-circle' if category == 'danger' else 'fa-check-circle' }} mt-0.5"></i>
-            <div class="text-sm font-medium leading-tight">{{ message }}</div>
-        </div>
-        {% endfor %}
-        {% endif %}
-        {% endwith %}
+        {% include "partials/flash_messages.html" %}
 
         <!-- Cabeçalho -->
         <div class="page-hero p-6 sm:p-7 mb-2 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -118,9 +106,9 @@ shadow-sm placeholder:text-slate-400" %}
                 <h3 class="text-sm font-bold text-slate-700 uppercase tracking-wide flex items-center gap-2">
                     <i class="fas fa-chart-line text-blue-500"></i> Performance Global
                 </h3>
-                <span class="text-xs font-bold uppercase px-2 py-1 rounded {{ global_bg }} {{ global_color }}">
-                    {{ global_status_text }}
-                </span>
+                {% set text = global_status_text %}
+                {% set variant = 'danger' if global_status_text == 'Atrasado' else ('success' if global_status_text == 'Adiantado' else ('info' if global_status_text == 'No Prazo' else 'neutral')) %}
+                {% include "components/badge.html" %}
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -199,7 +187,7 @@ shadow-sm placeholder:text-slate-400" %}
             <input type="hidden" name="equipe_obra_json" id="equipe_obra_json">
 
             <!-- 1. Dados Gerais -->
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="surface-card rounded-2xl overflow-hidden bg-white border border-slate-200 shadow-sm">
                 <div
                     class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div class="flex items-center gap-3">
@@ -213,11 +201,11 @@ shadow-sm placeholder:text-slate-400" %}
 
                     <!-- Status Badge / Toggle -->
                     {% if view_mode %}
-                    <span
-                        class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide {{ 'bg-emerald-100 text-emerald-700' if (item and item.status == 1) else 'bg-red-100 text-red-700' }}">
-                        <i
-                            class="fas {{ 'fa-check-circle' if (item and item.status == 1) else 'fa-times-circle' }} mr-1.5"></i>
-                        {{ 'Ativa' if (item and item.status == 1) else 'Inativa' }}
+                    <span class="inline-flex items-center gap-1.5">
+                        <i class="fas {{ 'fa-check-circle' if (item and item.status == 1) else 'fa-times-circle' }} text-xs"></i>
+                        {% set text = 'Ativa' if (item and item.status == 1) else 'Inativa' %}
+                        {% set variant = 'success' if (item and item.status == 1) else 'danger' %}
+                        {% include "components/badge.html" %}
                     </span>
                     {% else %}
                     <label class="relative inline-flex items-center cursor-pointer group">
@@ -299,7 +287,7 @@ shadow-sm placeholder:text-slate-400" %}
                 </div>
             </div>
 
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="surface-card rounded-2xl overflow-hidden bg-white border border-slate-200 shadow-sm">
                 <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
                     <div
                         class="w-8 h-8 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center shrink-0 text-sm">
@@ -330,7 +318,7 @@ shadow-sm placeholder:text-slate-400" %}
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
                 <!-- Datas -->
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden h-full">
+                <div class="surface-card rounded-2xl overflow-hidden bg-white border border-slate-200 shadow-sm h-full">
                     <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
                         <div
                             class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 text-sm">
@@ -413,7 +401,7 @@ shadow-sm placeholder:text-slate-400" %}
                 </div>
 
                 <!-- Localização -->
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden h-full">
+                <div class="surface-card rounded-2xl overflow-hidden bg-white border border-slate-200 shadow-sm h-full">
                     <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
                         <div
                             class="w-8 h-8 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center shrink-0 text-sm">
@@ -473,7 +461,7 @@ shadow-sm placeholder:text-slate-400" %}
             </div>
 
             <!-- 3. Frentes de Trabalho -->
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="surface-card rounded-2xl overflow-hidden bg-white border border-slate-200 shadow-sm">
                 <div
                     class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex flex-wrap items-center justify-between gap-4">
                     <div class="flex items-center gap-3">
@@ -497,7 +485,7 @@ shadow-sm placeholder:text-slate-400" %}
                 </div>
 
                 <!-- Tabela de Frentes -->
-                <div class="w-full overflow-hidden">
+                <div class="w-full overflow-x-auto">
                     <table class="w-full text-left mobile-table" id="table_frentes">
                         <thead>
                             <tr
@@ -670,7 +658,7 @@ shadow-sm placeholder:text-slate-400" %}
             </div>
 
             <!-- Barra de Ações -->
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="surface-card rounded-2xl overflow-hidden bg-white border border-slate-200 shadow-sm">
                 <div
                     class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex flex-wrap items-center justify-between gap-4">
                     <div class="flex items-center gap-3">
@@ -693,7 +681,7 @@ shadow-sm placeholder:text-slate-400" %}
                     {% endif %}
                 </div>
 
-                <div class="w-full overflow-hidden">
+                <div class="w-full overflow-x-auto">
                     <table class="w-full text-left mobile-table" id="table-equipe-obra">
                         <thead>
                             <tr
