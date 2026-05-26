@@ -6,8 +6,20 @@
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_datatables.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/enterprise_theme.css') }}">
 
 {% import "components/table/macros.html" as ui_table %}
+
+{% set table_config = {
+    'title': 'Cadastro de Funções',
+    'icon': 'fa-users-cog',
+    'create_url': url_for('auth.criar_funcao'),
+    'create_label': 'Nova Função',
+    'search_id': 'maoObraInputSearch',
+    'search_placeholder': 'Filtrar funções cadastradas...',
+    'datatable_id': 'dataTableMaoObra',
+    'mode': 'comfortable'
+} %}
 
 <style>
     /* moved to static/css/admin_datatables.css */
@@ -131,35 +143,16 @@
                 Gestão e parametrização centralizada dos cargos e atribuições da mão de obra do sistema.
             </p>
         </div>
-        <div>
-            <a href="{{ url_for('auth.criar_funcao') }}"
-                class="w-full sm:w-auto inline-flex justify-center items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow-sm shadow-blue-500/10 transition-all hover:-translate-y-0.5 gap-2">
-                <i class="fas fa-plus text-xs"></i> Nova Função
-            </a>
-        </div>
     </div>
 
-    <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
+    {% call ui_table.wrapper(config=table_config) %}
 
-        <div
-            class="p-4 border-b border-slate-100 flex flex-col sm:flex-row gap-3 justify-between items-center bg-slate-50/50">
-            <div class="relative w-full sm:w-80 group">
-                <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                    <i class="fas fa-search text-xs"></i>
-                </span>
-                <input type="text" id="maoObraInputSearch"
-                    class="block w-full pl-9 pr-3 py-1.5 border border-slate-200 rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all placeholder:text-slate-400"
-                    placeholder="Filtrar funções cadastradas...">
-            </div>
-
-            <div class="flex w-full sm:w-auto justify-end gap-2">
-                <button onclick="window.location.reload()"
-                    class="inline-flex justify-center items-center w-9 h-9 border border-slate-200 rounded-lg text-slate-500 bg-white hover:bg-slate-100 hover:text-slate-800 transition-all shadow-sm"
-                    title="Recarregar Lista">
-                    <i class="fas fa-sync-alt text-xs"></i>
-                </button>
-            </div>
-        </div>
+        {% call ui_table.toolbar(
+            config=table_config,
+            search_id=table_config.search_id,
+            create_url=table_config.create_url,
+            create_label=table_config.create_label
+        ) %}{% endcall %}
 
         {% call ui_table.table_container('px-4 sm:px-0') %}
             <table id="dataTableMaoObra" class="w-full text-left border-collapse ds-mobile-cards">
@@ -218,47 +211,22 @@
                         </td>
 
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
-                            <div class="flex justify-end items-center gap-1">
-                                <a href="{{ url_for('auth.visualizar_funcao', id=mao.id) }}"
-                                    class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
-                                    title="Visualizar Detalhes">
-                                    <i class="fas fa-eye text-xs"></i>
-                                </a>
-                                <a href="{{ url_for('auth.editar_funcao', id=mao.id) }}"
-                                    class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all"
-                                    title="Editar Registro">
-                                    <i class="fas fa-pen text-xs"></i>
-                                </a>
-                                <button onclick="confirmDeleteMaoObra({{ mao.id }})"
-                                    class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
-                                    title="Remover Registro">
-                                    <i class="fas fa-trash-alt text-xs"></i>
-                                </button>
-                            </div>
+                            {{ ui_table.actions_dropdown(actions=[
+                                {'label': 'Visualizar', 'icon': 'fa-eye', 'url': url_for('auth.visualizar_funcao', id=mao.id)},
+                                {'label': 'Editar', 'icon': 'fa-pen', 'url': url_for('auth.editar_funcao', id=mao.id)},
+                                {'divider': true},
+                                {'label': 'Excluir', 'icon': 'fa-trash-alt', 'onclick': 'confirmDeleteMaoObra(' ~ mao.id ~ ')'}
+                            ], button_title='Ações') }}
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
 
-            {% if not opcoes %}
-            <div class="py-16 text-center max-w-sm mx-auto">
-                <div
-                    class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-slate-50 text-slate-400 mb-4 border border-slate-200 shadow-sm">
-                    <i class="fas fa-layer-group text-base"></i>
-                </div>
-                <h3 class="text-sm font-semibold text-slate-900">Nenhuma função localizada</h3>
-                <p class="text-xs text-slate-500 mt-1">A base de dados de cargos e funções está vazia no momento.</p>
-                <div class="mt-4">
-                    <a href="{{ url_for('auth.criar_funcao') }}"
-                        class="inline-flex items-center gap-2 text-xs font-medium text-blue-600 hover:text-blue-700 bg-blue-50/50 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors">
-                        Cadastrar primeira função
-                    </a>
-                </div>
-            </div>
-            {% endif %}
         {% endcall %}
-    </div>
+
+        {{ ui_table.empty_state(not opcoes, icon='fa-users-cog', title='Nenhuma função localizada', description='Clique em \"Nova Função\" para começar.') }}
+    {% endcall %}
 </div>
 
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
