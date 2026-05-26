@@ -4,6 +4,12 @@
 {% set _rows = rows if rows is defined else [] %}
 {% set _empty_text = empty_text if empty_text is defined else 'Nenhum registro encontrado.' %}
 
+{% macro wrapper(extra_class='') %}
+<div class="w-full overflow-x-auto {{ extra_class }}">
+    {{ caller() }}
+</div>
+{% endmacro %}
+
 <div class="w-full overflow-x-auto">
     <table class="min-w-full divide-y divide-slate-200">
         {% if _thead and _thead|length > 0 %}

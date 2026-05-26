@@ -2,6 +2,7 @@
 {% block title %}Lista de Obras{% endblock %}
 
 {% block content %}
+{% import "components/table.html" as ui_table %}
 
 <!-- DataTables CSS -->
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
@@ -356,7 +357,7 @@
         </div>
 
         <!-- Tabela -->
-        <div class="w-full px-0 overflow-x-hidden">
+        {% call ui_table.wrapper('px-0') %}
             <table id="dataTableObras" class="w-full text-left border-collapse">
                 <thead class="bg-slate-50/80 border-b border-slate-200 backdrop-blur">
                     <tr>
@@ -514,7 +515,7 @@
                 <p class="text-sm text-slate-500 mt-1">Registre sua primeira obra ou matriz.</p>
             </div>
             {% endif %}
-        </div>
+        {% endcall %}
     </div>
 </div>
 
