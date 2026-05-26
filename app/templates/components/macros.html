@@ -58,3 +58,25 @@
   {% endif %}
 {% endmacro %}
 
+{% macro audit_info(user_name=None, at=None, label='Criado em', fmt='%d/%m/%y %H:%M', align='left', show_label=True) %}
+  {# Reusable audit snippet for list/detail screens. #}
+  {% set name = user_name or 'Sistema' %}
+  {% set parts = (name or '').split() %}
+  {% set initials = (parts[0][:1] ~ (parts[1][:1] if parts|length > 1 else '')).upper() if parts and parts[0] else 'SI' %}
+  {% set align_cls = 'text-right' if align == 'right' else 'text-left' %}
+  <div class="flex items-center gap-2 md:gap-3 {{ align_cls }}">
+    <div
+      class="h-8 w-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-xs font-bold border border-blue-100 uppercase shrink-0">
+      {{ initials }}
+    </div>
+    <div class="{{ align_cls }}">
+      <div class="text-xs md:text-sm font-medium text-slate-700 truncate-safe max-w-[180px]" title="{{ name }}">{{ name }}</div>
+      {% if at %}
+      <div class="text-[10px] text-slate-400 hidden md:block">
+        {% if show_label %}{{ label }}:{% endif %} {{ at.strftime(fmt) if at.strftime is defined else at }}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+{% endmacro %}
+
