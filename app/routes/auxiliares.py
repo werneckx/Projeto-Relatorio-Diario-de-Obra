@@ -244,12 +244,12 @@ def gerar_funcao():
     ativo = request.form.get("ativo") == "1"
 
     if not nome:
-        flash("Nome da funÃ§Ã£o Ã© obrigatÃ³rio.", "danger")
+        flash("Nome da função é obrigatório.", "danger")
         return redirect(url_for("auth.lista_funcoes"))
 
-    funcao_existente = _find_duplicate_option(AuxFuncoes, nome, "Mao de Obra", exclude_id=funcao_id, tipo=tipo)
+    funcao_existente = _find_duplicate_option(AuxFuncoes, nome, "Função", exclude_id=funcao_id, tipo=tipo)
     if funcao_existente:
-        flash("JÃ¡ existe uma funÃ§Ã£o cadastrada com esse nome e tipo.", "danger")
+        flash("Já existe uma função cadastrada com esse nome e tipo.", "danger")
         if funcao_id:
             return redirect(url_for("auth.editar_funcao", id=funcao_id))
         return redirect(url_for("auth.criar_funcao"))
@@ -318,7 +318,73 @@ def excluir_funcao(id):
 def excluir_mao_obra(id):
     return excluir_funcao(id)
 
+# --- TIPOS DE OBRA ---
+@auth_bp.get("/lista-tipos-obra")
+@login_required
+def lista_tipos_obra():
+    tipos = AuxTipoObra.query.filter_by(ativo=True).order_by(AuxTipoObra.nome.asc()).all()
+    return render_template("list_tipos_obra.html", opcoes=tipos, categoria="tipo_obra")
 
-#######################################################################################################
-####################################################################################################### OBRAS
-#######################################################################################################
+
+@auth_bp.get("/criar-tipo-obra")
+@login_required
+@role_required(PERM_MANAGEMENT)
+def criar_tipo_obra():
+    return render_template("form_tipo_obra.html", item=None, view_mode=False)
+
+@auth_bp.post('/gerar-tipo-obra')
+@login_required
+@role_required(PERM_WRITE_BASIC)
+def gerar_tipo_obra():
+    tipo_id = request.form.get('id')
+    nome = _normalize_option_input(request.form.get('nome', ''))
+    ativo = request.form.get('ativo') == '1'
+    if not nome:
+        flash('Nome do tipo de obra é obrigatório.', 'danger')
+        if tipo_id: return redirect(url_for('auth.editar_tipo_obra', id=tipo_id))
+        return redirect(url_for('auth.criar_tipo_obra'))
+
+    tipo_existente = _find_duplicate_option(AuxTipoObra, nome, "Tipo de Obra", exclude_id=tipo_id)
+
+    if tipo_existente:
+        flash('Já existe um tipo de obra cadastrado com esse nome.', 'danger')
+        if tipo_id: return redirect(url_for('auth.editar_tipo_obra', id=tipo_id))
+        return redirect(url_for('auth.criar_tipo_obra'))
+
+    if tipo_id:
+        tipo = AuxTipoObra.query.get(tipo_id)
+        if not tipo: return redirect(url_for('auth.lista_tipos_obra'))
+        tipo.nome = nome
+        tipo.ativo = ativo
+        db.session.add(tipo)
+        db.session.commit()
+        return redirect(url_for('auth.lista_tipos_obra'))
+
+    novo = AuxTipoObra(nome=nome, ativo=ativo)
+    db.session.add(novo)
+    db.session.commit()
+    return redirect(url_for('auth.lista_tipos_obra'))
+
+@auth_bp.get("/editar-tipo-obra/<int:id>")
+@login_required
+@role_required(PERM_MANAGEMENT)
+def editar_tipo_obra(id):
+    tipo = AuxTipoObra.query.get_or_404(id)
+    return render_template("form_tipo_obra.html", item=tipo, view_mode=False)
+
+@auth_bp.post('/excluir-tipo-obra/<int:id>')
+@login_required
+@role_required(PERM_MANAGEMENT)
+def excluir_tipo_obra(id):
+    tipo = AuxTipoObra.query.get(id)
+    if tipo:
+        tipo.ativo = False
+        db.session.add(tipo)
+        db.session.commit()
+    return redirect(url_for('auth.lista_tipos_obra'))
+
+@auth_bp.get('/visualizar-tipo-obra/<int:id>')
+@login_required
+def visualizar_tipo_obra(id):
+    tipo = AuxTipoObra.query.get_or_404(id)
+    return render_template('form_tipo_obra.html', item=tipo, view_mode=True)
