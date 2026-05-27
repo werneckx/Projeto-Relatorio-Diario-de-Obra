@@ -3,11 +3,12 @@
 {% block title %}Lista de RDOs{% endblock %}
 
 {% block content %}
-{% import "components/table.html" as ui_table %}
+{% import "components/table/macros.html" as ui_table %}
 
 <!-- DataTables CSS -->
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin_datatables.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/enterprise_theme.css') }}">
 
 <!-- Cálculos de Contagem -->
 {% set count_total = rdos | length %}
@@ -31,6 +32,19 @@
 {% endfor %}
 {% endif %}
 {% set meus_rdo_ids_pendentes = meus_rdo_ids_pendentes | unique %}
+
+{% set table_config = {
+  'title': 'Relatórios Diários',
+  'icon': 'fa-file-lines',
+  'create_url': url_for('auth.criar_rdo'),
+  'create_label': 'Novo RDO',
+  'create_permission': 'rdo.create',
+  'search_id': 'customSearch',
+  'search_placeholder': 'Buscar RDO, obra ou ID...',
+  'datatable_id': 'dataTableRDO',
+  'show_reload': false,
+  'mode': 'comfortable'
+} %}
 
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -446,7 +460,7 @@
   }
 </style>
 
-<div class="space-y-5 max-w-[1600px] mx-auto px-2 sm:px-0">
+<div class="space-y-5 ds-section mx-auto px-2 sm:px-0">
 
   <!-- 1. Cabeçalho -->
   <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 animate-fade-up">
@@ -470,13 +484,6 @@
         class="w-full md:w-auto inline-flex justify-center items-center px-4 py-2.5 bg-gray-600 hover:bg-gray-700 text-white text-sm font-semibold rounded-lg shadow-sm shadow-gray-500/30 transition-all hover:-translate-y-0.5">
         <i class="fas fa-qrcode mr-2"></i>
         Validar RDO
-      </a>
-
-      <!-- Novo -->
-      <a href="{{ url_for('auth.criar_rdo') }}"
-        class="w-full md:w-auto inline-flex justify-center items-center px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-sm shadow-blue-500/30 transition-all hover:-translate-y-0.5">
-        <i class="fas fa-plus mr-2"></i>
-        Novo RDO
       </a>
 
       <!-- EXPORTAÇÃO -->
@@ -643,34 +650,29 @@
   </div>
 
   <!-- 3. Container da Tabela -->
-  <div class="bg-white border border-slate-200 rounded-xl shadow-sm animate-fade-up flex flex-col"
-    style="animation-delay: 200ms;">
+  {% call ui_table.wrapper(config=table_config, extra_class='animate-fade-up') %}
 
-    <!-- Toolbar -->
-    <div
-      class="p-4 border-b border-slate-100 flex flex-col md:flex-row gap-3 justify-between items-center bg-white rounded-t-xl">
-      <div class="relative w-full md:w-80 group">
-        <input type="text" id="customSearch"
-          class="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-lg bg-slate-50 text-sm focus:bg-white focus:ring-2 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all placeholder:text-slate-400"
-          placeholder="Buscar RDO, obra ou ID...">
-      </div>
+    {% call ui_table.toolbar(
+      config=table_config,
+      search_id=table_config.search_id,
+      create_url=table_config.create_url,
+      create_label=table_config.create_label,
+      create_permission=table_config.create_permission,
+      show_reload=false
+    ) %}
+      <button onclick="toggleAdvancedFilter()"
+        class="flex-1 md:flex-none inline-flex justify-center items-center px-4 py-2.5 border border-slate-200 rounded-lg text-sm font-semibold text-slate-600 bg-white hover:bg-slate-50 hover:text-slate-900 transition-all shadow-sm">
+        <i class="fas fa-sliders-h mr-2"></i> Filtros
+      </button>
+      <button onclick="resetTableState()"
+        class="inline-flex justify-center items-center w-10 h-10 border border-slate-200 rounded-lg text-slate-500 bg-white hover:bg-slate-50 hover:text-blue-600 transition-all shadow-sm"
+        title="Recarregar">
+        <i class="fas fa-sync-alt"></i>
+      </button>
+    {% endcall %}
 
-      <div class="flex w-full md:w-auto gap-2">
-        <button onclick="toggleAdvancedFilter()"
-          class="flex-1 md:flex-none inline-flex justify-center items-center px-4 py-2.5 border border-slate-200 rounded-lg text-sm font-semibold text-slate-600 bg-white hover:bg-slate-50 hover:text-slate-900 transition-all shadow-sm">
-          <i class="fas fa-sliders-h mr-2"></i> Filtros
-        </button>
-        <button onclick="resetTableState()"
-          class="inline-flex justify-center items-center w-10 h-10 border border-slate-200 rounded-lg text-slate-500 bg-white hover:bg-slate-50 hover:text-blue-600 transition-all shadow-sm"
-          title="Recarregar">
-          <i class="fas fa-sync-alt"></i>
-        </button>
-      </div>
-    </div>
-
-    <!-- Tabela -->
-    {% call ui_table.wrapper('px-0') %}
-      <table id="dataTableRDO" class="w-full text-left border-collapse">
+    {% call ui_table.table_container('px-0') %}
+      <table id="{{ table_config.datatable_id }}" class="w-full text-left border-collapse ds-mobile-labels">
         <thead class="bg-slate-50/80 border-b border-slate-200 backdrop-blur">
           <tr>
             <th data-export-key="status" class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
@@ -700,7 +702,7 @@
             data-minha-pendencia="{{ 'true' if rdo_row.is_my_turn else 'false' }}">
 
             <!-- Status (Coluna 1) -->
-            <td class="px-6 py-4 whitespace-nowrap">
+            <td data-label="Status" class="px-6 py-4 whitespace-nowrap">
               <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border
                                 {% if s == 'APROVADO' %} bg-emerald-50 text-emerald-700 border-emerald-200
                                 {% elif s == 'PENDENTE' %} bg-amber-50 text-amber-700 border-amber-200
@@ -716,7 +718,7 @@
             </td>
 
             <!-- ID (Coluna 2) -->
-            <td class="px-6 py-4 whitespace-nowrap">
+            <td data-label="Documento" class="px-6 py-4 whitespace-nowrap">
               <div class="flex items-center gap-2">
                 <span class="text-sm font-bold text-slate-700">#{{ '%03d' % (rdo.id_sequencial | int)
                   }}</span>
@@ -731,14 +733,14 @@
             </td>
 
             <!-- Data Ref (Coluna 3) -->
-            <td class="px-6 py-4 whitespace-nowrap" data-order="{{ rdo.data.strftime('%Y%m%d') if rdo.data }}">
+            <td data-label="Data Ref." class="px-6 py-4 whitespace-nowrap" data-order="{{ rdo.data.strftime('%Y%m%d') if rdo.data }}">
               <div class="text-sm text-slate-600 font-medium">
                 {{ rdo.data.strftime('%d/%m/%Y') if rdo.data else '-' }}
               </div>
             </td>
 
             <!-- Obra (Coluna 4) -->
-            <td class="px-6 py-4">
+            <td data-label="Obra" class="px-6 py-4">
               <div class="text-sm font-bold text-slate-800 truncate max-w-[180px]" title="{{ rdo.obra.nome }}">
                 {{ rdo.obra.nome if rdo.obra else 'Sem Obra' }}
               </div>
@@ -749,7 +751,7 @@
             </td>
 
             <!-- Criação (Coluna 5) -->
-            <td class="px-6 py-4 whitespace-nowrap"
+            <td data-label="Criação" class="px-6 py-4 whitespace-nowrap"
               data-order="{{ rdo.criado.strftime('%Y%m%d%H%M%S') if rdo.criado else '0' }}">
               <div class="flex items-center gap-2 md:gap-3 justify-end md:justify-start">
                 <div
@@ -766,31 +768,14 @@
             </td>
 
             <!-- Ações (Coluna 6) -->
-            <td class="px-6 py-4 whitespace-nowrap text-right">
-              <div class="flex justify-end items-center gap-1">
-                <a href="{{ url_for('auth.gerar_pdf_rdo_view', rdo_id=rdo.id) }}" target="_blank"
-                  class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors action-btn"
-                  title="PDF">
-                  <i class="fas fa-file-pdf"></i>
-                </a>
-                <a href="{{ url_for('auth.visualizar_rdo', rdo_id=rdo.id) }}"
-                  class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors action-btn"
-                  title="Ver">
-                  <i class="fas fa-eye"></i>
-                </a>
-                {% if s != 'APROVADO' %}
-                <a href="{{ url_for('auth.editar_rdo', rdo_id=rdo.id) }}"
-                  class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors action-btn"
-                  title="Editar">
-                  <i class="fas fa-pen"></i>
-                </a>
-                {% endif %}
-                <button onclick="excluirItem('{{ rdo.id }}')"
-                  class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors action-btn"
-                  title="Excluir">
-                  <i class="fas fa-trash-alt"></i>
-                </button>
-              </div>
+            <td data-label="Ações" class="px-6 py-4 whitespace-nowrap text-right ds-mobile-actions">
+              {{ ui_table.actions_dropdown(actions=[
+                {'label': 'PDF', 'icon': 'fa-file-pdf', 'url': url_for('auth.gerar_pdf_rdo_view', rdo_id=rdo.id), 'permission': 'rdo.view'},
+                {'label': 'Ver', 'icon': 'fa-eye', 'url': url_for('auth.visualizar_rdo', rdo_id=rdo.id), 'permission': 'rdo.view'},
+                {'label': 'Editar', 'icon': 'fa-pen', 'url': url_for('auth.editar_rdo', rdo_id=rdo.id), 'permission': 'rdo.update', 'disabled': (s == 'APROVADO'), 'disabled_reason': 'RDO aprovado não pode ser editado'},
+                {'divider': true},
+                {'label': 'Excluir', 'icon': 'fa-trash-alt', 'onclick': 'excluirItem(' ~ rdo.id ~ ')', 'permission': 'rdo.approve'}
+              ], button_title='Ações') }}
             </td>
           </tr>
           {% endfor %}
@@ -798,17 +783,9 @@
       </table>
 
       <!-- Empty State -->
-      {% if not rdos %}
-      <div class="py-16 text-center">
-        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-50 mb-4">
-          <i class="fas fa-search text-slate-300 text-2xl"></i>
-        </div>
-        <h3 class="text-slate-800 font-bold">Nenhum RDO encontrado</h3>
-        <p class="text-sm text-slate-500 mt-1">Tente ajustar seus filtros ou crie um novo.</p>
-      </div>
-      {% endif %}
+      {{ ui_table.empty_state(not rdos, icon='fa-search', title='Nenhum RDO encontrado', description='Tente ajustar seus filtros ou crie um novo.') }}
     {% endcall %}
-  </div>
+  {% endcall %}
 </div>
 
 <!-- OVERLAY DE FILTROS -->
@@ -938,6 +915,7 @@
 <!-- Scripts -->
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="{{ url_for('static', filename='js/admin_datatables.js') }}"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
 
 <script>
@@ -995,19 +973,28 @@
       document.body.appendChild(overlay);
     }
 
-    table = $('#dataTableRDO').DataTable({
-      responsive: false, // Custom CSS responsivo
+    const dataTableOptions = {
+      responsive: false,
       stateSave: false,
       pageLength: 50,
       lengthMenu: [[10, 25, 50, -1], ["10", "25", "50", "Todos"]],
-      order: [[2, 'desc']], // Ordenar por Data (Index 2)
+      order: [[2, 'desc']],
       language: { url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json", search: "", searchPlaceholder: "Buscar..." },
       dom: 'rt<"flex flex-col sm:flex-row justify-between items-center px-4 py-4 gap-4"li p>'
-    });
+    };
 
-    $('#customSearch').on('keyup', function () {
-      table.search(this.value).draw();
-    });
+    if (window.AdminTables && window.AdminTables.initWithSearch) {
+      table = window.AdminTables.initWithSearch({
+        tableSelector: '#{{ table_config.datatable_id }}',
+        searchInputSelector: '#{{ table_config.search_id }}',
+        dataTableOptions: dataTableOptions,
+      });
+    } else {
+      table = $('#{{ table_config.datatable_id }}').DataTable(dataTableOptions);
+      $('#{{ table_config.search_id }}').on('keyup', function () {
+        table.search(this.value).draw();
+      });
+    }
   });
 
   // Funções de Data
