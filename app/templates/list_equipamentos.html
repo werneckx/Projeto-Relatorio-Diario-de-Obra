@@ -12,15 +12,15 @@
 {% import "components/table/macros.html" as ui_table %}
 
 {% set table_config = {
-    'title': 'Cadastro de Equipamentos',
-    'icon': 'fa-tools',
-    'create_url': url_for('auth.criar_equipamento'),
-    'create_label': 'Novo Equipamento',
-    'search_input_id': 'equipamentoInputSearch',
-    'search_placeholder': 'Buscar equipamento...',
-    'datatable_id': 'dataTableEquipamentos',
-    'mobile_cards': true,
-    'mode': 'comfortable'
+'title': 'Cadastro de Equipamentos',
+'icon': 'fa-tools',
+'create_url': url_for('auth.criar_equipamento'),
+'create_label': 'Novo Equipamento',
+'search_input_id': 'equipamentoInputSearch',
+'search_placeholder': 'Buscar equipamento...',
+'datatable_id': 'dataTableEquipamentos',
+'mobile_cards': true,
+'mode': 'comfortable'
 } %}
 
 <style>
@@ -181,62 +181,80 @@
 
     <!-- Tabela Container -->
     {% call ui_table.wrapper(config=table_config, extra_class='animate-fade-up') %}
-        {% call ui_table.toolbar(config=table_config) %}{% endcall %}
+    {% call ui_table.toolbar(config=table_config) %}
+    {{ ui_table.actions_dropdown(actions=[
+    {'label': 'Exportar PDF', 'icon': 'fa-file-pdf', 'onclick': "exportEquipamentos('pdf')"},
+    {'label': 'Exportar XLSX', 'icon': 'fa-file-excel', 'onclick': "exportEquipamentos('xlsx')"}
+    ], button_title='Exportar', button_icon='fa-download') }}
+    {% endcall %}
 
-        {% call ui_table.table_container('px-0') %}
-            <table id="dataTableEquipamentos" class="w-full text-left border-collapse ds-mobile-cards ds-mobile-cards--grid">
-                <thead class="bg-slate-50/80 border-b border-slate-200 backdrop-blur">
-                    <tr>
-                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-20">ID</th>
-                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Nome do
-                            Equipamento</th>
-                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right w-32">
-                            Ações</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100 bg-white">
-                    {% for equipamento in opcoes %}
-                    <tr id="equipamento-row-{{ equipamento.id }}" class="hover:bg-slate-50/80 transition-colors group">
+    {% call ui_table.table_container('px-0') %}
+    <table id="dataTableEquipamentos" class="w-full text-left border-collapse ds-mobile-cards ds-mobile-cards--grid">
+        <thead class="bg-slate-50/80 border-b border-slate-200 backdrop-blur">
+            <tr>
+                <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-20">ID</th>
+                <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Nome do
+                    Equipamento</th>
+                <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Tipo</th>
+                <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right w-32">
+                    Ações</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 bg-white">
+            {% for equipamento in opcoes %}
+            <tr id="equipamento-row-{{ equipamento.id }}" class="hover:bg-slate-50/80 transition-colors group">
 
-                        <!-- ID -->
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-slate-400">
-                            #{{ '%03d' % equipamento.id }}
-                        </td>
+                <!-- ID -->
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-slate-400">
+                    #{{ '%03d' % equipamento.id }}
+                </td>
 
-                        <!-- Nome -->
-                        <td class="px-6 py-4 font-medium text-slate-800">
-                            <span
-                                class="inline-flex items-center px-2.5 py-1 rounded-md text-sm font-medium bg-slate-50 text-slate-700 border border-slate-200">
-                                <i class="fas fa-tools mr-2 text-slate-400 text-xs"></i>
-                                {{ equipamento.nome }}
-                            </span>
-                        </td>
+                <!-- Nome -->
+                <td class="px-6 py-4 font-medium text-slate-800">
+                    <span
+                        class="inline-flex items-center px-2.5 py-1 rounded-md text-sm font-medium bg-slate-50 text-slate-700 border border-slate-200">
+                        <i class="fas fa-tools mr-2 text-slate-400 text-xs"></i>
+                        {{ equipamento.nome }}
+                    </span>
+                </td>
 
-                        <!-- Ações -->
-                        <td class="px-6 py-4 whitespace-nowrap text-right">
-                            {{ ui_table.actions_dropdown(actions=[
-                                {'label': 'Visualizar', 'icon': 'fa-eye', 'url': url_for('auth.visualizar_equipamento', id=equipamento.id)},
-                                {'label': 'Editar', 'icon': 'fa-pen', 'url': url_for('auth.editar_equipamento', id=equipamento.id)},
-                                {'divider': true},
-                                {'label': 'Excluir', 'icon': 'fa-trash-alt', 'onclick': 'confirmDeleteEquipamento(' ~ equipamento.id ~ ')'}
-                            ], button_title='Ações') }}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                <!-- Tipo -->
+                <td class="px-6 py-4 font-medium text-slate-800">
+                    <span
+                        class="inline-flex items-center px-2.5 py-1 rounded-md text-sm font-medium bg-slate-50 text-slate-700 border border-slate-200">
+                        <i class="fas fa-tools mr-2 text-slate-400 text-xs"></i>
+                        {{ equipamento.tipo }}
+                    </span>
+                </td>
 
-            {{ ui_table.empty_state(not opcoes, icon='fa-hammer', title='Nenhum Equipamento encontrado', description='Clique em \"Novo Equipamento\" para começar.') }}
-            {% if false %}
-            <div class="py-16 text-center">
-                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-50 mb-4">
-                    <i class="fas fa-hammer text-slate-300 text-2xl"></i>
-                </div>
-                <h3 class="text-slate-800 font-bold">Nenhum Equipamento encontrado</h3>
-                <p class="text-sm text-slate-500 mt-1">Clique em "Novo Equipamento" para começar.</p>
-            </div>
-            {% endif %}
-        {% endcall %}
+                <!-- Ações -->
+                <td class="px-6 py-4 whitespace-nowrap text-right">
+                    {{ ui_table.actions_dropdown(actions=[
+                    {'label': 'Visualizar', 'icon': 'fa-eye', 'url': url_for('auth.visualizar_equipamento',
+                    id=equipamento.id)},
+                    {'label': 'Editar', 'icon': 'fa-pen', 'url': url_for('auth.editar_equipamento', id=equipamento.id)},
+                    {'divider': true},
+                    {'label': 'Excluir', 'icon': 'fa-trash-alt', 'onclick': 'confirmDeleteEquipamento(' ~ equipamento.id
+                    ~ ')'}
+                    ], button_title='Ações') }}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {{ ui_table.empty_state(not opcoes, icon='fa-hammer', title='Nenhum Equipamento encontrado', description='Clique em
+    \"Novo Equipamento\" para começar.') }}
+    {% if false %}
+    <div class="py-16 text-center">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-50 mb-4">
+            <i class="fas fa-hammer text-slate-300 text-2xl"></i>
+        </div>
+        <h3 class="text-slate-800 font-bold">Nenhum Equipamento encontrado</h3>
+        <p class="text-sm text-slate-500 mt-1">Clique em "Novo Equipamento" para começar.</p>
+    </div>
+    {% endif %}
+    {% endcall %}
     {% endcall %}
 </div>
 
