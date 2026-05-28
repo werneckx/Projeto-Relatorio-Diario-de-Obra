@@ -58,6 +58,7 @@ from app.models.auxiliares import AuxClima, AuxFuncoes, AuxEquipamentos, AuxTagO
 from app.models.obra import FrenteTrabalho, Obra, FrenteColaborador
 from app.models.rdo import RDO, RDOAprovacao, RDOEquipamento, RDOMaoObra, RDOAtividade, RDOFoto, RDOOcorrencia
 from app.models.fornecedor import Fornecedor
+from app.models.cliente import Cliente
 
 # ==============================================================================
 # 5. UTILITÁRIOS E SERVIÇOS

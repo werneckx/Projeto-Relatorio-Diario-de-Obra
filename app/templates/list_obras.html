@@ -33,13 +33,6 @@
                 Lista operacional para gestão de obras, status, progresso e auditoria.
             </p>
         </div>
-        <div class="text-xs text-slate-500">
-            <span
-                class="inline-flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-xl shadow-sm">
-                <i class="fas {{ TABLE_OBRAS_CONFIG.icon }} text-slate-400"></i>
-                <strong class="text-slate-700">{{ (opcoes|length) if opcoes else 0 }}</strong> registros
-            </span>
-        </div>
     </div>
 
     {% call ui_table.wrapper(config=TABLE_OBRAS_CONFIG, extra_class='animate-fade-up') %}
@@ -50,23 +43,6 @@
     create_label=TABLE_OBRAS_CONFIG.create_label,
     create_permission=TABLE_OBRAS_CONFIG.create_permission
     ) %}
-    <div class="hidden lg:flex items-center gap-2 mr-2">
-        <button type="button"
-            class="js-obra-filter px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-600 hover:bg-slate-50"
-            data-filter="all">
-            Todas
-        </button>
-        <button type="button"
-            class="js-obra-filter px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs font-bold text-emerald-700 hover:bg-emerald-50"
-            data-filter="active">
-            Ativas
-        </button>
-        <button type="button"
-            class="js-obra-filter px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs font-bold text-red-700 hover:bg-red-50"
-            data-filter="inactive">
-            Inativas
-        </button>
-    </div>
 
     {{ ui_table.actions_dropdown(actions=[
     {'label': 'PDF (visualização atual)', 'icon': 'fa-file-pdf', 'onclick': "exportCurrentViewObras('pdf')"},
@@ -94,14 +70,10 @@
                     Projeto</th>
                 <th data-export-key="cliente"
                     class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-72">Cliente</th>
-                <th data-export-key="cidade"
-                    class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-48">Local</th>
                 <th data-export-key="cnpj"
                     class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-40">CNPJ</th>
                 <th data-export-key="tipo"
                     class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-28">Tipo</th>
-                <th data-export-key="progresso"
-                    class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-40">Progresso</th>
                 <th data-export-key="status"
                     class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-28 text-center">Status
                 </th>
@@ -140,26 +112,13 @@
                         <div class="min-w-0">
                             <div class="font-bold text-slate-800 truncate-safe" title="{{ obra.nome }}">{{ obra.nome }}
                             </div>
-                            <div class="text-[11px] text-slate-500 truncate-safe mt-0.5"
-                                title="{{ obra.endereco or '-' }}">
-                                {{ obra.endereco or '-' }}
-                            </div>
                         </div>
                     </div>
                 </td>
 
                 <td data-label="Cliente" data-export-key="cliente" class="px-6 py-4 text-sm text-slate-700">
-                    <div class="truncate-safe" title="{{ obra.cliente or '-' }}">{{ obra.cliente or '-' }}</div>
-                </td>
-
-                <td data-label="Local" data-export-key="cidade" class="px-6 py-4 text-sm text-slate-700">
-                    <div class="flex items-center gap-2">
-                        <i class="fas fa-map-marker-alt text-slate-300 text-xs"></i>
-                        <div class="min-w-0">
-                            <div class="truncate-safe" title="{{ obra.cidade or '-' }}">{{ obra.cidade or '-' }}</div>
-                            <div class="text-[11px] text-slate-400">{{ obra.estado or '-' }}</div>
-                        </div>
-                    </div>
+                    <div class="truncate-safe" title="{{ obra.cliente or '-' }}">{{ (obra.cliente | truncate(20, true,
+                        '...')) or '-' }}</div>
                 </td>
 
                 <td data-label="CNPJ" data-export-key="cnpj" class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
@@ -181,18 +140,6 @@
                         <i class="fas fa-layer-group mr-2 text-slate-400 text-[10px]"></i>
                         {{ obra.tipo or '-' }}
                     </span>
-                </td>
-
-                <td data-label="Progresso" data-export-key="progresso" class="px-6 py-4">
-                    <div class="w-full max-w-[180px]">
-                        <div class="flex justify-between items-end mb-1">
-                            <span class="text-xs font-bold text-slate-700">{{ progress_val | round(0) | int }}%</span>
-                        </div>
-                        <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden border border-slate-200">
-                            <div class="h-1.5 rounded-full {{ 'bg-emerald-500' if progress_val >= 100 else 'bg-blue-600' }}"
-                                style="width: {{ progress_val }}%"></div>
-                        </div>
-                    </div>
                 </td>
 
                 <td data-label="Status" data-export-key="status" class="px-6 py-4 whitespace-nowrap text-center">

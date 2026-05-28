@@ -1,102 +1,64 @@
 {% extends "base.html" %}
+{% import "components/form/macros.html" as ui_form %}
 
 {% block title %}
-{% if view_mode %}Visualizar{% elif item and item.id %}Editar{% else %}Cadastrar{% endif %} Fornecedor
+  {% if view_mode %}Visualizar{% elif item and item.id %}Editar{% else %}Cadastrar{% endif %} Fornecedor
 {% endblock %}
 
 {% block content %}
-<div class="page-shell">
-  {% include "partials/flash_messages.html" %}
+{% set page_title = ('Visualizar' if view_mode else ('Editar' if item and item.id else 'Novo')) ~ ' Fornecedor' %}
+{% set subtitle = 'Detalhes do registro selecionado.' if view_mode else ('Atualize as informações.' if item and item.id else 'Cadastre um novo fornecedor.') %}
 
-  <div class="page-hero p-6 sm:p-7 flex items-center justify-between">
-    <div>
-      <h1 class="text-2xl font-bold text-slate-900 tracking-tight">
-        {% if view_mode %}Visualizar{% elif item and item.id %}Editar{% else %}Novo{% endif %} Fornecedor
-      </h1>
-      <p class="text-sm text-slate-500 mt-1">
-        {% if view_mode %}Detalhes do registro selecionado.{% elif item and item.id %}Atualize as informações.{% else %}Cadastre um novo fornecedor.{% endif %}
-      </p>
-    </div>
-    <a href="{{ url_for('auth.lista_fornecedores') }}"
-      class="hidden md:inline-flex items-center text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors">
-      <i class="fas fa-arrow-left mr-2"></i> Voltar
-    </a>
-  </div>
+{% call ui_form.page_shell() %}
+  {{ ui_form.hero(page_title, subtitle=subtitle, back_url=url_for('auth.lista_fornecedores')) }}
 
-  <form action="{{ url_for('auth.gerar_fornecedor') }}" method="POST" id="fornecedorForm" class="space-y-6">
-    <input type="hidden" name="id" value="{{ item.id if item and item.id }}">
-
-    <div class="surface-card rounded-2xl overflow-hidden">
-      <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
-        <div class="w-8 h-8 rounded-lg bg-cyan-100 text-cyan-700 flex items-center justify-center shrink-0 text-sm">
-          <i class="fas fa-truck-loading"></i>
-        </div>
-        <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">Dados do Fornecedor</h3>
-      </div>
-
-      <div class="p-6 space-y-6">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label for="nome" class="block text-xs font-bold text-slate-500 uppercase mb-2">
-              Nome <span class="text-red-500">*</span>
-            </label>
-            <input type="text" name="nome" id="nome" value="{{ item.nome if item }}"
-              class="block w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-500 disabled:border-slate-200 disabled:shadow-none transition-all"
-              placeholder="Ex: Prestadora ABC Ltda" {{ 'readonly disabled' if view_mode }} required>
-          </div>
-          <div>
-            <label for="cnpj" class="block text-xs font-bold text-slate-500 uppercase mb-2">CNPJ</label>
-            <input type="text" name="cnpj" id="cnpj" value="{{ item.cnpj if item }}"
-              class="block w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-500 disabled:border-slate-200 disabled:shadow-none transition-all font-mono"
-              placeholder="00.000.000/0000-00" {{ 'readonly disabled' if view_mode }}>
-          </div>
+  {% call ui_form.form_start(action=url_for('auth.gerar_fornecedor'), form_id='fornecedorForm', item=item) %}
+    {% call ui_form.section('Dados do Fornecedor', icon='fa-truck-loading', icon_box_class='bg-cyan-50 text-cyan-700') %}
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label for="nome" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">
+            Nome <span class="text-rose-500">*</span>
+          </label>
+          <input type="text" name="nome" id="nome" value="{{ item.nome if item }}"
+            class="block w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm shadow-xs placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-500 disabled:border-slate-200 transition-all"
+            placeholder="Ex: Prestadora ABC Ltda" {{ 'readonly disabled' if view_mode }} required>
         </div>
 
         <div>
-          <label for="endereco" class="block text-xs font-bold text-slate-500 uppercase mb-2">Endereço</label>
-          <textarea name="endereco" id="endereco" rows="3"
-            class="block w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-500 disabled:border-slate-200 disabled:shadow-none transition-all"
-            placeholder="Rua, número, bairro, cidade – UF, CEP" {{ 'readonly disabled' if view_mode }}>{{ item.endereco if item }}</textarea>
-        </div>
-
-        <div class="flex items-center gap-3">
-          <input type="checkbox" name="ativo" id="ativo" value="1"
-            class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-            {% if item is none or item.ativo %}checked{% endif %} {{ 'disabled' if view_mode }}>
-          <label for="ativo" class="text-sm text-slate-600">Ativo</label>
+          <label for="cnpj" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">CNPJ</label>
+          <input type="text" name="cnpj" id="cnpj" value="{{ item.cnpj if item }}"
+            class="block w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm shadow-xs placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-500 disabled:border-slate-200 transition-all font-mono"
+            placeholder="00.000.000/0000-00" {{ 'readonly disabled' if view_mode }}>
         </div>
       </div>
-    </div>
 
-    <div class="flex flex-col-reverse sm:flex-row gap-3 pt-2">
-      <a href="{{ url_for('auth.lista_fornecedores') }}"
-        class="flex-1 px-4 py-2.5 bg-white border border-slate-300 text-slate-700 font-semibold rounded-lg shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-200 transition-all text-center text-sm">
-        {{ 'Voltar' if view_mode else 'Cancelar' }}
-      </a>
+      <div>
+        <label for="endereco" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Endereço</label>
+        <textarea name="endereco" id="endereco" rows="3"
+          class="block w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm shadow-xs placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-500 disabled:border-slate-200 transition-all"
+          placeholder="Rua, número, bairro, cidade – UF, CEP" {{ 'readonly disabled' if view_mode }}>{{ item.endereco if item }}</textarea>
+      </div>
 
-      {% if view_mode and item and item.id %}
-      <a href="{{ url_for('auth.editar_fornecedor', id=item.id) }}"
-        class="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-sm shadow-blue-500/30 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-all text-center text-sm flex items-center justify-center gap-2">
-        <i class="fas fa-edit"></i> Editar
-      </a>
-      {% else %}
-      <button type="submit" id="submitBtn"
-        class="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-sm shadow-blue-500/30 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-all text-center text-sm flex items-center justify-center gap-2">
-        <i class="fas fa-save"></i> Salvar Registro
-      </button>
-      {% endif %}
-    </div>
-  </form>
-</div>
+      <label class="inline-flex items-center gap-2 text-sm text-slate-600">
+        <input type="checkbox" name="ativo" id="ativo" value="1"
+          class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+          {% if item is none or item.ativo %}checked{% endif %} {{ 'disabled' if view_mode }}>
+        Ativo
+      </label>
+    {% endcall %}
 
-<script>
-  document.getElementById('fornecedorForm')?.addEventListener('submit', function () {
-    const btn = document.getElementById('submitBtn');
-    if (btn) {
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
-      btn.classList.add('opacity-75', 'cursor-not-allowed');
-    }
-  });
-</script>
+    {{ ui_form.actions(
+      list_url=url_for('auth.lista_fornecedores'),
+      view_mode=view_mode,
+      edit_url=(url_for('auth.editar_fornecedor', id=item.id) if item and item.id else None),
+      submit_label='Salvar Fornecedor',
+      cancel_label='Cancelar',
+      back_label='Voltar',
+      submit_btn_id='submitBtn'
+    ) }}
+  {% endcall %}
+
+  {{ ui_form.submit_script(form_id='fornecedorForm', submit_btn_id='submitBtn', loading_label='Salvando...') }}
+{% endcall %}
 {% endblock %}
 

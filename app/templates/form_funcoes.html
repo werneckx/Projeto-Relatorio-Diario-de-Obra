@@ -1,109 +1,159 @@
 {% extends "base.html" %}
 
 {% block title %}
-{% if view_mode %}Visualizar{% elif item and item.id %}Editar{% else %}Cadastrar{% endif %} FunÃ§Ã£o
+{% if view_mode %}Visualizar{% elif item and item.id %}Editar{% else %}Cadastrar{% endif %} Função
 {% endblock %}
 
 {% block content %}
-<div class="page-shell">
+<div>
 
-    <!-- Flash Messages (padronizado) -->
     {% include "partials/flash_messages.html" %}
 
-    <!-- CabeÃ§alho -->
-    <div class="page-hero p-6 sm:p-7 flex items-center justify-between">
+    <div class="flex items-center justify-between border-b border-slate-200 pb-5 mb-6">
         <div>
-            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">
-                {% if view_mode %}Visualizar{% elif item and item.id %}Editar{% else %}Nova{% endif %} FunÃ§Ã£o
+            <h1 class="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                <span class="p-2 bg-blue-50 text-blue-600 rounded-lg text-base">
+                    <i class="fas fa-hard-hat"></i>
+                </span>
+                {% if view_mode %}Visualizar{% elif item and item.id %}Editar{% else %}Nova{% endif %} Função
             </h1>
-            <p class="text-sm text-slate-500 mt-1">
-                {% if view_mode %}Detalhes do registro selecionado.{% elif item and item.id %}Atualize as informaÃ§Ãµes.{%
-                else %}Cadastre uma nova funÃ§Ã£o/cargo.{% endif %}
+            <p class="text-xs text-slate-500 mt-1">
+                {% if view_mode %}Detalhamento completo dos dados deste registro.{% elif item and item.id %}Modifique os
+                campos necessários abaixo.{% else %}Preencha os campos para abrir um novo registro de função.{% endif %}
             </p>
         </div>
         <a href="{{ url_for('auth.lista_funcoes') }}"
-            class="hidden md:inline-flex items-center text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors">
-            <i class="fas fa-arrow-left mr-2"></i> Voltar
+            class="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg">
+            <i class="fas fa-arrow-left text-xs"></i> Voltar à lista
         </a>
     </div>
 
-    <!-- FormulÃ¡rio -->
-    <form action="{{ url_for('auth.gerar_funcao') }}" method="POST" id="maoObraForm" class="space-y-6">
+    <form action="{{ url_for('auth.gerar_funcao') }}" method="POST" id="funcaoForm"
+        class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
         <input type="hidden" name="id" value="{{ item.id if item and item.id }}">
 
-        <!-- Card Principal -->
-        <div class="surface-card rounded-2xl overflow-hidden">
-            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
-                <div
-                    class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 text-sm">
-                    <i class="fas fa-users-cog"></i>
-                </div>
-                <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">
-                    Dados da FunÃ§Ã£o
-                </h3>
-            </div>
+        <div class="p-6 sm:p-8 space-y-6">
 
-            <div class="p-6 space-y-6">
-                <div>
-                    <label for="nome" class="block text-xs font-bold text-slate-500 uppercase mb-2">
-                        Nome da FunÃ§Ã£o/Cargo <span class="text-red-500">*</span>
+            <div class="grid grid-cols-1 gap-6 sm:grid-cols-12">
+                {% if item and item.id %}
+                <div class="sm:col-span-3">
+                    <label for="display_id"
+                        class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">ID do
+                        Registro</label>
+                    <input type="text" id="display_id" value="{{ item.id }}" disabled readonly
+                        class="block w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-500 font-mono text-center focus:outline-none">
+                </div>
+                {% endif %}
+
+                <div class="{% if item and item.id %}sm:col-span-9{% else %}sm:col-span-12{% endif %}">
+                    <label for="nome" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                        Nome da Função <span class="text-red-500">*</span>
                     </label>
                     <div class="relative">
                         <input type="text" name="nome" id="nome" value="{{ item.nome if item }}"
-                            class="block w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm shadow-sm placeholder-slate-400
-                                      focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500
-                                      disabled:bg-slate-50 disabled:text-slate-500 disabled:border-slate-200 disabled:shadow-none transition-all"
-                            placeholder="Ex: Pedreiro, Servente, Mestre de Obras..." {{ 'readonly disabled' if view_mode
-                            }} required>
-                        {% if not view_mode %}
-                        <div
-                            class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
-                            <i class="fas fa-pen text-xs"></i>
-                        </div>
-                        {% endif %}
+                            class="block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-400 disabled:border-slate-200 transition-all"
+                            placeholder="Ex: Mestre de Obras, Almoxarife..." {{ 'readonly disabled' if view_mode }}
+                            required>
                     </div>
                 </div>
-                <div class="grid gap-4 sm:grid-cols-2">
-                    <div>
-                        <label for="tipo" class="block text-xs font-bold text-slate-500 uppercase mb-2">
-                            Tipo
-                        </label>
-                        <select name="tipo" id="tipo"
-                            class="block w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm shadow-sm bg-white text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all disabled:bg-slate-50 disabled:text-slate-500"
-                            {{ 'disabled' if view_mode }}>
-                            <option value="">Selecione o tipo</option>
-                            <option value="Direta" {% if item and item.tipo=='Direta' %}selected{% endif %}>Direta
-                            </option>
-                            <option value="Indireta" {% if item and item.tipo=='Indireta' %}selected{% endif %}>Indireta
-                            </option>
-                        </select>
-                    </div>
-                    <div class="flex items-center gap-3 mt-6">
+            </div>
+
+            <div class="grid grid-cols-1 gap-6 sm:grid-cols-12 items-center pt-2">
+
+                <div class="sm:col-span-4">
+                    <label for="tipo"
+                        class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">Tipo de
+                        Alocação</label>
+                    <select name="tipo" id="tipo"
+                        class="block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm shadow-sm bg-white text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all disabled:bg-slate-50 disabled:text-slate-400 disabled:border-slate-200"
+                        {{ 'disabled' if view_mode }}>
+                        <option value="">Selecione o tipo...</option>
+                        <option value="Direta" {% if item and item.tipo=='Direta' %}selected{% endif %}>Direta</option>
+                        <option value="Indireta" {% if item and item.tipo=='Indireta' %}selected{% endif %}>Indireta
+                        </option>
+                    </select>
+                </div>
+
+                <div class="sm:col-span-8 flex flex-wrap gap-x-8 gap-y-4 sm:pt-6">
+
+                    <label class="inline-flex items-center group cursor-pointer">
                         <input type="checkbox" name="ativo" id="ativo" value="1"
-                            class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" {% if item is
-                            none or item.ativo %}checked{% endif %} {{ 'disabled' if view_mode }}>
-                        <label for="ativo" class="text-sm text-slate-600">Ativo</label>
-                    </div>
+                            class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50 transition-all cursor-pointer"
+                            {% if item is none or item.ativo %}checked{% endif %} {{ 'disabled' if view_mode }}>
+                        <div class="ml-3">
+                            <span class="block text-sm font-medium text-slate-800 group-hover:text-slate-900">Registro
+                                Ativo</span>
+                            <span class="block text-xs text-slate-400">Permite usar este registro em novas
+                                movimentações</span>
+                        </div>
+                    </label>
+
+                    <label class="inline-flex items-center group cursor-pointer">
+                        <input type="checkbox" name="is_system" id="is_system" value="1"
+                            class="h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500 disabled:opacity-50 transition-all cursor-pointer"
+                            {% if item and item.is_system %}checked{% endif %} {{ 'disabled' if view_mode }}>
+                        <div class="ml-3">
+                            <span class="block text-sm font-medium text-slate-800 group-hover:text-slate-900">Registro
+                                do Sistema</span>
+                            <span class="block text-xs text-slate-400">Função estrutural interna de proteção
+                                padrão</span>
+                        </div>
+                    </label>
                 </div>
             </div>
         </div>
 
-        <!-- Barra de AÃ§Ãµes -->
-        <div class="flex flex-col-reverse sm:flex-row gap-3 pt-2">
+        {% if item and item.id %}
+        <div class="bg-slate-50/70 border-t border-b border-slate-200/60 px-6 py-4">
+            <div class="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4 text-[11px] text-slate-500">
+                <div>
+                    <span class="block font-medium text-slate-400 uppercase tracking-wider mb-0.5">Criado Por</span>
+                    <span class="font-medium text-slate-700 flex items-center gap-1.5">
+                        <i class="far fa-user text-slate-400"></i>
+                        {{ item.criado_por.nome | default(item.criado_por) | default('-') }}
+                    </span>
+                </div>
+                <div>
+                    <span class="block font-medium text-slate-400 uppercase tracking-wider mb-0.5">Criado Em</span>
+                    <span class="font-medium text-slate-700 flex items-center gap-1.5">
+                        <i class="far fa-calendar-alt text-slate-400"></i>
+                        {{ item.criado_em.strftime('%d/%m/%Y %H:%M') if item.criado_em else '-' }}
+                    </span>
+                </div>
+                <div>
+                    <span class="block font-medium text-slate-400 uppercase tracking-wider mb-0.5">Modificado Por</span>
+                    <span class="font-medium text-slate-700 flex items-center gap-1.5">
+                        <i class="far fa-user text-slate-400"></i>
+                        {{ item.modificado_por.nome | default(item.modificado_por) | default('-') }}
+                    </span>
+                </div>
+                <div>
+                    <span class="block font-medium text-slate-400 uppercase tracking-wider mb-0.5">Modificado Em</span>
+                    <span class="font-medium text-slate-700 flex items-center gap-1.5">
+                        <i class="far fa-calendar-check text-slate-400"></i>
+                        {{ item.modificado_em.strftime('%d/%m/%Y %H:%M') if item.modificado_em else '-' }}
+                    </span>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div
+            class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
             <a href="{{ url_for('auth.lista_funcoes') }}"
-                class="flex-1 px-4 py-2.5 bg-white border border-slate-300 text-slate-700 font-semibold rounded-lg shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-200 transition-all text-center text-sm">
+                class="px-4 py-2 bg-white border border-slate-300 text-slate-700 font-medium rounded-lg shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-200 transition-all text-center text-sm sm:w-28">
                 {{ 'Voltar' if view_mode else 'Cancelar' }}
             </a>
 
             {% if view_mode %}
             <a href="{{ url_for('auth.editar_funcao', id=item.id) }}"
-                class="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-sm shadow-blue-500/30 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-all text-center text-sm flex items-center justify-center gap-2">
-                <i class="fas fa-edit"></i> Editar
+                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-all text-center text-sm flex items-center justify-center gap-2 sm:w-28">
+                <i class="fas fa-edit text-xs"></i> Editar
             </a>
             {% else %}
             <button type="submit" id="submitBtn"
-                class="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-sm shadow-blue-500/30 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-all text-center text-sm flex items-center justify-center gap-2">
-                <i class="fas fa-save"></i> Salvar Registro
+                class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-all text-center text-sm flex items-center justify-center gap-2 min-w-[140px]">
+                <i class="fas fa-save text-xs"></i> Salvar Função
             </button>
             {% endif %}
         </div>
@@ -111,13 +161,12 @@
 </div>
 
 <script>
-    document.getElementById('maoObraForm').addEventListener('submit', function (e) {
+    document.getElementById('funcaoForm').addEventListener('submit', function (e) {
         const btn = document.getElementById('submitBtn');
         if (btn) {
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Salvando...';
             btn.classList.add('opacity-75', 'cursor-not-allowed');
         }
     });
 </script>
 {% endblock %}
-
