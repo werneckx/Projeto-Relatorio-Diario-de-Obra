@@ -1,12 +1,13 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 
 {% block title %}
 {% if view_mode %}Visualizar{% elif item and item.id %}Editar{% else %}Cadastrar{% endif %} Obra
 {% endblock %}
 
 {% block content %}
+{% import "components/form/macros.html" as ui_form %}
 
-<!-- Definição de Estilos Dinâmicos -->
+<!-- DefiniÃ§Ã£o de Estilos DinÃ¢micos -->
 {% set input_base_css = "block w-full px-3 py-2.5 text-sm rounded-lg border transition-all outline-none appearance-none"
 %}
 {% set input_edit_css = "bg-white border-slate-300 text-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500
@@ -17,7 +18,7 @@ shadow-sm placeholder:text-slate-400" %}
 {% set select_view_css = "!bg-slate-100/60 !text-slate-800 !opacity-100 font-semibold bg-no-repeat" if view_mode else ""
 %}
 
-{# --- CÁLCULO DE PROGRESSO GLOBAL E CURVA S (Média das Frentes) --- #}
+{# --- CÃLCULO DE PROGRESSO GLOBAL E CURVA S (MÃ©dia das Frentes) --- #}
 {% set ns = namespace(total_realized_pct=0, total_expected_pct=0, count=0) %}
 {% if frentes %}
 {% for f in frentes %}
@@ -27,11 +28,11 @@ shadow-sm placeholder:text-slate-400" %}
 {% set expected = f.qtd_esperada_curva_s or 0 %}
 
 {% if plan > 0 %}
-{# Cálculo % Realizado #}
+{# CÃ¡lculo % Realizado #}
 {% set pct_real = (real / plan) * 100 %}
 {% if pct_real > 100 %}{% set pct_real = 100 %}{% endif %}
 
-{# Cálculo % Esperado (Curva S) #}
+{# CÃ¡lculo % Esperado (Curva S) #}
 {% set pct_exp = (expected / plan) * 100 %}
 {% if pct_exp > 100 %}{% set pct_exp = 100 %}{% endif %}
 
@@ -46,12 +47,12 @@ shadow-sm placeholder:text-slate-400" %}
 {% set global_expected = (ns.total_expected_pct / ns.count) if ns.count > 0 else 0 %}
 
 {# Define status global visual #}
-{% set global_status_text = "Não Iniciado" %}
+{% set global_status_text = "NÃ£o Iniciado" %}
 {% set global_color = "text-slate-400" %}
 {% set global_bg = "bg-slate-100" %}
 
 {% if global_expected > 0.1 %}
-{# SPI: Índice de Desempenho de Prazo #}
+{# SPI: Ãndice de Desempenho de Prazo #}
 {% set spi = global_realized / global_expected %}
 
 {% if spi < 0.9 %} {% set global_status_text="Atrasado" %} {% set global_color="text-red-600" %} {% set
@@ -65,17 +66,17 @@ shadow-sm placeholder:text-slate-400" %}
     {% set global_bg = "bg-blue-50" %}
     {% endif %}
     {% elif global_realized > 0 %}
-    {# Caso especial: Começou antes do previsto #}
+    {# Caso especial: ComeÃ§ou antes do previsto #}
     {% set global_status_text = "Adiantado" %}
     {% set global_color = "text-emerald-600" %}
     {% set global_bg = "bg-emerald-50" %}
     {% endif %}
 
-    <div class="page-shell animate-fade-in-up">
+    <div class="animate-fade-in-up">
 
         {% include "partials/flash_messages.html" %}
 
-        <!-- Cabeçalho -->
+        <!-- CabeÃ§alho -->
         <div class="page-hero p-6 sm:p-7 mb-2 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
                 <h1 class="text-2xl font-bold text-slate-900 tracking-tight">
@@ -83,7 +84,7 @@ shadow-sm placeholder:text-slate-400" %}
                 </h1>
                 <p class="text-sm text-slate-500 mt-1">
                     {% if view_mode %}
-                    Ficha técnica do projeto.
+                    Ficha tÃ©cnica do projeto.
                     {% elif item and item.id %}
                     Atualize os dados da obra e frentes de trabalho.
                     {% else %}
@@ -100,14 +101,15 @@ shadow-sm placeholder:text-slate-400" %}
 
         <!-- CARD DE STATUS DO PROJETO (Curva S Global) -->
         {% if item and item.id %}
-        <!-- CORREÇÃO: Removido 'overflow-hidden' para permitir que o Tooltip apareça completo -->
+        <!-- CORREÃ‡ÃƒO: Removido 'overflow-hidden' para permitir que o Tooltip apareÃ§a completo -->
         <div class="mb-6 bg-white rounded-xl border border-slate-200 shadow-sm p-6 relative">
             <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-2">
                 <h3 class="text-sm font-bold text-slate-700 uppercase tracking-wide flex items-center gap-2">
                     <i class="fas fa-chart-line text-blue-500"></i> Performance Global
                 </h3>
                 {% set text = global_status_text %}
-                {% set variant = 'danger' if global_status_text == 'Atrasado' else ('success' if global_status_text == 'Adiantado' else ('info' if global_status_text == 'No Prazo' else 'neutral')) %}
+                {% set variant = 'danger' if global_status_text == 'Atrasado' else ('success' if global_status_text ==
+                'Adiantado' else ('info' if global_status_text == 'No Prazo' else 'neutral')) %}
                 {% include "components/badge.html" %}
             </div>
 
@@ -117,7 +119,7 @@ shadow-sm placeholder:text-slate-400" %}
                     <div class="flex justify-between items-end mb-2">
                         <div>
                             <span class="text-xs font-bold text-emerald-600 uppercase">Realizado</span>
-                            <p class="text-[10px] text-slate-400">Média de avanço físico</p>
+                            <p class="text-[10px] text-slate-400">MÃ©dia de avanÃ§o fÃ­sico</p>
                         </div>
                         <div class="text-2xl font-bold text-slate-800">{{ global_realized | round(1) }}%</div>
                     </div>
@@ -148,16 +150,16 @@ shadow-sm placeholder:text-slate-400" %}
                             <div
                                 class="absolute bottom-full left-0 mb-2 w-72 p-4 bg-slate-800 text-white text-xs rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-[100] transform group-hover:-translate-y-1">
                                 <div class="font-bold text-blue-300 mb-1 border-b border-slate-600 pb-1">
-                                    <i class="fas fa-chart-line mr-1"></i> Fator de Cálculo: Curva S
+                                    <i class="fas fa-chart-line mr-1"></i> Fator de CÃ¡lculo: Curva S
                                 </div>
                                 <p class="leading-relaxed text-slate-300 mb-2">
-                                    A <strong>Curva S</strong> é usada para definir a meta diária. Diferente de uma
-                                    média linear, ela considera o ritmo natural da engenharia:
+                                    A <strong>Curva S</strong> Ã© usada para definir a meta diÃ¡ria. Diferente de uma
+                                    mÃ©dia linear, ela considera o ritmo natural da engenharia:
                                 </p>
                                 <ul class="space-y-1 text-[10px] text-slate-400 list-disc list-inside">
-                                    <li><strong>Início:</strong> Ritmo lento (mobilização).</li>
-                                    <li><strong>Meio:</strong> Aceleração máxima (pico de produção).</li>
-                                    <li><strong>Fim:</strong> Desaceleração (acabamentos).</li>
+                                    <li><strong>InÃ­cio:</strong> Ritmo lento (mobilizaÃ§Ã£o).</li>
+                                    <li><strong>Meio:</strong> AceleraÃ§Ã£o mÃ¡xima (pico de produÃ§Ã£o).</li>
+                                    <li><strong>Fim:</strong> DesaceleraÃ§Ã£o (acabamentos).</li>
                                 </ul>
                                 <!-- Seta do Tooltip -->
                                 <div
@@ -178,580 +180,576 @@ shadow-sm placeholder:text-slate-400" %}
         </div>
         {% endif %}
 
-        <!-- Formulário Principal -->
-        <form action="{{ url_for('auth.gerar_obra') }}" method="POST" id="mainForm" class="space-y-6">
-            <input type="hidden" name="id" value="{{ item.id if item and item.id }}">
-            <input type="hidden" name="categoria" value="obra">
-            <!-- Input JSON essencial para o Backend processar as frentes (novas e editadas) -->
-            <input type="hidden" name="frentes_json" id="frentes_json">
-            <input type="hidden" name="equipe_obra_json" id="equipe_obra_json">
+        <!-- FormulÃ¡rio Principal -->
+        {% call ui_form.form_start(url_for('auth.gerar_obra'), 'mainForm', item=item, extra_class='space-y-6') %}
 
-            <!-- 1. Dados Gerais -->
-            <div class="surface-card rounded-2xl overflow-hidden bg-white border border-slate-200 shadow-sm">
-                <div
-                    class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div class="flex items-center gap-3">
-                        <div
-                            class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 text-sm">
-                            <i class="fas fa-building"></i>
-                        </div>
-                        <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">Informações Básicas
-                        </h3>
+        <input type="hidden" name="categoria" value="obra">
+        <!-- Input JSON essencial para o Backend processar as frentes (novas e editadas) -->
+        <input type="hidden" name="frentes_json" id="frentes_json">
+        <input type="hidden" name="equipe_obra_json" id="equipe_obra_json">
+
+        <!-- 1. Dados Gerais -->
+        <div class="surface-card rounded-2xl overflow-hidden bg-white border border-slate-200 shadow-sm">
+            <div
+                class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <div
+                        class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 text-sm">
+                        <i class="fas fa-building"></i>
                     </div>
+                    <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">Informações básicas da Obra
+                    </h3>
+                </div>
 
-                    <!-- Status Badge / Toggle -->
-                    {% if view_mode %}
-                    <span class="inline-flex items-center gap-1.5">
-                        <i class="fas {{ 'fa-check-circle' if (item and item.status == 1) else 'fa-times-circle' }} text-xs"></i>
-                        {% set text = 'Ativa' if (item and item.status == 1) else 'Inativa' %}
-                        {% set variant = 'success' if (item and item.status == 1) else 'danger' %}
-                        {% include "components/badge.html" %}
+                <!-- Status Badge / Toggle -->
+                {% if view_mode %}
+                <span class="inline-flex items-center gap-1.5">
+                    <i
+                        class="fas {{ 'fa-check-circle' if (item and item.status == 1) else 'fa-times-circle' }} text-xs"></i>
+                    {% set text = 'Ativa' if (item and item.status == 1) else 'Inativa' %}
+                    {% set variant = 'success' if (item and item.status == 1) else 'danger' %}
+                    {% include "components/badge.html" %}
+                </span>
+                {% else %}
+                <label class="relative inline-flex items-center cursor-pointer group">
+                    <input type="checkbox" name="status" class="sr-only peer" {{ 'checked' if (item and item.status==1)
+                        or not item }}>
+                    <div
+                        class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500">
+                    </div>
+                    <span id="statusLabel"
+                        class="ml-3 text-xs font-bold uppercase transition-colors {{ 'text-emerald-600' if (item and item.status == 1) or not item else 'text-slate-400' }}">
+                        {{ 'Ativa' if (item and item.status == 1) or not item else 'Inativa' }}
                     </span>
+                </label>
+                {% endif %}
+            </div>
+
+            <div class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6">
+                <!-- Nome -->
+                <div class="lg:col-span-8">
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Nome da Obra</label>
+                    <input type="text" name="nome" value="{{ item.nome if item }}"
+                        placeholder="Ex: Reforma do GalpÃ£o LogÃ­stico" class="{{ final_input_css }}"
+                        {{ 'readonly disabled' if view_mode }} required>
+                </div>
+
+                <!-- CNPJ da Obra -->
+                <div class="lg:col-span-4">
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">CNPJ da Obra</label>
+                    <input type="text" name="cnpj_obra" id="cnpj_obra" maxlength="18" value="{{ item.cnpj if item }}"
+                        placeholder="00.000.000/0000-00" class="{{ final_input_css }} font-mono" {{ 'readonly disabled'
+                        if view_mode }}>
+                </div>
+
+                <!-- Cliente -->
+                <div class="lg:col-span-6">
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Cliente</label>
+                    {% if view_mode %}
+                    <input type="text" value="{{ item.contratante if item }}" class="{{ final_input_css }}" readonly
+                        disabled>
                     {% else %}
-                    <label class="relative inline-flex items-center cursor-pointer group">
-                        <input type="checkbox" name="status" class="sr-only peer" {{ 'checked' if (item and
-                            item.status==1) or not item }}>
+                    <div class="relative">
+                        <select name="cliente_id" class="{{ final_input_css }} {{ select_view_css }}" required>
+                            <option value="">Selecione um cliente...</option>
+                            {% for cliente in clientes %}
+                            <option value="{{ cliente.id }}" {% if item and item.cliente_id==cliente.id %}selected{%
+                                endif %}>
+                                {{ cliente.razao_social }}{% if cliente.cnpj %} ({{ cliente.cnpj }}){% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
                         <div
-                            class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500">
+                            class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
+                            <i class="fas fa-chevron-down text-xs"></i>
                         </div>
-                        <span id="statusLabel"
-                            class="ml-3 text-xs font-bold uppercase transition-colors {{ 'text-emerald-600' if (item and item.status == 1) or not item else 'text-slate-400' }}">
-                            {{ 'Ativa' if (item and item.status == 1) or not item else 'Inativa' }}
-                        </span>
-                    </label>
+                    </div>
                     {% endif %}
                 </div>
 
-                <div class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6">
-                    <!-- Nome -->
-                    <div class="lg:col-span-8">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Nome da Obra</label>
-                        <input type="text" name="nome" value="{{ item.nome if item }}"
-                            placeholder="Ex: Reforma do Galpão Logístico" class="{{ final_input_css }}"
-                            {{ 'readonly disabled' if view_mode }} required>
-                    </div>
-
-                    <!-- CNPJ da Obra -->
-                    <div class="lg:col-span-4">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">CNPJ da Obra</label>
-                        <input type="text" name="cnpj_obra" id="cnpj_obra" maxlength="18"
-                            value="{{ item.cnpj if item }}" placeholder="00.000.000/0000-00"
-                            class="{{ final_input_css }} font-mono" {{ 'readonly disabled' if view_mode }}>
-                    </div>
-
-                    <!-- Cliente -->
-                    <div class="lg:col-span-6">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Cliente</label>
-                        {% if view_mode %}
-                        <input type="text" value="{{ item.contratante if item }}" class="{{ final_input_css }}" readonly
-                            disabled>
-                        {% else %}
-                        <div class="relative">
-                            <select name="cliente_id" class="{{ final_input_css }} {{ select_view_css }}" required>
-                                <option value="">Selecione um cliente...</option>
-                                {% for cliente in clientes %}
-                                <option value="{{ cliente.id }}" {% if item and item.cliente_id==cliente.id %}selected{%
-                                    endif %}>
-                                    {{ cliente.razao_social }}{% if cliente.cnpj %} ({{ cliente.cnpj }}){% endif %}
-                                </option>
-                                {% endfor %}
-                            </select>
-                            <div
-                                class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
-                                <i class="fas fa-chevron-down text-xs"></i>
-                            </div>
+                <!-- ResponsÃ¡vel -->
+                <div class="lg:col-span-3">
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">ResponsÃ¡vel TÃ©cnico</label>
+                    <div class="relative">
+                        <select name="id_responsavel" class="{{ final_input_css }} {{ select_view_css }}" {{ 'disabled'
+                            if view_mode }}>
+                            <option value="">Selecione...</option>
+                            {% for usuario in usuarios %}
+                            <option value="{{ usuario.id }}" {% if item and item.id_responsavel==usuario.id %}selected{%
+                                endif %}>{{ usuario.nome }} ({{ usuario.email }})</option>
+                            {% endfor %}
+                        </select>
+                        {% if not view_mode %}
+                        <div
+                            class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
+                            <i class="fas fa-chevron-down text-xs"></i>
                         </div>
                         {% endif %}
                     </div>
+                </div>
+            </div>
+        </div>
 
-                    <!-- Responsável -->
-                    <div class="lg:col-span-3">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Responsável Técnico</label>
-                        <div class="relative">
-                            <select name="id_responsavel" class="{{ final_input_css }} {{ select_view_css }}"
-                                {{ 'disabled' if view_mode }}>
-                                <option value="">Selecione...</option>
-                                {% for usuario in usuarios %}
-                                <option value="{{ usuario.id }}" {% if item and item.id_responsavel==usuario.id
-                                    %}selected{% endif %}>{{ usuario.nome }} ({{ usuario.email }})</option>
-                                {% endfor %}
-                            </select>
+        <div class="surface-card rounded-2xl overflow-hidden bg-white border border-slate-200 shadow-sm">
+            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
+                <div
+                    class="w-8 h-8 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center shrink-0 text-sm">
+                    <i class="far fa-clock"></i>
+                </div>
+                <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">Horarios Padrao da Obra
+                </h3>
+            </div>
+            <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Horario Entrada
+                        Padrao</label>
+                    <input type="time" name="horario_entrada"
+                        value="{{ item.horario_entrada.strftime('%H:%M') if item and item.horario_entrada else '' }}"
+                        class="{{ final_input_css }} font-mono" {{ 'readonly disabled' if view_mode }}>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Horario Saida
+                        Padrao</label>
+                    <input type="time" name="horario_saida"
+                        value="{{ item.horario_saida.strftime('%H:%M') if item and item.horario_saida else '' }}"
+                        class="{{ final_input_css }} font-mono" {{ 'readonly disabled' if view_mode }}>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Datas e LocalizaÃ§Ã£o -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            <!-- Datas -->
+            <div class="surface-card rounded-2xl overflow-hidden bg-white border border-slate-200 shadow-sm h-full">
+                <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
+                    <div
+                        class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 text-sm">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
+                    <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">Cronograma</h3>
+                </div>
+                <div class="p-6 space-y-5">
+                    <!-- InÃ­cio -->
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="text-xs font-bold text-slate-500 uppercase">Data de InÃ­cio</label>
                             {% if not view_mode %}
-                            <div
-                                class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
-                                <i class="fas fa-chevron-down text-xs"></i>
+                            <button type="button" onclick="setToday('data_inicio_visual', 'data_inicio_hidden')"
+                                class="text-[10px] font-bold text-emerald-600 hover:bg-emerald-50 px-2 py-1 rounded transition-colors border border-emerald-100 shadow-sm flex items-center">
+                                <i class="fas fa-magic mr-1"></i> HOJE
+                            </button>
+                            {% endif %}
+                        </div>
+                        <div class="relative">
+                            <input type="hidden" name="inicio" id="data_inicio_hidden"
+                                value="{{ item.inicio | string if item and item.inicio else '' }}">
+                            <input type="text" id="data_inicio_visual"
+                                value="{{ item.inicio.strftime('%d/%m/%Y') if item and item.inicio else '' }}"
+                                placeholder="DD/MM/AAAA" maxlength="10"
+                                class="{{ final_input_css }} {{ 'pr-10' if not view_mode else '' }}"
+                                {{ 'readonly disabled' if view_mode }} required
+                                oninput="mascaraData(this); syncDate(this, 'data_inicio_hidden')"
+                                onblur="syncDate(this, 'data_inicio_hidden')">
+                            {% if not view_mode %}
+                            <div class="absolute inset-y-0 right-0 flex items-center pr-3 z-10">
+                                <i class="far fa-calendar-alt text-slate-400 hover:text-emerald-600 cursor-pointer text-lg"
+                                    onclick="this.nextElementSibling.showPicker()"></i>
+                                <input type="date" class="absolute w-0 h-0 opacity-0 pointer-events-none" tabindex="-1"
+                                    onchange="applyPicker(this, 'data_inicio_visual', 'data_inicio_hidden')">
                             </div>
                             {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- TÃ©rmino -->
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="text-xs font-bold text-slate-500 uppercase">PrevisÃ£o de TÃ©rmino</label>
+                            {% if not view_mode %}
+                            <button type="button" onclick="setToday('data_termino_visual', 'data_termino_hidden')"
+                                class="text-[10px] font-bold text-emerald-600 hover:bg-emerald-50 px-2 py-1 rounded transition-colors border border-emerald-100 shadow-sm flex items-center">
+                                <i class="fas fa-magic mr-1"></i> HOJE
+                            </button>
+                            {% endif %}
+                        </div>
+                        <div class="relative">
+                            <input type="hidden" name="termino" id="data_termino_hidden"
+                                value="{{ item.termino | string if item and item.termino else '' }}">
+                            <input type="text" id="data_termino_visual"
+                                value="{{ item.termino.strftime('%d/%m/%Y') if item and item.termino else '' }}"
+                                placeholder="DD/MM/AAAA" maxlength="10"
+                                class="{{ final_input_css }} {{ 'pr-10' if not view_mode else '' }}"
+                                {{ 'readonly disabled' if view_mode }} required
+                                oninput="mascaraData(this); syncDate(this, 'data_termino_hidden')"
+                                onblur="syncDate(this, 'data_termino_hidden')">
+                            {% if not view_mode %}
+                            <div class="absolute inset-y-0 right-0 flex items-center pr-3 z-10">
+                                <i class="far fa-calendar-alt text-slate-400 hover:text-emerald-600 cursor-pointer text-lg"
+                                    onclick="this.nextElementSibling.showPicker()"></i>
+                                <input type="date" class="absolute w-0 h-0 opacity-0 pointer-events-none" tabindex="-1"
+                                    onchange="applyPicker(this, 'data_termino_visual', 'data_termino_hidden')">
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div id="erro_data"
+                            class="hidden items-center gap-2 mt-2 text-red-600 bg-red-50 p-2 rounded-lg text-xs font-medium animate-pulse">
+                            <i class="fas fa-exclamation-triangle"></i><span>O tÃ©rmino deve ser posterior ao
+                                inÃ­cio.</span>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="surface-card rounded-2xl overflow-hidden bg-white border border-slate-200 shadow-sm">
+            <!-- LocalizaÃ§Ã£o -->
+            <div class="surface-card rounded-2xl overflow-hidden bg-white border border-slate-200 shadow-sm h-full">
                 <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
                     <div
                         class="w-8 h-8 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center shrink-0 text-sm">
-                        <i class="far fa-clock"></i>
+                        <i class="fas fa-map-marker-alt"></i>
                     </div>
-                    <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">Horarios Padrao da Obra
-                    </h3>
+                    <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">EndereÃ§o</h3>
                 </div>
-                <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="p-6 grid grid-cols-12 gap-4">
+                    <!-- CEP -->
+                    <div class="col-span-5 sm:col-span-4">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">CEP</label>
+                        <input type="text" name="cep" id="cep" maxlength="9" value="{{ item.cep if item }}"
+                            placeholder="00000-000" class="{{ final_input_css }}" {{ 'readonly disabled' if view_mode }}
+                            required>
+                        <p id="cep-message" class="text-[10px] mt-1 h-3"></p>
+                    </div>
+                    <div class="col-span-7 sm:col-span-8 flex items-end pb-1">
+                        {% if not view_mode %}<span class="text-[10px] text-slate-400 italic"><i
+                                class="fas fa-search mr-1"></i>Digite o CEP para buscar</span>{% endif %}
+                    </div>
+
+                    <!-- Campos de endereÃ§o -->
+                    <div class="col-span-12">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">EndereÃ§o</label>
+                        <input type="text" name="endereco" id="endereco" value="{{ item.endereco if item }}"
+                            class="{{ final_input_css }}" required {{ 'readonly disabled' if view_mode }}>
+                    </div>
+                    <div class="col-span-4">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">NÂº</label>
+                        <input type="text" name="numero" id="numero" value="{{ item.numero if item }}"
+                            class="{{ final_input_css }}" required {{ 'readonly disabled' if view_mode }}>
+                    </div>
+                    <div class="col-span-8">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Complemento</label>
+                        <input type="text" name="complemento" id="complemento" value="{{ item.complemento if item }}"
+                            class="{{ final_input_css }}" {{ 'readonly disabled' if view_mode }}>
+                    </div>
+                    <div class="col-span-6">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Bairro</label>
+                        <input type="text" name="bairro" id="bairro" value="{{ item.bairro if item }}"
+                            class="{{ final_input_css }}" required {{ 'readonly disabled' if view_mode }}>
+                    </div>
+                    <div class="col-span-4">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Cidade</label>
+                        <input type="text" name="cidade" id="cidade" value="{{ item.cidade if item }}"
+                            class="{{ final_input_css }}" required {{ 'readonly disabled' if view_mode }}>
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">UF</label>
+                        <input type="text" name="estado" id="estado" maxlength="2" value="{{ item.estado if item }}"
+                            class="{{ final_input_css }} text-center uppercase" required {{ 'readonly disabled' if
+                            view_mode }}>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Frentes de Trabalho -->
+        <div class="surface-card rounded-2xl overflow-hidden bg-white border border-slate-200 shadow-sm">
+            <div
+                class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <div
+                        class="w-8 h-8 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center shrink-0 text-sm">
+                        <i class="fas fa-hard-hat"></i>
+                    </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Horario Entrada
-                            Padrao</label>
-                        <input type="time" name="horario_entrada"
-                            value="{{ item.horario_entrada.strftime('%H:%M') if item and item.horario_entrada else '' }}"
-                            class="{{ final_input_css }} font-mono" {{ 'readonly disabled' if view_mode }}>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Horario Saida
-                            Padrao</label>
-                        <input type="time" name="horario_saida"
-                            value="{{ item.horario_saida.strftime('%H:%M') if item and item.horario_saida else '' }}"
-                            class="{{ final_input_css }} font-mono" {{ 'readonly disabled' if view_mode }}>
+                        <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">Frentes de Trabalho
+                        </h3>
+                        <p class="text-[10px] text-slate-500 hidden sm:block">Defina metas fÃ­sicas e cronograma
+                            (obrigatÃ³rio para Curva S).</p>
                     </div>
                 </div>
-            </div>
-
-            <!-- 2. Datas e Localização -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-                <!-- Datas -->
-                <div class="surface-card rounded-2xl overflow-hidden bg-white border border-slate-200 shadow-sm h-full">
-                    <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
-                        <div
-                            class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 text-sm">
-                            <i class="fas fa-calendar-alt"></i>
-                        </div>
-                        <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">Cronograma</h3>
-                    </div>
-                    <div class="p-6 space-y-5">
-                        <!-- Início -->
-                        <div>
-                            <div class="flex justify-between items-center mb-2">
-                                <label class="text-xs font-bold text-slate-500 uppercase">Data de Início</label>
-                                {% if not view_mode %}
-                                <button type="button" onclick="setToday('data_inicio_visual', 'data_inicio_hidden')"
-                                    class="text-[10px] font-bold text-emerald-600 hover:bg-emerald-50 px-2 py-1 rounded transition-colors border border-emerald-100 shadow-sm flex items-center">
-                                    <i class="fas fa-magic mr-1"></i> HOJE
-                                </button>
-                                {% endif %}
-                            </div>
-                            <div class="relative">
-                                <input type="hidden" name="inicio" id="data_inicio_hidden"
-                                    value="{{ item.inicio | string if item and item.inicio else '' }}">
-                                <input type="text" id="data_inicio_visual"
-                                    value="{{ item.inicio.strftime('%d/%m/%Y') if item and item.inicio else '' }}"
-                                    placeholder="DD/MM/AAAA" maxlength="10"
-                                    class="{{ final_input_css }} {{ 'pr-10' if not view_mode else '' }}"
-                                    {{ 'readonly disabled' if view_mode }} required
-                                    oninput="mascaraData(this); syncDate(this, 'data_inicio_hidden')"
-                                    onblur="syncDate(this, 'data_inicio_hidden')">
-                                {% if not view_mode %}
-                                <div class="absolute inset-y-0 right-0 flex items-center pr-3 z-10">
-                                    <i class="far fa-calendar-alt text-slate-400 hover:text-emerald-600 cursor-pointer text-lg"
-                                        onclick="this.nextElementSibling.showPicker()"></i>
-                                    <input type="date" class="absolute w-0 h-0 opacity-0 pointer-events-none"
-                                        tabindex="-1"
-                                        onchange="applyPicker(this, 'data_inicio_visual', 'data_inicio_hidden')">
-                                </div>
-                                {% endif %}
-                            </div>
-                        </div>
-
-                        <!-- Término -->
-                        <div>
-                            <div class="flex justify-between items-center mb-2">
-                                <label class="text-xs font-bold text-slate-500 uppercase">Previsão de Término</label>
-                                {% if not view_mode %}
-                                <button type="button" onclick="setToday('data_termino_visual', 'data_termino_hidden')"
-                                    class="text-[10px] font-bold text-emerald-600 hover:bg-emerald-50 px-2 py-1 rounded transition-colors border border-emerald-100 shadow-sm flex items-center">
-                                    <i class="fas fa-magic mr-1"></i> HOJE
-                                </button>
-                                {% endif %}
-                            </div>
-                            <div class="relative">
-                                <input type="hidden" name="termino" id="data_termino_hidden"
-                                    value="{{ item.termino | string if item and item.termino else '' }}">
-                                <input type="text" id="data_termino_visual"
-                                    value="{{ item.termino.strftime('%d/%m/%Y') if item and item.termino else '' }}"
-                                    placeholder="DD/MM/AAAA" maxlength="10"
-                                    class="{{ final_input_css }} {{ 'pr-10' if not view_mode else '' }}"
-                                    {{ 'readonly disabled' if view_mode }} required
-                                    oninput="mascaraData(this); syncDate(this, 'data_termino_hidden')"
-                                    onblur="syncDate(this, 'data_termino_hidden')">
-                                {% if not view_mode %}
-                                <div class="absolute inset-y-0 right-0 flex items-center pr-3 z-10">
-                                    <i class="far fa-calendar-alt text-slate-400 hover:text-emerald-600 cursor-pointer text-lg"
-                                        onclick="this.nextElementSibling.showPicker()"></i>
-                                    <input type="date" class="absolute w-0 h-0 opacity-0 pointer-events-none"
-                                        tabindex="-1"
-                                        onchange="applyPicker(this, 'data_termino_visual', 'data_termino_hidden')">
-                                </div>
-                                {% endif %}
-                            </div>
-                            <div id="erro_data"
-                                class="hidden items-center gap-2 mt-2 text-red-600 bg-red-50 p-2 rounded-lg text-xs font-medium animate-pulse">
-                                <i class="fas fa-exclamation-triangle"></i><span>O término deve ser posterior ao
-                                    início.</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Localização -->
-                <div class="surface-card rounded-2xl overflow-hidden bg-white border border-slate-200 shadow-sm h-full">
-                    <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
-                        <div
-                            class="w-8 h-8 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center shrink-0 text-sm">
-                            <i class="fas fa-map-marker-alt"></i>
-                        </div>
-                        <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">Endereço</h3>
-                    </div>
-                    <div class="p-6 grid grid-cols-12 gap-4">
-                        <!-- CEP -->
-                        <div class="col-span-5 sm:col-span-4">
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">CEP</label>
-                            <input type="text" name="cep" id="cep" maxlength="9" value="{{ item.cep if item }}"
-                                placeholder="00000-000" class="{{ final_input_css }}" {{ 'readonly disabled' if
-                                view_mode }} required>
-                            <p id="cep-message" class="text-[10px] mt-1 h-3"></p>
-                        </div>
-                        <div class="col-span-7 sm:col-span-8 flex items-end pb-1">
-                            {% if not view_mode %}<span class="text-[10px] text-slate-400 italic"><i
-                                    class="fas fa-search mr-1"></i>Digite o CEP para buscar</span>{% endif %}
-                        </div>
-
-                        <!-- Campos de endereço -->
-                        <div class="col-span-12">
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Endereço</label>
-                            <input type="text" name="endereco" id="endereco" value="{{ item.endereco if item }}"
-                                class="{{ final_input_css }}" required {{ 'readonly disabled' if view_mode }}>
-                        </div>
-                        <div class="col-span-4">
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Nº</label>
-                            <input type="text" name="numero" id="numero" value="{{ item.numero if item }}"
-                                class="{{ final_input_css }}" required {{ 'readonly disabled' if view_mode }}>
-                        </div>
-                        <div class="col-span-8">
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Complemento</label>
-                            <input type="text" name="complemento" id="complemento"
-                                value="{{ item.complemento if item }}" class="{{ final_input_css }}"
-                                {{ 'readonly disabled' if view_mode }}>
-                        </div>
-                        <div class="col-span-6">
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Bairro</label>
-                            <input type="text" name="bairro" id="bairro" value="{{ item.bairro if item }}"
-                                class="{{ final_input_css }}" required {{ 'readonly disabled' if view_mode }}>
-                        </div>
-                        <div class="col-span-4">
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Cidade</label>
-                            <input type="text" name="cidade" id="cidade" value="{{ item.cidade if item }}"
-                                class="{{ final_input_css }}" required {{ 'readonly disabled' if view_mode }}>
-                        </div>
-                        <div class="col-span-2">
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">UF</label>
-                            <input type="text" name="estado" id="estado" maxlength="2" value="{{ item.estado if item }}"
-                                class="{{ final_input_css }} text-center uppercase" required {{ 'readonly disabled' if
-                                view_mode }}>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 3. Frentes de Trabalho -->
-            <div class="surface-card rounded-2xl overflow-hidden bg-white border border-slate-200 shadow-sm">
-                <div
-                    class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex flex-wrap items-center justify-between gap-4">
-                    <div class="flex items-center gap-3">
-                        <div
-                            class="w-8 h-8 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center shrink-0 text-sm">
-                            <i class="fas fa-hard-hat"></i>
-                        </div>
-                        <div>
-                            <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">Frentes de Trabalho
-                            </h3>
-                            <p class="text-[10px] text-slate-500 hidden sm:block">Defina metas físicas e cronograma
-                                (obrigatório para Curva S).</p>
-                        </div>
-                    </div>
-                    {% if not view_mode %}
-                    <button type="button" onclick="addFrenteRow()"
-                        class="bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 px-4 py-2 rounded-lg font-bold text-xs transition flex items-center gap-2">
-                        <i class="fas fa-plus"></i> <span class="hidden sm:inline">Adicionar Frente</span>
-                    </button>
-                    {% endif %}
-                </div>
-
-                <!-- Tabela de Frentes -->
-                <div class="w-full overflow-x-auto">
-                    <table class="w-full text-left mobile-table" id="table_frentes">
-                        <thead>
-                            <tr
-                                class="bg-slate-50 text-[10px] uppercase text-slate-500 font-bold border-b border-slate-200">
-                                <!-- Larguras balanceadas para incluir Data Inicio -->
-                                <th class="p-3 w-[25%]">Nome da Frente</th>
-                                <th class="p-3 w-[15%]">Responsável</th>
-                                <th class="p-3 w-[8%] text-center">Unid.</th>
-                                <th class="p-3 w-[10%] text-center">Meta</th>
-                                <th class="p-3 w-[12%] text-center">Data Início</th>
-                                <th class="p-3 w-[12%] text-center">Data Fim</th>
-                                <th class="p-3 w-[15%] text-center">Progresso</th>
-                                {% if not view_mode %}<th class="p-3 w-[3%] text-center"></th>{% endif %}
-                            </tr>
-                        </thead>
-                        <tbody id="lista-frentes" class="divide-y divide-slate-100 bg-white">
-                            {% if frentes %}
-                            {% for f in frentes %}
-                            <!-- Cálculos auxiliares -->
-                            {% set plan_f = f.qtd_planejada or 0 %}
-                            {% set real_f = f.qtd_realizada or 0 %}
-                            {% set pct_f = (real_f / plan_f * 100) if plan_f > 0 else 0 %}
-                            {% if pct_f > 100 %}{% set pct_f = 100 %}{% endif %}
-
-                            {% set expected_val = f.qtd_esperada_curva_s or 0 %}
-                            {% set pct_exp_f = (expected_val / plan_f * 100) if plan_f > 0 else 0 %}
-                            {% if pct_exp_f > 100 %}{% set pct_exp_f = 100 %}{% endif %}
-
-                            {% set status_f = f.status_prazo or 'N/A' %}
-
-                            <tr class="group hover:bg-slate-50 transition-colors">
-                                <input type="hidden" name="frente_id[]" value="{{ f.id_frente_trabalho }}">
-
-                                <td class="p-2 full-width-mobile" data-label="Nome:">
-                                    <input type="text" name="frente_nome[]" value="{{ f.nome_frente }}"
-                                        class="{{ 'w-full h-9 text-sm px-2 rounded-md bg-transparent border-none font-semibold text-slate-800' if view_mode else 'form-control-std h-9 text-sm' }}"
-                                        placeholder="Nome..." required {{ 'readonly' if view_mode }}>
-                                </td>
-
-                                <td class="p-2" data-label="Resp:">
-                                    <select name="frente_responsavel[]"
-                                        class="{{ 'w-full h-9 text-sm px-2 rounded-md bg-transparent border-none text-slate-700 appearance-none pointer-events-none' if view_mode else 'form-control-std h-9 text-sm' }}"
-                                        {{ 'disabled' if view_mode }}>
-                                        <option value="">Selecione...</option>
-                                        {% for u in usuarios %}
-                                        <option value="{{ u.id }}" {% if f.id_responsavel==u.id %}selected{% endif %}>{{
-                                            u.nome }} ({{ u.email }})</option>
-                                        {% endfor %}
-                                    </select>
-                                </td>
-
-                                <td class="p-2" data-label="Unid:">
-                                    <select name="frente_unidade[]"
-                                        class="{{ 'w-full h-9 text-sm text-center px-2 rounded-md bg-transparent border-none text-slate-700 appearance-none pointer-events-none' if view_mode else 'form-control-std h-9 text-sm text-center bg-white' }}"
-                                        {{ 'disabled' if view_mode }}>
-                                        {% for u in ['m²', 'm³', 'm', 'un', 'kg', 't', 'vb', 'cj', 'h'] %}
-                                        <option value="{{ u }}" {% if f.unidade==u %}selected{% endif %}>{{ u }}
-                                        </option>
-                                        {% endfor %}
-                                    </select>
-                                </td>
-
-                                <td class="p-2" data-label="Meta:">
-                                    <input type="number" name="frente_qtd[]" value="{{ f.qtd_planejada }}" step="0.01"
-                                        class="{{ 'w-full h-9 text-sm text-center px-2 rounded-md bg-transparent border-none font-bold text-slate-800' if view_mode else 'form-control-std h-9 text-sm text-center font-bold' }}"
-                                        {{ 'readonly' if view_mode }}>
-                                </td>
-
-                                <!-- DATA INÍCIO -->
-                                <td class="p-2" data-label="Data Início:">
-                                    <div class="relative">
-                                        <!-- Campo Oculto formatado YYYY-MM-DD para o Backend -->
-                                        <input type="hidden" name="frente_data_inicio[]"
-                                            value="{{ f.data_inicio or '' }}" class="frente-date-hidden">
-
-                                        <!-- Campo Visual formatado DD/MM/AAAA -->
-                                        <input type="text"
-                                            value="{{ f.data_inicio.strftime('%d/%m/%Y') if f.data_inicio else '' }}"
-                                            class="{{ 'w-full h-9 text-sm text-center px-2 rounded-md bg-transparent border-none text-slate-700' if view_mode else 'form-control-std h-9 text-sm text-left pr-8 frente-date-visual cursor-pointer' }}"
-                                            placeholder="{{ '-' if view_mode else 'DD/MM/AAAA' }}" maxlength="10"
-                                            oninput="mascaraData(this); syncRowDate(this)" {{ 'readonly' if view_mode
-                                            }}>
-
-                                        {% if not view_mode %}
-                                        <div class="absolute inset-y-0 right-0 flex items-center pr-2 cursor-pointer z-10"
-                                            onclick="this.nextElementSibling.showPicker()">
-                                            <i class="far fa-calendar-alt text-slate-400 hover:text-purple-600"></i>
-                                        </div>
-                                        <input type="date" class="absolute w-0 h-0 opacity-0 pointer-events-none"
-                                            tabindex="-1" onchange="applyRowPicker(this)">
-                                        {% endif %}
-                                    </div>
-                                </td>
-
-                                <!-- DATA PLANEJADA -->
-                                <td class="p-2" data-label="Data Fim:">
-                                    <div class="relative">
-                                        <input type="hidden" name="frente_data_planejada[]"
-                                            value="{{ f.data_planejada or '' }}" class="frente-date-hidden">
-
-                                        <input type="text"
-                                            value="{{ f.data_planejada.strftime('%d/%m/%Y') if f.data_planejada else '' }}"
-                                            class="{{ 'w-full h-9 text-sm text-center px-2 rounded-md bg-transparent border-none text-slate-700' if view_mode else 'form-control-std h-9 text-sm text-left pr-8 frente-date-visual cursor-pointer' }}"
-                                            placeholder="{{ '-' if view_mode else 'DD/MM/AAAA' }}" maxlength="10"
-                                            oninput="mascaraData(this); syncRowDate(this)" {{ 'readonly' if view_mode
-                                            }}>
-
-                                        {% if not view_mode %}
-                                        <div class="absolute inset-y-0 right-0 flex items-center pr-2 cursor-pointer z-10"
-                                            onclick="this.nextElementSibling.showPicker()">
-                                            <i class="far fa-calendar-alt text-slate-400 hover:text-purple-600"></i>
-                                        </div>
-                                        <input type="date" class="absolute w-0 h-0 opacity-0 pointer-events-none"
-                                            tabindex="-1" onchange="applyRowPicker(this)">
-                                        {% endif %}
-                                    </div>
-                                </td>
-
-                                <!-- STATUS / CURVA S -->
-                                <td class="p-2 text-center" data-label="Status:">
-                                    <div class="flex flex-col items-center justify-center w-full space-y-1">
-                                        <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden border border-slate-200"
-                                            title="Realizado: {{ pct_f | round(1) }}%">
-                                            <div class="h-1.5 rounded-full {{ 'bg-emerald-500' if pct_f >= 100 else 'bg-blue-500' }}"
-                                                style="width: {{ pct_f }}%"></div>
-                                        </div>
-                                        <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden border border-slate-200"
-                                            title="Esperado (Curva S): {{ pct_exp_f | round(1) }}%">
-                                            <div class="h-1.5 rounded-full bg-slate-400 opacity-60"
-                                                style="width: {{ pct_exp_f }}%"></div>
-                                        </div>
-                                        <div
-                                            class="flex justify-between w-full text-[9px] font-bold uppercase tracking-wider mt-1">
-                                            <span class="text-blue-600">{{ pct_f | round(0) }}%</span>
-                                            <span class="text-slate-400">{{ pct_exp_f | round(0) }}% (S)</span>
-                                        </div>
-                                        <span
-                                            class="text-[9px] font-bold uppercase {{ 'text-emerald-600' if status_f == 'No Prazo' or status_f == 'Adiantado' else 'text-red-600' if status_f == 'Atrasado' else 'text-slate-400' }}">
-                                            {{ status_f }}
-                                        </span>
-                                    </div>
-                                </td>
-
-                                {% if not view_mode %}
-                                <td class="p-2 text-center action-cell">
-                                    <button type="button" onclick="removeRow(this, {{ f.id_frente_trabalho }})"
-                                        class="w-8 h-8 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition flex items-center justify-center">
-                                        <i class="fas fa-trash-alt"></i>
-                                    </button>
-                                </td>
-                                {% endif %}
-                            </tr>
-                            {% endfor %}
-                            {% else %}
-                            <!-- Mensagem Vazia -->
-                            {% if view_mode %}
-                            <tr>
-                                <td colspan="8" class="p-8 text-center text-slate-400 italic bg-slate-50">Nenhuma frente
-                                    de trabalho cadastrada neste projeto.</td>
-                            </tr>
-                            {% endif %}
-
-                            {% if not view_mode %}
-                            <script>window.addEventListener('DOMContentLoaded', () => { if (document.getElementById('lista-frentes').children.length === 0) addFrenteRow(); });</script>
-                            {% endif %}
-                            {% endif %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Barra de Ações -->
-            <div class="surface-card rounded-2xl overflow-hidden bg-white border border-slate-200 shadow-sm">
-                <div
-                    class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex flex-wrap items-center justify-between gap-4">
-                    <div class="flex items-center gap-3">
-                        <div
-                            class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0 text-sm">
-                            <i class="fas fa-users"></i>
-                        </div>
-                        <div>
-                            <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">Equipe Padrão da
-                                Obra</h3>
-                            <p class="text-[10px] text-slate-500 hidden sm:block">Composição base para ser importada no
-                                RDO.</p>
-                        </div>
-                    </div>
-                    {% if not view_mode %}
-                    <button type="button" onclick="addEquipeObraRow()"
-                        class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-2 rounded-lg font-bold text-xs transition flex items-center gap-2">
-                        <i class="fas fa-plus"></i> <span class="hidden sm:inline">Adicionar Mão de Obra</span>
-                    </button>
-                    {% endif %}
-                </div>
-
-                <div class="w-full overflow-x-auto">
-                    <table class="w-full text-left mobile-table" id="table-equipe-obra">
-                        <thead>
-                            <tr
-                                class="bg-slate-50 text-[10px] uppercase text-slate-500 font-bold border-b border-slate-200">
-                                <th class="p-3 w-[70%]">Mão de Obra</th>
-                                <th class="p-3 w-[20%] text-center">Quantidade</th>
-                                {% if not view_mode %}<th class="p-3 w-[10%] text-center"></th>{% endif %}
-                            </tr>
-                        </thead>
-                        <tbody id="lista-equipe-obra" class="divide-y divide-slate-100 bg-white">
-                            {% if equipe_obra %}
-                            {% for equipe in equipe_obra %}
-                            <tr class="group hover:bg-slate-50 transition-colors">
-                                <td class="p-2 full-width-mobile" data-label="Mão de Obra:">
-                                    <select
-                                        class="{{ 'w-full h-9 text-sm px-2 rounded-md bg-transparent border-none text-slate-700 appearance-none pointer-events-none' if view_mode else 'form-control-std h-9 text-sm select-equipe-obra bg-white' }}"
-                                        {{ 'disabled' if view_mode }}>
-                                        <option value="">Selecione...</option>
-                                        {% for op in mao_de_obra_options %}
-                                        <option value="{{ op.id }}" {% if op.id==equipe.id_lista_opcoes %}selected{%
-                                            endif %}>{{ op.nome }}{% if op.tipo %} ({{ op.tipo }}){% endif %}</option>
-                                        {% endfor %}
-                                    </select>
-                                </td>
-                                <td class="p-2" data-label="Quantidade:">
-                                    <input type="number" min="1" step="1" value="{{ equipe.quantidade }}"
-                                        class="{{ 'w-full h-9 text-sm text-center px-2 rounded-md bg-transparent border-none font-bold text-slate-800' if view_mode else 'form-control-std h-9 text-sm text-center font-bold input-equipe-qtd' }}"
-                                        {{ 'readonly' if view_mode }}>
-                                </td>
-                                {% if not view_mode %}
-                                <td class="p-2 text-center action-cell">
-                                    <button type="button" onclick="removeEquipeObraRow(this)"
-                                        class="w-8 h-8 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition flex items-center justify-center">
-                                        <i class="fas fa-trash-alt"></i>
-                                    </button>
-                                </td>
-                                {% endif %}
-                            </tr>
-                            {% endfor %}
-                            {% elif view_mode %}
-                            <tr>
-                                <td colspan="3" class="p-8 text-center text-slate-400 italic bg-slate-50">Nenhuma equipe
-                                    padrão cadastrada nesta obra.</td>
-                            </tr>
-                            {% endif %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div class="flex flex-col-reverse sm:flex-row gap-3 pt-4 border-t border-slate-200">
-                <a href="{{ url_for('auth.lista_obras') }}"
-                    class="flex-1 px-4 py-3 bg-white border border-slate-300 text-slate-700 font-bold rounded-xl shadow-sm hover:bg-slate-50 transition-colors text-center text-sm">
-                    {{ 'Voltar' if view_mode else 'Cancelar' }}
-                </a>
-
-                {% if view_mode %}
-                <a href="{{ url_for('auth.editar_obra', id=item.id) }}"
-                    class="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md shadow-blue-500/20 transition-all text-center text-sm flex items-center justify-center gap-2">
-                    <i class="fas fa-edit"></i> Editar Obra
-                </a>
-                {% else %}
-                <button type="button" onclick="submitObraForm()" id="submitBtn"
-                    class="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md shadow-blue-500/20 transition-all text-center text-sm flex items-center justify-center gap-2">
-                    <span id="btnText">{{ 'Salvar Alterações' if item and item.id else 'Cadastrar Obra' }}</span>
-                    <i class="fas fa-spinner fa-spin hidden" id="spinner"></i>
+                {% if not view_mode %}
+                <button type="button" onclick="addFrenteRow()"
+                    class="bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 px-4 py-2 rounded-lg font-bold text-xs transition flex items-center gap-2">
+                    <i class="fas fa-plus"></i> <span class="hidden sm:inline">Adicionar Frente</span>
                 </button>
                 {% endif %}
             </div>
-        </form>
+
+            <!-- Tabela de Frentes -->
+            <div class="w-full overflow-x-auto">
+                <table class="w-full text-left mobile-table" id="table_frentes">
+                    <thead>
+                        <tr
+                            class="bg-slate-50 text-[10px] uppercase text-slate-500 font-bold border-b border-slate-200">
+                            <!-- Larguras balanceadas para incluir Data Inicio -->
+                            <th class="p-3 w-[25%]">Nome da Frente</th>
+                            <th class="p-3 w-[15%]">ResponsÃ¡vel</th>
+                            <th class="p-3 w-[8%] text-center">Unid.</th>
+                            <th class="p-3 w-[10%] text-center">Meta</th>
+                            <th class="p-3 w-[12%] text-center">Data InÃ­cio</th>
+                            <th class="p-3 w-[12%] text-center">Data Fim</th>
+                            <th class="p-3 w-[15%] text-center">Progresso</th>
+                            {% if not view_mode %}<th class="p-3 w-[3%] text-center"></th>{% endif %}
+                        </tr>
+                    </thead>
+                    <tbody id="lista-frentes" class="divide-y divide-slate-100 bg-white">
+                        {% if frentes %}
+                        {% for f in frentes %}
+                        <!-- CÃ¡lculos auxiliares -->
+                        {% set plan_f = f.qtd_planejada or 0 %}
+                        {% set real_f = f.qtd_realizada or 0 %}
+                        {% set pct_f = (real_f / plan_f * 100) if plan_f > 0 else 0 %}
+                        {% if pct_f > 100 %}{% set pct_f = 100 %}{% endif %}
+
+                        {% set expected_val = f.qtd_esperada_curva_s or 0 %}
+                        {% set pct_exp_f = (expected_val / plan_f * 100) if plan_f > 0 else 0 %}
+                        {% if pct_exp_f > 100 %}{% set pct_exp_f = 100 %}{% endif %}
+
+                        {% set status_f = f.status_prazo or 'N/A' %}
+
+                        <tr class="group hover:bg-slate-50 transition-colors">
+                            <input type="hidden" name="frente_id[]" value="{{ f.id_frente_trabalho }}">
+
+                            <td class="p-2 full-width-mobile" data-label="Nome:">
+                                <input type="text" name="frente_nome[]" value="{{ f.nome_frente }}"
+                                    class="{{ 'w-full h-9 text-sm px-2 rounded-md bg-transparent border-none font-semibold text-slate-800' if view_mode else 'form-control-std h-9 text-sm' }}"
+                                    placeholder="Nome..." required {{ 'readonly' if view_mode }}>
+                            </td>
+
+                            <td class="p-2" data-label="Resp:">
+                                <select name="frente_responsavel[]"
+                                    class="{{ 'w-full h-9 text-sm px-2 rounded-md bg-transparent border-none text-slate-700 appearance-none pointer-events-none' if view_mode else 'form-control-std h-9 text-sm' }}"
+                                    {{ 'disabled' if view_mode }}>
+                                    <option value="">Selecione...</option>
+                                    {% for u in usuarios %}
+                                    <option value="{{ u.id }}" {% if f.id_responsavel==u.id %}selected{% endif %}>{{
+                                        u.nome }} ({{ u.email }})</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+
+                            <td class="p-2" data-label="Unid:">
+                                <select name="frente_unidade[]"
+                                    class="{{ 'w-full h-9 text-sm text-center px-2 rounded-md bg-transparent border-none text-slate-700 appearance-none pointer-events-none' if view_mode else 'form-control-std h-9 text-sm text-center bg-white' }}"
+                                    {{ 'disabled' if view_mode }}>
+                                    {% for u in ['mÂ²', 'mÂ³', 'm', 'un', 'kg', 't', 'vb', 'cj', 'h'] %}
+                                    <option value="{{ u }}" {% if f.unidade==u %}selected{% endif %}>{{ u }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+
+                            <td class="p-2" data-label="Meta:">
+                                <input type="number" name="frente_qtd[]" value="{{ f.qtd_planejada }}" step="0.01"
+                                    class="{{ 'w-full h-9 text-sm text-center px-2 rounded-md bg-transparent border-none font-bold text-slate-800' if view_mode else 'form-control-std h-9 text-sm text-center font-bold' }}"
+                                    {{ 'readonly' if view_mode }}>
+                            </td>
+
+                            <!-- DATA INÃCIO -->
+                            <td class="p-2" data-label="Data InÃ­cio:">
+                                <div class="relative">
+                                    <!-- Campo Oculto formatado YYYY-MM-DD para o Backend -->
+                                    <input type="hidden" name="frente_data_inicio[]" value="{{ f.data_inicio or '' }}"
+                                        class="frente-date-hidden">
+
+                                    <!-- Campo Visual formatado DD/MM/AAAA -->
+                                    <input type="text"
+                                        value="{{ f.data_inicio.strftime('%d/%m/%Y') if f.data_inicio else '' }}"
+                                        class="{{ 'w-full h-9 text-sm text-center px-2 rounded-md bg-transparent border-none text-slate-700' if view_mode else 'form-control-std h-9 text-sm text-left pr-8 frente-date-visual cursor-pointer' }}"
+                                        placeholder="{{ '-' if view_mode else 'DD/MM/AAAA' }}" maxlength="10"
+                                        oninput="mascaraData(this); syncRowDate(this)" {{ 'readonly' if view_mode }}>
+
+                                    {% if not view_mode %}
+                                    <div class="absolute inset-y-0 right-0 flex items-center pr-2 cursor-pointer z-10"
+                                        onclick="this.nextElementSibling.showPicker()">
+                                        <i class="far fa-calendar-alt text-slate-400 hover:text-purple-600"></i>
+                                    </div>
+                                    <input type="date" class="absolute w-0 h-0 opacity-0 pointer-events-none"
+                                        tabindex="-1" onchange="applyRowPicker(this)">
+                                    {% endif %}
+                                </div>
+                            </td>
+
+                            <!-- DATA PLANEJADA -->
+                            <td class="p-2" data-label="Data Fim:">
+                                <div class="relative">
+                                    <input type="hidden" name="frente_data_planejada[]"
+                                        value="{{ f.data_planejada or '' }}" class="frente-date-hidden">
+
+                                    <input type="text"
+                                        value="{{ f.data_planejada.strftime('%d/%m/%Y') if f.data_planejada else '' }}"
+                                        class="{{ 'w-full h-9 text-sm text-center px-2 rounded-md bg-transparent border-none text-slate-700' if view_mode else 'form-control-std h-9 text-sm text-left pr-8 frente-date-visual cursor-pointer' }}"
+                                        placeholder="{{ '-' if view_mode else 'DD/MM/AAAA' }}" maxlength="10"
+                                        oninput="mascaraData(this); syncRowDate(this)" {{ 'readonly' if view_mode }}>
+
+                                    {% if not view_mode %}
+                                    <div class="absolute inset-y-0 right-0 flex items-center pr-2 cursor-pointer z-10"
+                                        onclick="this.nextElementSibling.showPicker()">
+                                        <i class="far fa-calendar-alt text-slate-400 hover:text-purple-600"></i>
+                                    </div>
+                                    <input type="date" class="absolute w-0 h-0 opacity-0 pointer-events-none"
+                                        tabindex="-1" onchange="applyRowPicker(this)">
+                                    {% endif %}
+                                </div>
+                            </td>
+
+                            <!-- STATUS / CURVA S -->
+                            <td class="p-2 text-center" data-label="Status:">
+                                <div class="flex flex-col items-center justify-center w-full space-y-1">
+                                    <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden border border-slate-200"
+                                        title="Realizado: {{ pct_f | round(1) }}%">
+                                        <div class="h-1.5 rounded-full {{ 'bg-emerald-500' if pct_f >= 100 else 'bg-blue-500' }}"
+                                            style="width: {{ pct_f }}%"></div>
+                                    </div>
+                                    <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden border border-slate-200"
+                                        title="Esperado (Curva S): {{ pct_exp_f | round(1) }}%">
+                                        <div class="h-1.5 rounded-full bg-slate-400 opacity-60"
+                                            style="width: {{ pct_exp_f }}%"></div>
+                                    </div>
+                                    <div
+                                        class="flex justify-between w-full text-[9px] font-bold uppercase tracking-wider mt-1">
+                                        <span class="text-blue-600">{{ pct_f | round(0) }}%</span>
+                                        <span class="text-slate-400">{{ pct_exp_f | round(0) }}% (S)</span>
+                                    </div>
+                                    <span
+                                        class="text-[9px] font-bold uppercase {{ 'text-emerald-600' if status_f == 'No Prazo' or status_f == 'Adiantado' else 'text-red-600' if status_f == 'Atrasado' else 'text-slate-400' }}">
+                                        {{ status_f }}
+                                    </span>
+                                </div>
+                            </td>
+
+                            {% if not view_mode %}
+                            <td class="p-2 text-center action-cell">
+                                <button type="button" onclick="removeRow(this, {{ f.id_frente_trabalho }})"
+                                    class="w-8 h-8 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition flex items-center justify-center">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <!-- Mensagem Vazia -->
+                        {% if view_mode %}
+                        <tr>
+                            <td colspan="8" class="p-8 text-center text-slate-400 italic bg-slate-50">Nenhuma frente
+                                de trabalho cadastrada neste projeto.</td>
+                        </tr>
+                        {% endif %}
+
+                        {% if not view_mode %}
+                        <script>window.addEventListener('DOMContentLoaded', () => { if (document.getElementById('lista-frentes').children.length === 0) addFrenteRow(); });</script>
+                        {% endif %}
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Barra de AÃ§Ãµes -->
+        <div class="surface-card rounded-2xl overflow-hidden bg-white border border-slate-200 shadow-sm">
+            <div
+                class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <div
+                        class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0 text-sm">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">Equipe PadrÃ£o da
+                            Obra</h3>
+                        <p class="text-[10px] text-slate-500 hidden sm:block">ComposiÃ§Ã£o base para ser importada no
+                            RDO.</p>
+                    </div>
+                </div>
+                {% if not view_mode %}
+                <button type="button" onclick="addEquipeObraRow()"
+                    class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-2 rounded-lg font-bold text-xs transition flex items-center gap-2">
+                    <i class="fas fa-plus"></i> <span class="hidden sm:inline">Adicionar MÃ£o de Obra</span>
+                </button>
+                {% endif %}
+            </div>
+
+            <div class="w-full overflow-x-auto">
+                <table class="w-full text-left mobile-table" id="table-equipe-obra">
+                    <thead>
+                        <tr
+                            class="bg-slate-50 text-[10px] uppercase text-slate-500 font-bold border-b border-slate-200">
+                            <th class="p-3 w-[70%]">MÃ£o de Obra</th>
+                            <th class="p-3 w-[20%] text-center">Quantidade</th>
+                            {% if not view_mode %}<th class="p-3 w-[10%] text-center"></th>{% endif %}
+                        </tr>
+                    </thead>
+                    <tbody id="lista-equipe-obra" class="divide-y divide-slate-100 bg-white">
+                        {% if equipe_obra %}
+                        {% for equipe in equipe_obra %}
+                        <tr class="group hover:bg-slate-50 transition-colors">
+                            <td class="p-2 full-width-mobile" data-label="MÃ£o de Obra:">
+                                <select
+                                    class="{{ 'w-full h-9 text-sm px-2 rounded-md bg-transparent border-none text-slate-700 appearance-none pointer-events-none' if view_mode else 'form-control-std h-9 text-sm select-equipe-obra bg-white' }}"
+                                    {{ 'disabled' if view_mode }}>
+                                    <option value="">Selecione...</option>
+                                    {% for op in mao_de_obra_options %}
+                                    <option value="{{ op.id }}" {% if op.id==equipe.id_lista_opcoes %}selected{% endif
+                                        %}>{{ op.nome }}{% if op.tipo %} ({{ op.tipo }}){% endif %}</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                            <td class="p-2" data-label="Quantidade:">
+                                <input type="number" min="1" step="1" value="{{ equipe.quantidade }}"
+                                    class="{{ 'w-full h-9 text-sm text-center px-2 rounded-md bg-transparent border-none font-bold text-slate-800' if view_mode else 'form-control-std h-9 text-sm text-center font-bold input-equipe-qtd' }}"
+                                    {{ 'readonly' if view_mode }}>
+                            </td>
+                            {% if not view_mode %}
+                            <td class="p-2 text-center action-cell">
+                                <button type="button" onclick="removeEquipeObraRow(this)"
+                                    class="w-8 h-8 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition flex items-center justify-center">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% endfor %}
+                        {% elif view_mode %}
+                        <tr>
+                            <td colspan="3" class="p-8 text-center text-slate-400 italic bg-slate-50">Nenhuma equipe
+                                padrÃ£o cadastrada nesta obra.</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="flex flex-col-reverse sm:flex-row gap-3 pt-4 border-t border-slate-200">
+            <a href="{{ url_for('auth.lista_obras') }}"
+                class="flex-1 px-4 py-3 bg-white border border-slate-300 text-slate-700 font-bold rounded-xl shadow-sm hover:bg-slate-50 transition-colors text-center text-sm">
+                {{ 'Voltar' if view_mode else 'Cancelar' }}
+            </a>
+
+            {% if view_mode %}
+            <a href="{{ url_for('auth.editar_obra', id=item.id) }}"
+                class="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md shadow-blue-500/20 transition-all text-center text-sm flex items-center justify-center gap-2">
+                <i class="fas fa-edit"></i> Editar Obra
+            </a>
+            {% else %}
+            <button type="button" onclick="submitObraForm()" id="submitBtn"
+                class="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md shadow-blue-500/20 transition-all text-center text-sm flex items-center justify-center gap-2">
+                <span id="btnText">{{ 'Salvar AlteraÃ§Ãµes' if item and item.id else 'Cadastrar Obra' }}</span>
+                <i class="fas fa-spinner fa-spin hidden" id="spinner"></i>
+            </button>
+            {% endif %}
+        </div>
+        {% endcall %}
     </div>
 
     <style>
@@ -849,7 +847,7 @@ shadow-sm placeholder:text-slate-400" %}
         const isViewMode = {{ 'true' if view_mode else 'false' }};
         let frentesRemovidas = [];
 
-        // --- MÁSCARAS ---
+        // --- MÃSCARAS ---
         function applyMasks() {
             if (el('cnpj_obra')) el('cnpj_obra').addEventListener('input', e => {
                 let x = e.target.value.replace(/\D/g, '').match(/(\d{0,2})(\d{0,3})(\d{0,3})(\d{0,4})(\d{0,2})/);
@@ -875,9 +873,9 @@ shadow-sm placeholder:text-slate-400" %}
             checkDateLogic();
         }
 
-        // CORRIGIDO: Busca elementos apenas dentro da célula atual
+        // CORRIGIDO: Busca elementos apenas dentro da cÃ©lula atual
         function syncRowDate(visualInput) {
-            // Usa 'closest' para achar o container pai relativo (a célula da tabela)
+            // Usa 'closest' para achar o container pai relativo (a cÃ©lula da tabela)
             const container = visualInput.closest('.relative');
             const hidden = container.querySelector('.frente-date-hidden');
 
@@ -897,11 +895,11 @@ shadow-sm placeholder:text-slate-400" %}
             checkDateLogic();
         }
 
-        // CORRIGIDO: Busca elementos apenas dentro da célula atual
+        // CORRIGIDO: Busca elementos apenas dentro da cÃ©lula atual
         function applyRowPicker(picker) {
             if (!picker.value) return;
 
-            // Usa 'closest' para achar o container pai relativo (a célula da tabela)
+            // Usa 'closest' para achar o container pai relativo (a cÃ©lula da tabela)
             // Antes estava buscando na 'tr', o que pegava sempre o primeiro input (Data Inicio)
             const container = picker.closest('.relative');
             const visual = container.querySelector('.frente-date-visual');
@@ -938,20 +936,20 @@ shadow-sm placeholder:text-slate-400" %}
             if (clean.length !== 8) return;
             el("cep-message").innerText = "Buscando...";
             fetch(`https://viacep.com.br/ws/${clean}/json/`).then(r => r.json()).then(d => {
-                if (d.erro) { el("cep-message").innerText = "CEP não encontrado."; return; }
+                if (d.erro) { el("cep-message").innerText = "CEP nÃ£o encontrado."; return; }
                 el("endereco").value = d.logradouro; el("bairro").value = d.bairro;
                 el("cidade").value = d.localidade; el("estado").value = d.uf;
                 el("cep-message").innerText = ""; el("numero").focus();
             }).catch(() => el("cep-message").innerText = "Erro ao buscar.");
         }
 
-        // --- TABELA DINÂMICA (ADD/REMOVE) ---
+        // --- TABELA DINÃ‚MICA (ADD/REMOVE) ---
         function addFrenteRow() {
             const tbody = el('lista-frentes');
             const tr = document.createElement('tr');
             tr.className = 'group hover:bg-slate-50 transition-colors animate-fade-in-up';
 
-            // Estrutura HTML idêntica à do Jinja para garantir consistência
+            // Estrutura HTML idÃªntica Ã  do Jinja para garantir consistÃªncia
             tr.innerHTML = `
         <input type="hidden" name="frente_id[]" value="">
         
@@ -968,7 +966,7 @@ shadow-sm placeholder:text-slate-400" %}
 
         <td class="p-2" data-label="Unid:">
             <select name="frente_unidade[]" class="form-control-std h-9 text-sm text-center bg-white cursor-pointer">
-                {% for u in ['m²', 'm³', 'm', 'un', 'kg', 't', 'vb', 'cj', 'h'] %}<option value="{{ u }}">{{ u }}</option>{% endfor %}
+                {% for u in ['mÂ²', 'mÂ³', 'm', 'un', 'kg', 't', 'vb', 'cj', 'h'] %}<option value="{{ u }}">{{ u }}</option>{% endfor %}
             </select>
         </td>
 
@@ -976,7 +974,7 @@ shadow-sm placeholder:text-slate-400" %}
             <input type="number" name="frente_qtd[]" value="0.00" step="0.01" class="form-control-std h-9 text-sm text-center font-bold">
         </td>
 
-        <td class="p-2" data-label="Data Início:">
+        <td class="p-2" data-label="Data InÃ­cio:">
             <div class="relative">
                 <input type="hidden" name="frente_data_inicio[]" class="frente-date-hidden">
                 <input type="text" class="form-control-std h-9 text-sm text-left pr-8 frente-date-visual cursor-pointer" 
@@ -1025,7 +1023,7 @@ shadow-sm placeholder:text-slate-400" %}
             const tr = document.createElement('tr');
             tr.className = 'group hover:bg-slate-50 transition-colors animate-fade-in-up';
             tr.innerHTML = `
-                <td class="p-2 full-width-mobile" data-label="Mão de Obra:">
+                <td class="p-2 full-width-mobile" data-label="MÃ£o de Obra:">
                     <select class="form-control-std h-9 text-sm select-equipe-obra bg-white">
                         <option value="">Selecione...</option>
                         {% for op in mao_de_obra_options %}
@@ -1049,7 +1047,7 @@ shadow-sm placeholder:text-slate-400" %}
             btn.closest('tr').remove();
         }
 
-        // --- SUBMISSÃO DO FORM ---
+        // --- SUBMISSÃƒO DO FORM ---
         function submitObraForm() {
             if (!checkDateLogic()) return alert("Verifique as datas globais da obra.");
 
@@ -1057,8 +1055,8 @@ shadow-sm placeholder:text-slate-400" %}
             const cnpjInput = el('cnpj_obra');
             if (cnpjInput) cnpjInput.value = cnpjInput.value.replace(/\D/g, '');
 
-            // --- CORREÇÃO CEP ---
-            // Remove máscara do CEP antes de enviar (transforma '12345-678' em '12345678')
+            // --- CORREÃ‡ÃƒO CEP ---
+            // Remove mÃ¡scara do CEP antes de enviar (transforma '12345-678' em '12345678')
             const cepInput = el('cep');
             if (cepInput) cepInput.value = cepInput.value.replace(/\D/g, '');
 
@@ -1081,7 +1079,7 @@ shadow-sm placeholder:text-slate-400" %}
                 });
             });
 
-            // Payload formatado para a lógica "novas/editadas/removidas" do Python
+            // Payload formatado para a lÃ³gica "novas/editadas/removidas" do Python
             const jsonPayload = {
                 novas: frentes.filter(f => !f.id_frente_trabalho),
                 editadas: frentes.filter(f => f.id_frente_trabalho),
