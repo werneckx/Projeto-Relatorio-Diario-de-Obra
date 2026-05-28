@@ -11,15 +11,19 @@
 {% import "components/table/macros.html" as ui_table %}
 
 {% set table_config = {
-    'title': 'Gestão de Usuários',
-    'icon': 'fa-users',
-    'create_url': url_for('auth.criar_usuario'),
-    'create_label': 'Novo Usuário',
-    'create_permission': 'usuario.manage',
-    'search_id': 'userInputSearch',
-    'search_placeholder': 'Buscar por Nome, CPF ou Email...',
-    'datatable_id': 'dataTableUsers',
-    'mode': 'comfortable'
+'title': 'Gestão de Usuários',
+'icon': 'fa-users',
+'create_url': url_for('auth.criar_usuario'),
+'create_label': 'Novo Usuário',
+'create_permission': 'usuario.manage',
+'export_actions': [
+{'label': 'Exportar CSV', 'icon': 'fa-file-csv', 'onclick': "window.AdminTables.exportCsv({tableSelector:
+'#dataTableUsers', filename: 'usuarios.csv'})"}
+],
+'search_id': 'userInputSearch',
+'search_placeholder': 'Buscar por Nome, CPF ou Email...',
+'datatable_id': 'dataTableUsers',
+'mode': 'comfortable'
 } %}
 
 <div class="space-y-5 ds-section mx-auto px-2 sm:px-0">
@@ -27,114 +31,146 @@
     <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 animate-fade-up">
         <div>
             <h1 class="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">{{ table_config.title }}</h1>
-            <p class="text-slate-500 mt-1 text-xs md:text-sm">Administre as credenciais, permissões e status de acesso.</p>
+            <p class="text-slate-500 mt-1 text-xs md:text-sm">Administre as credenciais, permissões e status de acesso.
+            </p>
         </div>
     </div>
 
     {% call ui_table.wrapper(config=table_config, extra_class='animate-fade-up') %}
-        {% call ui_table.toolbar(
-            config=table_config,
-            search_id=table_config.search_id,
-            create_url=table_config.create_url,
-            create_label=table_config.create_label,
-            create_permission=table_config.create_permission
-        ) %}{% endcall %}
+    {% call ui_table.toolbar(
+    config=table_config,
+    search_id=table_config.search_id,
+    create_url=table_config.create_url,
+    create_label=table_config.create_label,
+    create_permission=table_config.create_permission
+    ) %}
+    {{ ui_table.actions_dropdown(actions=[
+    {'label': 'Limpar busca', 'icon': 'fa-eraser', 'onclick': 'clearUserSearch()'}
+    ], button_title='Outros', button_icon='fa-ellipsis-h', size='sm') }}
+    {% endcall %}
 
-        {% call ui_table.table_container('px-0') %}
-            <table id="{{ table_config.datatable_id }}" class="w-full text-left border-collapse ds-mobile-labels">
-                <thead class="bg-slate-50/80 border-b border-slate-200 backdrop-blur">
-                    <tr>
-                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-16 text-center">ID</th>
-                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Usuário</th>
-                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Contato</th>
-                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Cargo</th>
-                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Supervisor</th>
-                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center w-28">Status</th>
-                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right w-36">Ações</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100 bg-white">
-                    {% for user in opcoes %}
-                    <tr id="row-{{ user.id }}"
-                        class="hover:bg-slate-50/80 transition-colors group {{ 'opacity-60 grayscale bg-slate-50' if user.status == 0 else '' }}">
+    {% call ui_table.table_container('px-0') %}
+    <table id="{{ table_config.datatable_id }}" class="w-full text-left border-collapse ds-mobile-labels">
+        <thead class="bg-slate-50/80 border-b border-slate-200 backdrop-blur">
+            <tr>
+                <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-28">Sistema</th>
+                <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-16 text-center">ID</th>
+                <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Usuário</th>
+                <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Contato</th>
+                <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Cargo</th>
+                <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Supervisor</th>
+                <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center w-28">Status
+                </th>
+                <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right w-36">Ações
+                </th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 bg-white">
+            {% for user in opcoes %}
+            <tr id="row-{{ user.id }}"
+                class="hover:bg-slate-50/80 transition-colors group {{ 'opacity-60 grayscale bg-slate-50' if user.status == 0 else '' }}">
 
-                        <td data-label="ID" class="px-6 py-4 whitespace-nowrap text-sm font-mono text-slate-400 text-center">
-                            #{{ '%03d' % user.id }}
-                        </td>
+                <td data-label="Sistema" class="px-6 py-4 whitespace-nowrap text-xs">
+                    {% if user.is_system %}
+                    <span
+                        class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[11px] font-bold border bg-slate-100 text-slate-700 border-slate-200">
+                        <i class="fas fa-lock text-[10px] text-slate-500"></i> Sistema
+                    </span>
+                    {% else %}
+                    <span
+                        class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[11px] font-bold border bg-slate-50 text-slate-600 border-slate-200">
+                        <i class="fas fa-building text-[10px] text-slate-400"></i> Empresa
+                    </span>
+                    {% endif %}
+                </td>
 
-                        <td data-label="Usuário" class="px-6 py-4">
-                            <div class="flex items-center gap-3">
-                                <div
-                                    class="w-9 h-9 rounded-full bg-slate-100 text-slate-500 border border-slate-200 flex items-center justify-center font-bold text-xs shrink-0 md:flex hidden">
-                                    {{ user.nome[:2].upper() }}
-                                </div>
-                                <div class="min-w-0">
-                                    <div class="font-bold text-slate-800 text-sm leading-tight truncate-safe" title="{{ user.nome }}">{{ user.nome }}</div>
-                                    <div class="text-[11px] text-slate-400 font-mono mt-0.5 truncate-safe">
-                                        CPF: {{ user.cpf if user.cpf else 'Sem CPF' }}
-                                    </div>
-                                </div>
+                <td data-label="ID" class="px-6 py-4 whitespace-nowrap text-sm font-mono text-slate-400 text-center">
+                    #{{ '%03d' % user.id }}
+                </td>
+
+                <td data-label="Usuário" class="px-6 py-4">
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="w-9 h-9 rounded-full bg-slate-100 text-slate-500 border border-slate-200 flex items-center justify-center font-bold text-xs shrink-0 md:flex hidden">
+                            {{ user.nome[:2].upper() }}
+                        </div>
+                        <div class="min-w-0">
+                            <div class="font-bold text-slate-800 text-sm leading-tight truncate-safe"
+                                title="{{ user.nome }}">{{ user.nome }}</div>
+                            <div class="text-[11px] text-slate-400 font-mono mt-0.5 truncate-safe">
+                                CPF: {{ user.cpf if user.cpf else 'Sem CPF' }}
                             </div>
-                        </td>
+                        </div>
+                    </div>
+                </td>
 
-                        <td data-label="Contato" class="px-6 py-4 whitespace-nowrap">
-                            <div class="flex items-center gap-2 text-sm text-slate-600">
-                                <i class="far fa-envelope text-slate-300 text-xs shrink-0"></i>
-                                <span class="truncate max-w-[220px]" title="{{ user.email }}">{{ user.email }}</span>
-                            </div>
-                        </td>
+                <td data-label="Contato" class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center gap-2 text-sm text-slate-600">
+                        <i class="far fa-envelope text-slate-300 text-xs shrink-0"></i>
+                        <span class="truncate max-w-[220px]" title="{{ user.email }}">{{ user.email }}</span>
+                    </div>
+                </td>
 
-                        <td data-label="Cargo" class="px-6 py-4 whitespace-nowrap">
-                            {% set badge_class = 'bg-slate-100 text-slate-600 border-slate-200' %}
-                            {% if user.papel == 'Admin' %}
-                                {% set badge_class = 'bg-purple-50 text-purple-700 border-purple-200 ring-1 ring-purple-500/10' %}
-                            {% elif user.papel == 'Gestor' %}
-                                {% set badge_class = 'bg-indigo-50 text-indigo-700 border-indigo-200 ring-1 ring-indigo-500/10' %}
-                            {% elif user.papel == 'Operador' %}
-                                {% set badge_class = 'bg-blue-50 text-blue-700 border-blue-200 ring-1 ring-blue-500/10' %}
-                            {% endif %}
+                <td data-label="Cargo" class="px-6 py-4 whitespace-nowrap">
+                    {% set badge_class = 'bg-slate-100 text-slate-600 border-slate-200' %}
+                    {% if user.papel == 'Admin' %}
+                    {% set badge_class = 'bg-purple-50 text-purple-700 border-purple-200 ring-1 ring-purple-500/10' %}
+                    {% elif user.papel == 'Gestor' %}
+                    {% set badge_class = 'bg-indigo-50 text-indigo-700 border-indigo-200 ring-1 ring-indigo-500/10' %}
+                    {% elif user.papel == 'Operador' %}
+                    {% set badge_class = 'bg-blue-50 text-blue-700 border-blue-200 ring-1 ring-blue-500/10' %}
+                    {% endif %}
 
-                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border {{ badge_class }}">
-                                {{ user.papel }}
-                            </span>
-                        </td>
+                    <span
+                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border {{ badge_class }}">
+                        {{ user.papel }}
+                    </span>
+                </td>
 
-                        <td data-label="Supervisor" class="px-6 py-4 whitespace-nowrap">
-                            {% if user.nome_supervisor %}
-                                <div class="flex items-center gap-2 text-sm text-slate-600">
-                                    <i class="fas fa-user-tie text-slate-300 text-xs"></i>
-                                    <span class="truncate max-w-[160px]" title="{{ user.nome_supervisor }}">{{ user.nome_supervisor }}</span>
-                                </div>
-                            {% else %}
-                                <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-medium bg-slate-50 text-slate-400 border border-slate-100">
-                                    <i class="fas fa-shield-alt text-[9px]"></i> Padrão
-                                </span>
-                            {% endif %}
-                        </td>
+                <td data-label="Supervisor" class="px-6 py-4 whitespace-nowrap">
+                    {% if user.nome_supervisor %}
+                    <div class="flex items-center gap-2 text-sm text-slate-600">
+                        <i class="fas fa-user-tie text-slate-300 text-xs"></i>
+                        <span class="truncate max-w-[160px]" title="{{ user.nome_supervisor }}">{{ user.nome_supervisor
+                            }}</span>
+                    </div>
+                    {% else %}
+                    <span
+                        class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-medium bg-slate-50 text-slate-400 border border-slate-100">
+                        <i class="fas fa-shield-alt text-[9px]"></i> Padrão
+                    </span>
+                    {% endif %}
+                </td>
 
-                        <td data-label="Status" class="px-6 py-4 whitespace-nowrap text-center">
-                            <span id="status-badge-{{ user.id }}"
-                                class="status-badge inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border transition-all {{ 'bg-emerald-50 text-emerald-700 border-emerald-200' if user.status else 'bg-red-50 text-red-700 border-red-200' }}">
-                                <span class="w-1.5 h-1.5 rounded-full {{ 'bg-emerald-500' if user.status else 'bg-red-500' }}"></span>
-                                <span class="status-text">{{ 'Ativo' if user.status else 'Inativo' }}</span>
-                            </span>
-                        </td>
+                <td data-label="Status" class="px-6 py-4 whitespace-nowrap text-center">
+                    <span id="status-badge-{{ user.id }}"
+                        class="status-badge inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border transition-all {{ 'bg-emerald-50 text-emerald-700 border-emerald-200' if user.status else 'bg-red-50 text-red-700 border-red-200' }}">
+                        <span
+                            class="w-1.5 h-1.5 rounded-full {{ 'bg-emerald-500' if user.status else 'bg-red-500' }}"></span>
+                        <span class="status-text">{{ 'Ativo' if user.status else 'Inativo' }}</span>
+                    </span>
+                </td>
 
-                        <td data-label="Ações" class="px-6 py-4 whitespace-nowrap text-right ds-mobile-actions">
-                            {{ ui_table.actions_dropdown(actions=[
-                                {'label': 'Visualizar', 'icon': 'fa-eye', 'url': url_for('auth.visualizar_usuario', id=user.id, view_mode=True), 'permission': 'usuario.manage'},
-                                {'label': 'Editar', 'icon': 'fa-pen', 'url': url_for('auth.editar_usuario', id=user.id), 'permission': 'usuario.manage'},
-                                {'divider': true},
-                                {'label': ('Inativar' if user.status else 'Ativar'), 'icon': ('fa-ban' if user.status else 'fa-check'), 'onclick': 'toggleStatus(' ~ user.id ~ ')', 'permission': 'usuario.manage', 'attrs': {'data-user-id': user.id}}
-                            ], button_title='Ações') }}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                <td data-label="Ações" class="px-6 py-4 whitespace-nowrap text-right ds-mobile-actions">
+                    {{ ui_table.actions_dropdown(actions=[
+                    {'label': 'Visualizar', 'icon': 'fa-eye', 'url': url_for('auth.visualizar_usuario', id=user.id,
+                    view_mode=True), 'permission': 'usuario.manage'},
+                    {'label': 'Editar', 'icon': 'fa-pen', 'url': url_for('auth.editar_usuario', id=user.id),
+                    'permission': 'usuario.manage'},
+                    {'divider': true},
+                    {'label': ('Inativar' if user.status else 'Ativar'), 'icon': ('fa-ban' if user.status else
+                    'fa-check'), 'onclick': 'toggleStatus(' ~ user.id ~ ')', 'permission': 'usuario.manage', 'attrs':
+                    {'data-user-id': user.id}}
+                    ], button_title='Ações') }}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 
-            {{ ui_table.empty_state(not opcoes, icon='fa-users', title='Nenhum usuário encontrado', description='Clique em \"Novo Usuário\" para começar.') }}
-        {% endcall %}
+    {{ ui_table.empty_state(not opcoes, icon='fa-users', title='Nenhum usuário encontrado', description='Clique em
+    \"Novo Usuário\" para começar.') }}
+    {% endcall %}
     {% endcall %}
 </div>
 
@@ -253,7 +289,13 @@
                 btn.disabled = false;
             });
     }
+
+    function clearUserSearch() {
+        const el = document.getElementById('{{ table_config.search_id }}');
+        if (!el) return;
+        el.value = '';
+        el.dispatchEvent(new Event('keyup'));
+    }
 </script>
 
 {% endblock %}
-
