@@ -802,16 +802,23 @@ INSERT INTO permissoes (empresa_id, chave, descricao, is_system, ativo) VALUES
 (NULL, 'empresa.view',      'Visualizar dados da empresa',             TRUE, TRUE),
 (NULL, 'empresa.manage',    'Gerenciar configurações da empresa',      TRUE, TRUE),
 (NULL, 'usuario.manage',   'Gerenciar usuários da empresa',           TRUE, TRUE),
+(NULL, 'cliente.view',     'Visualizar clientes da empresa',          TRUE, TRUE),
+(NULL, 'cliente.manage',   'Gerenciar clientes da empresa',           TRUE, TRUE),
 (NULL, 'rdo.create',        'Criar novos RDOs',                        TRUE, TRUE),
 (NULL, 'rdo.update',        'Editar RDOs existentes',                  TRUE, TRUE),
 (NULL, 'rdo.approve',       'Aprovar ou rejeitar RDOs',                TRUE, TRUE),
 (NULL, 'rdo.view',          'Visualizar RDOs',                         TRUE, TRUE),
-(NULL, 'rdo.sign',         'Assinar RDOs no fluxo',                 TRUE, TRUE),
-(NULL, 'rdo.reject',       'Rejeitar assinaturas no fluxo',          TRUE, TRUE),
+(NULL, 'fornecedor.view',  'Visualizar fornecedores da empresa',      TRUE, TRUE),
 (NULL, 'fornecedor.manage','Gerenciar fornecedores da empresa',       TRUE, TRUE),
 (NULL, 'obra.manage',      'Gerenciar obras e frentes de trabalho',   TRUE, TRUE),
+(NULL, 'colaborador.view', 'Visualizar colaboradores e equipes',      TRUE, TRUE),
 (NULL, 'colaborador.manage','Gerenciar colaboradores e equipes',      TRUE, TRUE),
+(NULL, 'workflow.manage',   'Gerenciar definiÃ§Ãµes de workflow',      TRUE, TRUE),
 
+(NULL, 'tipo_obra.view',   'Visualizar tipos de obra',                TRUE, TRUE),
+(NULL, 'tipo_obra.create', 'Criar tipos de obra',                     TRUE, TRUE),
+(NULL, 'tipo_obra.update', 'Editar tipos de obra',                    TRUE, TRUE),
+(NULL, 'tipo_obra.delete', 'Excluir tipos de obra',                   TRUE, TRUE),
 
 -- Auxiliares (clima)
 (NULL, 'clima.view',       'Visualizar climas',                      TRUE, TRUE),
@@ -849,7 +856,16 @@ SELECT NULL, p.id, perm.id, TRUE
 FROM papeis p, permissoes perm
 WHERE p.nome = 'GESTOR' AND p.empresa_id IS NULL
   AND perm.empresa_id IS NULL
-  AND perm.chave IN ('empresa.view','usuario.manage','rdo.create','rdo.update','rdo.approve','rdo.view','fornecedor.manage','obra.manage','colaborador.manage');
+  AND perm.chave IN (
+    'empresa.view','usuario.manage',
+    'cliente.view','cliente.manage',
+    'rdo.create','rdo.update','rdo.approve','rdo.view',
+    'fornecedor.view','fornecedor.manage',
+    'obra.manage',
+    'colaborador.view','colaborador.manage',
+    'workflow.manage',
+    'tipo_obra.view','tipo_obra.create','tipo_obra.update','tipo_obra.delete'
+  );
 
 -- Mapeamento OPERADOR
 INSERT INTO papel_permissao (empresa_id, papel_id, permissao_id, ativo)
@@ -857,7 +873,7 @@ SELECT NULL, p.id, perm.id, TRUE
 FROM papeis p, permissoes perm
 WHERE p.nome = 'OPERADOR' AND p.empresa_id IS NULL
   AND perm.empresa_id IS NULL
-  AND perm.chave IN ('rdo.create','rdo.update','rdo.view','empresa.view','colaborador.manage');
+  AND perm.chave IN ('rdo.create','rdo.update','rdo.view','empresa.view','cliente.view','fornecedor.view','colaborador.view','colaborador.manage','tipo_obra.view');
 
 -- Mapeamento LEITOR
 INSERT INTO papel_permissao (empresa_id, papel_id, permissao_id, ativo)
@@ -865,7 +881,7 @@ SELECT NULL, p.id, perm.id, TRUE
 FROM papeis p, permissoes perm
 WHERE p.nome = 'LEITOR' AND p.empresa_id IS NULL
   AND perm.empresa_id IS NULL
-  AND perm.chave IN ('rdo.view','empresa.view');
+  AND perm.chave IN ('rdo.view','empresa.view','cliente.view','fornecedor.view','colaborador.view','tipo_obra.view');
 
 -- Mapeamento CLIENTE_OBRA
 INSERT INTO papel_permissao (empresa_id, papel_id, permissao_id, ativo)
@@ -958,7 +974,7 @@ INSERT INTO clientes (id, empresa_id, razao_social, nome_fantasia, cnpj, contato
 -- 4. Inserir Colaboradores (Próprios e Terceiros)
 -- Próprios
 INSERT INTO colaboradores (id, empresa_id, fornecedor_id, tipo, cadastro_pessoa_fisica, nome) VALUES
-(1, 1, NULL, 'PROPRIO', '123.456.789-00', 'Ricardo Silva (Gestor)'),
+(1, 2, NULL, 'PROPRIO', '123.456.789-00', 'Edson Rodrigues'),
 (2, 1, NULL, 'PROPRIO', '222.333.444-55', 'João Pereira (Engenheiro)'),
 (3, 1, NULL, 'PROPRIO', '999.888.777-66', 'Ana Costa (Operadora)');
 
@@ -977,18 +993,21 @@ INSERT INTO colaboradores (id, empresa_id, cliente_id, tipo, nome) VALUES
 -- antes: 1=gestor(ADMIN), 2=operador, 3=supervisor
 -- agora: 1=admin master, 2=ex-usuario 1, 3=ex-usuario 2, 4=ex-usuario 3
 INSERT INTO usuarios (id, empresa_id, colaborador_id, email, senha_hash, is_system) VALUES
-(1, 2, 1, 'admin@nosde.com.br', 'scrypt:32768:8:1$NMXQmJ4GCOJVmNoe$c62100d1b8d581dddc096ec887df55f1a716ab08c8cbd8f6ff16eae875822597681b6b29e4633ef098f281d3b7ab47c7b8540be065efe25605c1ac82a441dbf8', TRUE), -- ADMIN MASTER (Acesso Total, sem vínculo com empresa específica)
+(1, 2, 1, 'admin@nosde.com.br', 'scrypt:32768:8:1$NMXQmJ4GCOJVmNoe$c62100d1b8d581dddc096ec887df55f1a716ab08c8cbd8f6ff16eae875822597681b6b29e4633ef098f281d3b7ab47c7b8540be065efe25605c1ac82a441dbf8', TRUE), -- ADMIN MASTER (Acesso ao /admin exige papel global)
 (2, 1, 3, 'operador@horizonte.com.br', 'scrypt:32768:8:1$NMXQmJ4GCOJVmNoe$c62100d1b8d581dddc096ec887df55f1a716ab08c8cbd8f6ff16eae875822597681b6b29e4633ef098f281d3b7ab47c7b8540be065efe25605c1ac82a441dbf8', FALSE),
 (3, 1, 6, 'supervisor@bellavista.com.br', 'scrypt:32768:8:1$NMXQmJ4GCOJVmNoe$c62100d1b8d581dddc096ec887df55f1a716ab08c8cbd8f6ff16eae875822597681b6b29e4633ef098f281d3b7ab47c7b8540be065efe25605c1ac82a441dbf8', FALSE),
 (4, 1, 1, 'gestor@horizonte.com.br', 'scrypt:32768:8:1$NMXQmJ4GCOJVmNoe$c62100d1b8d581dddc096ec887df55f1a716ab08c8cbd8f6ff16eae875822597681b6b29e4633ef098f281d3b7ab47c7b8540be065efe25605c1ac82a441dbf8', FALSE);
 
 -- 6. Atribuir Papéis aos Usuários
 -- Após ajuste: 1=ADMIN MASTER, 2=ex-usuario 1, 3=ex-usuario 2
-INSERT INTO usuario_papel (empresa_id, usuario_id, papel_id) VALUES
-(1, 1, 1), -- admin.master é ADMIN (Acesso Total)
-(1, 2, 3), -- operador
-(1, 3, 3), -- supervisor
-(1, 4, 3); -- gestor legado vira operador (mantém FKs do seed)
+INSERT INTO usuario_papel (empresa_id, usuario_id, papel_id)
+SELECT 1, 1, p.id FROM papeis p WHERE p.empresa_id IS NULL AND p.nome = 'ADMIN';
+INSERT INTO usuario_papel (empresa_id, usuario_id, papel_id)
+SELECT 1, 2, p.id FROM papeis p WHERE p.empresa_id IS NULL AND p.nome = 'OPERADOR';
+INSERT INTO usuario_papel (empresa_id, usuario_id, papel_id)
+SELECT 1, 3, p.id FROM papeis p WHERE p.empresa_id IS NULL AND p.nome = 'CLIENTE_OBRA';
+INSERT INTO usuario_papel (empresa_id, usuario_id, papel_id)
+SELECT 1, 4, p.id FROM papeis p WHERE p.empresa_id IS NULL AND p.nome = 'GESTOR';
 
 -- 7. Inserir Obras
 INSERT INTO obras (id, empresa_id, nome, data_inicio, data_fim_planejada, tipo_obra_id, usuario_responsavel_id, cliente_id, cidade, estado, hora_entrada_padrao, hora_saida_padrao) VALUES
@@ -1433,12 +1452,23 @@ INSERT INTO papeis (id, empresa_id, nome, descricao, is_system, ativo) VALUES
 (20, 2, 'GESTOR_CONTRATO', 'Gestor responsavel por contratos e medicoes da empresa.', FALSE, TRUE);
 
 INSERT INTO permissoes (empresa_id, chave, descricao, is_system, ativo) VALUES
-(2, 'medicao.view', 'Visualizar dados de medicao e produtividade da obra.', FALSE, TRUE),
-(2, 'workflow.manage', 'Gerenciar workflows de aprovacao da empresa.', FALSE, TRUE);
+(2, 'medicao.view', 'Visualizar dados de medicao e produtividade da obra.', FALSE, TRUE);
 
-INSERT INTO papel_permissao (id, empresa_id, papel_id, permissao_id, ativo) VALUES
-(100, 2, 20, 20, TRUE),
-(101, 2, 20, 21, TRUE);
+INSERT INTO papel_permissao (empresa_id, papel_id, permissao_id, ativo)
+SELECT
+  2,
+  p.id,
+  perm.id,
+  TRUE
+FROM papeis p
+JOIN permissoes perm
+WHERE p.empresa_id = 2
+  AND p.nome = 'GESTOR_CONTRATO'
+  AND (
+    (perm.empresa_id = 2 AND perm.chave = 'medicao.view')
+    OR
+    (perm.empresa_id IS NULL AND perm.chave = 'workflow.manage')
+  );
 
 -- Fornecedores e clientes
 INSERT INTO fornecedores (id, empresa_id, nome, cnpj, endereco, ativo, criado_por) VALUES
@@ -1464,11 +1494,14 @@ INSERT INTO usuarios (id, empresa_id, colaborador_id, email, senha_hash, ativo, 
 (22, 2, 22, 'rafael.nunes@enfil.com.br', 'scrypt:32768:8:1$NMXQmJ4GCOJVmNoe$c62100d1b8d581dddc096ec887df55f1a716ab08c8cbd8f6ff16eae875822597681b6b29e4633ef098f281d3b7ab47c7b8540be065efe25605c1ac82a441dbf8', TRUE, NOW() - INTERVAL 10 MINUTE, '10.10.2.22'),
 (23, 2, 26, 'fiscal@sanecamp.example', 'scrypt:32768:8:1$NMXQmJ4GCOJVmNoe$c62100d1b8d581dddc096ec887df55f1a716ab08c8cbd8f6ff16eae875822597681b6b29e4633ef098f281d3b7ab47c7b8540be065efe25605c1ac82a441dbf8', TRUE, NOW() - INTERVAL 1 DAY, '177.10.20.30');
 
-INSERT INTO usuario_papel (empresa_id, usuario_id, papel_id, ativo) VALUES
-(2, 20, 1, TRUE),
-(2, 21, 20, TRUE),
-(2, 22, 3, TRUE),
-(2, 23, 5, TRUE);
+INSERT INTO usuario_papel (empresa_id, usuario_id, papel_id, ativo)
+SELECT 2, 20, p.id, TRUE FROM papeis p WHERE p.empresa_id IS NULL AND p.nome = 'ADMIN';
+INSERT INTO usuario_papel (empresa_id, usuario_id, papel_id, ativo)
+SELECT 2, 21, p.id, TRUE FROM papeis p WHERE p.empresa_id = 2 AND p.nome = 'GESTOR_CONTRATO';
+INSERT INTO usuario_papel (empresa_id, usuario_id, papel_id, ativo)
+SELECT 2, 22, p.id, TRUE FROM papeis p WHERE p.empresa_id IS NULL AND p.nome = 'OPERADOR';
+INSERT INTO usuario_papel (empresa_id, usuario_id, papel_id, ativo)
+SELECT 2, 23, p.id, TRUE FROM papeis p WHERE p.empresa_id IS NULL AND p.nome = 'CLIENTE_OBRA';
 
 -- Obra, frentes e alocacoes
 INSERT INTO obras (

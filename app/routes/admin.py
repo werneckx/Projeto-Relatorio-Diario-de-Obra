@@ -56,22 +56,34 @@ SYSTEM_PERMISSIONS = [
     {'chave': 'empresa.view',      'descricao': 'Visualizar dados da empresa'},
     {'chave': 'empresa.manage',    'descricao': 'Gerenciar configurações da empresa'},
     {'chave': 'usuario.manage',    'descricao': 'Gerenciar usuários da empresa'},
+    {'chave': 'cliente.view',      'descricao': 'Visualizar clientes da empresa'},
+    {'chave': 'cliente.manage',    'descricao': 'Gerenciar clientes da empresa'},
     {'chave': 'rdo.create',        'descricao': 'Criar novos RDOs'},
     {'chave': 'rdo.update',        'descricao': 'Editar RDOs existentes'},
     {'chave': 'rdo.approve',       'descricao': 'Aprovar ou rejeitar RDOs'},
     {'chave': 'rdo.view',          'descricao': 'Visualizar RDOs'},
+    {'chave': 'fornecedor.view',   'descricao': 'Visualizar fornecedores da empresa'},
     {'chave': 'fornecedor.manage', 'descricao': 'Gerenciar fornecedores da empresa'},
     {'chave': 'obra.manage',       'descricao': 'Gerenciar obras e frentes de trabalho'},
+    {'chave': 'colaborador.view',  'descricao': 'Visualizar colaboradores e equipes'},
     {'chave': 'colaborador.manage','descricao': 'Gerenciar colaboradores e equipes'},
     {'chave': 'workflow.manage',   'descricao': 'Gerenciar definições de workflow'},
+    {'chave': 'tipo_obra.view',    'descricao': 'Visualizar tipos de obra'},
+    {'chave': 'tipo_obra.create',  'descricao': 'Criar tipos de obra'},
+    {'chave': 'tipo_obra.update',  'descricao': 'Editar tipos de obra'},
+    {'chave': 'tipo_obra.delete',  'descricao': 'Excluir tipos de obra'},
 ]
 
 ROLE_PERMISSION_MAP = {
     'ADMIN':        None,  # None = todas as permissões
-    'GESTOR':       ['empresa.view','usuario.manage','rdo.create','rdo.update',
-                     'rdo.approve','rdo.view','fornecedor.manage','obra.manage','colaborador.manage','workflow.manage'],
-    'OPERADOR':     ['rdo.create','rdo.update','rdo.view','empresa.view','colaborador.manage'],
-    'LEITOR':       ['rdo.view','empresa.view'],
+    'GESTOR':       ['empresa.view','usuario.manage','cliente.view','cliente.manage','rdo.create','rdo.update',
+                     'rdo.approve','rdo.view','fornecedor.view','fornecedor.manage','obra.manage',
+                     'colaborador.view','colaborador.manage','workflow.manage',
+                     'tipo_obra.view','tipo_obra.create','tipo_obra.update','tipo_obra.delete'],
+    'OPERADOR':     ['rdo.create','rdo.update','rdo.view','empresa.view',
+                     'cliente.view','fornecedor.view','colaborador.view','colaborador.manage',
+                     'tipo_obra.view'],
+    'LEITOR':       ['rdo.view','empresa.view','cliente.view','fornecedor.view','colaborador.view','tipo_obra.view'],
     'CLIENTE_OBRA': ['rdo.view','rdo.approve'],
 }
 
