@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Página Não Encontrada | Nosde System RDO{% endblock %}
+
+{% block content %}
+<div class="flex flex-col items-center justify-center text-center py-12 lg:py-24 animate-fade-in">
+
+    <div class="relative mb-8">
+        <div class="absolute inset-0 bg-blue-500/10 blur-3xl rounded-full scale-150 pointer-events-none"></div>
+
+        <div
+            class="relative w-28 h-28 lg:w-36 lg:h-36 rounded-3xl bg-white border border-slate-200/60 shadow-xl flex items-center justify-center text-blue-600">
+            <i class="fas fa-compass text-5xl lg:text-6xl animate-pulse"></i>
+        </div>
+
+        <div
+            class="absolute -bottom-2 -right-2 w-10 h-10 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center border-2 border-white shadow-md">
+            <i class="fas fa-exclamation-triangle text-xs font-bold"></i>
+        </div>
+    </div>
+
+    <span class="text-xs font-bold uppercase tracking-[0.25em] text-blue-600 bg-blue-50 px-4 py-1.5 rounded-full mb-4">
+        Erro 404
+    </span>
+
+    <h1 class="text-3xl lg:text-4xl font-extrabold text-slate-800 tracking-tight mb-3">
+        Página não encontrada
+    </h1>
+
+    <p class="text-slate-500 max-w-md text-sm lg:text-base leading-relaxed mb-8 px-4">
+        Desculpe, a página que você está procurando não existe, foi movida ou mudou de endereço. Verifique a URL
+        digitada.
+    </p>
+
+    <div class="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto px-4">
+
+        <a href="{{ url_for('auth.inicio') }}"
+            class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-blue-600 text-white font-semibold text-sm shadow-lg shadow-blue-100 hover:bg-blue-700 hover:shadow-xl hover:scale-[1.01] transition-all duration-200">
+            <i class="fas fa-home text-xs"></i>
+            <span>Voltar ao Início</span>
+        </a>
+
+        <a href="{{ url_for('auth.suporte') }}"
+            class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl border border-slate-200 bg-white text-slate-600 font-semibold text-sm hover:bg-slate-50 hover:text-slate-800 hover:shadow-sm transition-all duration-200">
+            <i class="fas fa-headset text-xs"></i>
+            <span>Contatar Suporte</span>
+        </a>
+
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,46 @@
+{# Botão padronizado (opcional; também existem macros para botões) #}
+
+{% set _variant = variant if variant is defined else 'primary' %}
+{% set _label = label if label is defined else '' %}
+{% set _icon = icon if icon is defined else None %}
+{% set _disabled = disabled if disabled is defined else False %}
+{% set _size = size if size is defined else 'md' %}
+{% set _href = href if href is defined else None %}
+{% set _type = type if type is defined else 'button' %}
+
+{% set size_map = {
+'sm': 'px-3 py-2 text-sm',
+'md': 'px-4 py-2.5 text-sm',
+'lg': 'px-5 py-3 text-base'
+} %}
+{% set size_classes = size_map.get(_size, size_map['md']) %}
+
+{% set base = 'inline-flex items-center justify-center gap-2 rounded-2xl font-semibold transition-all duration-200
+focus:outline-none focus:ring-2 focus:ring-blue-200' %}
+
+{% if _variant == 'primary' %}
+{% set v = 'bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-400' %}
+{% elif _variant == 'secondary' %}
+{% set v = 'bg-slate-100 text-slate-800 hover:bg-slate-200 disabled:bg-slate-100 disabled:text-slate-400' %}
+{% elif _variant == 'danger' %}
+{% set v = 'bg-red-600 text-white hover:bg-red-700 disabled:bg-red-400' %}
+{% elif _variant == 'success' %}
+{% set v = 'bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-emerald-400' %}
+{% elif _variant == 'outline' %}
+{% set v = 'bg-transparent border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:text-slate-300' %}
+{% else %}
+{% set v = 'bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-400' %}
+{% endif %}
+
+{% if _href %}
+<a href="{{ _href }}" class="{{ base }} {{ v }} {{ size_classes }}" {% if _disabled %}aria-disabled="true" tabindex="-1"
+    {% endif %}>
+    {% if _icon %}<i class="{{ _icon }} text-xs"></i>{% endif %}
+    {{ _label }}
+</a>
+{% else %}
+<button type="{{ _type }}" class="{{ base }} {{ v }} {{ size_classes }}" {% if _disabled %}disabled{% endif %}>
+    {% if _icon %}<i class="{{ _icon }} text-xs"></i>{% endif %}
+    {{ _label }}
+</button>
+{% endif %}

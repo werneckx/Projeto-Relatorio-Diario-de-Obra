@@ -388,5 +388,8 @@ from app.routes import rdo  # noqa: F401,E402
 from app.routes import rdo_assinaturas  # noqa: F401,E402
 from app.routes import usuarios  # noqa: F401,E402
 from app.routes import auxiliares  # noqa: F401,E402
+from app.routes import clientes  # noqa: F401,E402
+from app.routes import colaboradores  # noqa: F401,E402
+from app.routes import fornecedores  # noqa: F401,E402
 from app.routes import obras  # noqa: F401,E402
 from app.routes import perfil  # noqa: F401,E402

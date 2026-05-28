@@ -54,7 +54,7 @@ from app.models.usuario import (
     PapelPermissao,
 )
 from app.models.empresa import Empresa
-from app.models.auxiliares import AuxClima, AuxFuncoes, AuxEquipamentos, AuxTagOcorrencia
+from app.models.auxiliares import AuxClima, AuxFuncoes, AuxEquipamentos, AuxTagOcorrencia, AuxTipoObra
 from app.models.obra import FrenteTrabalho, Obra, FrenteColaborador
 from app.models.rdo import RDO, RDOAprovacao, RDOEquipamento, RDOMaoObra, RDOAtividade, RDOFoto, RDOOcorrencia
 from app.models.fornecedor import Fornecedor
@@ -443,3 +443,4 @@ def _get_equipe_obra_payload(obra_id):
 
 
 __all__ = [name for name in globals() if not name.startswith("__")]
+

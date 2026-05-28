@@ -1,0 +1,191 @@
+{# Enterprise table building blocks (wrappers/macros). #}
+
+{# Wrapper panel for list tables (card container). #}
+{# Usage:
+{% import "components/table/macros.html" as ui_table %}
+{% call ui_table.wrapper(mode='comfortable') %}
+{% call ui_table.toolbar(search_input_id='q', search_placeholder='Buscar...') %}{% endcall %}
+{% call ui_table.table_container('px-0') %}
+<table id="..." class="...">...</table>
+{% endcall %}
+{% endcall %}
+#}
+{% macro wrapper(config=None, mode='comfortable', extra_class='') %}
+{% if config is mapping %}
+{% if config.get('mode') %}{% set mode = config.get('mode') %}{% endif %}
+{% if config.get('wrapper_class') %}{% set extra_class = (extra_class ~ ' ' ~ config.get('wrapper_class')).strip() %}{%
+endif %}
+{% endif %}
+{% set mode_map = {
+'compact': 'rounded-xl',
+'comfortable': 'rounded-xl',
+'dense': 'rounded-xl'
+} %}
+{% set mode_cls = mode_map.get(mode, mode_map['comfortable']) %}
+<div class="bg-white border border-slate-200 shadow-sm flex flex-col {{ mode_cls }} {{ extra_class }}">
+    {{ caller() }}
+</div>
+{% endmacro %}
+
+{% macro toolbar(
+config=None,
+search_id=None,
+search_input_id=None,
+search_placeholder='Buscar...',
+create_url=None,
+create_label=None,
+create_icon='fa-plus',
+create_permission=None,
+show_reload=True,
+reload_title='Recarregar'
+) %}
+{% if config is mapping %}
+{% if not search_id and config.get('search_id') %}{% set search_id = config.get('search_id') %}{% endif %}
+{% if not search_input_id and config.get('search_input_id') %}{% set search_input_id = config.get('search_input_id')
+%}{% endif %}
+{% if not search_input_id and search_id %}{% set search_input_id = search_id %}{% endif %}
+{% if search_placeholder == 'Buscar...' and config.get('search_placeholder') %}{% set search_placeholder =
+config.get('search_placeholder') %}{% endif %}
+{% if not create_url and config.get('create_url') %}{% set create_url = config.get('create_url') %}{% endif %}
+{% if not create_label and config.get('create_label') %}{% set create_label = config.get('create_label') %}{% endif %}
+{% if create_icon == 'fa-plus' and config.get('create_icon') %}{% set create_icon = config.get('create_icon') %}{% endif
+%}
+{% if not create_permission and config.get('create_permission') %}{% set create_permission =
+config.get('create_permission') %}{% endif %}
+{% if config.get('show_reload') is not none %}{% set show_reload = config.get('show_reload') %}{% endif %}
+{% endif %}
+<div class="ds-toolbar flex-col md:flex-row bg-white rounded-t-xl">
+    <div class="relative w-full md:w-80 group">
+        {% if search_input_id %}
+        <input type="text" id="{{ search_input_id }}"
+            class="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-lg bg-slate-50 text-sm focus:bg-white focus:ring-2 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all placeholder:text-slate-400"
+            placeholder="{{ search_placeholder }}">
+        {% endif %}
+    </div>
+
+    <div class="flex w-full md:w-auto gap-2 items-center justify-end">
+        {% if create_url and create_label %}
+        {% set perms = session.get('permissions', []) %}
+        {% if not create_permission or create_permission in perms %}
+        <a href="{{ create_url }}"
+            class="inline-flex justify-center items-center px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-sm shadow-blue-500/30 transition-all hover:-translate-y-0.5">
+            <i class="fas {{ create_icon }} mr-2"></i> {{ create_label }}
+        </a>
+        {% endif %}
+        {% endif %}
+        {% if caller is defined %}
+        {{ caller() }}
+        {% endif %}
+        {% if show_reload %}
+        <button onclick="window.location.reload()"
+            class="inline-flex justify-center items-center w-10 h-10 border border-slate-200 rounded-lg text-slate-500 bg-white hover:bg-slate-50 hover:text-blue-600 transition-all shadow-sm"
+            title="{{ reload_title }}">
+            <i class="fas fa-sync-alt"></i>
+        </button>
+        {% endif %}
+    </div>
+</div>
+{% endmacro %}
+
+{% macro table_container(extra_class='') %}
+<div class="w-full overflow-x-auto {{ extra_class }}">
+    {{ caller() }}
+</div>
+{% endmacro %}
+
+{% macro empty_state(show, icon='fa-search', title='Nenhum registro encontrado', description='') %}
+{% if show %}
+<div class="py-16 text-center">
+    <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-50 mb-4">
+        <i class="fas {{ icon }} text-slate-300 text-2xl"></i>
+    </div>
+    <h3 class="text-slate-800 font-bold">{{ title }}</h3>
+    {% if description %}
+    <p class="text-sm text-slate-500 mt-1">{{ description }}</p>
+    {% endif %}
+</div>
+{% endif %}
+{% endmacro %}
+
+{% macro status_badge(is_active, active_label='Ativo', inactive_label='Inativo') %}
+{% if is_active %}
+{% set text = active_label %}
+{% set variant = 'success' %}
+{% else %}
+{% set text = inactive_label %}
+{% set variant = 'danger' %}
+{% endif %}
+{% include "components/badge.html" %}
+{% endmacro %}
+
+{% macro actions_dropdown(
+actions=[],
+button_title='Ações',
+button_icon='fa-ellipsis-h',
+align='right',
+width_class='w-56'
+) %}
+{# actions: [{label, url|href?, onclick?, icon?, permission?, disabled?, disabled_reason?, variant?, divider?, attrs?}] #}
+{% set perms = session.get('permissions', []) %}
+{% set side = 'right-0' if align == 'right' else 'left-0' %}
+<div class="relative dropdown-wrapper inline-flex ds-dropdown">
+    <button type="button"
+        class="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"
+        aria-haspopup="menu" aria-label="{{ button_title }}">
+        <i class="fas {{ button_icon }} text-xs text-slate-500"></i>
+    </button>
+    <div class="dropdown-panel absolute {{ side }} mt-2 {{ width_class }} rounded-xl border border-slate-200 bg-white shadow-lg p-1 z-50"
+        role="menu">
+        {% for a in actions %}
+        {% if a.get('divider') %}
+        <div class="my-1 border-t border-slate-100"></div>
+        {% else %}
+        {% set _perm = a.get('permission') %}
+        {% if not _perm or _perm in perms %}
+        {% set _icon = a.get('icon') %}
+        {% set _label = a.get('label') %}
+        {% set _href = a.get('url') or a.get('href') %}
+        {% set _onclick = a.get('onclick') %}
+        {% set _attrs = a.get('attrs') %}
+        {% set _disabled = a.get('disabled') %}
+        {% set _disabled_reason = a.get('disabled_reason') %}
+        {% set _variant = a.get('variant') %}
+        {% set _row_cls = 'opacity-50 cursor-not-allowed pointer-events-none' if _disabled else '' %}
+
+        {% set _variant_cls = '' %}
+        {% if _variant == 'danger' %}{% set _variant_cls = 'text-red-700 hover:bg-red-50' %}{% endif %}
+        {% if _variant == 'success' %}{% set _variant_cls = 'text-emerald-700 hover:bg-emerald-50' %}{% endif %}
+        {% if _variant == 'warning' %}{% set _variant_cls = 'text-amber-700 hover:bg-amber-50' %}{% endif %}
+        {% if _variant == 'info' %}{% set _variant_cls = 'text-blue-700 hover:bg-blue-50' %}{% endif %}
+
+        {% if _href %}
+        <a href="{{ _href }}"
+            class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-50 {{ _variant_cls }} {{ _row_cls }}"
+            role="menuitem" {% if _perm %}data-permission="{{ _perm }}" {% endif %}
+            {% if _attrs is mapping %}
+              {% for k, v in _attrs.items() %}{{ k }}="{{ v }}" {% endfor %}
+            {% endif %}
+            {% if _disabled_reason %}title="{{ _disabled_reason }}"{% endif %}
+            {% if _disabled %}aria-disabled="true"{% endif %}>
+            {% if _icon %}<i class="fas {{ _icon }} text-xs text-slate-400"></i>{% endif %}
+            {{ _label }}
+        </a>
+        {% else %}
+        <button type="button" {% if _onclick %}onclick="{{ _onclick }}" {% endif %}
+            class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-50 text-left {{ _variant_cls }} {{ _row_cls }}"
+            role="menuitem" {% if _perm %}data-permission="{{ _perm }}" {% endif %}
+            {% if _attrs is mapping %}
+              {% for k, v in _attrs.items() %}{{ k }}="{{ v }}" {% endfor %}
+            {% endif %}
+            {% if _disabled_reason %}title="{{ _disabled_reason }}"{% endif %}
+            {% if _disabled %}aria-disabled="true"{% endif %}>
+            {% if _icon %}<i class="fas {{ _icon }} text-xs text-slate-400"></i>{% endif %}
+            {{ _label }}
+        </button>
+        {% endif %}
+        {% endif %}
+        {% endif %}
+        {% endfor %}
+    </div>
+</div>
+{% endmacro %}

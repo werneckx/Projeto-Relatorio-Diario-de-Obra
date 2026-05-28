@@ -6,6 +6,27 @@
 <!-- DataTables CSS -->
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin_datatables.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/enterprise_theme.css') }}">
+
+{% import "components/table/macros.html" as ui_table %}
+
+{% set table_config = {
+'title': 'Cadastro de Equipamentos',
+'icon': 'fa-tools',
+'create_url': url_for('auth.criar_equipamento'),
+'create_label': 'Novo Equipamento',
+'create_permission': 'equipamento.create',
+'export_actions': [
+{'label': 'Exportar CSV', 'icon': 'fa-file-csv', 'onclick': "window.AdminTables.exportCsv({tableSelector:
+'#dataTableEquipamentos', filename: 'equipamentos.csv'})"}
+],
+'search_input_id': 'equipamentoInputSearch',
+'search_placeholder': 'Buscar equipamento...',
+'datatable_id': 'dataTableEquipamentos',
+'mobile_cards': true,
+'mode': 'comfortable'
+} %}
 
 <style>
     /* Estilos globais e animações */
@@ -111,7 +132,7 @@
         }
 
         /* ID (Topo Direita) */
-        table#dataTableEquipamentos tbody td:nth-child(1) {
+        table#dataTableEquipamentos tbody td:nth-child(2) {
             grid-column: 2 / 3;
             grid-row: 1;
             text-align: right;
@@ -120,7 +141,7 @@
         }
 
         /* Nome (Topo Esquerda - Destaque) */
-        table#dataTableEquipamentos tbody td:nth-child(2) {
+        table#dataTableEquipamentos tbody td:nth-child(3) {
             grid-column: 1 / 2;
             grid-row: 1;
             font-size: 1rem;
@@ -131,7 +152,7 @@
         }
 
         /* Ações (Rodapé) */
-        table#dataTableEquipamentos tbody td:nth-child(3) {
+        table#dataTableEquipamentos tbody td:nth-child(6) {
             grid-column: 1 / 3;
             grid-row: 2;
             margin-top: 12px;
@@ -161,117 +182,121 @@
             <p class="text-slate-500 mt-1 text-xs md:text-sm">Gestão centralizada dos tipos de equipamentos utilizados
                 no sistema.</p>
         </div>
-        <div>
-            <a href="{{ url_for('auth.criar_equipamento') }}"
-                class="w-full md:w-auto inline-flex justify-center items-center px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-sm shadow-blue-500/30 transition-all hover:-translate-y-0.5">
-                <i class="fas fa-plus mr-2"></i> Novo Equipamento
-            </a>
-        </div>
     </div>
 
     <!-- Tabela Container -->
-    <div class="bg-white border border-slate-200 rounded-xl shadow-sm animate-fade-up flex flex-col"
-        style="animation-delay: 100ms;">
+    {% call ui_table.wrapper(config=table_config, extra_class='animate-fade-up') %}
+    {% call ui_table.toolbar(config=table_config, create_permission=table_config.create_permission) %}
+    {{ ui_table.actions_dropdown(actions=[
+    {'label': 'Limpar busca', 'icon': 'fa-eraser', 'onclick': 'clearEquipamentoSearch()'}
+    ], button_title='Outros', button_icon='fa-ellipsis-h', size='sm') }}
+    {% endcall %}
 
-        <!-- Toolbar -->
-        <div
-            class="p-4 border-b border-slate-100 flex flex-col md:flex-row gap-3 justify-between items-center bg-white rounded-t-xl">
-            <div class="relative w-full md:w-80 group">
-                <input type="text" id="equipamentoInputSearch"
-                    class="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-lg bg-slate-50 text-sm focus:bg-white focus:ring-2 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all placeholder:text-slate-400"
-                    placeholder="Buscar equipamento...">
-            </div>
+    {% call ui_table.table_container('px-0') %}
+    <table id="dataTableEquipamentos" class="w-full text-left border-collapse ds-mobile-cards ds-mobile-cards--grid">
+        <thead class="bg-slate-50/80 border-b border-slate-200 backdrop-blur">
+            <tr>
+                <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-20">Sistema</th>
+                <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-20">ID</th>
+                <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Nome do
+                    Equipamento</th>
+                <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Tipo</th>
+                <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-40">Status</th>
+                <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right w-32">
+                    Ações</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 bg-white">
+            {% for equipamento in opcoes %}
+            <tr id="equipamento-row-{{ equipamento.id }}" class="hover:bg-slate-50/80 transition-colors group">
 
-            <div class="flex w-full md:w-auto gap-2">
-                <button onclick="window.location.reload()"
-                    class="inline-flex justify-center items-center w-10 h-10 border border-slate-200 rounded-lg text-slate-500 bg-white hover:bg-slate-50 hover:text-blue-600 transition-all shadow-sm"
-                    title="Recarregar">
-                    <i class="fas fa-sync-alt"></i>
-                </button>
-            </div>
+                <!-- Sistema -->
+                <td data-label="Sistema" class="px-6 py-4 whitespace-nowrap text-xs">
+                    {% if equipamento.is_system %}
+                    <span
+                        class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[11px] font-bold border bg-slate-100 text-slate-700 border-slate-200">
+                        <i class="fas fa-lock text-[10px] text-slate-500"></i> Sistema
+                    </span>
+                    {% else %}
+                    <span
+                        class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[11px] font-bold border bg-slate-50 text-slate-600 border-slate-200">
+                        <i class="fas fa-building text-[10px] text-slate-400"></i> Empresa
+                    </span>
+                    {% endif %}
+                </td>
+
+                <!-- ID -->
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-slate-400">
+                    #{{ '%03d' % equipamento.id }}
+                </td>
+
+                <!-- Nome -->
+                <td class="px-6 py-4 font-medium text-slate-800">
+                    <span class="truncate-safe">
+                        {{ equipamento.nome }}
+                    </span>
+                </td>
+
+                <!-- Tipo -->
+                <td class="px-6 py-4 font-medium text-slate-800">
+                    <span class="truncate-safe">
+                        {{ equipamento.tipo }}
+                    </span>
+                </td>
+
+                <!-- Status -->
+                <td data-label="Status" class="px-6 py-4 whitespace-nowrap text-sm">
+                    {{ ui_table.status_badge(equipamento.ativo, active_label='Ativo', inactive_label='Inativo') }}
+                </td>
+
+                <!-- Ações -->
+                <td class="px-6 py-4 whitespace-nowrap text-right ds-mobile-actions">
+                    {{ ui_table.actions_dropdown(actions=[
+                    {'label': 'Visualizar', 'icon': 'fa-eye', 'url': url_for('auth.visualizar_equipamento',
+                    id=equipamento.id), 'permission': 'equipamento.view'},
+                    {'label': 'Editar', 'icon': 'fa-pen', 'url': url_for('auth.editar_equipamento', id=equipamento.id),
+                    'permission': 'equipamento.update', 'disabled': equipamento.is_system, 'disabled_reason': 'Registro
+                    de sistema'},
+                    {'divider': true},
+                    {'label': 'Excluir', 'icon': 'fa-trash-alt', 'onclick': 'confirmDeleteEquipamento(' ~ equipamento.id
+                    ~ ')', 'permission': 'equipamento.delete', 'disabled': equipamento.is_system, 'disabled_reason':
+                    'Registro de sistema', 'variant': 'danger'}
+                    ], button_title='Ações') }}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {{ ui_table.empty_state(not opcoes, icon='fa-hammer', title='Nenhum Equipamento encontrado', description='Clique em
+    \"Novo Equipamento\" para começar.') }}
+    {% if false %}
+    <div class="py-16 text-center">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-50 mb-4">
+            <i class="fas fa-hammer text-slate-300 text-2xl"></i>
         </div>
-
-        <!-- Tabela -->
-        <div class="w-full px-0">
-            <table id="dataTableEquipamentos" class="w-full text-left border-collapse">
-                <thead class="bg-slate-50/80 border-b border-slate-200 backdrop-blur">
-                    <tr>
-                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-20">ID</th>
-                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Nome do
-                            Equipamento</th>
-                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right w-32">
-                            Ações</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100 bg-white">
-                    {% for equipamento in opcoes %}
-                    <tr id="equipamento-row-{{ equipamento.id }}" class="hover:bg-slate-50/80 transition-colors group">
-
-                        <!-- ID -->
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-slate-400">
-                            #{{ '%03d' % equipamento.id }}
-                        </td>
-
-                        <!-- Nome -->
-                        <td class="px-6 py-4 font-medium text-slate-800">
-                            <span
-                                class="inline-flex items-center px-2.5 py-1 rounded-md text-sm font-medium bg-slate-50 text-slate-700 border border-slate-200">
-                                <i class="fas fa-tools mr-2 text-slate-400 text-xs"></i>
-                                {{ equipamento.nome }}
-                            </span>
-                        </td>
-
-                        <!-- Ações -->
-                        <td class="px-6 py-4 whitespace-nowrap text-right">
-                            <div class="flex justify-end items-center gap-1">
-                                <a href="{{ url_for('auth.visualizar_equipamento', id=equipamento.id) }}"
-                                    class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                                    title="Visualizar">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                <a href="{{ url_for('auth.editar_equipamento', id=equipamento.id) }}"
-                                    class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
-                                    title="Editar">
-                                    <i class="fas fa-pen"></i>
-                                </a>
-                                <button onclick="confirmDeleteEquipamento({{ equipamento.id }})"
-                                    class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                                    title="Excluir">
-                                    <i class="fas fa-trash-alt"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-
-            {% if not opcoes %}
-            <div class="py-16 text-center">
-                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-50 mb-4">
-                    <i class="fas fa-hammer text-slate-300 text-2xl"></i>
-                </div>
-                <h3 class="text-slate-800 font-bold">Nenhum Equipamento encontrado</h3>
-                <p class="text-sm text-slate-500 mt-1">Clique em "Novo Equipamento" para começar.</p>
-            </div>
-            {% endif %}
-        </div>
+        <h3 class="text-slate-800 font-bold">Nenhum Equipamento encontrado</h3>
+        <p class="text-sm text-slate-500 mt-1">Clique em "Novo Equipamento" para começar.</p>
     </div>
+    {% endif %}
+    {% endcall %}
+    {% endcall %}
 </div>
 
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="{{ url_for('static', filename='js/admin_datatables.js') }}"></script>
 
 <script>
     var dataTableEquipamentos = null;
     $(document).ready(function () {
-        dataTableEquipamentos = $('#dataTableEquipamentos').DataTable({
+        const dataTableOptions = {
             responsive: false,
             paging: true,
             searching: true,
             pageLength: 10,
             lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "Todos"]],
-            order: [[0, 'desc']],
+            order: [[1, 'desc']],
             language: {
                 url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json",
                 search: "",
@@ -285,11 +310,20 @@
             initComplete: function () {
                 $(this.api().table().container()).removeClass('dt-container');
             }
-        });
+        };
 
-        $('#equipamentoInputSearch').on('keyup', function () {
-            dataTableEquipamentos.search(this.value).draw();
-        });
+        if (window.AdminTables && window.AdminTables.initWithSearch) {
+            dataTableEquipamentos = window.AdminTables.initWithSearch({
+                tableSelector: '#dataTableEquipamentos',
+                searchInputSelector: '#equipamentoInputSearch',
+                dataTableOptions: dataTableOptions
+            });
+        } else {
+            dataTableEquipamentos = $('#dataTableEquipamentos').DataTable(dataTableOptions);
+            $('#equipamentoInputSearch').on('keyup', function () {
+                dataTableEquipamentos.search(this.value).draw();
+            });
+        }
     });
 
     function confirmDeleteEquipamento(id) {
@@ -314,6 +348,13 @@
                 console.error(err);
                 alert('Erro ao excluir equipamento.');
             });
+    }
+
+    function clearEquipamentoSearch() {
+        const el = document.getElementById('{{ table_config.search_input_id }}');
+        if (!el) return;
+        el.value = '';
+        el.dispatchEvent(new Event('keyup'));
     }
 </script>
 {% endblock %}

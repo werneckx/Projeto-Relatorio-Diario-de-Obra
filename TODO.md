@@ -1,3 +1,9 @@
 - [ ] Atualizar `tests/conftest.py` para criar `Cliente` válido (razao_social + cnpj + empresa_id) e substituir `cliente_id=0` por `cliente.id` nas fixtures de `obra`, `obra_empresa1` e `obra_empresa2`.
 - [ ] Atualizar `app/models/cliente.py` para aceitar compatibilidade `Cliente(nome=...)` mapeando `nome -> razao_social` quando `razao_social` não for fornecido.
 - [ ] Rodar `pytest` e coletar erros remanescentes para direcionar correções (ex.: DetachedInstanceError, RecuperacaoSenha, ConfigService).
+- [ ] Branch `refactor/templates-design-system`: criar backlog operacional (feito em `docs/branch-14-design-system-backlog.md`).
+- [ ] Branch `refactor/templates-design-system` (Fase A): inventariar scripts inline e padrões repetidos nos templates.
+- [ ] Branch `refactor/templates-design-system` (Fase B): criar `app/templates/components/` e componentes básicos (badge/button/table/card/modal/pagination/notification + macros).
+- [ ] Branch `refactor/templates-design-system` (Fase D/E): extrair CSS/JS inline do `app/templates/base.html` para `app/static/css/*` e `app/static/js/*`.
+- [ ] Branch `refactor/templates-design-system` (Fase C/F): aplicar componentes nas telas e remover legacy.
+- [ ] Branch `refactor/templates-design-system` (Fase G): smoke tests de componentes e renderização.

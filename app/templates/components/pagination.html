@@ -1,0 +1,53 @@
+{# Paginação simples e responsiva #}
+
+{% set page = page if page is defined else 1 %}
+{% set total_pages = total_pages if total_pages is defined else 1 %}
+{% set url_for_page = url_for_page if url_for_page is defined else None %}
+
+{% if total_pages <= 1 %} {# nada a renderizar #} {% else %} <nav class="flex items-center justify-between gap-4 mt-6">
+    <div class="text-xs text-slate-500">
+        Página <span class="font-semibold text-slate-700">{{ page }}</span> de <span
+            class="font-semibold text-slate-700">{{ total_pages }}</span>
+    </div>
+
+    <div class="flex items-center gap-2">
+        {% if page > 1 %}
+        <a href="{{ url_for_page(page-1) if url_for_page else '#' }}"
+            class="px-3 py-2 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-sm font-semibold">
+            <i class="fas fa-chevron-left text-xs"></i>
+        </a>
+        {% else %}
+        <span
+            class="px-3 py-2 rounded-2xl border border-slate-200 bg-slate-50 text-slate-400 text-sm font-semibold cursor-not-allowed"
+            aria-disabled="true">
+            <i class="fas fa-chevron-left text-xs"></i>
+        </span>
+        {% endif %}
+
+        {# Mostrar janela curta de páginas #}
+        {% set window = 2 %}
+        {% set start = page - window if page - window > 1 else 1 %}
+        {% set end = page + window if page + window < total_pages else total_pages %} {% for p in range(start, end+1) %}
+            {% if p==page %} <span class="px-3 py-2 rounded-2xl bg-blue-600 text-white text-sm font-bold">{{ p }}</span>
+            {% else %}
+            <a href="{{ url_for_page(p) if url_for_page else '#' }}"
+                class="px-3 py-2 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-sm font-semibold">
+                {{ p }}
+            </a>
+            {% endif %}
+            {% endfor %}
+
+            {% if page < total_pages %} <a href="{{ url_for_page(page+1) if url_for_page else '#' }}"
+                class="px-3 py-2 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-sm font-semibold">
+                <i class="fas fa-chevron-right text-xs"></i>
+                </a>
+                {% else %}
+                <span
+                    class="px-3 py-2 rounded-2xl border border-slate-200 bg-slate-50 text-slate-400 text-sm font-semibold cursor-not-allowed"
+                    aria-disabled="true">
+                    <i class="fas fa-chevron-right text-xs"></i>
+                </span>
+                {% endif %}
+    </div>
+    </nav>
+    {% endif %}

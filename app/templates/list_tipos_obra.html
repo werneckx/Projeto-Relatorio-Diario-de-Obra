@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}Tipos de Obra{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin_datatables.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/enterprise_theme.css') }}">
+
+{% import "components/table/macros.html" as ui_table %}
+
+{% set table_config = {
+'title': 'Tipos de Obra',
+'icon': 'fa-layer-group',
+'create_url': url_for('auth.criar_tipo_obra'),
+'create_label': 'Novo Tipo',
+'create_permission': 'tipo_obra.create',
+'export_actions': [
+{'label': 'Exportar CSV', 'icon': 'fa-file-csv', 'onclick': "window.AdminTables.exportCsv({tableSelector:
+'#dataTableTiposObra', filename: 'tipos_obra.csv'})"}
+],
+'search_id': 'tipoObraSearch',
+'search_placeholder': 'Buscar tipo de obra...',
+'datatable_id': 'dataTableTiposObra',
+'mode': 'comfortable'
+} %}
+
+<div class="space-y-5 ds-section mx-auto px-2 sm:px-0">
+  <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 animate-fade-up">
+    <div>
+      <h1 class="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">{{ table_config.title }}</h1>
+      <p class="text-slate-500 mt-1 text-xs md:text-sm">Padronização do cadastro de tipos de obra.</p>
+    </div>
+  </div>
+
+  {% call ui_table.wrapper(config=table_config, extra_class='animate-fade-up') %}
+  {% call ui_table.toolbar(
+  config=table_config,
+  search_id=table_config.search_id,
+  create_url=table_config.create_url,
+  create_label=table_config.create_label,
+  create_permission=table_config.create_permission
+  ) %}
+  {{ ui_table.actions_dropdown(actions=[
+  {'label': 'Limpar busca', 'icon': 'fa-eraser', 'onclick': 'clearTipoObraSearch()'}
+  ], button_title='Outros', button_icon='fa-ellipsis-h', size='sm') }}
+  {% endcall %}
+
+  {% call ui_table.table_container('px-0') %}
+  <table id="{{ table_config.datatable_id }}" class="w-full text-left border-collapse ds-mobile-labels">
+    <thead class="bg-slate-50/80 border-b border-slate-200 backdrop-blur">
+      <tr>
+        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-28">Sistema</th>
+        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-24">ID</th>
+        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Nome</th>
+        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Descrição</th>
+        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-40">Status</th>
+        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right w-32">Ações</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-slate-100 bg-white">
+      {% for t in opcoes %}
+      <tr id="tipo-obra-row-{{ t.id }}" class="hover:bg-slate-50/80 transition-colors group">
+        <td data-label="Sistema" class="px-6 py-4 whitespace-nowrap text-xs">
+          {% if t.is_system %}
+          <span
+            class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[11px] font-bold border bg-slate-100 text-slate-700 border-slate-200">
+            <i class="fas fa-lock text-[10px] text-slate-500"></i> Sistema
+          </span>
+          {% else %}
+          <span
+            class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[11px] font-bold border bg-slate-50 text-slate-600 border-slate-200">
+            <i class="fas fa-building text-[10px] text-slate-400"></i> Empresa
+          </span>
+          {% endif %}
+        </td>
+        <td data-label="ID" class="px-6 py-4 whitespace-nowrap text-sm font-mono text-slate-400">#{{ '%03d' % t.id }}
+        </td>
+        <td data-label="Nome" class="px-6 py-4 text-sm text-slate-800 font-medium">
+          <div class="truncate-safe" title="{{ t.nome }}">{{ t.nome }}</div>
+        </td>
+        <td data-label="Descrição" class="px-6 py-4 text-sm text-slate-700">
+          <div class="truncate-safe" title="{{ t.descricao or '-' }}">{{ t.descricao or '-' }}</div>
+        </td>
+        <td data-label="Status" class="px-6 py-4 whitespace-nowrap text-sm">
+          {{ ui_table.status_badge(t.ativo, active_label='Ativo', inactive_label='Inativo') }}
+        </td>
+        <td data-label="Ações" class="px-6 py-4 whitespace-nowrap text-right ds-mobile-actions">
+          {{ ui_table.actions_dropdown(actions=[
+          {'label': 'Visualizar', 'icon': 'fa-eye', 'url': url_for('auth.visualizar_tipo_obra', id=t.id), 'permission':
+          'tipo_obra.view'},
+          {'label': 'Editar', 'icon': 'fa-pen', 'url': url_for('auth.editar_tipo_obra', id=t.id), 'permission':
+          'tipo_obra.update', 'disabled': t.is_system, 'disabled_reason': 'Registro de sistema'},
+          {'divider': true},
+          {'label': 'Excluir', 'icon': 'fa-trash-alt', 'onclick': 'confirmDeleteTipoObra(' ~ t.id ~ ')', 'permission':
+          'tipo_obra.delete', 'disabled': t.is_system, 'disabled_reason': 'Registro de sistema', 'variant': 'danger'}
+          ], button_title='Ações') }}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {{ ui_table.empty_state(not opcoes, icon='fa-layer-group', title='Nenhum Tipo de Obra encontrado', description='Clique
+  em \"Novo Tipo\" para começar.') }}
+  {% endcall %}
+  {% endcall %}
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="{{ url_for('static', filename='js/admin_datatables.js') }}"></script>
+
+<script>
+  var tableTiposObra = null;
+  $(document).ready(function () {
+    const dataTableOptions = {
+      responsive: false,
+      paging: true,
+      searching: true,
+      pageLength: 10,
+      lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "Todos"]],
+      ordering: true,
+      order: [[1, 'desc']],
+      language: {
+        url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json",
+        search: "",
+        searchPlaceholder: "Filtrar...",
+        paginate: { previous: '<i class="fas fa-chevron-left"></i>', next: '<i class="fas fa-chevron-right"></i>' }
+      },
+      dom: 'rt<"px-4 py-4 border-t border-slate-200 bg-slate-50 rounded-b-xl flex flex-col sm:flex-row justify-between items-center gap-4"li p>',
+      initComplete: function () { $(this.api().table().container()).removeClass('dt-container'); }
+    };
+
+    if (window.AdminTables && window.AdminTables.initWithSearch) {
+      tableTiposObra = window.AdminTables.initWithSearch({
+        tableSelector: '#{{ table_config.datatable_id }}',
+        searchInputSelector: '#{{ table_config.search_id }}',
+        dataTableOptions: dataTableOptions
+      });
+    } else {
+      tableTiposObra = $('#{{ table_config.datatable_id }}').DataTable(dataTableOptions);
+      $('#{{ table_config.search_id }}').on('keyup', function () { tableTiposObra.search(this.value).draw(); });
+    }
+  });
+
+  function confirmDeleteTipoObra(id) {
+    if (!confirm('Tem certeza que deseja remover este tipo de obra?')) return;
+    fetch(`/auth/excluir-tipo-obra/${id}`, { method: 'POST' }).then(() => window.location.reload());
+  }
+
+  function clearTipoObraSearch() {
+    const el = document.getElementById('{{ table_config.search_id }}');
+    if (!el) return;
+    el.value = '';
+    el.dispatchEvent(new Event('keyup'));
+  }
+</script>
+
+{% endblock %}

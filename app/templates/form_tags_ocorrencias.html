@@ -7,19 +7,8 @@
 {% block content %}
 <div class="page-shell">
 
-    <!-- Flash Messages -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-    {% for category, message in messages %}
-    <div
-        class="mb-6 p-4 rounded-xl flex items-start gap-3 border shadow-sm transition-all
-                    {{ 'bg-red-50 text-red-700 border-red-100' if category == 'danger' else 'bg-emerald-50 text-emerald-700 border-emerald-100' }}">
-        <i class="fas {{ 'fa-exclamation-circle' if category == 'danger' else 'fa-check-circle' }} mt-0.5"></i>
-        <div class="text-sm font-medium leading-tight">{{ message }}</div>
-    </div>
-    {% endfor %}
-    {% endif %}
-    {% endwith %}
+    <!-- Flash Messages (padronizado) -->
+    {% include "partials/flash_messages.html" %}
 
     <!-- Cabeçalho -->
     <div class="page-hero p-6 sm:p-7 flex items-center justify-between">

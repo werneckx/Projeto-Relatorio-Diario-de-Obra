@@ -1,0 +1,75 @@
+{# Tabela genérica com container responsivo e empty state #}
+
+{% set _thead = headers if headers is defined else [] %}
+{% set _rows = rows if rows is defined else [] %}
+{% set _empty_text = empty_text if empty_text is defined else 'Nenhum registro encontrado.' %}
+
+{% macro wrapper(extra_class='') %}
+<div class="w-full overflow-x-auto {{ extra_class }}">
+    {{ caller() }}
+</div>
+{% endmacro %}
+
+<div class="w-full overflow-x-auto">
+    <table class="min-w-full divide-y divide-slate-200">
+        {% if _thead and _thead|length > 0 %}
+        <thead class="bg-slate-50">
+            <tr>
+                {% for h in _thead %}
+                <th
+                    class="px-6 py-3 text-left text-xs font-bold uppercase tracking-[0.08em] text-slate-500 whitespace-nowrap">
+                    {{ h }}
+                </th>
+                {% endfor %}
+                {% if actions is defined and actions %}
+                <th
+                    class="px-6 py-3 text-right text-xs font-bold uppercase tracking-[0.08em] text-slate-500 whitespace-nowrap">
+                    Ações
+                </th>
+                {% endif %}
+            </tr>
+        </thead>
+        {% endif %}
+
+        <tbody class="bg-white divide-y divide-slate-100">
+            {% if _rows and _rows|length > 0 %}
+            {% for r in _rows %}
+            <tr class="hover:bg-slate-50/60 transition-colors">
+                {% if r is mapping or r is iterable and r is not string %}
+                {% if r is mapping %}
+                {# mapping: assume keys in same order as headers #}
+                {% for h in _thead %}
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
+                    {{ r.get(h, '') }}
+                </td>
+                {% endfor %}
+                {% else %}
+                {% for cell in r %}
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
+                    {{ cell }}
+                </td>
+                {% endfor %}
+                {% endif %}
+                {% endif %}
+
+                {% if actions is defined and actions %}
+                <td class="px-6 py-4 whitespace-nowrap text-right">
+                    {{ actions }}
+                </td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+            {% else %}
+            <tr>
+                <td colspan="{{ (_thead|length) + (1 if (actions is defined and actions) else 0) }}"
+                    class="px-6 py-12 text-center">
+                    <div class="inline-flex items-center justify-center gap-3 text-slate-500">
+                        <i class="fas fa-info-circle text-slate-400"></i>
+                        <span class="text-sm font-semibold">{{ _empty_text }}</span>
+                    </div>
+                </td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
