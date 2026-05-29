@@ -12,14 +12,14 @@ def lista_fornecedores():
         .order_by(Fornecedor.id.asc())
         .all()
     )
-    return render_template("list_fornecedores.html", opcoes=fornecedores, categoria="fornecedor")
+    return render_template("cadastros/fornecedores/list_fornecedores.html", opcoes=fornecedores, categoria="fornecedor")
 
 
 @auth_bp.get('/criar-fornecedor')
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def criar_fornecedor():
-    return render_template('form_fornecedor.html', item=None, view_mode=False)
+    return render_template('cadastros/fornecedores/form_fornecedor.html', item=None, view_mode=False)
 
 
 @auth_bp.get('/editar-fornecedor/<int:id>')
@@ -28,7 +28,7 @@ def criar_fornecedor():
 def editar_fornecedor(id):
     empresa_id = get_current_empresa_id()
     item = Fornecedor.query.filter_by(id=id, empresa_id=empresa_id).first_or_404()
-    return render_template('form_fornecedor.html', item=item, view_mode=False)
+    return render_template('cadastros/fornecedores/form_fornecedor.html', item=item, view_mode=False)
 
 
 @auth_bp.get('/visualizar-fornecedor/<int:id>')
@@ -36,7 +36,7 @@ def editar_fornecedor(id):
 def visualizar_fornecedor(id):
     empresa_id = get_current_empresa_id()
     item = Fornecedor.query.filter_by(id=id, empresa_id=empresa_id).first_or_404()
-    return render_template('form_fornecedor.html', item=item, view_mode=True)
+    return render_template('cadastros/fornecedores/form_fornecedor.html', item=item, view_mode=True)
 
 
 @auth_bp.post('/gerar-fornecedor')
@@ -85,4 +85,3 @@ def excluir_fornecedor(id):
         fornecedor.ativo = False
         db.session.commit()
     return redirect(url_for('auth.lista_fornecedores'))
-

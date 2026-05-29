@@ -37,7 +37,7 @@ def setup():
 
         if not all([empresa_nome, admin_nome, admin_email, admin_senha]):
             flash("Todos os campos são obrigatórios.", "danger")
-            return render_template("setup.html")
+            return render_template("auth/setup.html")
 
         try:
             # 1. Garantir que roles e permissões globais existam
@@ -87,14 +87,14 @@ def setup():
             db.session.rollback()
             flash(f"Erro ao configurar sistema: {str(e)}", "danger")
 
-    return render_template("setup.html")
+    return render_template("auth/setup.html")
 
 @auth_bp.get("/login")
 def login():
     admin_exists = Usuario.query.join(Usuario.papeis).filter(Papel.nome == ROLE_ADMIN).first()
     if not admin_exists:
         return redirect(url_for("auth.setup"))
-    return render_template("login.html")
+    return render_template("auth/login.html")
 
 
 @auth_bp.post("/login")
@@ -296,7 +296,7 @@ def logout():
 def indicadores_operacionais():
     empresa_id = session.get('empresa_id')
     indicadores = BIService.indicadores(empresa_id=empresa_id)
-    return render_template('bi_indicadores.html', indicadores=indicadores)
+    return render_template('dashboard/bi_indicadores.html', indicadores=indicadores)
 
 
 # --- ROTAS DE RECUPERAÇÃO DE SENHA ---
@@ -306,7 +306,7 @@ def esqueci_senha():
     admin_contato = Usuario.query.join(Usuario.papeis).filter(Papel.nome == ROLE_ADMIN).first()
 
     if request.method == "GET":
-        return render_template("esqueci_senha.html", admin=admin_contato)
+        return render_template("auth/esqueci_senha.html", admin=admin_contato)
     
     email = request.form.get("email")
     user = Usuario.query.filter_by(email=email).first()
@@ -340,14 +340,14 @@ def redefinir_senha(token):
         return redirect(url_for("auth.esqueci_senha"))
     
     if request.method == "GET":
-        return render_template("redefinir_senha.html", token=token)
+        return render_template("auth/redefinir_senha.html", token=token)
     
     nova_senha = request.form.get("nova_senha")
     confirmar_senha = request.form.get("confirmar_senha")
     
     if nova_senha != confirmar_senha:
         flash("As senhas não conferem.", "danger")
-        return render_template("redefinir_senha.html", token=token)
+        return render_template("auth/redefinir_senha.html", token=token)
         
     user = Usuario.query.filter_by(email=email).first()
     
@@ -366,16 +366,16 @@ def redefinir_senha(token):
 
 @auth_bp.get("/termos")
 def termos():
-    return render_template("termos.html")
+    return render_template("paginas/termos.html")
 
 @auth_bp.get("/privacidade")
 def privacidade():
-    return render_template("privacidade.html")
+    return render_template("paginas/privacidade.html")
 
 @auth_bp.get("/suporte")
 def suporte():
     email_usuario = session.get("user_email", "")
-    return render_template("suporte.html", email_usuario=email_usuario)
+    return render_template("paginas/suporte.html", email_usuario=email_usuario)
 
 
 

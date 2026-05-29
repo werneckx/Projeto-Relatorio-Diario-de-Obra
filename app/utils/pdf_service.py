@@ -65,7 +65,7 @@ def render_rdo_pdf(rdo_id):
 
     # 3. Renderizar o Template HTML
     html_string = render_template(
-        'modelo_rdo.html',
+        'rdo/modelo_rdo.html',
         rdo=rdo,
         logo_path=logo_path_uri,
         clima=AuxClima.query.all(),
@@ -124,7 +124,7 @@ def render_rdo_pdf_compact(rdo_id):
 
     # 3. Renderizar o Template HTML
     html_string = render_template(
-        'modelo_rdo_compacta.html',
+        'rdo/modelo_rdo_compacta.html',
         rdo=rdo,
         logo_path=logo_path_uri,
         clima=AuxClima.query.all(),

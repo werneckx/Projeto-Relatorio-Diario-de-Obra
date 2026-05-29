@@ -81,7 +81,7 @@ def criar_rdo():
     usuarios_obra = Usuario.query.filter_by(empresa_id=empresa_id, ativo=True).all()
 
     return render_template(
-        "form_rdo.html", 
+        "rdo/form_rdo.html", 
         item=None, 
         obras=obras, 
         clima=clima, 
@@ -595,7 +595,7 @@ def visualizar_rdo(rdo_id):
     qr_code_img = gerar_qrcode_b64(url_validacao)
 
     return render_template(
-        "form_rdo.html",
+        "rdo/form_rdo.html",
         item=item,
         view_mode=True,
         obras=Obra.query.filter_by(empresa_id=empresa_id, ativo=True).all(),
@@ -648,7 +648,7 @@ def editar_rdo(rdo_id):
     frente_trabalho=FrenteTrabalho.query.all()
 
     return render_template(
-        "form_rdo.html",
+        "rdo/form_rdo.html",
         item=item,
         view_mode=False,
         obras=Obra.query.filter_by(empresa_id=session.get('empresa_id'), ativo=True).all(),
@@ -748,7 +748,7 @@ def lista_rdo():
         ativo=True
     ).count()
 
-    return render_template("list_rdo.html", rdos=rdos, count_minhas_pendencias=minhas_pendencias, lista_pendencias=lista_pendencias)
+    return render_template("rdo/list_rdo.html", rdos=rdos, count_minhas_pendencias=minhas_pendencias, lista_pendencias=lista_pendencias)
 
 
 @auth_bp.get('/lista-rdo/export/<string:export_format>')
@@ -784,7 +784,7 @@ def export_lista_rdo(export_format):
         return make_xlsx_response(headers, rows, prefix='rdos')
     if export_format == 'pdf':
         return make_pdf_response(
-            'export_generic_table.html',
+            'exports/export_generic_table.html',
             {'title': 'Relatórios Diários de Obra', 'headers': headers, 'rows': rows},
             prefix='rdos',
         )
