@@ -127,7 +127,7 @@ def lista_obras():
         }
         obras_formatadas.append(obra_dict)
     
-    return render_template("list_obras.html", opcoes=obras_formatadas, categoria="obra")
+    return render_template("cadastros/obras/list_obras.html", opcoes=obras_formatadas, categoria="obra")
 
 
 @auth_bp.get('/lista-obras/export/<string:export_format>')
@@ -156,7 +156,7 @@ def export_lista_obras(export_format):
         return make_xlsx_response(headers, rows, prefix='obras')
     if export_format == 'pdf':
         return make_pdf_response(
-            'export_generic_table.html',
+            'exports/export_generic_table.html',
             {'title': 'Cadastro de Obras', 'headers': headers, 'rows': rows},
             prefix='obras',
         )
@@ -171,7 +171,7 @@ def criar_obra():
     usuarios = Usuario.query.filter_by(status=1).all()
     clientes = Cliente.query.filter_by(empresa_id=session.get('empresa_id'), ativo=True).order_by(Cliente.razao_social.asc()).all()
     mao_de_obra_options = AuxFuncoes.query.filter_by(ativo=True).order_by(AuxFuncoes.nome.asc()).all()
-    return render_template("form_obra.html", item=None, usuarios=usuarios, clientes=clientes, mao_de_obra_options=mao_de_obra_options, equipe_obra=[])
+    return render_template("cadastros/obras/form_obra.html", item=None, usuarios=usuarios, clientes=clientes, mao_de_obra_options=mao_de_obra_options, equipe_obra=[])
 
 @auth_bp.post("/mudar-status-obras/<int:obraid>")
 @login_required
@@ -346,7 +346,7 @@ def editar_obra(id):
     clientes = Cliente.query.filter_by(empresa_id=session.get('empresa_id'), ativo=True).order_by(Cliente.razao_social.asc()).all()
     mao_de_obra_options = AuxFuncoes.query.filter_by(ativo=True).order_by(AuxFuncoes.nome.asc()).all()
     equipe_obra = _get_equipe_obra_payload(id)
-    return render_template("form_obra.html", item=obra, frentes=frentes, usuarios=usuarios, clientes=clientes, mao_de_obra_options=mao_de_obra_options, equipe_obra=equipe_obra)
+    return render_template("cadastros/obras/form_obra.html", item=obra, frentes=frentes, usuarios=usuarios, clientes=clientes, mao_de_obra_options=mao_de_obra_options, equipe_obra=equipe_obra)
 
 @auth_bp.get("/visualizar-obra/<int:id>")
 @login_required
@@ -367,7 +367,7 @@ def visualizar_obra(id):
     equipe_obra = _get_equipe_obra_payload(id)
     
     return render_template(
-        "form_obra.html", 
+        "cadastros/obras/form_obra.html", 
         item=item, 
         view_mode=True, 
         categoria="obra",

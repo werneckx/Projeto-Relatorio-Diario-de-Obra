@@ -12,14 +12,14 @@ def lista_clientes():
         .order_by(Cliente.id.asc())
         .all()
     )
-    return render_template("list_clientes.html", opcoes=clientes, categoria="cliente")
+    return render_template("cadastros/clientes/list_clientes.html", opcoes=clientes, categoria="cliente")
 
 
 @auth_bp.get('/criar-cliente')
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def criar_cliente():
-    return render_template('form_cliente.html', item=None, view_mode=False)
+    return render_template('cadastros/clientes/form_cliente.html', item=None, view_mode=False)
 
 
 @auth_bp.get('/editar-cliente/<int:id>')
@@ -28,7 +28,7 @@ def criar_cliente():
 def editar_cliente(id):
     empresa_id = get_current_empresa_id()
     item = Cliente.query.filter_by(id=id, empresa_id=empresa_id).first_or_404()
-    return render_template('form_cliente.html', item=item, view_mode=False)
+    return render_template('cadastros/clientes/form_cliente.html', item=item, view_mode=False)
 
 
 @auth_bp.get('/visualizar-cliente/<int:id>')
@@ -36,7 +36,7 @@ def editar_cliente(id):
 def visualizar_cliente(id):
     empresa_id = get_current_empresa_id()
     item = Cliente.query.filter_by(id=id, empresa_id=empresa_id).first_or_404()
-    return render_template('form_cliente.html', item=item, view_mode=True)
+    return render_template('cadastros/clientes/form_cliente.html', item=item, view_mode=True)
 
 
 @auth_bp.post('/gerar-cliente')
@@ -98,4 +98,3 @@ def excluir_cliente(id):
         cliente.ativo = False
         db.session.commit()
     return redirect(url_for('auth.lista_clientes'))
-

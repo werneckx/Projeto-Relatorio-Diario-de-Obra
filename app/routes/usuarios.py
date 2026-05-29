@@ -36,7 +36,7 @@ def lista_usuarios():
         except Exception: pass
         setattr(u, 'nome_supervisor', nome_sup)
 
-    return render_template("list_usuarios.html", opcoes=usuarios, categoria="usuario")
+    return render_template("cadastros/usuarios/list_usuarios.html", opcoes=usuarios, categoria="usuario")
 
 @auth_bp.get("/criar-usuario")
 @login_required
@@ -54,7 +54,7 @@ def criar_usuario():
     default_supervisor = {'id': admin.id, 'nome': admin.nome, 'email': admin.email} if admin else None
 
     return render_template(
-        "form_usuario.html", 
+        "cadastros/usuarios/form_usuario.html", 
         categoria="usuario", 
         obras=obras,
         default_supervisor=default_supervisor
@@ -88,7 +88,7 @@ def gerar_usuario():
         # SECURITY: Gestor não pode criar Admin
         if current_user_obj.papel == ROLE_GESTOR and papel == ROLE_ADMIN:
             flash("Gestores não podem criar usuários Administradores.", "danger")
-            return render_template("form_usuario.html", item=None, obras=obras_ativas)
+            return render_template("cadastros/usuarios/form_usuario.html", item=None, obras=obras_ativas)
 
         item_form = {'id': user_id, 'nome': nome, 'email': email, 'papel': papel, 'cpf': cpf}
 
@@ -104,7 +104,7 @@ def gerar_usuario():
 
             if Usuario.query.filter(Usuario.empresa_id == empresa_id, Usuario.cpf == cpf, Usuario.id != user_id).first():
                 flash("Este CPF já está cadastrado.", "danger")
-                return render_template("form_usuario.html", item=item_form, obras=obras_ativas)
+                return render_template("cadastros/usuarios/form_usuario.html", item=item_form, obras=obras_ativas)
             
             user.nome, user.email, user.papel, user.cpf, user.status = nome, email, papel, cpf, status
             try: user.id_supervisor = int(id_supervisor_raw) if id_supervisor_raw else None
@@ -112,7 +112,7 @@ def gerar_usuario():
         else:
             if Usuario.query.filter_by(cpf=cpf).first():
                 flash("CPF já cadastrado.", "danger")
-                return render_template("form_usuario.html", item=item_form, obras=obras_ativas)
+                return render_template("cadastros/usuarios/form_usuario.html", item=item_form, obras=obras_ativas)
 
             user = Usuario(nome=nome, email=email, papel=papel, cpf=cpf, status=status, primeiro_acesso=True)
             try: user.id_supervisor = int(id_supervisor_raw) if id_supervisor_raw else None
@@ -143,11 +143,11 @@ def gerar_usuario():
         try:
             db.session.commit()
             flash("Usuário salvo com sucesso!", "success")
-            return render_template("form_usuario.html", item=user, obras=obras_ativas, view_mode=True)
+            return render_template("cadastros/usuarios/form_usuario.html", item=user, obras=obras_ativas, view_mode=True)
         except Exception as e:
             db.session.rollback()
             flash(f"Erro: {str(e)}", "danger")
-            return render_template("form_usuario.html", item=item_form, obras=obras_ativas)
+            return render_template("cadastros/usuarios/form_usuario.html", item=item_form, obras=obras_ativas)
 
 @auth_bp.post("/mudar-status-usuario/<int:userId>")
 @login_required
@@ -201,7 +201,7 @@ def editar_usuario(id):
     else:
         obras = Obra.query.filter_by(empresa_id=session.get('empresa_id'), status=1).order_by(Obra.nome).all()
 
-    return render_template("form_usuario.html", item=user_edit, categoria="usuario", obras=obras)
+    return render_template("cadastros/usuarios/form_usuario.html", item=user_edit, categoria="usuario", obras=obras)
     
 @auth_bp.get("/visualizar-usuario/<int:id>")
 @login_required
@@ -241,7 +241,7 @@ def visualizar_usuario(id):
     except Exception: pass
 
     return render_template(
-        "form_usuario.html", 
+        "cadastros/usuarios/form_usuario.html", 
         item=user_view, 
         categoria="usuario", 
         obras=obras, 
@@ -293,15 +293,15 @@ def alterar_senha_obrigatoria():
 
         if not nova_senha or not confirmar_senha:
             flash("Preencha todos os campos.", "danger")
-            return render_template("alterar_senha_obrigatoria.html")
+            return render_template("auth/alterar_senha_obrigatoria.html")
 
         if nova_senha != confirmar_senha:
             flash("As senhas não conferem.", "danger")
-            return render_template("alterar_senha_obrigatoria.html")
+            return render_template("auth/alterar_senha_obrigatoria.html")
             
         if len(nova_senha) < 6:
              flash("A senha deve ter no mínimo 6 caracteres.", "danger")
-             return render_template("alterar_senha_obrigatoria.html")
+             return render_template("auth/alterar_senha_obrigatoria.html")
 
         user = Usuario.query.get(session.get("user_id"))
         user.set_senha(nova_senha)
@@ -314,7 +314,7 @@ def alterar_senha_obrigatoria():
             db.session.rollback()
             flash(f"Erro ao salvar senha: {str(e)}", "danger")
 
-    return render_template("alterar_senha_obrigatoria.html")
+    return render_template("auth/alterar_senha_obrigatoria.html")
 
 #######################################################################################################
 ####################################################################################################### LISTAS AUXILIARES (Clima, Equip, MaoObra, Tags)

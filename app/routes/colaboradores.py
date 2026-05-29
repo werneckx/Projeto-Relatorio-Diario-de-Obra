@@ -14,7 +14,7 @@ def lista_colaboradores():
         .order_by(Colaborador.nome.asc())
         .all()
     )
-    return render_template("list_colaboradores.html", opcoes=colaboradores, categoria="colaborador")
+    return render_template("cadastros/colaboradores/list_colaboradores.html", opcoes=colaboradores, categoria="colaborador")
 
 
 @auth_bp.get('/criar-colaborador')
@@ -24,7 +24,7 @@ def criar_colaborador():
     empresa_id = get_current_empresa_id()
     fornecedores = Fornecedor.query.filter_by(empresa_id=empresa_id, ativo=True).order_by(Fornecedor.nome.asc()).all()
     clientes = Cliente.query.filter_by(empresa_id=empresa_id, ativo=True).order_by(Cliente.razao_social.asc()).all()
-    return render_template('form_colaborador.html', item=None, view_mode=False, fornecedores=fornecedores, clientes=clientes)
+    return render_template('cadastros/colaboradores/form_colaborador.html', item=None, view_mode=False, fornecedores=fornecedores, clientes=clientes)
 
 
 @auth_bp.get('/editar-colaborador/<int:id>')
@@ -35,7 +35,7 @@ def editar_colaborador(id):
     item = Colaborador.query.filter_by(id=id, empresa_id=empresa_id).first_or_404()
     fornecedores = Fornecedor.query.filter_by(empresa_id=empresa_id, ativo=True).order_by(Fornecedor.nome.asc()).all()
     clientes = Cliente.query.filter_by(empresa_id=empresa_id, ativo=True).order_by(Cliente.razao_social.asc()).all()
-    return render_template('form_colaborador.html', item=item, view_mode=False, fornecedores=fornecedores, clientes=clientes)
+    return render_template('cadastros/colaboradores/form_colaborador.html', item=item, view_mode=False, fornecedores=fornecedores, clientes=clientes)
 
 
 @auth_bp.get('/visualizar-colaborador/<int:id>')
@@ -45,7 +45,7 @@ def visualizar_colaborador(id):
     item = Colaborador.query.filter_by(id=id, empresa_id=empresa_id).first_or_404()
     fornecedores = Fornecedor.query.filter_by(empresa_id=empresa_id, ativo=True).order_by(Fornecedor.nome.asc()).all()
     clientes = Cliente.query.filter_by(empresa_id=empresa_id, ativo=True).order_by(Cliente.razao_social.asc()).all()
-    return render_template('form_colaborador.html', item=item, view_mode=True, fornecedores=fornecedores, clientes=clientes)
+    return render_template('cadastros/colaboradores/form_colaborador.html', item=item, view_mode=True, fornecedores=fornecedores, clientes=clientes)
 
 
 @auth_bp.post('/gerar-colaborador')
@@ -118,4 +118,3 @@ def excluir_colaborador(id):
         colaborador.ativo = False
         db.session.commit()
     return redirect(url_for('auth.lista_colaboradores'))
-

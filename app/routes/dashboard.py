@@ -82,7 +82,7 @@ def inicio():
     ultimos_rdos = q_rdos.order_by(RDO.data_rdo.desc(), RDO.id.desc()).limit(5).all()
 
     return render_template(
-        "inicio.html",
+        "dashboard/inicio.html",
         kpi_obras=kpi_obras,
         kpi_pendentes=kpi_pendentes,
         kpi_efetivo=int(kpi_efetivo),

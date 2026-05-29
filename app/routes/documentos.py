@@ -65,7 +65,7 @@ def creator_secret():
             "email": "mailto:er4273270@gmail.com"
         }
     }
-    return render_template("criador.html", dev=perfil)
+    return render_template("documentos/criador.html", dev=perfil)
 
 #######################################################################################################
 ####################################################################################################### VALIDAÇÃO PUBLICA (PÚBLICO)
@@ -231,4 +231,5 @@ def validar_documento_publico():
             else: erro = "Este documento foi invalidado no sistema."
         else: erro = "Código de autenticidade (Hash) não encontrado na base de dados."
 
-    return render_template("public_validacao.html", resultado=resultado, erro=erro, hash_buscado=hash_buscado)
+    return render_template("documentos/public_validacao.html", resultado=resultado, erro=erro, hash_buscado=hash_buscado)
+    

@@ -4,13 +4,13 @@
 @login_required
 def lista_climas():
     climas = AuxClima.query.filter_by(ativo=True).order_by(AuxClima.nome.asc()).all()
-    return render_template("list_climas.html", opcoes=climas, categoria="clima")
+    return render_template("auxiliares/list_climas.html", opcoes=climas, categoria="clima")
 
 @auth_bp.get('/criar-clima')
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def criar_clima():
-    return render_template('form_clima.html', item=None, view_mode=False)
+    return render_template('auxiliares/form_clima.html', item=None, view_mode=False)
 
 @auth_bp.post('/gerar-clima')
 @login_required
@@ -50,14 +50,14 @@ def gerar_clima():
 @login_required
 def visualizar_clima(id):
     clima = AuxClima.query.get_or_404(id)
-    return render_template('form_clima.html', item=clima, view_mode=True)
+    return render_template('auxiliares/form_clima.html', item=clima, view_mode=True)
 
 @auth_bp.get('/editar-clima/<int:id>')
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def editar_clima(id):
     clima = AuxClima.query.get_or_404(id)
-    return render_template('form_clima.html', item=clima, view_mode=False)
+    return render_template('auxiliares/form_clima.html', item=clima, view_mode=False)
 
 @auth_bp.post('/excluir-clima/<int:id>')
 @login_required
@@ -76,13 +76,13 @@ def excluir_clima(id):
 @login_required
 def lista_equipamentos():
     equipamentos = AuxEquipamentos.query.filter_by(ativo=True).order_by(AuxEquipamentos.nome.asc()).all()
-    return render_template("list_equipamentos.html", opcoes=equipamentos, categoria="equipamento")
+    return render_template("auxiliares/list_equipamentos.html", opcoes=equipamentos, categoria="equipamento")
 
 @auth_bp.get('/criar-equipamento')
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def criar_equipamento():
-    return render_template('form_equipamento.html', item=None, view_mode=False)
+    return render_template('auxiliares/form_equipamento.html', item=None, view_mode=False)
 
 @auth_bp.post('/gerar-equipamento')
 @login_required
@@ -118,14 +118,14 @@ def gerar_equipamento():
 @login_required
 def visualizar_equipamento(id):
     equipamento = AuxEquipamentos.query.get_or_404(id)
-    return render_template('form_equipamento.html', item=equipamento, view_mode=True)
+    return render_template('auxiliares/form_equipamento.html', item=equipamento, view_mode=True)
 
 @auth_bp.get('/editar-equipamento/<int:id>')
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def editar_equipamento(id):
     equipamento = AuxEquipamentos.query.get_or_404(id)
-    return render_template('form_equipamento.html', item=equipamento, view_mode=False)
+    return render_template('auxiliares/form_equipamento.html', item=equipamento, view_mode=False)
 
 @auth_bp.post('/excluir-equipamento/<int:id>')
 @login_required
@@ -144,13 +144,13 @@ def excluir_equipamento(id):
 @login_required
 def lista_tags_ocorrencias():
     tagsOcorrencias = AuxTagOcorrencia.query.filter_by(ativo=True).order_by(AuxTagOcorrencia.nome.asc()).all()
-    return render_template("list_tags_ocorrencias.html", opcoes=tagsOcorrencias, categoria="tagsOcorrencias")
+    return render_template("auxiliares/list_tags_ocorrencias.html", opcoes=tagsOcorrencias, categoria="tagsOcorrencias")
 
 @auth_bp.get('/criar-tags-ocorrencias')
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def criar_tags_ocorrencias():
-    return render_template('form_tags_ocorrencias.html', item=None, view_mode=False)
+    return render_template('auxiliares/form_tags_ocorrencias.html', item=None, view_mode=False)
 
 @auth_bp.post('/gerar-tags-ocorrencias')
 @login_required
@@ -184,14 +184,14 @@ def gerar_tags_ocorrencias():
 @login_required
 def visualizar_tags_ocorrencias(id):
     tag = AuxTagOcorrencia.query.get_or_404(id)
-    return render_template('form_tags_ocorrencias.html', item=tag, view_mode=True)
+    return render_template('auxiliares/form_tags_ocorrencias.html', item=tag, view_mode=True)
 
 @auth_bp.get('/editar-tags-ocorrencias/<int:id>')
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def editar_tags_ocorrencias(id):
     tag = AuxTagOcorrencia.query.get_or_404(id)
-    return render_template('form_tags_ocorrencias.html', item=tag, view_mode=False)
+    return render_template('auxiliares/form_tags_ocorrencias.html', item=tag, view_mode=False)
 
 @auth_bp.post('/excluir-tags-ocorrencias/<int:id>')
 @login_required
@@ -213,7 +213,7 @@ def excluir_tags_ocorrencias(id):
 @login_required
 def lista_funcoes():
     funcoes = AuxFuncoes.query.filter_by(ativo=True).order_by(AuxFuncoes.nome.asc()).all()
-    return render_template("list_funcoes.html", opcoes=funcoes, categoria="funcoes")
+    return render_template("auxiliares/list_funcoes.html", opcoes=funcoes, categoria="funcoes")
 
 @auth_bp.get("/lista-mao-obra")
 @login_required
@@ -225,7 +225,7 @@ def lista_mao_obra():
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def criar_funcao():
-    return render_template("form_funcoes.html", item=None, view_mode=False)
+    return render_template("auxiliares/form_funcoes.html", item=None, view_mode=False)
 
 @auth_bp.get("/criar-mao-obra")
 @login_required
@@ -279,7 +279,7 @@ def gerar_mao_obra():
 @login_required
 def visualizar_funcao(id):
     funcao = AuxFuncoes.query.get_or_404(id)
-    return render_template("form_funcoes.html", item=funcao, view_mode=True)
+    return render_template("auxiliares/form_funcoes.html", item=funcao, view_mode=True)
 
 @auth_bp.get("/visualizar-mao-obra/<int:id>")
 @login_required
@@ -292,7 +292,7 @@ def visualizar_mao_obra(id):
 @role_required(PERM_WRITE_BASIC)
 def editar_funcao(id):
     funcao = AuxFuncoes.query.get_or_404(id)
-    return render_template("form_funcoes.html", item=funcao, view_mode=False)
+    return render_template("auxiliares/form_funcoes.html", item=funcao, view_mode=False)
 
 @auth_bp.get("/editar-mao-obra/<int:id>")
 @login_required
@@ -323,14 +323,14 @@ def excluir_mao_obra(id):
 @login_required
 def lista_tipos_obra():
     tipos = AuxTipoObra.query.filter_by(ativo=True).order_by(AuxTipoObra.nome.asc()).all()
-    return render_template("list_tipos_obra.html", opcoes=tipos, categoria="tipo_obra")
+    return render_template("cadastros/obras/list_tipos_obra.html", opcoes=tipos, categoria="tipo_obra")
 
 
 @auth_bp.get("/criar-tipo-obra")
 @login_required
 @role_required(PERM_MANAGEMENT)
 def criar_tipo_obra():
-    return render_template("form_tipo_obra.html", item=None, view_mode=False)
+    return render_template("cadastros/obras/form_tipo_obra.html", item=None, view_mode=False)
 
 @auth_bp.post('/gerar-tipo-obra')
 @login_required
@@ -370,7 +370,7 @@ def gerar_tipo_obra():
 @role_required(PERM_MANAGEMENT)
 def editar_tipo_obra(id):
     tipo = AuxTipoObra.query.get_or_404(id)
-    return render_template("form_tipo_obra.html", item=tipo, view_mode=False)
+    return render_template("cadastros/obras/form_tipo_obra.html", item=tipo, view_mode=False)
 
 @auth_bp.post('/excluir-tipo-obra/<int:id>')
 @login_required
@@ -387,4 +387,4 @@ def excluir_tipo_obra(id):
 @login_required
 def visualizar_tipo_obra(id):
     tipo = AuxTipoObra.query.get_or_404(id)
-    return render_template('form_tipo_obra.html', item=tipo, view_mode=True)
+    return render_template('cadastros/obras/form_tipo_obra.html', item=tipo, view_mode=True)

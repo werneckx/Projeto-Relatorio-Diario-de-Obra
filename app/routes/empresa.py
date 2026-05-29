@@ -86,7 +86,7 @@ def empresa():
             can_edit = False
 
     return render_template(
-        'empresa.html',
+        'empresa/empresa.html',
         config_data=config_data,
         view_mode=True,
         config_map=mapa,

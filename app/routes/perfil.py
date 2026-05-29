@@ -8,7 +8,7 @@
 @login_required
 def meu_perfil():
     user = Usuario.query.get(session.get("user_id"))
-    return render_template("configuracoes_perfil.html", current_user=user)
+    return render_template("perfil/configuracoes_perfil.html", current_user=user)
 
 @auth_bp.post("/atualizar-meu-perfil")
 @login_required
