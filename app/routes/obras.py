@@ -1,6 +1,8 @@
 ﻿from app.routes.auth_common import *
 from app.models.cliente import Cliente
 from app.utils.export_service import make_csv_response, make_xlsx_response, make_pdf_response
+from app.models.usuario import Colaborador
+from sqlalchemy import func
 
 OBRA_EXPORT_COLUMNS = [
     ("id", "ID"),
@@ -362,7 +364,12 @@ def visualizar_obra(id):
     usuarios = Usuario.query.filter_by(status=1).all()
     clientes = Cliente.query.filter_by(empresa_id=session.get('empresa_id'), ativo=True).order_by(Cliente.razao_social.asc()).all()
     frentes = FrenteTrabalho.query.filter_by(obra_id=id).all()
-    usuario = Usuario.query.order_by(Usuario.nome).all()
+    usuario = (
+        Usuario.query.filter_by(status=1)
+        .outerjoin(Colaborador, Usuario.colaborador_id == Colaborador.id)
+        .order_by(func.coalesce(Colaborador.nome, Usuario.email).asc())
+        .all()
+    )
     mao_de_obra_options = AuxFuncoes.query.filter_by(ativo=True).order_by(AuxFuncoes.nome.asc()).all()
     equipe_obra = _get_equipe_obra_payload(id)
     
