@@ -1,3 +1,4 @@
+{% import "components/form/macros.html" as ui_form %}
 <!DOCTYPE html>
 <html lang="pt-BR" class="h-full bg-slate-900">
 
@@ -95,7 +96,7 @@
             {% endif %}
             {% endwith %}
 
-            <form class="space-y-5" action="{{ url_for('auth.login_post') }}" method="POST">
+            {% call ui_form.form_start(action=url_for('auth.login_post'), form_id='loginForm', item=None, extra_class='space-y-5', id_name=None) %}
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                 <div>
@@ -136,7 +137,7 @@
                         Entrar no Sistema <i class="fas fa-arrow-right text-xs opacity-70"></i>
                     </button>
                 </div>
-            </form>
+            {% endcall %}
         </div>
 
         <p class="mt-10 text-center text-xs font-medium text-slate-400/80">

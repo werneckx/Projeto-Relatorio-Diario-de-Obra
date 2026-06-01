@@ -1,3 +1,4 @@
+{% import "components/form/macros.html" as ui_form %}
 <!DOCTYPE html>
 <html lang="pt-BR" class="h-full bg-slate-900">
 
@@ -55,7 +56,7 @@
             {% endif %}
             {% endwith %}
 
-            <form class="space-y-6" action="{{ url_for('auth.redefinir_senha', token=token) }}" method="POST">
+            {% call ui_form.form_start(action=url_for('auth.redefinir_senha', token=token), form_id='redefinirSenhaForm', item=None, extra_class='space-y-6', id_name=None) %}
 
                 <div>
                     <label for="nova_senha" class="block text-sm font-medium leading-6 text-slate-900">Nova
@@ -89,7 +90,7 @@
                         Salvar Nova Senha
                     </button>
                 </div>
-            </form>
+            {% endcall %}
         </div>
     </div>
 </body>

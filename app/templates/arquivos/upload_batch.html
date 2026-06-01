@@ -1,21 +1,24 @@
 {% extends 'base.html' %}
+{% import "components/form/macros.html" as ui_form %}
 
 {% block content %}
-<div class="container mt-4">
-  <h2>Upload de lote de planilhas</h2>
-  <p>Selecione vários arquivos <strong>.xlsx</strong> ou um diretório contendo planilhas para processar em lote.</p>
+{% call ui_form.page_shell() %}
+  {{ ui_form.hero('Upload em lote', subtitle='Envie vários arquivos .xlsx (ou uma pasta) para processar em lote.', back_url=url_for('auth.inicio')) }}
 
-  <form method="post" action="{{ url_for('auth.upload_arquivos_batch') }}" enctype="multipart/form-data">
-    <div class="form-group">
-      <label for="files">Arquivos</label>
-      <input id="files" name="files" type="file" multiple webkitdirectory directory accept=".xlsx" class="form-control-file" />
+  {% call ui_form.form_start(action=url_for('auth.upload_arquivos_batch'), form_id='uploadBatchForm', item=None, extra_class='space-y-5', enctype='multipart/form-data') %}
+    {% call ui_form.section('Arquivos', icon='fa-file-excel', icon_box_class='bg-emerald-50 text-emerald-700') %}
+      <div class="space-y-2">
+        <label for="files" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Planilhas (.xlsx)</label>
+        <input id="files" name="files" type="file" multiple webkitdirectory directory accept=".xlsx" />
+        <p class="text-xs text-slate-500">Apenas arquivos XLSX válidos serão processados. O resultado retorna em JSON.</p>
+      </div>
+    {% endcall %}
+
+    <div class="flex justify-end">
+      <button type="submit" class="premium-button premium-button-primary">
+        <i class="fas fa-upload text-xs"></i> Enviar lote
+      </button>
     </div>
-
-    <button type="submit" class="btn btn-primary mt-3">Enviar lote</button>
-  </form>
-
-  <div class="alert alert-info mt-4">
-    Observação: apenas arquivos XLSX válidos serão processados. O resultado será retornado em JSON.
-  </div>
-</div>
+  {% endcall %}
+{% endcall %}
 {% endblock %}
