@@ -59,7 +59,7 @@
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label for="fornecedor_id" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Fornecedor (se Terceiro)</label>
+          <label for="fornecedor_id" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Fornecedor (se for Terceiro)</label>
           <select name="fornecedor_id" id="fornecedor_id"
             class="block w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm shadow-xs bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-500 disabled:border-slate-200 transition-all"
             {{ 'disabled' if view_mode }}>
@@ -71,7 +71,7 @@
         </div>
 
         <div>
-          <label for="cliente_id" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Cliente (se Cliente)</label>
+          <label for="cliente_id" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Cliente (se for Cliente)</label>
           <select name="cliente_id" id="cliente_id"
             class="block w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm shadow-xs bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-500 disabled:border-slate-200 transition-all"
             {{ 'disabled' if view_mode }}>
