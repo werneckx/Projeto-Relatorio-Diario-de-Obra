@@ -1,3 +1,4 @@
+{% import "components/form/macros.html" as ui_form %}
 <!DOCTYPE html>
 <html lang="pt-br">
 
@@ -189,7 +190,7 @@
             {% endif %}
             {% endwith %}
 
-            <form action="{{ url_for('auth.setup') }}" method="POST">
+            {% call ui_form.form_start(action=url_for('auth.setup'), form_id='setupForm', item=None, extra_class='', id_name=None) %}
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                 <div class="section-title">Dados da Empresa</div>
@@ -213,7 +214,7 @@
                 </div>
 
                 <button type="submit" class="btn-submit">Finalizar Configuração</button>
-            </form>
+            {% endcall %}
         </div>
     </div>
 </body>

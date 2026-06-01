@@ -1,3 +1,4 @@
+{% import "components/form/macros.html" as ui_form %}
 <!DOCTYPE html>
 <html lang="pt-BR" class="h-full bg-slate-900">
 
@@ -65,7 +66,7 @@
             {% endwith %}
 
             <div class="mt-8">
-                <form class="space-y-6" action="{{ url_for('auth.alterar_senha_obrigatoria') }}" method="POST">
+                {% call ui_form.form_start(action=url_for('auth.alterar_senha_obrigatoria'), form_id='alterarSenhaObrigatoriaForm', item=None, extra_class='space-y-6', id_name=None) %}
 
                     <div>
                         <label for="nova_senha" class="block text-sm font-medium leading-6 text-slate-900">Nova
@@ -104,7 +105,7 @@
                             <i class="fas fa-arrow-left mr-2"></i> Voltar ao login
                         </a>
                     </div>
-                </form>
+                {% endcall %}
             </div>
         </div>
 

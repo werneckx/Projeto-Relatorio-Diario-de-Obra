@@ -7,7 +7,7 @@
 {% block content %}
 {% import "components/form/macros.html" as ui_form %}
 
-<!-- DefiniÃ§Ã£o de Estilos DinÃ¢micos -->
+<!-- Definição de Estilos Dinâmicos -->
 {% set input_base_css = "block w-full px-3 py-2.5 text-sm rounded-lg border transition-all outline-none appearance-none"
 %}
 {% set input_edit_css = "bg-white border-slate-300 text-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500
@@ -18,7 +18,7 @@ shadow-sm placeholder:text-slate-400" %}
 {% set select_view_css = "!bg-slate-100/60 !text-slate-800 !opacity-100 font-semibold bg-no-repeat" if view_mode else ""
 %}
 
-{# --- CÃLCULO DE PROGRESSO GLOBAL E CURVA S (MÃ©dia das Frentes) --- #}
+{# --- CALCULOS DE PROGRESSO GLOBAL E CURVA S (MÃ©dia das Frentes) --- #}
 {% set ns = namespace(total_realized_pct=0, total_expected_pct=0, count=0) %}
 {% if frentes %}
 {% for f in frentes %}
@@ -84,7 +84,7 @@ shadow-sm placeholder:text-slate-400" %}
                 </h1>
                 <p class="text-sm text-slate-500 mt-1">
                     {% if view_mode %}
-                    Ficha tÃ©cnica do projeto.
+                    Ficha técnica do projeto.
                     {% elif item and item.id %}
                     Atualize os dados da obra e frentes de trabalho.
                     {% else %}
@@ -95,21 +95,19 @@ shadow-sm placeholder:text-slate-400" %}
 
             <a href="{{ url_for('auth.lista_obras') }}"
                 class="hidden md:inline-flex items-center text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors">
-                <i class="fas fa-arrow-left mr-2"></i> Voltar para Lista
+                <i class="fas fa-arrow-left mr-2"></i> Voltar para a lista
             </a>
         </div>
 
         <!-- CARD DE STATUS DO PROJETO (Curva S Global) -->
         {% if item and item.id %}
-        <!-- CORREÃ‡ÃƒO: Removido 'overflow-hidden' para permitir que o Tooltip apareÃ§a completo -->
         <div class="mb-6 bg-white rounded-xl border border-slate-200 shadow-sm p-6 relative">
             <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-2">
                 <h3 class="text-sm font-bold text-slate-700 uppercase tracking-wide flex items-center gap-2">
                     <i class="fas fa-chart-line text-blue-500"></i> Performance Global
                 </h3>
                 {% set text = global_status_text %}
-                {% set variant = 'danger' if global_status_text == 'Atrasado' else ('success' if global_status_text ==
-                'Adiantado' else ('info' if global_status_text == 'No Prazo' else 'neutral')) %}
+                {% set variant = 'danger' if global_status_text == 'Atrasado' else ('success' if global_status_text == 'Adiantado' else ('info' if global_status_text == 'No Prazo' else 'neutral')) %}
                 {% include "components/badge.html" %}
             </div>
 
@@ -119,7 +117,7 @@ shadow-sm placeholder:text-slate-400" %}
                     <div class="flex justify-between items-end mb-2">
                         <div>
                             <span class="text-xs font-bold text-emerald-600 uppercase">Realizado</span>
-                            <p class="text-[10px] text-slate-400">MÃ©dia de avanÃ§o fÃ­sico</p>
+                            <p class="text-[10px] text-slate-400">Média de avanço físico</p>
                         </div>
                         <div class="text-2xl font-bold text-slate-800">{{ global_realized | round(1) }}%</div>
                     </div>
@@ -136,8 +134,7 @@ shadow-sm placeholder:text-slate-400" %}
                         <!-- Tooltip da Curva S -->
                         <div class="relative group cursor-help z-10">
                             <div class="flex items-center gap-1.5">
-                                <span
-                                    class="text-xs font-bold text-blue-600 uppercase border-b border-dashed border-blue-300">
+                                <span class="text-xs font-bold text-blue-600 uppercase border-b border-dashed border-blue-300">
                                     Esperado (Curva S)
                                 </span>
                                 <i class="fas fa-question-circle text-[10px] text-blue-400"></i>
@@ -145,26 +142,20 @@ shadow-sm placeholder:text-slate-400" %}
 
                             <p class="text-[10px] text-slate-400">Planejado para hoje</p>
 
-                            <!-- O Tooltip -->
-                            <!-- z-[100] garante que fique acima de tudo, inclusive de outros cards se houver overlap -->
-                            <div
-                                class="absolute bottom-full left-0 mb-2 w-72 p-4 bg-slate-800 text-white text-xs rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-[100] transform group-hover:-translate-y-1">
+                            <!-- Tooltip -->
+                            <div class="absolute bottom-full left-0 mb-2 w-72 p-4 bg-slate-800 text-white text-xs rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-[100] transform group-hover:-translate-y-1">
                                 <div class="font-bold text-blue-300 mb-1 border-b border-slate-600 pb-1">
-                                    <i class="fas fa-chart-line mr-1"></i> Fator de CÃ¡lculo: Curva S
+                                    <i class="fas fa-chart-line mr-1"></i> Fator de Cálculo: Curva S
                                 </div>
                                 <p class="leading-relaxed text-slate-300 mb-2">
-                                    A <strong>Curva S</strong> Ã© usada para definir a meta diÃ¡ria. Diferente de uma
-                                    mÃ©dia linear, ela considera o ritmo natural da engenharia:
+                                    A <strong>Curva S</strong> é usada para definir a meta diária. Diferente de uma média linear, ela considera o ritmo natural da engenharia:
                                 </p>
                                 <ul class="space-y-1 text-[10px] text-slate-400 list-disc list-inside">
-                                    <li><strong>InÃ­cio:</strong> Ritmo lento (mobilizaÃ§Ã£o).</li>
-                                    <li><strong>Meio:</strong> AceleraÃ§Ã£o mÃ¡xima (pico de produÃ§Ã£o).</li>
-                                    <li><strong>Fim:</strong> DesaceleraÃ§Ã£o (acabamentos).</li>
+                                    <li><strong>Início:</strong> Ritmo lento (mobilização).</li>
+                                    <li><strong>Meio:</strong> Aceleração máxima (pico de produção).</li>
+                                    <li><strong>Fim:</strong> Desaceleração (acabamentos).</li>
                                 </ul>
-                                <!-- Seta do Tooltip -->
-                                <div
-                                    class="absolute top-full left-4 -mt-1 border-4 border-transparent border-t-slate-800">
-                                </div>
+                                <div class="absolute top-full left-4 -mt-1 border-4 border-transparent border-t-slate-800"></div>
                             </div>
                         </div>
 
@@ -230,7 +221,7 @@ shadow-sm placeholder:text-slate-400" %}
                 <div class="lg:col-span-8">
                     <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Nome da Obra</label>
                     <input type="text" name="nome" value="{{ item.nome if item }}"
-                        placeholder="Ex: Reforma do GalpÃ£o LogÃ­stico" class="{{ final_input_css }}"
+                        placeholder="Ex: Reforma do Galpão Logistico" class="{{ final_input_css }}"
                         {{ 'readonly disabled' if view_mode }} required>
                 </div>
 
@@ -267,9 +258,9 @@ shadow-sm placeholder:text-slate-400" %}
                     {% endif %}
                 </div>
 
-                <!-- ResponsÃ¡vel -->
+                <!-- Responsável -->
                 <div class="lg:col-span-3">
-                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">ResponsÃ¡vel TÃ©cnico</label>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Responsável Técnico</label>
                     <div class="relative">
                         <select name="id_responsavel" class="{{ final_input_css }} {{ select_view_css }}" {{ 'disabled'
                             if view_mode }}>
@@ -296,20 +287,20 @@ shadow-sm placeholder:text-slate-400" %}
                     class="w-8 h-8 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center shrink-0 text-sm">
                     <i class="far fa-clock"></i>
                 </div>
-                <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">Horarios Padrao da Obra
+                <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">Horários Padrão da Obra
                 </h3>
             </div>
             <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Horario Entrada
-                        Padrao</label>
+                        Padrão</label>
                     <input type="time" name="horario_entrada"
                         value="{{ item.horario_entrada.strftime('%H:%M') if item and item.horario_entrada else '' }}"
                         class="{{ final_input_css }} font-mono" {{ 'readonly disabled' if view_mode }}>
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Horario Saida
-                        Padrao</label>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Horario Saída
+                        Padrão</label>
                     <input type="time" name="horario_saida"
                         value="{{ item.horario_saida.strftime('%H:%M') if item and item.horario_saida else '' }}"
                         class="{{ final_input_css }} font-mono" {{ 'readonly disabled' if view_mode }}>
@@ -330,10 +321,10 @@ shadow-sm placeholder:text-slate-400" %}
                     <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">Cronograma</h3>
                 </div>
                 <div class="p-6 space-y-5">
-                    <!-- InÃ­cio -->
+                    <!-- Inicio -->
                     <div>
                         <div class="flex justify-between items-center mb-2">
-                            <label class="text-xs font-bold text-slate-500 uppercase">Data de InÃ­cio</label>
+                            <label class="text-xs font-bold text-slate-500 uppercase">Data de Inicio</label>
                             {% if not view_mode %}
                             <button type="button" onclick="setToday('data_inicio_visual', 'data_inicio_hidden')"
                                 class="text-[10px] font-bold text-emerald-600 hover:bg-emerald-50 px-2 py-1 rounded transition-colors border border-emerald-100 shadow-sm flex items-center">
@@ -365,7 +356,7 @@ shadow-sm placeholder:text-slate-400" %}
                     <!-- TÃ©rmino -->
                     <div>
                         <div class="flex justify-between items-center mb-2">
-                            <label class="text-xs font-bold text-slate-500 uppercase">PrevisÃ£o de TÃ©rmino</label>
+                            <label class="text-xs font-bold text-slate-500 uppercase">Previsão de Término</label>
                             {% if not view_mode %}
                             <button type="button" onclick="setToday('data_termino_visual', 'data_termino_hidden')"
                                 class="text-[10px] font-bold text-emerald-600 hover:bg-emerald-50 px-2 py-1 rounded transition-colors border border-emerald-100 shadow-sm flex items-center">
@@ -395,7 +386,7 @@ shadow-sm placeholder:text-slate-400" %}
                         <div id="erro_data"
                             class="hidden items-center gap-2 mt-2 text-red-600 bg-red-50 p-2 rounded-lg text-xs font-medium animate-pulse">
                             <i class="fas fa-exclamation-triangle"></i><span>O tÃ©rmino deve ser posterior ao
-                                inÃ­cio.</span>
+                                Inicio.</span>
                         </div>
                     </div>
                 </div>
@@ -408,7 +399,7 @@ shadow-sm placeholder:text-slate-400" %}
                         class="w-8 h-8 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center shrink-0 text-sm">
                         <i class="fas fa-map-marker-alt"></i>
                     </div>
-                    <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">EndereÃ§o</h3>
+                    <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">Endereço</h3>
                 </div>
                 <div class="p-6 grid grid-cols-12 gap-4">
                     <!-- CEP -->
@@ -424,14 +415,14 @@ shadow-sm placeholder:text-slate-400" %}
                                 class="fas fa-search mr-1"></i>Digite o CEP para buscar</span>{% endif %}
                     </div>
 
-                    <!-- Campos de endereÃ§o -->
+                    <!-- Campos de Endereço -->
                     <div class="col-span-12">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">EndereÃ§o</label>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Endereço</label>
                         <input type="text" name="endereco" id="endereco" value="{{ item.endereco if item }}"
                             class="{{ final_input_css }}" required {{ 'readonly disabled' if view_mode }}>
                     </div>
                     <div class="col-span-4">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">NÂº</label>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Nº</label>
                         <input type="text" name="numero" id="numero" value="{{ item.numero if item }}"
                             class="{{ final_input_css }}" required {{ 'readonly disabled' if view_mode }}>
                     </div>
@@ -472,8 +463,6 @@ shadow-sm placeholder:text-slate-400" %}
                     <div>
                         <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">Frentes de Trabalho
                         </h3>
-                        <p class="text-[10px] text-slate-500 hidden sm:block">Defina metas fÃ­sicas e cronograma
-                            (obrigatÃ³rio para Curva S).</p>
                     </div>
                 </div>
                 {% if not view_mode %}
@@ -490,14 +479,12 @@ shadow-sm placeholder:text-slate-400" %}
                     <thead>
                         <tr
                             class="bg-slate-50 text-[10px] uppercase text-slate-500 font-bold border-b border-slate-200">
-                            <!-- Larguras balanceadas para incluir Data Inicio -->
+                            <!-- Larguras balanceadas para incluir Data Início -->
                             <th class="p-3 w-[25%]">Nome da Frente</th>
-                            <th class="p-3 w-[15%]">ResponsÃ¡vel</th>
-                            <th class="p-3 w-[8%] text-center">Unid.</th>
-                            <th class="p-3 w-[10%] text-center">Meta</th>
-                            <th class="p-3 w-[12%] text-center">Data InÃ­cio</th>
+                            <th class="p-3 w-[12%] text-center">Centro de Custo</th>
+                            <th class="p-3 w-[12%] text-center">Data Inicio</th>
+                            <th class="p-3 w-[12%] text-center">Data Fim Plan.</th>
                             <th class="p-3 w-[12%] text-center">Data Fim</th>
-                            <th class="p-3 w-[15%] text-center">Progresso</th>
                             {% if not view_mode %}<th class="p-3 w-[3%] text-center"></th>{% endif %}
                         </tr>
                     </thead>
@@ -525,37 +512,23 @@ shadow-sm placeholder:text-slate-400" %}
                                     placeholder="Nome..." required {{ 'readonly' if view_mode }}>
                             </td>
 
-                            <td class="p-2" data-label="Resp:">
-                                <select name="frente_responsavel[]"
-                                    class="{{ 'w-full h-9 text-sm px-2 rounded-md bg-transparent border-none text-slate-700 appearance-none pointer-events-none' if view_mode else 'form-control-std h-9 text-sm' }}"
-                                    {{ 'disabled' if view_mode }}>
-                                    <option value="">Selecione...</option>
-                                    {% for u in usuarios %}
-                                    <option value="{{ u.id }}" {% if f.id_responsavel==u.id %}selected{% endif %}>{{
-                                        u.nome }} ({{ u.email }})</option>
-                                    {% endfor %}
-                                </select>
-                            </td>
-
-                            <td class="p-2" data-label="Unid:">
-                                <select name="frente_unidade[]"
+                            <td class="p-2" data-label="Centro de Custo">
+                                <select name="centro_custo[]"
                                     class="{{ 'w-full h-9 text-sm text-center px-2 rounded-md bg-transparent border-none text-slate-700 appearance-none pointer-events-none' if view_mode else 'form-control-std h-9 text-sm text-center bg-white' }}"
-                                    {{ 'disabled' if view_mode }}>
-                                    {% for u in ['mÂ²', 'mÂ³', 'm', 'un', 'kg', 't', 'vb', 'cj', 'h'] %}
-                                    <option value="{{ u }}" {% if f.unidade==u %}selected{% endif %}>{{ u }}
-                                    </option>
+                                    placeholder="Centro de Custo..." required {{ 'readonly' if view_mode }}>
+                                    <option value="">Selecione...</option>
+                                    {% set cc_atual = (f.centro_custo or '') %}
+                                    {% if cc_atual and (centros_custo is not defined or cc_atual not in (centros_custo
+                                    or [])) %}
+                                    <option value="{{ cc_atual }}" selected>{{ cc_atual }}</option>
+                                    {% endif %}
+                                    {% for cc in (centros_custo or []) %}
+                                    <option value="{{ cc }}" {% if cc==cc_atual %}selected{% endif %}>{{ cc }}</option>
                                     {% endfor %}
                                 </select>
-                            </td>
 
-                            <td class="p-2" data-label="Meta:">
-                                <input type="number" name="frente_qtd[]" value="{{ f.qtd_planejada }}" step="0.01"
-                                    class="{{ 'w-full h-9 text-sm text-center px-2 rounded-md bg-transparent border-none font-bold text-slate-800' if view_mode else 'form-control-std h-9 text-sm text-center font-bold' }}"
-                                    {{ 'readonly' if view_mode }}>
-                            </td>
-
-                            <!-- DATA INÃCIO -->
-                            <td class="p-2" data-label="Data InÃ­cio:">
+                                <!-- DATA INÃCIO -->
+                            <td class="p-2" data-label="Data Inicio:">
                                 <div class="relative">
                                     <!-- Campo Oculto formatado YYYY-MM-DD para o Backend -->
                                     <input type="hidden" name="frente_data_inicio[]" value="{{ f.data_inicio or '' }}"
@@ -580,7 +553,7 @@ shadow-sm placeholder:text-slate-400" %}
                             </td>
 
                             <!-- DATA PLANEJADA -->
-                            <td class="p-2" data-label="Data Fim:">
+                            <td class="p-2" data-label="Data Fim Planejada:">
                                 <div class="relative">
                                     <input type="hidden" name="frente_data_planejada[]"
                                         value="{{ f.data_planejada or '' }}" class="frente-date-hidden">
@@ -602,28 +575,26 @@ shadow-sm placeholder:text-slate-400" %}
                                 </div>
                             </td>
 
-                            <!-- STATUS / CURVA S -->
-                            <td class="p-2 text-center" data-label="Status:">
-                                <div class="flex flex-col items-center justify-center w-full space-y-1">
-                                    <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden border border-slate-200"
-                                        title="Realizado: {{ pct_f | round(1) }}%">
-                                        <div class="h-1.5 rounded-full {{ 'bg-emerald-500' if pct_f >= 100 else 'bg-blue-500' }}"
-                                            style="width: {{ pct_f }}%"></div>
+                            <!-- DATA FIM -->
+                            <td class="p-2" data-label="Data Fim:">
+                                <div class="relative">
+                                    <input type="hidden" name="frente_data_fim[]" value="{{ f.data_fim or '' }}"
+                                        class="frente-date-hidden">
+
+                                    <input type="text"
+                                        value="{{ f.data_fim.strftime('%d/%m/%Y') if f.data_fim else '' }}"
+                                        class="{{ 'w-full h-9 text-sm text-center px-2 rounded-md bg-transparent border-none text-slate-700' if view_mode else 'form-control-std h-9 text-sm text-left pr-8 frente-date-visual cursor-pointer' }}"
+                                        placeholder="{{ '-' if view_mode else 'DD/MM/AAAA' }}" maxlength="10"
+                                        oninput="mascaraData(this); syncRowDate(this)" {{ 'readonly' if view_mode }}>
+
+                                    {% if not view_mode %}
+                                    <div class="absolute inset-y-0 right-0 flex items-center pr-2 cursor-pointer z-10"
+                                        onclick="this.nextElementSibling.showPicker()">
+                                        <i class="far fa-calendar-alt text-slate-400 hover:text-purple-600"></i>
                                     </div>
-                                    <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden border border-slate-200"
-                                        title="Esperado (Curva S): {{ pct_exp_f | round(1) }}%">
-                                        <div class="h-1.5 rounded-full bg-slate-400 opacity-60"
-                                            style="width: {{ pct_exp_f }}%"></div>
-                                    </div>
-                                    <div
-                                        class="flex justify-between w-full text-[9px] font-bold uppercase tracking-wider mt-1">
-                                        <span class="text-blue-600">{{ pct_f | round(0) }}%</span>
-                                        <span class="text-slate-400">{{ pct_exp_f | round(0) }}% (S)</span>
-                                    </div>
-                                    <span
-                                        class="text-[9px] font-bold uppercase {{ 'text-emerald-600' if status_f == 'No Prazo' or status_f == 'Adiantado' else 'text-red-600' if status_f == 'Atrasado' else 'text-slate-400' }}">
-                                        {{ status_f }}
-                                    </span>
+                                    <input type="date" class="absolute w-0 h-0 opacity-0 pointer-events-none"
+                                        tabindex="-1" onchange="applyRowPicker(this)">
+                                    {% endif %}
                                 </div>
                             </td>
 
@@ -665,7 +636,7 @@ shadow-sm placeholder:text-slate-400" %}
                         <i class="fas fa-users"></i>
                     </div>
                     <div>
-                        <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">Equipe PadrÃ£o da
+                        <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">Equipe Padrão da
                             Obra</h3>
                         <p class="text-[10px] text-slate-500 hidden sm:block">ComposiÃ§Ã£o base para ser importada no
                             RDO.</p>
@@ -674,7 +645,7 @@ shadow-sm placeholder:text-slate-400" %}
                 {% if not view_mode %}
                 <button type="button" onclick="addEquipeObraRow()"
                     class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-2 rounded-lg font-bold text-xs transition flex items-center gap-2">
-                    <i class="fas fa-plus"></i> <span class="hidden sm:inline">Adicionar MÃ£o de Obra</span>
+                    <i class="fas fa-plus"></i> <span class="hidden sm:inline">Adicionar Mão de Obra</span>
                 </button>
                 {% endif %}
             </div>
@@ -684,7 +655,7 @@ shadow-sm placeholder:text-slate-400" %}
                     <thead>
                         <tr
                             class="bg-slate-50 text-[10px] uppercase text-slate-500 font-bold border-b border-slate-200">
-                            <th class="p-3 w-[70%]">MÃ£o de Obra</th>
+                            <th class="p-3 w-[70%]">Mão de Obra</th>
                             <th class="p-3 w-[20%] text-center">Quantidade</th>
                             {% if not view_mode %}<th class="p-3 w-[10%] text-center"></th>{% endif %}
                         </tr>
@@ -693,7 +664,7 @@ shadow-sm placeholder:text-slate-400" %}
                         {% if equipe_obra %}
                         {% for equipe in equipe_obra %}
                         <tr class="group hover:bg-slate-50 transition-colors">
-                            <td class="p-2 full-width-mobile" data-label="MÃ£o de Obra:">
+                            <td class="p-2 full-width-mobile" data-label="Mão de Obra:">
                                 <select
                                     class="{{ 'w-full h-9 text-sm px-2 rounded-md bg-transparent border-none text-slate-700 appearance-none pointer-events-none' if view_mode else 'form-control-std h-9 text-sm select-equipe-obra bg-white' }}"
                                     {{ 'disabled' if view_mode }}>
@@ -722,7 +693,7 @@ shadow-sm placeholder:text-slate-400" %}
                         {% elif view_mode %}
                         <tr>
                             <td colspan="3" class="p-8 text-center text-slate-400 italic bg-slate-50">Nenhuma equipe
-                                padrÃ£o cadastrada nesta obra.</td>
+                                Padrão cadastrada nesta obra.</td>
                         </tr>
                         {% endif %}
                     </tbody>
@@ -900,7 +871,7 @@ shadow-sm placeholder:text-slate-400" %}
             if (!picker.value) return;
 
             // Usa 'closest' para achar o container pai relativo (a cÃ©lula da tabela)
-            // Antes estava buscando na 'tr', o que pegava sempre o primeiro input (Data Inicio)
+            // Antes estava buscando na 'tr', o que pegava sempre o primeiro input (Data Início)
             const container = picker.closest('.relative');
             const visual = container.querySelector('.frente-date-visual');
             const hidden = container.querySelector('.frente-date-hidden');
@@ -974,7 +945,14 @@ shadow-sm placeholder:text-slate-400" %}
             <input type="number" name="frente_qtd[]" value="0.00" step="0.01" class="form-control-std h-9 text-sm text-center font-bold">
         </td>
 
-        <td class="p-2" data-label="Data InÃ­cio:">
+        <td class="p-2" data-label="Centro de Custo:">
+            <select name="centro_custo[]" class="form-control-std h-9 text-sm text-center bg-white cursor-pointer" required>
+                <option value="">Selecione...</option>
+                {% for cc in (centros_custo or []) %}<option value="{{ cc }}">{{ cc }}</option>{% endfor %}
+            </select>
+        </td>
+
+        <td class="p-2" data-label="Data Inicio:">
             <div class="relative">
                 <input type="hidden" name="frente_data_inicio[]" class="frente-date-hidden">
                 <input type="text" class="form-control-std h-9 text-sm text-left pr-8 frente-date-visual cursor-pointer" 
@@ -1023,7 +1001,7 @@ shadow-sm placeholder:text-slate-400" %}
             const tr = document.createElement('tr');
             tr.className = 'group hover:bg-slate-50 transition-colors animate-fade-in-up';
             tr.innerHTML = `
-                <td class="p-2 full-width-mobile" data-label="MÃ£o de Obra:">
+                <td class="p-2 full-width-mobile" data-label="Mão de Obra:">
                     <select class="form-control-std h-9 text-sm select-equipe-obra bg-white">
                         <option value="">Selecione...</option>
                         {% for op in mao_de_obra_options %}
@@ -1070,12 +1048,10 @@ shadow-sm placeholder:text-slate-400" %}
                 frentes.push({
                     id_frente_trabalho: id || null,
                     nome_frente: row.querySelector('[name="frente_nome[]"]').value,
-                    id_responsavel: row.querySelector('[name="frente_responsavel[]"]').value || null,
-                    unidade: row.querySelector('[name="frente_unidade[]"]').value,
-                    qtd_planejada: row.querySelector('[name="frente_qtd[]"]').value,
-                    // Pega o valor do input HIDDEN (YYYY-MM-DD) para enviar ao backend
+                    centro_custo: row.querySelector('[name=\"centro_custo[]\"]').value,
                     data_inicio: row.querySelector('[name="frente_data_inicio[]"]').value,
-                    data_planejada: row.querySelector('[name="frente_data_planejada[]"]').value
+                    data_planejada: row.querySelector('[name="frente_data_planejada[]"]').value,
+                    data_fim: row.querySelector('[name="frente_data_fim[]"]').value
                 });
             });
 

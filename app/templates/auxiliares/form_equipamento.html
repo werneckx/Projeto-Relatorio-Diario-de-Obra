@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "components/form/macros.html" as ui_form %}
 
 {% block title %}
 {% if view_mode %}Visualizar{% elif item and item.id %}Editar{% else %}Cadastrar{% endif %} Equipamento
@@ -29,8 +30,7 @@
     </div>
 
     <!-- Formulário -->
-    <form action="{{ url_for('auth.gerar_equipamento') }}" method="POST" id="equipamentoForm" class="space-y-6">
-        <input type="hidden" name="id" value="{{ item.id if item and item.id }}">
+    {% call ui_form.form_start(action=url_for('auth.gerar_equipamento'), form_id='equipamentoForm', item=item, extra_class='space-y-6') %}
 
 
         <!-- Card Principal -->
@@ -95,7 +95,7 @@
             </button>
             {% endif %}
         </div>
-    </form>
+    {% endcall %}
 </div>
 
 <script>

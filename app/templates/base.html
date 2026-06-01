@@ -17,7 +17,12 @@
             } else if (uiParam === 'legacy') {
                 localStorage.setItem('rdo_ui_theme', 'legacy');
                 document.documentElement.removeAttribute('data-ui-theme');
+            } else if (storedUI === 'legacy') {
+                document.documentElement.removeAttribute('data-ui-theme');
             } else if (storedUI === 'premium') {
+                document.documentElement.setAttribute('data-ui-theme', 'premium');
+            } else {
+                localStorage.setItem('rdo_ui_theme', 'premium');
                 document.documentElement.setAttribute('data-ui-theme', 'premium');
             }
         })();
@@ -58,6 +63,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/utilities.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/ds_premium.css') }}">
 
     <link rel="icon" type="image/png" href="{{ url_for('static', filename=icone_empresa) }}">
 
@@ -1181,6 +1187,13 @@
 
             setTimeout(() => { window.location = href; }, ANIM_MS);
         }
+    </script>
+
+    <script>
+        (function () {
+            if (document.documentElement.getAttribute('data-ui-theme') !== 'premium') return;
+            document.querySelectorAll('form').forEach((form) => form.classList.add('ds-form'));
+        })();
     </script>
 
 </body>

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "components/form/macros.html" as ui_form %}
 
 {% block title %}Configurações do Sistema{% endblock %}
 
@@ -75,7 +76,7 @@
                         {% endif %}
                     </div>
 
-                    <form action="{{ url_for('auth.salvar_empresa') }}" method="POST" enctype="multipart/form-data">
+                    {% call ui_form.form_start(action=url_for('auth.salvar_empresa'), form_id='empresaForm', item=None, extra_class='', enctype='multipart/form-data', id_name=None) %}
                         <div class="p-6 space-y-6">
                             <div>
                                 <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Nome
@@ -168,7 +169,7 @@
                                 <i class="fas fa-check text-xs"></i> Salvar Alterações
                             </button>
                         </div>
-                    </form>
+                    {% endcall %}
                 </div>
             </section>
 

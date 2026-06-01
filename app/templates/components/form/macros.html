@@ -22,9 +22,12 @@
 </div>
 {% endmacro %}
 
-{% macro form_start(action, form_id, item=None, extra_class='space-y-4') %}
-<form action="{{ action }}" method="POST" id="{{ form_id }}" class="{{ extra_class }}" autocomplete="off">
-  <input type="hidden" name="id" value="{{ item.id if item and item.id }}">
+{% macro form_start(action, form_id, item=None, extra_class='space-y-4', method='POST', enctype=None, id_name='id') %}
+<form action="{{ action }}" method="{{ method }}" id="{{ form_id }}" class="ds-form {{ extra_class }}" autocomplete="off"
+  {% if enctype %}enctype="{{ enctype }}"{% endif %}>
+  {% if id_name %}
+  <input type="hidden" name="{{ id_name }}" value="{{ item.id if item and item.id }}">
+  {% endif %}
   {{ caller() }}
 </form>
 {% endmacro %}

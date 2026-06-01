@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "components/form/macros.html" as ui_form %}
 
 {% block title %}
 {% if view_mode %}Visualizar{% elif item and item.id %}Editar{% else %}Cadastrar{% endif %} Função
@@ -28,9 +29,7 @@
         </a>
     </div>
 
-    <form action="{{ url_for('auth.gerar_funcao') }}" method="POST" id="funcaoForm"
-        class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-        <input type="hidden" name="id" value="{{ item.id if item and item.id }}">
+    {% call ui_form.form_start(action=url_for('auth.gerar_funcao'), form_id='funcaoForm', item=item, extra_class='bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden') %}
 
         <div class="p-6 sm:p-8 space-y-6">
 
@@ -157,7 +156,7 @@
             </button>
             {% endif %}
         </div>
-    </form>
+    {% endcall %}
 </div>
 
 <script>
