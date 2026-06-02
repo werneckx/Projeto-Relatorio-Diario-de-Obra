@@ -76,7 +76,7 @@ shadow-sm placeholder:text-slate-400" %}
 
         {% include "partials/flash_messages.html" %}
 
-        <!-- CabeÃ§alho -->
+        <!-- Cabeçalho -->
         <div class="page-hero p-6 sm:p-7 mb-2 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
                 <h1 class="text-2xl font-bold text-slate-900 tracking-tight">
@@ -99,78 +99,6 @@ shadow-sm placeholder:text-slate-400" %}
             </a>
         </div>
 
-        <!-- CARD DE STATUS DO PROJETO (Curva S Global) -->
-        {% if item and item.id %}
-        <div class="mb-6 bg-white rounded-xl border border-slate-200 shadow-sm p-6 relative">
-            <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-2">
-                <h3 class="text-sm font-bold text-slate-700 uppercase tracking-wide flex items-center gap-2">
-                    <i class="fas fa-chart-line text-blue-500"></i> Performance Global
-                </h3>
-                {% set text = global_status_text %}
-                {% set variant = 'danger' if global_status_text == 'Atrasado' else ('success' if global_status_text == 'Adiantado' else ('info' if global_status_text == 'No Prazo' else 'neutral')) %}
-                {% include "components/badge.html" %}
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <!-- Progresso Real -->
-                <div>
-                    <div class="flex justify-between items-end mb-2">
-                        <div>
-                            <span class="text-xs font-bold text-emerald-600 uppercase">Realizado</span>
-                            <p class="text-[10px] text-slate-400">Média de avanço físico</p>
-                        </div>
-                        <div class="text-2xl font-bold text-slate-800">{{ global_realized | round(1) }}%</div>
-                    </div>
-                    <div class="w-full bg-slate-100 rounded-full h-3 overflow-hidden shadow-inner">
-                        <div class="bg-gradient-to-r from-emerald-400 to-emerald-600 h-3 rounded-full transition-all duration-1000 ease-out"
-                            style="width: {{ global_realized }}%"></div>
-                    </div>
-                </div>
-
-                <!-- Curva S (Esperado) -->
-                <div>
-                    <div class="flex justify-between items-end mb-2">
-
-                        <!-- Tooltip da Curva S -->
-                        <div class="relative group cursor-help z-10">
-                            <div class="flex items-center gap-1.5">
-                                <span class="text-xs font-bold text-blue-600 uppercase border-b border-dashed border-blue-300">
-                                    Esperado (Curva S)
-                                </span>
-                                <i class="fas fa-question-circle text-[10px] text-blue-400"></i>
-                            </div>
-
-                            <p class="text-[10px] text-slate-400">Planejado para hoje</p>
-
-                            <!-- Tooltip -->
-                            <div class="absolute bottom-full left-0 mb-2 w-72 p-4 bg-slate-800 text-white text-xs rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-[100] transform group-hover:-translate-y-1">
-                                <div class="font-bold text-blue-300 mb-1 border-b border-slate-600 pb-1">
-                                    <i class="fas fa-chart-line mr-1"></i> Fator de Cálculo: Curva S
-                                </div>
-                                <p class="leading-relaxed text-slate-300 mb-2">
-                                    A <strong>Curva S</strong> é usada para definir a meta diária. Diferente de uma média linear, ela considera o ritmo natural da engenharia:
-                                </p>
-                                <ul class="space-y-1 text-[10px] text-slate-400 list-disc list-inside">
-                                    <li><strong>Início:</strong> Ritmo lento (mobilização).</li>
-                                    <li><strong>Meio:</strong> Aceleração máxima (pico de produção).</li>
-                                    <li><strong>Fim:</strong> Desaceleração (acabamentos).</li>
-                                </ul>
-                                <div class="absolute top-full left-4 -mt-1 border-4 border-transparent border-t-slate-800"></div>
-                            </div>
-                        </div>
-
-                        <div class="text-2xl font-bold text-slate-400">{{ global_expected | round(1) }}%</div>
-                    </div>
-                    <div class="w-full bg-slate-100 rounded-full h-3 overflow-hidden shadow-inner relative"
-                        title="Meta esperada: {{ global_expected | round(2) }}%">
-                        <div class="bg-blue-400 h-3 rounded-full transition-all duration-1000 ease-out opacity-60"
-                            style="width: {{ global_expected }}%"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-
         <!-- FormulÃ¡rio Principal -->
         {% call ui_form.form_start(url_for('auth.gerar_obra'), 'mainForm', item=item, extra_class='space-y-6') %}
 
@@ -179,108 +107,154 @@ shadow-sm placeholder:text-slate-400" %}
         <input type="hidden" name="frentes_json" id="frentes_json">
         <input type="hidden" name="equipe_obra_json" id="equipe_obra_json">
 
-        <!-- 1. Dados Gerais -->
-        <div class="surface-card rounded-2xl overflow-hidden bg-white border border-slate-200 shadow-sm">
-            <div
-                class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div class="flex items-center gap-3">
-                    <div
-                        class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 text-sm">
-                        <i class="fas fa-building"></i>
-                    </div>
-                    <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">Informações básicas da Obra
-                    </h3>
-                </div>
-
-                <!-- Status Badge / Toggle -->
-                {% if view_mode %}
-                <span class="inline-flex items-center gap-1.5">
-                    <i
-                        class="fas {{ 'fa-check-circle' if (item and item.status == 1) else 'fa-times-circle' }} text-xs"></i>
-                    {% set text = 'Ativa' if (item and item.status == 1) else 'Inativa' %}
-                    {% set variant = 'success' if (item and item.status == 1) else 'danger' %}
-                    {% include "components/badge.html" %}
-                </span>
-                {% else %}
-                <label class="relative inline-flex items-center cursor-pointer group">
-                    <input type="checkbox" name="status" class="sr-only peer" {{ 'checked' if (item and item.status==1)
-                        or not item }}>
-                    <div
-                        class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500">
-                    </div>
-                    <span id="statusLabel"
-                        class="ml-3 text-xs font-bold uppercase transition-colors {{ 'text-emerald-600' if (item and item.status == 1) or not item else 'text-slate-400' }}">
-                        {{ 'Ativa' if (item and item.status == 1) or not item else 'Inativa' }}
-                    </span>
-                </label>
-                {% endif %}
-            </div>
-
-            <div class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6">
-                <!-- Nome -->
-                <div class="lg:col-span-8">
-                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Nome da Obra</label>
-                    <input type="text" name="nome" value="{{ item.nome if item }}"
-                        placeholder="Ex: Reforma do Galpão Logistico" class="{{ final_input_css }}"
-                        {{ 'readonly disabled' if view_mode }} required>
-                </div>
-
-                <!-- CNPJ da Obra -->
-                <div class="lg:col-span-4">
-                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">CNPJ da Obra</label>
-                    <input type="text" name="cnpj_obra" id="cnpj_obra" maxlength="18" value="{{ item.cnpj if item }}"
-                        placeholder="00.000.000/0000-00" class="{{ final_input_css }} font-mono" {{ 'readonly disabled'
-                        if view_mode }}>
-                </div>
-
-                <!-- Cliente -->
-                <div class="lg:col-span-6">
-                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Cliente</label>
-                    {% if view_mode %}
-                    <input type="text" value="{{ item.contratante if item }}" class="{{ final_input_css }}" readonly
-                        disabled>
-                    {% else %}
-                    <div class="relative">
-                        <select name="cliente_id" class="{{ final_input_css }} {{ select_view_css }}" required>
-                            <option value="">Selecione um cliente...</option>
-                            {% for cliente in clientes %}
-                            <option value="{{ cliente.id }}" {% if item and item.cliente_id==cliente.id %}selected{%
-                                endif %}>
-                                {{ cliente.razao_social }}{% if cliente.cnpj %} ({{ cliente.cnpj }}){% endif %}
-                            </option>
-                            {% endfor %}
-                        </select>
+        <div class="space-y-6">
+            <!-- Tela única (sem abas) -->
+            <div class="surface-card rounded-2xl overflow-hidden bg-white border border-slate-200 shadow-sm">
+                <div
+                    class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
                         <div
-                            class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
-                            <i class="fas fa-chevron-down text-xs"></i>
+                            class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 text-sm">
+                            <i class="fas fa-building"></i>
                         </div>
+                        <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">Informações básicas da
+                            Obra
+                        </h3>
                     </div>
-                    {% endif %}
+
+                    <div class="flex items-center gap-4">
+                        <!-- Status da Obra -->
+                        {% if view_mode %}
+                        <span class="inline-flex items-center gap-1.5">
+                            <i
+                                class="fas {{ 'fa-check-circle' if (item and item.ativo) else 'fa-times-circle' }} text-xs"></i>
+                            {% set text = 'Ativa' if (item and item.ativo) else 'Inativa' %}
+                            {% set variant = 'success' if (item and item.ativo) else 'danger' %}
+                            {% include "components/badge.html" %}
+                        </span>
+                        {% else %}
+                        {% if not item %}
+                        <button type="button" onclick="clearNewObraForm()"
+                            class="px-4 py-3 bg-white border border-slate-300 text-slate-600 font-bold rounded-xl shadow-sm hover:bg-slate-50 transition-colors text-center text-sm flex items-center justify-center gap-2">
+                            Limpar formulário
+                        </button>
+                        {% endif %}
+                        <div class="min-w-[160px]">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Status</label>
+                            <div class="relative">
+                                <select name="ativo" class="{{ final_input_css }} {{ select_view_css }}">
+                                    <option value="1" {% if (item and item.ativo) or not item %}selected{% endif %}>
+                                        Ativo
+                                    </option>
+                                    <option value="0" {% if item and (not item.ativo) %}selected{% endif %}>Inativo
+                                    </option>
+                                </select>
+                                <div
+                                    class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
+                                    <i class="fas fa-chevron-down text-xs"></i>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+
+                    </div>
                 </div>
 
-                <!-- Responsável -->
-                <div class="lg:col-span-3">
-                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Responsável Técnico</label>
-                    <div class="relative">
-                        <select name="id_responsavel" class="{{ final_input_css }} {{ select_view_css }}" {{ 'disabled'
-                            if view_mode }}>
-                            <option value="">Selecione...</option>
-                            {% for usuario in usuarios %}
-                            <option value="{{ usuario.id }}" {% if item and item.id_responsavel==usuario.id %}selected{%
-                                endif %}>{{ usuario.nome }} ({{ usuario.email }})</option>
-                            {% endfor %}
-                        </select>
-                        {% if not view_mode %}
-                        <div
-                            class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
-                            <i class="fas fa-chevron-down text-xs"></i>
+                <div class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6">
+                    <!-- Nome -->
+                    <div class="lg:col-span-8">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Nome da Obra</label>
+                        <input type="text" name="nome" id="nome_obra" value="{{ item.nome if item }}"
+                            placeholder="Ex: Reforma do Galpão Logistico" class="{{ final_input_css }}"
+                            {{ 'readonly disabled' if view_mode }} required>
+                    </div>
+
+                    <!-- CNPJ da Obra -->
+                    <div class="lg:col-span-4">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">CNPJ da Obra</label>
+                        <input type="text" name="cnpj_obra" id="cnpj_obra" maxlength="18"
+                            value="{{ item.cnpj if item }}" placeholder="00.000.000/0000-00"
+                            class="{{ final_input_css }} font-mono" {{ 'readonly disabled' if view_mode }}>
+                        <p id="cnpj-message" class="text-[10px] mt-1 h-3"></p>
+                    </div>
+
+                    <!-- Cliente -->
+                    <div class="lg:col-span-6">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Cliente</label>
+                        {% if view_mode %}
+                        <input type="text"
+                            value="{% if item and item.cliente %}{{ item.cliente.razao_social }}{% if item.cliente.cnpj %} ({{ item.cliente.cnpj }}){% endif %}{% endif %}"
+                            class="{{ final_input_css }}" readonly disabled>
+                        {% else %}
+                        <div class="relative">
+                            <select name="cliente_id" class="{{ final_input_css }} {{ select_view_css }}" required>
+                                <option value="">Selecione um cliente...</option>
+                                {% for cliente in clientes %}
+                                <option value="{{ cliente.id }}" {% if item and item.cliente_id==cliente.id %}selected{%
+                                    endif %}>
+                                    {{ cliente.razao_social }}{% if cliente.cnpj %} ({{ cliente.cnpj }}){% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div
+                                class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
+                                <i class="fas fa-chevron-down text-xs"></i>
+                            </div>
                         </div>
                         {% endif %}
                     </div>
+
+                    <!-- Tipo de Obra -->
+                    <div class="lg:col-span-3">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Tipo de Obra</label>
+                        {% if view_mode %}
+                        <input type="text" value="{{ item.tipo_obra.nome if item and item.tipo_obra else '' }}"
+                            class="{{ final_input_css }}" readonly disabled>
+                        {% else %}
+                        <div class="relative">
+                            <select name="tipo_obra_id" class="{{ final_input_css }} {{ select_view_css }}">
+                                <option value="">Selecione...</option>
+                                {% for tipo in (tipos_obra or []) %}
+                                <option value="{{ tipo.id }}" {% if item and item.tipo_obra_id==tipo.id %}selected{%
+                                    endif %}>
+                                    {{ tipo.nome }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div
+                                class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
+                                <i class="fas fa-chevron-down text-xs"></i>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Responsável -->
+                    <div class="lg:col-span-3">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Responsável pela
+                            Obra</label>
+                        <div class="relative">
+                            <select name="usuario_responsavel_id" class="{{ final_input_css }} {{ select_view_css }}"
+                                {{ 'disabled' if view_mode }}>
+                                <option value="">Selecione...</option>
+                                {% for usuario in usuarios %}
+                                <option value="{{ usuario.id }}" {% if item and item.usuario_responsavel_id==usuario.id
+                                    %}selected{% endif %}>{{ usuario.nome }} ({{ usuario.email }})</option>
+                                {% endfor %}
+                            </select>
+                            {% if not view_mode %}
+                            <div
+                                class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
+                                <i class="fas fa-chevron-down text-xs"></i>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
 
+        </div>
         <div class="surface-card rounded-2xl overflow-hidden bg-white border border-slate-200 shadow-sm">
             <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
                 <div
@@ -292,164 +266,237 @@ shadow-sm placeholder:text-slate-400" %}
             </div>
             <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Horario Entrada
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Horário de Entrada
                         Padrão</label>
-                    <input type="time" name="horario_entrada"
-                        value="{{ item.horario_entrada.strftime('%H:%M') if item and item.horario_entrada else '' }}"
+                    <input type="time" name="hora_entrada_padrao"
+                        value="{{ item.hora_entrada_padrao.strftime('%H:%M') if item and item.hora_entrada_padrao else ('07:00' if not item else '') }}"
                         class="{{ final_input_css }} font-mono" {{ 'readonly disabled' if view_mode }}>
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Horario Saída
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Intervalo de Entrada
                         Padrão</label>
-                    <input type="time" name="horario_saida"
-                        value="{{ item.horario_saida.strftime('%H:%M') if item and item.horario_saida else '' }}"
+                    <input type="time" name="intervalo_entrada_padrao"
+                        value="{{ item.intervalo_entrada_padrao.strftime('%H:%M') if item and item.intervalo_entrada_padrao else ('12:00' if not item else '') }}"
+                        class="{{ final_input_css }} font-mono" {{ 'readonly disabled' if view_mode }}>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Intervalo de Saída
+                        Padrão</label>
+                    <input type="time" name="intervalo_saida_padrao"
+                        value="{{ item.intervalo_saida_padrao.strftime('%H:%M') if item and item.intervalo_saida_padrao else ('13:00' if not item else '') }}"
+                        class="{{ final_input_css }} font-mono" {{ 'readonly disabled' if view_mode }}>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Horário de Saída Padrão</label>
+                    <input type="time" name="hora_saida_padrao"
+                        value="{{ item.hora_saida_padrao.strftime('%H:%M') if item and item.hora_saida_padrao else ('17:00' if not item else '') }}"
                         class="{{ final_input_css }} font-mono" {{ 'readonly disabled' if view_mode }}>
                 </div>
             </div>
         </div>
 
-        <!-- 2. Datas e LocalizaÃ§Ã£o -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-            <!-- Datas -->
-            <div class="surface-card rounded-2xl overflow-hidden bg-white border border-slate-200 shadow-sm h-full">
-                <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
-                    <div
-                        class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 text-sm">
-                        <i class="fas fa-calendar-alt"></i>
-                    </div>
-                    <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">Cronograma</h3>
+        <!-- Cronograma -->
+        <div class="surface-card rounded-2xl overflow-hidden bg-white border border-slate-200 shadow-sm">
+            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
+                <div
+                    class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 text-sm">
+                    <i class="fas fa-calendar-alt"></i>
                 </div>
-                <div class="p-6 space-y-5">
-                    <!-- Inicio -->
-                    <div>
-                        <div class="flex justify-between items-center mb-2">
-                            <label class="text-xs font-bold text-slate-500 uppercase">Data de Inicio</label>
-                            {% if not view_mode %}
-                            <button type="button" onclick="setToday('data_inicio_visual', 'data_inicio_hidden')"
-                                class="text-[10px] font-bold text-emerald-600 hover:bg-emerald-50 px-2 py-1 rounded transition-colors border border-emerald-100 shadow-sm flex items-center">
-                                <i class="fas fa-magic mr-1"></i> HOJE
-                            </button>
-                            {% endif %}
-                        </div>
-                        <div class="relative">
-                            <input type="hidden" name="inicio" id="data_inicio_hidden"
-                                value="{{ item.inicio | string if item and item.inicio else '' }}">
-                            <input type="text" id="data_inicio_visual"
-                                value="{{ item.inicio.strftime('%d/%m/%Y') if item and item.inicio else '' }}"
-                                placeholder="DD/MM/AAAA" maxlength="10"
-                                class="{{ final_input_css }} {{ 'pr-10' if not view_mode else '' }}"
-                                {{ 'readonly disabled' if view_mode }} required
-                                oninput="mascaraData(this); syncDate(this, 'data_inicio_hidden')"
-                                onblur="syncDate(this, 'data_inicio_hidden')">
-                            {% if not view_mode %}
-                            <div class="absolute inset-y-0 right-0 flex items-center pr-3 z-10">
-                                <i class="far fa-calendar-alt text-slate-400 hover:text-emerald-600 cursor-pointer text-lg"
-                                    onclick="this.nextElementSibling.showPicker()"></i>
-                                <input type="date" class="absolute w-0 h-0 opacity-0 pointer-events-none" tabindex="-1"
-                                    onchange="applyPicker(this, 'data_inicio_visual', 'data_inicio_hidden')">
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    <!-- TÃ©rmino -->
-                    <div>
-                        <div class="flex justify-between items-center mb-2">
-                            <label class="text-xs font-bold text-slate-500 uppercase">Previsão de Término</label>
-                            {% if not view_mode %}
-                            <button type="button" onclick="setToday('data_termino_visual', 'data_termino_hidden')"
-                                class="text-[10px] font-bold text-emerald-600 hover:bg-emerald-50 px-2 py-1 rounded transition-colors border border-emerald-100 shadow-sm flex items-center">
-                                <i class="fas fa-magic mr-1"></i> HOJE
-                            </button>
-                            {% endif %}
-                        </div>
-                        <div class="relative">
-                            <input type="hidden" name="termino" id="data_termino_hidden"
-                                value="{{ item.termino | string if item and item.termino else '' }}">
-                            <input type="text" id="data_termino_visual"
-                                value="{{ item.termino.strftime('%d/%m/%Y') if item and item.termino else '' }}"
-                                placeholder="DD/MM/AAAA" maxlength="10"
-                                class="{{ final_input_css }} {{ 'pr-10' if not view_mode else '' }}"
-                                {{ 'readonly disabled' if view_mode }} required
-                                oninput="mascaraData(this); syncDate(this, 'data_termino_hidden')"
-                                onblur="syncDate(this, 'data_termino_hidden')">
-                            {% if not view_mode %}
-                            <div class="absolute inset-y-0 right-0 flex items-center pr-3 z-10">
-                                <i class="far fa-calendar-alt text-slate-400 hover:text-emerald-600 cursor-pointer text-lg"
-                                    onclick="this.nextElementSibling.showPicker()"></i>
-                                <input type="date" class="absolute w-0 h-0 opacity-0 pointer-events-none" tabindex="-1"
-                                    onchange="applyPicker(this, 'data_termino_visual', 'data_termino_hidden')">
-                            </div>
-                            {% endif %}
-                        </div>
-                        <div id="erro_data"
-                            class="hidden items-center gap-2 mt-2 text-red-600 bg-red-50 p-2 rounded-lg text-xs font-medium animate-pulse">
-                            <i class="fas fa-exclamation-triangle"></i><span>O tÃ©rmino deve ser posterior ao
-                                Inicio.</span>
-                        </div>
-                    </div>
-                </div>
+                <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">Cronograma</h3>
             </div>
-
-            <!-- LocalizaÃ§Ã£o -->
-            <div class="surface-card rounded-2xl overflow-hidden bg-white border border-slate-200 shadow-sm h-full">
-                <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
-                    <div
-                        class="w-8 h-8 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center shrink-0 text-sm">
-                        <i class="fas fa-map-marker-alt"></i>
+            <div class="p-6 space-y-5">
+                <!-- Inicio -->
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="text-xs font-bold text-slate-500 uppercase">Data de Início</label>
+                        {% if not view_mode %}
+                        <button type="button" onclick="setToday('data_inicio_visual', 'data_inicio_hidden')"
+                            class="text-[10px] font-bold text-emerald-600 hover:bg-emerald-50 px-2 py-1 rounded transition-colors border border-emerald-100 shadow-sm flex items-center">
+                            <i class="fas fa-magic mr-1"></i> HOJE
+                        </button>
+                        {% endif %}
                     </div>
-                    <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">Endereço</h3>
+                    <div class="relative">
+                        <input type="hidden" name="data_inicio" id="data_inicio_hidden"
+                            value="{{ item.data_inicio | string if item and item.data_inicio else '' }}">
+                        <input type="text" id="data_inicio_visual"
+                            value="{{ item.data_inicio.strftime('%d/%m/%Y') if item and item.data_inicio else '' }}"
+                            placeholder="DD/MM/AAAA" maxlength="10"
+                            class="{{ final_input_css }} {{ 'pr-10' if not view_mode else '' }}" {{ 'readonly disabled'
+                            if view_mode }} oninput="mascaraData(this); syncDate(this, 'data_inicio_hidden')"
+                            onblur="syncDate(this, 'data_inicio_hidden')">
+                        {% if not view_mode %}
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 z-10">
+                            <i class="far fa-calendar-alt text-slate-400 hover:text-emerald-600 cursor-pointer text-lg"
+                                onclick="this.nextElementSibling.showPicker()"></i>
+                            <input type="date" class="absolute w-0 h-0 opacity-0 pointer-events-none" tabindex="-1"
+                                onchange="applyPicker(this, 'data_inicio_visual', 'data_inicio_hidden')">
+                        </div>
+                        {% endif %}
+                    </div>
                 </div>
-                <div class="p-6 grid grid-cols-12 gap-4">
-                    <!-- CEP -->
-                    <div class="col-span-5 sm:col-span-4">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">CEP</label>
-                        <input type="text" name="cep" id="cep" maxlength="9" value="{{ item.cep if item }}"
-                            placeholder="00000-000" class="{{ final_input_css }}" {{ 'readonly disabled' if view_mode }}
-                            required>
-                        <p id="cep-message" class="text-[10px] mt-1 h-3"></p>
-                    </div>
-                    <div class="col-span-7 sm:col-span-8 flex items-end pb-1">
-                        {% if not view_mode %}<span class="text-[10px] text-slate-400 italic"><i
-                                class="fas fa-search mr-1"></i>Digite o CEP para buscar</span>{% endif %}
-                    </div>
 
-                    <!-- Campos de Endereço -->
-                    <div class="col-span-12">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Endereço</label>
-                        <input type="text" name="endereco" id="endereco" value="{{ item.endereco if item }}"
-                            class="{{ final_input_css }}" required {{ 'readonly disabled' if view_mode }}>
+                <!-- Fim Planejada -->
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="text-xs font-bold text-slate-500 uppercase">Data de Fim Planejada</label>
+                        {% if not view_mode %}
+                        <button type="button"
+                            onclick="setToday('data_fim_planejada_visual', 'data_fim_planejada_hidden')"
+                            class="text-[10px] font-bold text-emerald-600 hover:bg-emerald-50 px-2 py-1 rounded transition-colors border border-emerald-100 shadow-sm flex items-center">
+                            <i class="fas fa-magic mr-1"></i> HOJE
+                        </button>
+                        {% endif %}
                     </div>
-                    <div class="col-span-4">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Nº</label>
-                        <input type="text" name="numero" id="numero" value="{{ item.numero if item }}"
-                            class="{{ final_input_css }}" required {{ 'readonly disabled' if view_mode }}>
+                    <div class="relative">
+                        <input type="hidden" name="data_fim_planejada" id="data_fim_planejada_hidden"
+                            value="{{ item.data_fim_planejada | string if item and item.data_fim_planejada else '' }}">
+                        <input type="text" id="data_fim_planejada_visual"
+                            value="{{ item.data_fim_planejada.strftime('%d/%m/%Y') if item and item.data_fim_planejada else '' }}"
+                            placeholder="DD/MM/AAAA" maxlength="10"
+                            class="{{ final_input_css }} {{ 'pr-10' if not view_mode else '' }}" {{ 'readonly disabled'
+                            if view_mode }} oninput="mascaraData(this); syncDate(this, 'data_fim_planejada_hidden')"
+                            onblur="syncDate(this, 'data_fim_planejada_hidden')">
+                        {% if not view_mode %}
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 z-10">
+                            <i class="far fa-calendar-alt text-slate-400 hover:text-emerald-600 cursor-pointer text-lg"
+                                onclick="this.nextElementSibling.showPicker()"></i>
+                            <input type="date" class="absolute w-0 h-0 opacity-0 pointer-events-none" tabindex="-1"
+                                onchange="applyPicker(this, 'data_fim_planejada_visual', 'data_fim_planejada_hidden')">
+                        </div>
+                        {% endif %}
                     </div>
-                    <div class="col-span-8">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Complemento</label>
-                        <input type="text" name="complemento" id="complemento" value="{{ item.complemento if item }}"
-                            class="{{ final_input_css }}" {{ 'readonly disabled' if view_mode }}>
+                </div>
+
+                <!-- Fim Real -->
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="text-xs font-bold text-slate-500 uppercase">Data de Fim Real</label>
+                        {% if not view_mode %}
+                        <button type="button" onclick="setToday('data_fim_visual', 'data_fim_hidden')"
+                            class="text-[10px] font-bold text-emerald-600 hover:bg-emerald-50 px-2 py-1 rounded transition-colors border border-emerald-100 shadow-sm flex items-center">
+                            <i class="fas fa-magic mr-1"></i> HOJE
+                        </button>
+                        {% endif %}
                     </div>
-                    <div class="col-span-6">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Bairro</label>
-                        <input type="text" name="bairro" id="bairro" value="{{ item.bairro if item }}"
-                            class="{{ final_input_css }}" required {{ 'readonly disabled' if view_mode }}>
+                    <div class="relative">
+                        <input type="hidden" name="data_fim" id="data_fim_hidden"
+                            value="{{ item.data_fim | string if item and item.data_fim else '' }}">
+                        <input type="text" id="data_fim_visual"
+                            value="{{ item.data_fim.strftime('%d/%m/%Y') if item and item.data_fim else '' }}"
+                            placeholder="DD/MM/AAAA" maxlength="10"
+                            class="{{ final_input_css }} {{ 'pr-10' if not view_mode else '' }}" {{ 'readonly disabled'
+                            if view_mode }} oninput="mascaraData(this); syncDate(this, 'data_fim_hidden')"
+                            onblur="syncDate(this, 'data_fim_hidden')">
+                        {% if not view_mode %}
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 z-10">
+                            <i class="far fa-calendar-alt text-slate-400 hover:text-emerald-600 cursor-pointer text-lg"
+                                onclick="this.nextElementSibling.showPicker()"></i>
+                            <input type="date" class="absolute w-0 h-0 opacity-0 pointer-events-none" tabindex="-1"
+                                onchange="applyPicker(this, 'data_fim_visual', 'data_fim_hidden')">
+                        </div>
+                        {% endif %}
                     </div>
-                    <div class="col-span-4">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Cidade</label>
-                        <input type="text" name="cidade" id="cidade" value="{{ item.cidade if item }}"
-                            class="{{ final_input_css }}" required {{ 'readonly disabled' if view_mode }}>
-                    </div>
-                    <div class="col-span-2">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">UF</label>
-                        <input type="text" name="estado" id="estado" maxlength="2" value="{{ item.estado if item }}"
-                            class="{{ final_input_css }} text-center uppercase" required {{ 'readonly disabled' if
-                            view_mode }}>
+                    <div id="erro_data"
+                        class="hidden items-center gap-2 mt-2 text-red-600 bg-red-50 p-2 rounded-lg text-xs font-medium animate-pulse">
+                        <i class="fas fa-exclamation-triangle"></i><span>A data de fim deve ser igual ou posterior à
+                            data de início.</span>
                     </div>
                 </div>
             </div>
         </div>
+
+
+
+        <div class="surface-card rounded-2xl overflow-hidden bg-white border border-slate-200 shadow-sm">
+            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
+                <div
+                    class="w-8 h-8 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center shrink-0 text-sm">
+                    <i class="fas fa-map-marker-alt"></i>
+                </div>
+                <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">Endereço da Obra</h3>
+            </div>
+            <div class="p-6 grid grid-cols-12 gap-4">
+                <div class="col-span-12 sm:col-span-4">
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">CEP</label>
+                    <input type="hidden" name="ibge_municipio" id="ibge_municipio">
+                    <input type="text" name="cep" id="cep" maxlength="9" value="{{ item.cep if item }}"
+                        placeholder="00000-000" class="{{ final_input_css }}" {{ 'readonly disabled' if view_mode }}>
+                    <p id="cep-message" class="text-[10px] mt-1 h-3"></p>
+                </div>
+                <div class="col-span-12 sm:col-span-8 flex items-end pb-1">
+                    {% if not view_mode %}<span class="text-[10px] text-slate-400 italic"><i
+                            class="fas fa-search mr-1"></i>Digite o CEP para buscar</span>{% endif %}
+                </div>
+
+                <div class="col-span-12 sm:col-span-8">
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Logradouro</label>
+                    <input type="text" name="logradouro" id="logradouro" value="{{ item.logradouro if item }}"
+                        class="{{ final_input_css }}" {{ 'readonly disabled' if view_mode }}>
+                </div>
+                <div class="col-span-12 sm:col-span-4">
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Número</label>
+                    <input type="text" name="numero" id="numero" value="{{ item.numero if item }}"
+                        class="{{ final_input_css }}" {{ 'readonly disabled' if view_mode }}>
+                </div>
+                <div class="col-span-12">
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Complemento</label>
+                    <input type="text" name="complemento" id="complemento" value="{{ item.complemento if item }}"
+                        class="{{ final_input_css }}" {{ 'readonly disabled' if view_mode }}>
+                </div>
+                <div class="col-span-12 sm:col-span-5">
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Bairro</label>
+                    <input type="text" name="bairro" id="bairro" list="bairro-options" value="{{ item.bairro if item }}"
+                        class="{{ final_input_css }}" {{ 'readonly disabled' if view_mode }}>
+                    {% if not view_mode %}
+                    <datalist id="bairro-options">
+                        {% if item and item.bairro %}<option value="{{ item.bairro }}">{% endif %}
+                    </datalist>
+                    {% endif %}
+                </div>
+                <div class="col-span-12 sm:col-span-5">
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Cidade</label>
+                    {% if view_mode %}
+                    <input type="text" name="cidade" id="cidade" value="{{ item.cidade if item }}"
+                        class="{{ final_input_css }}" readonly disabled
+                        data-current-city="{{ item.cidade if item else '' }}" data-ibge-validated="">
+                    {% else %}
+                    <div class="relative">
+                        <select name="cidade" id="cidade" class="{{ final_input_css }} {{ select_view_css }}"
+                            data-current-city="{{ item.cidade if item else '' }}" data-ibge-validated="">
+                            <option value="">Selecione o estado...</option>
+                        </select>
+                        <div
+                            class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
+                            <i class="fas fa-chevron-down text-xs"></i>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="col-span-12 sm:col-span-2">
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Estado</label>
+                    {% if view_mode %}
+                    <input type="text" name="estado" id="estado" maxlength="2" value="{{ item.estado if item }}"
+                        class="{{ final_input_css }} text-center uppercase" readonly disabled
+                        data-current-state="{{ item.estado if item else '' }}" data-ibge-validated="">
+                    {% else %}
+                    <div class="relative">
+                        <select name="estado" id="estado"
+                            class="{{ final_input_css }} {{ select_view_css }} text-center uppercase"
+                            data-current-state="{{ item.estado if item else '' }}" data-ibge-validated="">
+                            <option value="">UF</option>
+                        </select>
+                        <div
+                            class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
+                            <i class="fas fa-chevron-down text-xs"></i>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+
 
         <!-- 3. Frentes de Trabalho -->
         <div class="surface-card rounded-2xl overflow-hidden bg-white border border-slate-200 shadow-sm">
@@ -485,7 +532,9 @@ shadow-sm placeholder:text-slate-400" %}
                             <th class="p-3 w-[12%] text-center">Data Inicio</th>
                             <th class="p-3 w-[12%] text-center">Data Fim Plan.</th>
                             <th class="p-3 w-[12%] text-center">Data Fim</th>
-                            {% if not view_mode %}<th class="p-3 w-[3%] text-center"></th>{% endif %}
+                            <th class="p-3 w-[12%] text-center">Colaboradores</th>
+                            <th class="p-3 w-[10%] text-center">Status</th>
+                            <th class="p-3 w-[10%] text-center">Ações</th>
                         </tr>
                     </thead>
                     <tbody id="lista-frentes" class="divide-y divide-slate-100 bg-white">
@@ -504,7 +553,7 @@ shadow-sm placeholder:text-slate-400" %}
                         {% set status_f = f.status_prazo or 'N/A' %}
 
                         <tr class="group hover:bg-slate-50 transition-colors">
-                            <input type="hidden" name="frente_id[]" value="{{ f.id_frente_trabalho }}">
+                            <input type="hidden" name="frente_id[]" value="{{ f.id }}">
 
                             <td class="p-2 full-width-mobile" data-label="Nome:">
                                 <input type="text" name="frente_nome[]" value="{{ f.nome_frente }}"
@@ -513,19 +562,10 @@ shadow-sm placeholder:text-slate-400" %}
                             </td>
 
                             <td class="p-2" data-label="Centro de Custo">
-                                <select name="centro_custo[]"
-                                    class="{{ 'w-full h-9 text-sm text-center px-2 rounded-md bg-transparent border-none text-slate-700 appearance-none pointer-events-none' if view_mode else 'form-control-std h-9 text-sm text-center bg-white' }}"
-                                    placeholder="Centro de Custo..." required {{ 'readonly' if view_mode }}>
-                                    <option value="">Selecione...</option>
-                                    {% set cc_atual = (f.centro_custo or '') %}
-                                    {% if cc_atual and (centros_custo is not defined or cc_atual not in (centros_custo
-                                    or [])) %}
-                                    <option value="{{ cc_atual }}" selected>{{ cc_atual }}</option>
-                                    {% endif %}
-                                    {% for cc in (centros_custo or []) %}
-                                    <option value="{{ cc }}" {% if cc==cc_atual %}selected{% endif %}>{{ cc }}</option>
-                                    {% endfor %}
-                                </select>
+                                <input type="text" name="centro_custo[]" value="{{ f.centro_custo or '' }}"
+                                    class="{{ 'w-full h-9 text-sm text-center px-2 rounded-md bg-transparent border-none text-slate-700' if view_mode else 'form-control-std h-9 text-sm text-center bg-white' }}"
+                                    placeholder="{{ '-' if view_mode else 'Centro de custo...' }}" {{ 'readonly' if
+                                    view_mode }}>
 
                                 <!-- DATA INÃCIO -->
                             <td class="p-2" data-label="Data Inicio:">
@@ -598,14 +638,52 @@ shadow-sm placeholder:text-slate-400" %}
                                 </div>
                             </td>
 
-                            {% if not view_mode %}
-                            <td class="p-2 text-center action-cell">
-                                <button type="button" onclick="removeRow(this, {{ f.id_frente_trabalho }})"
-                                    class="w-8 h-8 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition flex items-center justify-center">
-                                    <i class="fas fa-trash-alt"></i>
-                                </button>
+                            <!-- COLABORADORES (contadores) -->
+                            <td class="p-2" data-label="Colaboradores:">
+                                <div class="flex justify-center gap-1 text-[11px] font-bold">
+                                    <span id="frente-count-total-{{ f.id }}"
+                                        class="px-2 py-1 rounded-md bg-slate-100 text-slate-700">-</span>
+                                    <span id="frente-count-ativos-{{ f.id }}"
+                                        class="px-2 py-1 rounded-md bg-emerald-50 text-emerald-700">-</span>
+                                    <span id="frente-count-inativos-{{ f.id }}"
+                                        class="px-2 py-1 rounded-md bg-red-50 text-red-700">-</span>
+                                </div>
                             </td>
-                            {% endif %}
+
+                            <!-- STATUS -->
+                            <td class="p-2" data-label="Status:">
+                                {% if view_mode %}
+                                <div
+                                    class="text-center text-xs font-bold {{ 'text-emerald-700' if f.ativo else 'text-slate-400' }}">
+                                    {{ 'Ativa' if f.ativo else 'Inativa' }}
+                                </div>
+                                {% else %}
+                                <div class="relative">
+                                    <select name="frente_ativo[]"
+                                        class="form-control-std h-9 text-sm text-center bg-white">
+                                        <option value="1" {% if f.ativo %}selected{% endif %}>Ativa</option>
+                                        <option value="0" {% if not f.ativo %}selected{% endif %}>Inativa</option>
+                                    </select>
+                                </div>
+                                {% endif %}
+                            </td>
+
+                            <!-- AÇÕES -->
+                            <td class="p-2 text-center action-cell" data-label="Ações:">
+                                <div class="flex items-center justify-center gap-2">
+                                    <button type="button" data-frente-id="{{ f.id }}"
+                                        class="js-gerenciar-colaboradores px-3 h-9 rounded-lg text-xs font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition flex items-center gap-2">
+                                        <i class="fas fa-users"></i><span class="hidden sm:inline">Gerenciar</span>
+                                    </button>
+                                    {% if not view_mode %}
+                                    <button type="button" onclick="removeRow(this, {{ f.id }})"
+                                        class="w-9 h-9 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition flex items-center justify-center"
+                                        title="Inativar frente">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </td>
                         </tr>
                         {% endfor %}
                         {% else %}
@@ -617,87 +695,181 @@ shadow-sm placeholder:text-slate-400" %}
                         </tr>
                         {% endif %}
 
-                        {% if not view_mode %}
-                        <script>window.addEventListener('DOMContentLoaded', () => { if (document.getElementById('lista-frentes').children.length === 0) addFrenteRow(); });</script>
-                        {% endif %}
                         {% endif %}
                     </tbody>
                 </table>
             </div>
         </div>
 
-        <!-- Barra de AÃ§Ãµes -->
-        <div class="surface-card rounded-2xl overflow-hidden bg-white border border-slate-200 shadow-sm">
-            <div
-                class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex flex-wrap items-center justify-between gap-4">
-                <div class="flex items-center gap-3">
+        <!-- Modal: Colaboradores da Frente -->
+        <div id="modal-colaboradores" class="fixed inset-0 z-50 hidden">
+            <div class="absolute inset-0 bg-slate-900/40" onclick="closeColaboradoresModal()"></div>
+            <div class="absolute inset-0 flex items-end sm:items-center justify-center p-4">
+                <div class="w-full max-w-5xl bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
                     <div
-                        class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0 text-sm">
-                        <i class="fas fa-users"></i>
+                        class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between gap-3">
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-900 uppercase tracking-wide">Colaboradores da Frente
+                            </h3>
+                            <p class="text-xs text-slate-500 mt-1" id="modal-frente-titulo">-</p>
+                        </div>
+                        <button type="button" onclick="closeColaboradoresModal()"
+                            class="w-10 h-10 rounded-lg hover:bg-slate-100 text-slate-500 flex items-center justify-center">
+                            <i class="fas fa-times"></i>
+                        </button>
                     </div>
-                    <div>
-                        <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">Equipe Padrão da
-                            Obra</h3>
-                        <p class="text-[10px] text-slate-500 hidden sm:block">ComposiÃ§Ã£o base para ser importada no
-                            RDO.</p>
-                    </div>
-                </div>
-                {% if not view_mode %}
-                <button type="button" onclick="addEquipeObraRow()"
-                    class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-2 rounded-lg font-bold text-xs transition flex items-center gap-2">
-                    <i class="fas fa-plus"></i> <span class="hidden sm:inline">Adicionar Mão de Obra</span>
-                </button>
-                {% endif %}
-            </div>
 
-            <div class="w-full overflow-x-auto">
-                <table class="w-full text-left mobile-table" id="table-equipe-obra">
-                    <thead>
-                        <tr
-                            class="bg-slate-50 text-[10px] uppercase text-slate-500 font-bold border-b border-slate-200">
-                            <th class="p-3 w-[70%]">Mão de Obra</th>
-                            <th class="p-3 w-[20%] text-center">Quantidade</th>
-                            {% if not view_mode %}<th class="p-3 w-[10%] text-center"></th>{% endif %}
-                        </tr>
-                    </thead>
-                    <tbody id="lista-equipe-obra" class="divide-y divide-slate-100 bg-white">
-                        {% if equipe_obra %}
-                        {% for equipe in equipe_obra %}
-                        <tr class="group hover:bg-slate-50 transition-colors">
-                            <td class="p-2 full-width-mobile" data-label="Mão de Obra:">
-                                <select
-                                    class="{{ 'w-full h-9 text-sm px-2 rounded-md bg-transparent border-none text-slate-700 appearance-none pointer-events-none' if view_mode else 'form-control-std h-9 text-sm select-equipe-obra bg-white' }}"
-                                    {{ 'disabled' if view_mode }}>
-                                    <option value="">Selecione...</option>
-                                    {% for op in mao_de_obra_options %}
-                                    <option value="{{ op.id }}" {% if op.id==equipe.id_lista_opcoes %}selected{% endif
-                                        %}>{{ op.nome }}{% if op.tipo %} ({{ op.tipo }}){% endif %}</option>
-                                    {% endfor %}
-                                </select>
-                            </td>
-                            <td class="p-2" data-label="Quantidade:">
-                                <input type="number" min="1" step="1" value="{{ equipe.quantidade }}"
-                                    class="{{ 'w-full h-9 text-sm text-center px-2 rounded-md bg-transparent border-none font-bold text-slate-800' if view_mode else 'form-control-std h-9 text-sm text-center font-bold input-equipe-qtd' }}"
-                                    {{ 'readonly' if view_mode }}>
-                            </td>
-                            {% if not view_mode %}
-                            <td class="p-2 text-center action-cell">
-                                <button type="button" onclick="removeEquipeObraRow(this)"
-                                    class="w-8 h-8 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition flex items-center justify-center">
-                                    <i class="fas fa-trash-alt"></i>
-                                </button>
-                            </td>
-                            {% endif %}
-                        </tr>
-                        {% endfor %}
-                        {% elif view_mode %}
-                        <tr>
-                            <td colspan="3" class="p-8 text-center text-slate-400 italic bg-slate-50">Nenhuma equipe
-                                Padrão cadastrada nesta obra.</td>
-                        </tr>
+                    <div class="px-6 py-4 flex flex-wrap gap-2 items-center justify-between">
+                        <div class="flex gap-2 text-[11px] font-bold">
+                            <span class="px-2 py-1 rounded-md bg-slate-100 text-slate-700">Total: <span
+                                    id="modal-count-total">0</span></span>
+                            <span class="px-2 py-1 rounded-md bg-emerald-50 text-emerald-700">Ativos: <span
+                                    id="modal-count-ativos">0</span></span>
+                            <span class="px-2 py-1 rounded-md bg-red-50 text-red-700">Inativos: <span
+                                    id="modal-count-inativos">0</span></span>
+                        </div>
+                        {% if not view_mode %}
+                        <button type="button" onclick="openBuscarColaboradorModal()"
+                            class="px-4 h-10 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-2">
+                            <i class="fas fa-plus"></i> Adicionar colaborador
+                        </button>
                         {% endif %}
-                    </tbody>
-                </table>
+                    </div>
+
+                    <div class="px-6 pb-6 overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr
+                                    class="bg-slate-50 text-[10px] uppercase text-slate-500 font-bold border-b border-slate-200">
+                                    <th class="p-3">Colaborador</th>
+                                    <th class="p-3">Função</th>
+                                    <th class="p-3 text-center">Data Início</th>
+                                    <th class="p-3 text-center">Data Fim</th>
+                                    <th class="p-3 text-center">Status</th>
+                                    {% if not view_mode %}<th class="p-3 text-center">Ações</th>{% endif %}
+                                </tr>
+                            </thead>
+                            <tbody id="modal-vinculos-body" class="divide-y divide-slate-100 bg-white"></tbody>
+                        </table>
+                    </div>
+
+                    <input type="hidden" id="modal-frente-id" value="">
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal: Buscar Colaborador -->
+        <div id="modal-buscar-colaborador" class="fixed inset-0 z-[60] hidden">
+            <div class="absolute inset-0 bg-slate-900/40" onclick="closeBuscarColaboradorModal()"></div>
+            <div class="absolute inset-0 flex items-end sm:items-center justify-center p-4">
+                <div class="w-full max-w-4xl bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+                    <div
+                        class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between gap-3">
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-900 uppercase tracking-wide">Buscar Colaboradores
+                            </h3>
+                            <p class="text-xs text-slate-500 mt-1">Pesquise por nome, CPF/Cadastro Pessoa Física e tipo.
+                            </p>
+                        </div>
+                        <button type="button" onclick="closeBuscarColaboradorModal()"
+                            class="w-10 h-10 rounded-lg hover:bg-slate-100 text-slate-500 flex items-center justify-center">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <div class="p-6 grid grid-cols-12 gap-4">
+                        <div class="col-span-12 sm:col-span-6">
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Nome</label>
+                            <input type="text" id="buscar-q" class="{{ input_base_css }} {{ input_edit_css }}"
+                                placeholder="Digite para pesquisar...">
+                        </div>
+                        <div class="col-span-12 sm:col-span-3">
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">CPF/Cadastro</label>
+                            <input type="text" id="buscar-cpf" class="{{ input_base_css }} {{ input_edit_css }}"
+                                placeholder="Opcional">
+                        </div>
+                        <div class="col-span-12 sm:col-span-3">
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Tipo</label>
+                            <select id="buscar-tipo" class="{{ input_base_css }} {{ input_edit_css }}">
+                                <option value="">Todos</option>
+                                <option value="PROPRIO">Próprio</option>
+                                <option value="TERCEIRO">Terceiro</option>
+                                <option value="CLIENTE">Cliente</option>
+                            </select>
+                        </div>
+                        <div class="col-span-12 flex justify-end">
+                            <button type="button" id="btn-buscar-colaboradores" onclick="buscarColaboradores(this)"
+                                class="px-4 h-10 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-2">
+                                <i class="fas fa-search"></i> Buscar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="px-6 pb-6 overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr
+                                    class="bg-slate-50 text-[10px] uppercase text-slate-500 font-bold border-b border-slate-200">
+                                    <th class="p-3">Nome</th>
+                                    <th class="p-3">Tipo</th>
+                                    <th class="p-3">Função atual</th>
+                                    <th class="p-3 text-center">Status</th>
+                                    <th class="p-3 text-center">Selecionar</th>
+                                </tr>
+                            </thead>
+                            <tbody id="buscar-body" class="divide-y divide-slate-100 bg-white"></tbody>
+                        </table>
+                    </div>
+
+                    <div class="px-6 pb-6">
+                        <div class="surface-card rounded-xl border border-slate-200 p-4 bg-slate-50/50">
+                            <div class="grid grid-cols-12 gap-4">
+                                <div class="col-span-12 sm:col-span-6">
+                                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Função</label>
+                                    <select id="add-funcao-id" class="{{ input_base_css }} {{ input_edit_css }}">
+                                        <option value="">Selecione...</option>
+                                        {% for op in mao_de_obra_options %}
+                                        <option value="{{ op.id }}">{{ op.nome }}{% if op.tipo %} ({{ op.tipo }}){%
+                                            endif %}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-span-12 sm:col-span-3">
+                                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Data
+                                        Início</label>
+                                    <input type="date" id="add-data-inicio"
+                                        class="{{ input_base_css }} {{ input_edit_css }}">
+                                </div>
+                                <div class="col-span-12 sm:col-span-3">
+                                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Data
+                                        Fim</label>
+                                    <input type="date" id="add-data-fim"
+                                        class="{{ input_base_css }} {{ input_edit_css }}">
+                                </div>
+                                <div class="col-span-12 sm:col-span-3">
+                                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Status</label>
+                                    <select id="add-ativo" class="{{ input_base_css }} {{ input_edit_css }}">
+                                        <option value="1" selected>Ativo</option>
+                                        <option value="0">Inativo</option>
+                                    </select>
+                                </div>
+                                <div class="col-span-12 sm:col-span-9 flex items-end">
+                                    <p class="text-xs text-slate-500">Selecione um colaborador acima e preencha os dados
+                                        do vínculo.</p>
+                                </div>
+                                <div class="col-span-12 flex justify-end gap-2">
+                                    <input type="hidden" id="add-colaborador-id" value="">
+                                    <button type="button" id="btn-vincular-colaborador"
+                                        onclick="confirmarAdicionarColaborador(this)"
+                                        class="px-4 h-10 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-2">
+                                        <i class="fas fa-check"></i> Vincular
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
             </div>
         </div>
 
@@ -715,12 +887,14 @@ shadow-sm placeholder:text-slate-400" %}
             {% else %}
             <button type="button" onclick="submitObraForm()" id="submitBtn"
                 class="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md shadow-blue-500/20 transition-all text-center text-sm flex items-center justify-center gap-2">
-                <span id="btnText">{{ 'Salvar AlteraÃ§Ãµes' if item and item.id else 'Cadastrar Obra' }}</span>
+                <span id="btnText">{{ 'Salvar Alterações' if item and item.id else 'Cadastrar Obra' }}</span>
                 <i class="fas fa-spinner fa-spin hidden" id="spinner"></i>
             </button>
             {% endif %}
         </div>
-        {% endcall %}
+
+    </div>
+    {% endcall %}
     </div>
 
     <style>
@@ -814,281 +988,1365 @@ shadow-sm placeholder:text-slate-400" %}
 
     <script>
         const el = (id) => document.getElementById(id);
-        const ADDRESS_FIELDS = ["endereco", "numero", "complemento", "bairro", "cidade", "estado"];
         const isViewMode = {{ 'true' if view_mode else 'false' }};
+        const hasBackendItem = {{ 'true' if item and item.id else 'false' }};
+        const draftKey = `form_obra_draft_${hasBackendItem ? '{{ item.id if item else "novo" }}' : 'novo'}`;
+        const IBGE_ESTADOS_URL = 'https://servicodados.ibge.gov.br/api/v1/localidades/estados';
         let frentesRemovidas = [];
+        let estadosIbge = [];
+        let cidadesIbge = [];
+        let restoringDraft = false;
+        let submittingForm = false;
+        const asyncLocks = {};
+        const FUNCOES_OPTIONS_HTML = `
+            <option value="">Selecione...</option>
+            {% for op in mao_de_obra_options %}
+            <option value="{{ op.id }}">{{ op.nome }}{% if op.tipo %} ({{ op.tipo }}){% endif %}</option>
+            {% endfor %}
+        `;
+        const EQUIPE_OPTIONS_HTML = `
+            <option value="">Selecione...</option>
+            {% for op in mao_de_obra_options %}
+            <option value="{{ op.id }}">{{ op.nome }}{% if op.tipo %} ({{ op.tipo }}){% endif %}</option>
+            {% endfor %}
+        `;
 
-        // --- MÃSCARAS ---
-        function applyMasks() {
-            if (el('cnpj_obra')) el('cnpj_obra').addEventListener('input', e => {
-                let x = e.target.value.replace(/\D/g, '').match(/(\d{0,2})(\d{0,3})(\d{0,3})(\d{0,4})(\d{0,2})/);
-                e.target.value = !x[2] ? x[1] : x[1] + '.' + x[2] + '.' + x[3] + '/' + x[4] + (x[5] ? '-' + x[5] : '');
-            });
-            if (el('cep')) el('cep').addEventListener('input', e => {
-                let x = e.target.value.replace(/\D/g, '').match(/(\d{0,5})(\d{0,3})/);
-                e.target.value = !x[2] ? x[1] : x[1] + '-' + x[2];
-            });
+        function onlyDigits(value) {
+            return String(value || '').replace(/\D/g, '');
         }
 
-        // --- DATAS ---
-        function mascaraData(val) {
-            let v = val.value.replace(/\D/g, "").replace(/^(\d{2})(\d)/, "$1/$2").replace(/\/(\d{2})(\d)/, "/$1/$2");
-            val.value = v;
+        function escapeHtml(value) {
+            return String(value || '').replace(/[&<>"']/g, (char) => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            })[char]);
+        }
+
+        function normalizeText(value) {
+            return String(value || '')
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^a-zA-Z0-9]/g, '')
+                .toLowerCase();
+        }
+
+        function normalizeDisplayText(value) {
+            const text = String(value || '').trim().replace(/\s+/g, ' ');
+            if (!text) return '';
+            const lowerWords = ['a', 'as', 'ao', 'aos', 'da', 'das', 'de', 'do', 'dos', 'e', 'em', 'na', 'nas', 'no', 'nos'];
+            return text.toLocaleLowerCase('pt-BR').split(' ').map((word, index) => {
+                if (index > 0 && lowerWords.includes(word)) return word;
+                return word.charAt(0).toLocaleUpperCase('pt-BR') + word.slice(1);
+            }).join(' ');
+        }
+
+        function buildCnpjLogradouro(data) {
+            const tipo = normalizeDisplayText(
+                data.descricao_tipo_de_logradouro ||
+                data.tipo_logradouro ||
+                data.tipo ||
+                ''
+            );
+            const logradouro = normalizeDisplayText(data.logradouro || '');
+            if (!tipo) return logradouro;
+            if (!logradouro) return tipo;
+            return normalizeText(logradouro).startsWith(normalizeText(tipo)) ? logradouro : `${tipo} ${logradouro}`;
+        }
+
+        function debounce(fn, wait) {
+            let timer = null;
+            return function debounced() {
+                const context = this;
+                const args = arguments;
+                clearTimeout(timer);
+                timer = setTimeout(() => fn.apply(context, args), wait);
+            };
+        }
+
+        function showToast(message, type = 'info') {
+            let wrap = el('obra-toast-container');
+            if (!wrap) {
+                wrap = document.createElement('div');
+                wrap.id = 'obra-toast-container';
+                wrap.className = 'fixed top-4 right-4 z-[9999] space-y-2 max-w-sm';
+                document.body.appendChild(wrap);
+            }
+            const colors = {
+                success: 'bg-emerald-600 text-white',
+                error: 'bg-red-600 text-white',
+                warning: 'bg-amber-500 text-white',
+                info: 'bg-slate-900 text-white'
+            };
+            const toast = document.createElement('div');
+            toast.className = `${colors[type] || colors.info} rounded-xl px-4 py-3 text-sm font-semibold shadow-lg animate-fade-in-up`;
+            toast.textContent = message;
+            wrap.appendChild(toast);
+            setTimeout(() => toast.remove(), 4500);
+        }
+
+        function setButtonLoading(button, loadingText) {
+            if (!button) return () => { };
+            if (button.dataset.loading === '1') return null;
+            const originalHtml = button.innerHTML;
+            button.dataset.loading = '1';
+            button.disabled = true;
+            button.classList.add('opacity-70', 'cursor-wait');
+            button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${loadingText || 'Aguarde...'}`;
+            return () => {
+                button.innerHTML = originalHtml;
+                button.disabled = false;
+                button.dataset.loading = '';
+                button.classList.remove('opacity-70', 'cursor-wait');
+            };
+        }
+
+        function markFieldError(input, message) {
+            if (!input) return;
+            input.classList.add('border-red-300', 'bg-red-50', 'date-invalid');
+            if (message) input.setAttribute('title', message);
+        }
+
+        function clearFieldError(input) {
+            if (!input) return;
+            input.classList.remove('border-red-300', 'bg-red-50', 'date-invalid');
+            input.removeAttribute('title');
+        }
+
+        function scrollToField(input) {
+            if (input && input.scrollIntoView) {
+                input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                setTimeout(() => {
+                    if (input.focus) input.focus({ preventScroll: true });
+                }, 250);
+            }
+        }
+
+        function setInlineMessage(id, text, type = 'info') {
+            const msg = el(id);
+            if (!msg) return;
+            msg.textContent = text || '';
+            msg.classList.remove('text-red-600', 'text-emerald-600', 'text-slate-500', 'text-amber-600');
+            msg.classList.add(type === 'error' ? 'text-red-600' : type === 'success' ? 'text-emerald-600' : type === 'warning' ? 'text-amber-600' : 'text-slate-500');
+        }
+
+        function fillIfEmpty(id, value) {
+            const input = el(id);
+            if (!input || value === undefined || value === null || value === '') return;
+            if (!String(input.value || '').trim()) input.value = value;
+        }
+
+        function fillApiTextIfEmpty(id, value) {
+            fillIfEmpty(id, normalizeDisplayText(value));
+        }
+
+        function setApiTextValue(id, value) {
+            const input = el(id);
+            if (!input || value === undefined || value === null) return;
+            input.value = normalizeDisplayText(value);
+        }
+
+        function addBairroOption(value) {
+            const list = el('bairro-options');
+            const normalized = normalizeDisplayText(value);
+            if (!list || !normalized) return;
+            const exists = Array.from(list.options).some((option) => normalizeText(option.value) === normalizeText(normalized));
+            if (!exists) {
+                const option = document.createElement('option');
+                option.value = normalized;
+                list.appendChild(option);
+            }
+        }
+
+        function setDateIfEmpty(isoDate) {
+            if (!isoDate || !el('data_inicio_hidden') || el('data_inicio_hidden').value) return;
+            const normalized = normalizeApiDate(isoDate);
+            if (!normalized) return;
+            el('data_inicio_hidden').value = normalized;
+            if (el('data_inicio_visual')) {
+                const parts = normalized.split('-');
+                el('data_inicio_visual').value = `${parts[2]}/${parts[1]}/${parts[0]}`;
+            }
+            checkDateLogic(false);
+        }
+
+        function normalizeApiDate(value) {
+            if (!value) return '';
+            const raw = String(value).trim();
+            const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+            const brMatch = raw.match(/^(\d{2})[/. -](\d{2})[/. -](\d{4})$/);
+            if (brMatch) return `${brMatch[3]}-${brMatch[2]}-${brMatch[1]}`;
+            return '';
+        }
+
+        function formatCep(value) {
+            const digits = onlyDigits(value).slice(0, 8);
+            return digits.length > 5 ? `${digits.slice(0, 5)}-${digits.slice(5)}` : digits;
+        }
+
+        function formatCnpj(value) {
+            const digits = onlyDigits(value).slice(0, 14);
+            const parts = digits.match(/^(\d{0,2})(\d{0,3})(\d{0,3})(\d{0,4})(\d{0,2})$/);
+            if (!parts) return digits;
+            return !parts[2] ? parts[1] : parts[1] + '.' + parts[2] + '.' + parts[3] + '/' + parts[4] + (parts[5] ? '-' + parts[5] : '');
+        }
+
+        function isValidCnpj(value) {
+            const cnpj = onlyDigits(value);
+            if (cnpj.length !== 14 || /^(\d)\1+$/.test(cnpj)) return false;
+            const calc = (base) => {
+                let size = base.length;
+                let numbers = base.substring(0, size);
+                let sum = 0;
+                let pos = size - 7;
+                for (let i = size; i >= 1; i--) {
+                    sum += Number(numbers.charAt(size - i)) * pos--;
+                    if (pos < 2) pos = 9;
+                }
+                const result = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+                return String(result);
+            };
+            return calc(cnpj.substring(0, 12)) === cnpj.charAt(12) && calc(cnpj.substring(0, 13)) === cnpj.charAt(13);
+        }
+
+        function fillSelect(select, options, placeholder) {
+            if (!select) return;
+            const selected = select.value || select.dataset.currentState || select.dataset.currentCity || '';
+            select.innerHTML = `<option value="">${placeholder || 'Selecione...'}</option>`;
+            options.forEach((option) => {
+                const opt = document.createElement('option');
+                opt.value = option.value;
+                opt.textContent = option.label;
+                if (option.dataset) {
+                    Object.keys(option.dataset).forEach((key) => {
+                        opt.dataset[key] = option.dataset[key];
+                    });
+                }
+                select.appendChild(opt);
+            });
+            if (selected && Array.from(select.options).some((option) => option.value === selected)) {
+                select.value = selected;
+            }
+        }
+
+        async function loadEstados() {
+            const estadoSelect = el('estado');
+            if (!estadoSelect || isViewMode) return;
+            try {
+                const res = await fetch(IBGE_ESTADOS_URL);
+                if (!res.ok) throw new Error('Erro IBGE estados');
+                estadosIbge = await res.json();
+                estadosIbge.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+                fillSelect(estadoSelect, estadosIbge.map((uf) => ({
+                    value: uf.sigla,
+                    label: uf.sigla,
+                    dataset: { nome: uf.nome }
+                })), 'UF');
+                const currentUf = (estadoSelect.dataset.currentState || '').toUpperCase();
+                if (currentUf) {
+                    estadoSelect.value = currentUf;
+                    await loadCidades(currentUf, el('cidade') ? el('cidade').dataset.currentCity : '');
+                }
+            } catch (error) {
+                showToast('Não foi possível carregar estados do IBGE.', 'error');
+            }
+        }
+
+        async function loadCidades(uf, selectedCity = '') {
+            const cidadeSelect = el('cidade');
+            if (!cidadeSelect || isViewMode) return;
+            cidadesIbge = [];
+            cidadeSelect.innerHTML = '<option value="">Carregando...</option>';
+            if (!uf) {
+                cidadeSelect.innerHTML = '<option value="">Selecione o estado...</option>';
+                return;
+            }
+            try {
+                const res = await fetch(`${IBGE_ESTADOS_URL}/${uf}/municipios`);
+                if (!res.ok) throw new Error('Erro IBGE municípios');
+                cidadesIbge = await res.json();
+                cidadesIbge.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+                fillSelect(cidadeSelect, cidadesIbge.map((cidade) => ({
+                    value: cidade.nome,
+                    label: cidade.nome,
+                    dataset: { ibge: String(cidade.id) }
+                })), 'Selecione...');
+                selectCidadeOption(selectedCity);
+                updateIbgeMunicipio();
+            } catch (error) {
+                cidadeSelect.innerHTML = '<option value="">Erro ao carregar cidades</option>';
+                showToast('Não foi possível carregar cidades do IBGE.', 'error');
+            }
+        }
+
+        function selectCidadeOption(cityName) {
+            const cidadeSelect = el('cidade');
+            if (!cidadeSelect || !cityName) return false;
+            const normalizedCity = normalizeText(cityName);
+            const option = Array.from(cidadeSelect.options).find((opt) => normalizeText(opt.value) === normalizedCity)
+                || Array.from(cidadeSelect.options).find((opt) => normalizeText(opt.textContent) === normalizedCity);
+            if (!option) return false;
+            cidadeSelect.value = option.value;
+            return cidadeSelect.value === option.value;
+        }
+
+        function updateIbgeMunicipio() {
+            const cidadeSelect = el('cidade');
+            const selected = cidadeSelect && cidadeSelect.selectedOptions ? cidadeSelect.selectedOptions[0] : null;
+            const ibge = selected && selected.dataset ? selected.dataset.ibge : '';
+            if (el('ibge_municipio')) el('ibge_municipio').value = ibge || '';
+            if (cidadeSelect) cidadeSelect.dataset.ibgeValidated = ibge || '';
+            if (el('estado')) el('estado').dataset.ibgeValidated = ibge || '';
+        }
+
+        async function selectEstadoCidade(uf, cidade) {
+            const estadoSelect = el('estado');
+            if (!estadoSelect || !uf) return;
+            const normalizedUf = String(uf).trim().toUpperCase();
+            const ufOption = Array.from(estadoSelect.options).find((option) => option.value.toUpperCase() === normalizedUf);
+            if (ufOption) estadoSelect.value = ufOption.value;
+            else estadoSelect.value = normalizedUf;
+            await loadCidades(estadoSelect.value, cidade || '');
+            const cidadeSelect = el('cidade');
+            if (cidadeSelect && cidade) {
+                selectCidadeOption(cidade);
+            }
+            updateIbgeMunicipio();
+        }
+
+        function validateEnderecoObra() {
+            const cepInput = el('cep');
+            const cidadeSelect = el('cidade');
+            const estadoSelect = el('estado');
+            const ibgeInput = el('ibge_municipio');
+            [cepInput, cidadeSelect, estadoSelect].forEach(clearFieldError);
+
+            const cep = onlyDigits(cepInput ? cepInput.value : '');
+            if (!cep) return true;
+            if (cep.length !== 8) {
+                markFieldError(cepInput, 'CEP deve conter 8 dígitos.');
+                setInlineMessage('cep-message', 'CEP deve conter 8 dígitos.', 'error');
+                scrollToField(cepInput);
+                return false;
+            }
+            if (!estadoSelect || !estadoSelect.value || !cidadeSelect || !cidadeSelect.value || !ibgeInput || !ibgeInput.value) {
+                markFieldError(cepInput, 'Valide o CEP e selecione UF/Cidade pelo IBGE.');
+                markFieldError(estadoSelect);
+                markFieldError(cidadeSelect);
+                setInlineMessage('cep-message', 'Valide o CEP e selecione UF/Cidade pelo IBGE.', 'error');
+                scrollToField(cepInput);
+                return false;
+            }
+            return true;
+        }
+
+        async function searchCep(cepValue) {
+            const cepInput = el('cep');
+            const cep = onlyDigits(cepValue);
+            if (!cep) {
+                setInlineMessage('cep-message', '');
+                return;
+            }
+            if (cep.length !== 8) {
+                setInlineMessage('cep-message', 'CEP deve conter 8 dígitos.', 'error');
+                markFieldError(cepInput);
+                return;
+            }
+
+            setInlineMessage('cep-message', 'Buscando CEP...', 'info');
+            try {
+                const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+                if (!res.ok) throw new Error('Erro de rede');
+                const data = await res.json();
+                if (data.erro) {
+                    setInlineMessage('cep-message', 'CEP não encontrado.', 'error');
+                    if (el('ibge_municipio')) el('ibge_municipio').value = '';
+                    markFieldError(cepInput);
+                    return;
+                }
+                setApiTextValue('logradouro', data.logradouro);
+                fillApiTextIfEmpty('bairro', data.bairro);
+                addBairroOption(data.bairro);
+                if (cepInput) cepInput.dataset.validatedCep = cep;
+                await selectEstadoCidade(data.uf, data.localidade);
+                clearFieldError(cepInput);
+                setInlineMessage('cep-message', 'Endereço preenchido e validado pelo IBGE.', 'success');
+                if (el('numero') && !el('numero').value) el('numero').focus();
+                saveDraft();
+            } catch (error) {
+                setInlineMessage('cep-message', 'Erro ao buscar CEP. Tente novamente.', 'error');
+                markFieldError(cepInput);
+            }
+        }
+
+        async function searchCnpj() {
+            const cnpjInput = el('cnpj_obra');
+            const cnpj = onlyDigits(cnpjInput ? cnpjInput.value : '');
+            if (!cnpj) {
+                setInlineMessage('cnpj-message', '');
+                return;
+            }
+            if (!isValidCnpj(cnpj)) {
+                setInlineMessage('cnpj-message', 'CNPJ inválido.', 'error');
+                markFieldError(cnpjInput);
+                return;
+            }
+            setInlineMessage('cnpj-message', 'Buscando dados do CNPJ...', 'info');
+            try {
+                const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
+                if (res.status === 404) {
+                    setInlineMessage('cnpj-message', 'CNPJ não encontrado.', 'error');
+                    return;
+                }
+                if (!res.ok) throw new Error('Erro BrasilAPI');
+                const data = await res.json();
+                clearFieldError(cnpjInput);
+                fillApiTextIfEmpty('nome_obra', data.nome_fantasia || data.razao_social);
+                fillIfEmpty('logradouro', buildCnpjLogradouro(data));
+                fillIfEmpty('numero', data.numero);
+                fillApiTextIfEmpty('complemento', data.complemento);
+                fillApiTextIfEmpty('bairro', data.bairro);
+                addBairroOption(data.bairro);
+                if (data.cep && el('cep') && !onlyDigits(el('cep').value)) el('cep').value = formatCep(data.cep);
+                if (data.uf || data.municipio) await selectEstadoCidade(data.uf, data.municipio);
+                setDateIfEmpty(data.data_inicio_atividade || data.data_abertura || data.abertura);
+                setInlineMessage('cnpj-message', 'Dados do CNPJ carregados.', 'success');
+                saveDraft();
+            } catch (error) {
+                setInlineMessage('cnpj-message', 'Erro ao consultar CNPJ. Tente novamente.', 'error');
+            }
+        }
+
+        function mascaraData(input) {
+            input.value = onlyDigits(input.value).replace(/^(\d{2})(\d)/, '$1/$2').replace(/\/(\d{2})(\d)/, '/$1/$2').slice(0, 10);
+        }
+
+        function parseISODate(value) {
+            if (!value) return null;
+            const parts = String(value).split('-');
+            if (parts.length !== 3) return null;
+            const date = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+            return Number.isNaN(date.getTime()) ? null : date;
+        }
+
+        function parseBRDate(value) {
+            const parts = String(value || '').split('/');
+            if (parts.length !== 3 || parts[2].length !== 4) return '';
+            return `${parts[2]}-${parts[1]}-${parts[0]}`;
         }
 
         function syncDate(visualInput, hiddenId) {
             const hidden = el(hiddenId);
-            const parts = visualInput.value.split('/');
-            if (parts.length === 3 && parts[2].length === 4) hidden.value = `${parts[2]}-${parts[1]}-${parts[0]}`;
-            else hidden.value = '';
-            checkDateLogic();
+            if (hidden) hidden.value = parseBRDate(visualInput.value);
+            checkDateLogic(false);
+            saveDraft();
         }
 
-        // CORRIGIDO: Busca elementos apenas dentro da cÃ©lula atual
         function syncRowDate(visualInput) {
-            // Usa 'closest' para achar o container pai relativo (a cÃ©lula da tabela)
             const container = visualInput.closest('.relative');
-            const hidden = container.querySelector('.frente-date-hidden');
-
-            const parts = visualInput.value.split('/');
-            if (parts.length === 3 && parts[2].length === 4) {
-                hidden.value = `${parts[2]}-${parts[1]}-${parts[0]}`;
-            } else {
-                hidden.value = '';
-            }
+            const hidden = container ? container.querySelector('.frente-date-hidden') : null;
+            if (hidden) hidden.value = parseBRDate(visualInput.value);
+            checkDateLogic(false);
+            saveDraft();
         }
 
         function applyPicker(picker, visualId, hiddenId) {
             if (!picker.value) return;
-            const [y, m, d] = picker.value.split('-');
-            el(visualId).value = `${d}/${m}/${y}`;
-            el(hiddenId).value = picker.value;
-            checkDateLogic();
+            const parts = picker.value.split('-');
+            if (parts.length === 3 && el(visualId) && el(hiddenId)) {
+                el(visualId).value = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                el(hiddenId).value = picker.value;
+            }
+            checkDateLogic(false);
+            saveDraft();
         }
 
-        // CORRIGIDO: Busca elementos apenas dentro da cÃ©lula atual
         function applyRowPicker(picker) {
             if (!picker.value) return;
-
-            // Usa 'closest' para achar o container pai relativo (a cÃ©lula da tabela)
-            // Antes estava buscando na 'tr', o que pegava sempre o primeiro input (Data Início)
             const container = picker.closest('.relative');
-            const visual = container.querySelector('.frente-date-visual');
-            const hidden = container.querySelector('.frente-date-hidden');
-
-            const [y, m, d] = picker.value.split('-');
-            visual.value = `${d}/${m}/${y}`;
-            hidden.value = picker.value;
+            const visual = container ? container.querySelector('.frente-date-visual') : null;
+            const hidden = container ? container.querySelector('.frente-date-hidden') : null;
+            const parts = picker.value.split('-');
+            if (parts.length === 3 && visual && hidden) {
+                visual.value = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                hidden.value = picker.value;
+            }
+            checkDateLogic(false);
+            saveDraft();
         }
 
         function setToday(visualId, hiddenId) {
             const now = new Date();
-            el(visualId).value = now.toLocaleDateString('pt-BR');
-            el(hiddenId).value = now.toISOString().split('T')[0];
-            checkDateLogic();
+            const iso = now.toISOString().split('T')[0];
+            if (el(visualId)) el(visualId).value = now.toLocaleDateString('pt-BR');
+            if (el(hiddenId)) el(hiddenId).value = iso;
+            checkDateLogic(false);
+            saveDraft();
         }
 
-        function checkDateLogic() {
-            const i = el('data_inicio_hidden').value, t = el('data_termino_hidden').value;
-            const visual = el('data_termino_visual'), msg = el('erro_data');
-            if (i && t && new Date(i) > new Date(t)) {
-                if (visual) visual.classList.add('border-red-300', 'bg-red-50');
-                if (msg) msg.classList.replace('hidden', 'flex');
+        function clearDateErrors() {
+            document.querySelectorAll('.date-invalid').forEach(clearFieldError);
+            const msg = el('erro_data');
+            if (msg) {
+                msg.classList.replace('flex', 'hidden');
+                const span = msg.querySelector('span');
+                if (span) span.textContent = '';
+            }
+        }
+
+        function showDateErrors(messages, shouldToast) {
+            const msg = el('erro_data');
+            if (msg) {
+                const span = msg.querySelector('span');
+                if (span) span.textContent = messages[0] || 'Verifique as datas.';
+                msg.classList.replace('hidden', 'flex');
+            }
+            if (shouldToast && messages.length) showToast(messages[0], 'error');
+        }
+
+        function checkDateLogic(shouldNotify = true) {
+            clearDateErrors();
+            const messages = [];
+            let firstInvalidField = null;
+            const obraInicio = parseISODate(el('data_inicio_hidden') ? el('data_inicio_hidden').value : '');
+            const obraFimPlanejada = parseISODate(el('data_fim_planejada_hidden') ? el('data_fim_planejada_hidden').value : '');
+            const obraFimReal = parseISODate(el('data_fim_hidden') ? el('data_fim_hidden').value : '');
+            const limiteObra = [obraFimPlanejada, obraFimReal].filter(Boolean).sort((a, b) => a - b)[0] || null;
+
+            const addDateError = (field, message) => {
+                if (!firstInvalidField) firstInvalidField = field;
+                markFieldError(field, message);
+                messages.push(message);
+            };
+
+            if (obraInicio && obraFimPlanejada && obraFimPlanejada < obraInicio) {
+                addDateError(el('data_fim_planejada_visual'), 'A data final planejada da obra não pode ser anterior à data inicial.');
+            }
+            if (obraInicio && obraFimReal && obraFimReal < obraInicio) {
+                addDateError(el('data_fim_visual'), 'A data final real da obra não pode ser anterior à data inicial.');
+            }
+
+            document.querySelectorAll('#lista-frentes tr').forEach((row, index) => {
+                const nomeInput = row.querySelector('[name="frente_nome[]"]');
+                if (!nomeInput || isFrenteRowEmpty(row)) return;
+                const visuals = row.querySelectorAll('.frente-date-visual');
+                const frenteInicio = parseISODate(row.querySelector('[name="frente_data_inicio[]"]') ? row.querySelector('[name="frente_data_inicio[]"]').value : '');
+                const frenteFimPlanejada = parseISODate(row.querySelector('[name="frente_data_planejada[]"]') ? row.querySelector('[name="frente_data_planejada[]"]').value : '');
+                const frenteFimReal = parseISODate(row.querySelector('[name="frente_data_fim[]"]') ? row.querySelector('[name="frente_data_fim[]"]').value : '');
+                const label = (nomeInput.value || `Frente ${index + 1}`).trim();
+
+                if (obraInicio && frenteInicio && frenteInicio < obraInicio) {
+                    addDateError(visuals[0], `${label}: a data inicial da frente não pode ser anterior à data inicial da obra.`);
+                }
+                if (frenteInicio && frenteFimPlanejada && frenteFimPlanejada < frenteInicio) {
+                    addDateError(visuals[1], `${label}: a data final planejada da frente não pode ser anterior à data inicial.`);
+                }
+                if (frenteInicio && frenteFimReal && frenteFimReal < frenteInicio) {
+                    addDateError(visuals[2], `${label}: a data final da frente não pode ser anterior à data inicial.`);
+                }
+                if (limiteObra && frenteFimPlanejada && frenteFimPlanejada > limiteObra) {
+                    addDateError(visuals[1], `${label}: a data final planejada da frente não pode ultrapassar o fim da obra.`);
+                }
+                if (limiteObra && frenteFimReal && frenteFimReal > limiteObra) {
+                    addDateError(visuals[2], `${label}: a data final da frente não pode ultrapassar o fim da obra.`);
+                }
+            });
+
+            if (messages.length) {
+                showDateErrors(messages, shouldNotify);
+                if (shouldNotify) scrollToField(firstInvalidField);
                 return false;
             }
-            if (visual) visual.classList.remove('border-red-300', 'bg-red-50');
-            if (msg) msg.classList.replace('flex', 'hidden');
             return true;
         }
 
-        // --- CEP ---
-        function searchCep(cepValue) {
-            const clean = cepValue.replace(/\D/g, '');
-            if (clean.length !== 8) return;
-            el("cep-message").innerText = "Buscando...";
-            fetch(`https://viacep.com.br/ws/${clean}/json/`).then(r => r.json()).then(d => {
-                if (d.erro) { el("cep-message").innerText = "CEP nÃ£o encontrado."; return; }
-                el("endereco").value = d.logradouro; el("bairro").value = d.bairro;
-                el("cidade").value = d.localidade; el("estado").value = d.uf;
-                el("cep-message").innerText = ""; el("numero").focus();
-            }).catch(() => el("cep-message").innerText = "Erro ao buscar.");
+        function validateVinculoDates(dataInicioInput, dataFimInput, shouldNotify = true) {
+            [dataInicioInput, dataFimInput].forEach(clearFieldError);
+            const dataInicio = parseISODate(dataInicioInput ? dataInicioInput.value : '');
+            const dataFim = parseISODate(dataFimInput ? dataFimInput.value : '');
+            if (dataInicio && dataFim && dataFim < dataInicio) {
+                markFieldError(dataFimInput, 'A data final do vínculo não pode ser anterior à data inicial.');
+                if (shouldNotify) {
+                    showToast('A data final do vínculo não pode ser anterior à data inicial.', 'error');
+                    scrollToField(dataFimInput);
+                }
+                return false;
+            }
+            return true;
         }
 
-        // --- TABELA DINÃ‚MICA (ADD/REMOVE) ---
-        function addFrenteRow() {
+        function refreshFrenteCounts() {
+            const ids = Array.from(document.querySelectorAll('input[name="frente_id[]"]'))
+                .map((input) => (input.value || '').trim())
+                .filter((value) => value);
+
+            ids.forEach(async (id) => {
+                try {
+                    const res = await fetch(`/auth/api/frente/${id}/colaboradores`);
+                    const data = await res.json();
+                    if (!data || !data.ok) return;
+                    updateFrenteCounters(id, data.counts);
+                } catch (error) { }
+            });
+        }
+
+        function updateFrenteCounters(frenteId, counts) {
+            const total = el(`frente-count-total-${frenteId}`);
+            const ativos = el(`frente-count-ativos-${frenteId}`);
+            const inativos = el(`frente-count-inativos-${frenteId}`);
+            if (total) total.textContent = counts.total;
+            if (ativos) ativos.textContent = counts.ativos;
+            if (inativos) inativos.textContent = counts.inativos;
+            if (el('modal-count-total')) el('modal-count-total').textContent = counts.total;
+            if (el('modal-count-ativos')) el('modal-count-ativos').textContent = counts.ativos;
+            if (el('modal-count-inativos')) el('modal-count-inativos').textContent = counts.inativos;
+        }
+
+        function openColaboradoresModal(frenteId, btn) {
+            const modal = el('modal-colaboradores');
+            if (!modal || !frenteId) return;
+            if (modal.parentElement !== document.body) document.body.appendChild(modal);
+            if (el('modal-frente-id')) el('modal-frente-id').value = String(frenteId);
+            const row = btn && btn.closest ? btn.closest('tr') : null;
+            const nomeInput = row ? row.querySelector('[name="frente_nome[]"]') : null;
+            if (el('modal-frente-titulo')) el('modal-frente-titulo').textContent = nomeInput && nomeInput.value ? `Frente: ${nomeInput.value}` : `Frente #${frenteId}`;
+            modal.classList.remove('hidden');
+            modal.style.display = 'block';
+            modal.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('overflow-hidden');
+            loadVinculos(frenteId);
+        }
+
+        function closeColaboradoresModal() {
+            const modal = el('modal-colaboradores');
+            if (!modal) return;
+            modal.classList.add('hidden');
+            modal.style.display = '';
+            modal.setAttribute('aria-hidden', 'true');
+            document.body.classList.remove('overflow-hidden');
+            if (el('modal-vinculos-body')) el('modal-vinculos-body').innerHTML = '';
+        }
+
+        async function loadVinculos(frenteId) {
+            const body = el('modal-vinculos-body');
+            if (!body) return;
+            body.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400 italic">Carregando...</td></tr>`;
+            try {
+                const res = await fetch(`/auth/api/frente/${frenteId}/colaboradores`);
+                const data = await res.json();
+                if (!res.ok || !data || !data.ok) throw new Error('Falha ao carregar colaboradores');
+                updateFrenteCounters(frenteId, data.counts || { total: 0, ativos: 0, inativos: 0 });
+                renderVinculos(data.items || []);
+            } catch (error) {
+                body.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-red-600 bg-red-50">Erro ao carregar colaboradores.</td></tr>`;
+            }
+        }
+
+        function renderVinculos(items) {
+            const body = el('modal-vinculos-body');
+            if (!body) return;
+            if (!items.length) {
+                body.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400 italic">Nenhum colaborador vinculado.</td></tr>`;
+                return;
+            }
+            body.innerHTML = '';
+            items.forEach((item) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-3 text-sm font-semibold text-slate-800">${escapeHtml(item.colaborador_nome)}</td>
+                    <td class="p-3">${isViewMode ? `<span class="text-sm text-slate-700">${escapeHtml(item.funcao_nome)}</span>` : `<select class="form-control-std h-9 text-sm bg-white" data-field="funcao_id" data-id="${item.id}">${FUNCOES_OPTIONS_HTML}</select>`}</td>
+                    <td class="p-3 text-center">${isViewMode ? `<span class="text-sm text-slate-700">${escapeHtml(item.data_inicio)}</span>` : `<input type="date" class="form-control-std h-9 text-sm text-center bg-white" data-field="data_inicio" data-id="${item.id}" value="${item.data_inicio || ''}">`}</td>
+                    <td class="p-3 text-center">${isViewMode ? `<span class="text-sm text-slate-700">${escapeHtml(item.data_fim)}</span>` : `<input type="date" class="form-control-std h-9 text-sm text-center bg-white" data-field="data_fim" data-id="${item.id}" value="${item.data_fim || ''}">`}</td>
+                    <td class="p-3 text-center">${isViewMode ? `<span class="text-xs font-bold ${item.ativo ? 'text-emerald-700' : 'text-slate-400'}">${item.ativo ? 'Ativo' : 'Inativo'}</span>` : `<select class="form-control-std h-9 text-sm text-center bg-white" data-field="ativo" data-id="${item.id}"><option value="1" ${item.ativo ? 'selected' : ''}>Ativo</option><option value="0" ${!item.ativo ? 'selected' : ''}>Inativo</option></select>`}</td>
+                    ${isViewMode ? '' : `<td class="p-3 text-center"><button type="button" class="px-3 h-9 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold" onclick="salvarVinculo(${item.id}, this)">Salvar</button></td>`}
+                `;
+                body.appendChild(tr);
+                const funcaoSelect = tr.querySelector('select[data-field="funcao_id"]');
+                if (funcaoSelect) funcaoSelect.value = item.funcao_id ? String(item.funcao_id) : '';
+                const dataInicioInput = tr.querySelector('input[data-field="data_inicio"]');
+                const dataFimInput = tr.querySelector('input[data-field="data_fim"]');
+                [dataInicioInput, dataFimInput].forEach((input) => {
+                    if (input) input.addEventListener('change', () => validateVinculoDates(dataInicioInput, dataFimInput, false));
+                });
+            });
+        }
+
+        async function salvarVinculo(vinculoId, button) {
+            if (asyncLocks[`vinculo-${vinculoId}`]) return;
+            const releaseButton = setButtonLoading(button, 'Salvando...');
+            if (releaseButton === null) return;
+            asyncLocks[`vinculo-${vinculoId}`] = true;
+            const funcaoEl = document.querySelector(`select[data-field="funcao_id"][data-id="${vinculoId}"]`);
+            const dataInicioEl = document.querySelector(`input[data-field="data_inicio"][data-id="${vinculoId}"]`);
+            const dataFimEl = document.querySelector(`input[data-field="data_fim"][data-id="${vinculoId}"]`);
+            const ativoEl = document.querySelector(`select[data-field="ativo"][data-id="${vinculoId}"]`);
+            if (!validateVinculoDates(dataInicioEl, dataFimEl, true)) {
+                releaseButton();
+                asyncLocks[`vinculo-${vinculoId}`] = false;
+                return;
+            }
+            try {
+                const res = await fetch(`/auth/api/frente-colaborador/${vinculoId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        funcao_id: funcaoEl && funcaoEl.value ? Number(funcaoEl.value) : null,
+                        data_inicio: dataInicioEl && dataInicioEl.value ? dataInicioEl.value : null,
+                        data_fim: dataFimEl && dataFimEl.value ? dataFimEl.value : null,
+                        ativo: (ativoEl && ativoEl.value ? ativoEl.value : '1') === '1'
+                    })
+                });
+                if (!res.ok) throw new Error('Erro ao salvar vínculo');
+                showToast('Vínculo salvo com sucesso.', 'success');
+                loadVinculos(el('modal-frente-id').value);
+            } catch (error) {
+                showToast('Erro ao salvar vínculo.', 'error');
+            } finally {
+                releaseButton();
+                asyncLocks[`vinculo-${vinculoId}`] = false;
+            }
+        }
+
+        async function toggleVinculo(vinculoId, button) {
+            if (asyncLocks[`toggle-${vinculoId}`]) return;
+            const releaseButton = setButtonLoading(button, 'Atualizando...');
+            if (releaseButton === null) return;
+            asyncLocks[`toggle-${vinculoId}`] = true;
+            try {
+                const res = await fetch(`/auth/api/frente-colaborador/${vinculoId}/toggle`, { method: 'POST' });
+                if (!res.ok) throw new Error('Erro ao alterar status');
+                loadVinculos(el('modal-frente-id').value);
+            } catch (error) {
+                showToast('Erro ao alterar status do vínculo.', 'error');
+            } finally {
+                releaseButton();
+                asyncLocks[`toggle-${vinculoId}`] = false;
+            }
+        }
+
+        function openBuscarColaboradorModal() {
+            const modal = el('modal-buscar-colaborador');
+            if (!modal) return;
+            if (modal.parentElement !== document.body) document.body.appendChild(modal);
+            modal.classList.remove('hidden');
+            modal.style.display = 'block';
+            modal.setAttribute('aria-hidden', 'false');
+            if (el('buscar-body')) el('buscar-body').innerHTML = '';
+            if (el('add-colaborador-id')) el('add-colaborador-id').value = '';
+            if (el('buscar-q')) el('buscar-q').focus();
+        }
+
+        function closeBuscarColaboradorModal() {
+            const modal = el('modal-buscar-colaborador');
+            if (!modal) return;
+            modal.classList.add('hidden');
+            modal.style.display = '';
+            modal.setAttribute('aria-hidden', 'true');
+        }
+
+        async function buscarColaboradores(button) {
+            const releaseButton = setButtonLoading(button || el('btn-buscar-colaboradores'), 'Buscando...');
+            if (releaseButton === null) return;
+            const params = new URLSearchParams();
+            if (el('buscar-q') && el('buscar-q').value) params.set('q', el('buscar-q').value);
+            if (el('buscar-cpf') && el('buscar-cpf').value) params.set('cpf', onlyDigits(el('buscar-cpf').value));
+            if (el('buscar-tipo') && el('buscar-tipo').value) params.set('tipo', el('buscar-tipo').value);
+            const body = el('buscar-body');
+            if (body) body.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400 italic">Buscando...</td></tr>`;
+            try {
+                const res = await fetch(`/auth/api/colaboradores/search?${params.toString()}`);
+                const data = await res.json();
+                if (!res.ok || !data || !data.ok) throw new Error('Falha na busca');
+                renderBuscaColaboradores(data.items || []);
+            } catch (error) {
+                if (body) body.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-red-600 bg-red-50">Erro ao buscar colaboradores.</td></tr>`;
+            } finally {
+                releaseButton();
+            }
+        }
+
+        const buscarColaboradoresDebounced = debounce(() => buscarColaboradores(el('btn-buscar-colaboradores')), 450);
+
+        function renderBuscaColaboradores(items) {
+            const body = el('buscar-body');
+            if (!body) return;
+            if (!items.length) {
+                body.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400 italic">Nenhum resultado.</td></tr>`;
+                return;
+            }
+            body.innerHTML = '';
+            items.forEach((item) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-3 text-sm font-semibold text-slate-800">${escapeHtml(item.nome)}</td>
+                    <td class="p-3 text-sm text-slate-700">${escapeHtml(item.tipo)}</td>
+                    <td class="p-3 text-sm text-slate-700">${escapeHtml(item.funcao_atual)}</td>
+                    <td class="p-3 text-center"><span class="text-xs font-bold ${item.ativo ? 'text-emerald-700' : 'text-slate-400'}">${item.ativo ? 'Ativo' : 'Inativo'}</span></td>
+                    <td class="p-3 text-center"><button type="button" class="px-3 h-9 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold" onclick="selecionarColaborador(${item.id}, this)">Selecionar</button></td>
+                `;
+                body.appendChild(tr);
+            });
+        }
+
+        function selecionarColaborador(colaboradorId, button) {
+            if (el('add-colaborador-id')) el('add-colaborador-id').value = String(colaboradorId || '');
+            document.querySelectorAll('#buscar-body button').forEach((btn) => btn.classList.remove('bg-indigo-600', 'text-white'));
+            if (button) button.classList.add('bg-indigo-600', 'text-white');
+        }
+
+        async function confirmarAdicionarColaborador(button) {
+            const releaseButton = setButtonLoading(button || el('btn-vincular-colaborador'), 'Vinculando...');
+            if (releaseButton === null) return;
+            const frenteId = el('modal-frente-id') ? el('modal-frente-id').value : '';
+            const colaboradorId = el('add-colaborador-id') ? el('add-colaborador-id').value : '';
+            const dataInicioInput = el('add-data-inicio');
+            const dataFimInput = el('add-data-fim');
+            if (!frenteId || !colaboradorId) {
+                showToast('Selecione um colaborador.', 'warning');
+                releaseButton();
+                return;
+            }
+            if (!validateVinculoDates(dataInicioInput, dataFimInput, true)) {
+                releaseButton();
+                return;
+            }
+            try {
+                const res = await fetch(`/auth/api/frente/${frenteId}/colaboradores`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        colaborador_id: Number(colaboradorId),
+                        funcao_id: el('add-funcao-id') && el('add-funcao-id').value ? Number(el('add-funcao-id').value) : null,
+                        data_inicio: dataInicioInput && dataInicioInput.value ? dataInicioInput.value : null,
+                        data_fim: dataFimInput && dataFimInput.value ? dataFimInput.value : null,
+                        ativo: (el('add-ativo') && el('add-ativo').value ? el('add-ativo').value : '1') === '1'
+                    })
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.error || 'Erro ao vincular colaborador');
+                showToast('Colaborador vinculado com sucesso.', 'success');
+                closeBuscarColaboradorModal();
+                loadVinculos(frenteId);
+            } catch (error) {
+                showToast(error.message || 'Erro ao vincular colaborador.', 'error');
+            } finally {
+                releaseButton();
+            }
+        }
+
+        function isFrenteRowEmpty(row) {
+            if (!row || !row.querySelector('[name="frente_nome[]"]')) return true;
+            const fields = [
+                row.querySelector('[name="frente_id[]"]'),
+                row.querySelector('[name="frente_nome[]"]'),
+                row.querySelector('[name="centro_custo[]"]'),
+                row.querySelector('[name="frente_data_inicio[]"]'),
+                row.querySelector('[name="frente_data_planejada[]"]'),
+                row.querySelector('[name="frente_data_fim[]"]')
+            ];
+            return fields.every((field) => !field || !String(field.value || '').trim());
+        }
+
+        function isFrenteRowValid(row) {
+            if (isFrenteRowEmpty(row)) return true;
+            const nome = row.querySelector('[name="frente_nome[]"]');
+            if (!nome || !nome.value.trim()) {
+                markFieldError(nome, 'Informe o nome da frente.');
+                scrollToField(nome);
+                showToast('Informe o nome da frente antes de continuar.', 'warning');
+                return false;
+            }
+            return true;
+        }
+
+        function canAddFrenteRow() {
+            const rows = Array.from(document.querySelectorAll('#lista-frentes tr')).filter((row) => row.querySelector('[name="frente_nome[]"]'));
+            const lastRow = rows[rows.length - 1];
+            if (lastRow && isFrenteRowEmpty(lastRow)) {
+                showToast('Preencha a frente vazia antes de adicionar outra.', 'warning');
+                const input = lastRow.querySelector('[name="frente_nome[]"]');
+                scrollToField(input);
+                return false;
+            }
+            return true;
+        }
+
+        function addFrenteRow(force = false) {
             const tbody = el('lista-frentes');
+            if (!tbody) return;
+            if (!force && !canAddFrenteRow()) return;
+            const emptyMessage = tbody.querySelector('td[colspan]');
+            if (emptyMessage && emptyMessage.closest('tr')) emptyMessage.closest('tr').remove();
             const tr = document.createElement('tr');
             tr.className = 'group hover:bg-slate-50 transition-colors animate-fade-in-up';
-
-            // Estrutura HTML idÃªntica Ã  do Jinja para garantir consistÃªncia
             tr.innerHTML = `
-        <input type="hidden" name="frente_id[]" value="">
-        
-        <td class="p-2 full-width-mobile" data-label="Nome:">
-            <input type="text" name="frente_nome[]" class="form-control-std h-9 text-sm" placeholder="Nome..." required>
-        </td>
-
-        <td class="p-2" data-label="Resp:">
-            <select name="frente_responsavel[]" class="form-control-std h-9 text-sm">
-                <option value="" class="cursor-pointer">Selecione...</option>
-                {% for u in usuarios %}<option value="{{ u.id }}">{{ u.nome }} ({{ u.email }})</option>{% endfor %}
-            </select>
-        </td>
-
-        <td class="p-2" data-label="Unid:">
-            <select name="frente_unidade[]" class="form-control-std h-9 text-sm text-center bg-white cursor-pointer">
-                {% for u in ['mÂ²', 'mÂ³', 'm', 'un', 'kg', 't', 'vb', 'cj', 'h'] %}<option value="{{ u }}">{{ u }}</option>{% endfor %}
-            </select>
-        </td>
-
-        <td class="p-2" data-label="Meta:">
-            <input type="number" name="frente_qtd[]" value="0.00" step="0.01" class="form-control-std h-9 text-sm text-center font-bold">
-        </td>
-
-        <td class="p-2" data-label="Centro de Custo:">
-            <select name="centro_custo[]" class="form-control-std h-9 text-sm text-center bg-white cursor-pointer" required>
-                <option value="">Selecione...</option>
-                {% for cc in (centros_custo or []) %}<option value="{{ cc }}">{{ cc }}</option>{% endfor %}
-            </select>
-        </td>
-
-        <td class="p-2" data-label="Data Inicio:">
-            <div class="relative">
-                <input type="hidden" name="frente_data_inicio[]" class="frente-date-hidden">
-                <input type="text" class="form-control-std h-9 text-sm text-left pr-8 frente-date-visual cursor-pointer" 
-                    placeholder="DD/MM/AAAA" maxlength="10" oninput="mascaraData(this); syncRowDate(this)">
-                
-                <div class="absolute inset-y-0 right-0 flex items-center pr-2 cursor-pointer z-10" onclick="this.nextElementSibling.showPicker()">
-                    <i class="far fa-calendar-alt text-slate-400 hover:text-purple-600"></i>
-                </div>
-                <input type="date" class="absolute w-0 h-0 opacity-0 pointer-events-none" tabindex="-1" onchange="applyRowPicker(this)">
-            </div>
-        </td>
-
-        <td class="p-2" data-label="Data Fim:">
-            <div class="relative">
-                <input type="hidden" name="frente_data_planejada[]" class="frente-date-hidden">
-                <input type="text" class="form-control-std h-9 text-sm text-left pr-8 frente-date-visual cursor-pointer" 
-                    placeholder="DD/MM/AAAA" maxlength="10" oninput="mascaraData(this); syncRowDate(this)">
-                
-                <div class="absolute inset-y-0 right-0 flex items-center pr-2 cursor-pointer z-10" onclick="this.nextElementSibling.showPicker()">
-                    <i class="far fa-calendar-alt text-slate-400 hover:text-purple-600"></i>
-                </div>
-                <input type="date" class="absolute w-0 h-0 opacity-0 pointer-events-none" tabindex="-1" onchange="applyRowPicker(this)">
-            </div>
-        </td>
-
-        <td class="p-2 text-center text-xs text-slate-400" data-label="Status:">Nova</td>
-
-        <td class="p-2 text-center action-cell">
-            <button type="button" onclick="removeRow(this, null)" class="w-8 h-8 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center">
-                <i class="fas fa-trash-alt"></i>
-            </button>
-        </td>
-    `;
+                <input type="hidden" name="frente_id[]" value="">
+                <td class="p-2 full-width-mobile" data-label="Nome:"><input type="text" name="frente_nome[]" class="form-control-std h-9 text-sm" placeholder="Nome..." required></td>
+                <td class="p-2" data-label="Centro de Custo:"><input type="text" name="centro_custo[]" class="form-control-std h-9 text-sm text-center bg-white" placeholder="Centro de custo..."></td>
+                <td class="p-2" data-label="Data Inicio:"><div class="relative"><input type="hidden" name="frente_data_inicio[]" class="frente-date-hidden"><input type="text" class="form-control-std h-9 text-sm text-left pr-8 frente-date-visual cursor-pointer" placeholder="DD/MM/AAAA" maxlength="10" oninput="mascaraData(this); syncRowDate(this)"><div class="absolute inset-y-0 right-0 flex items-center pr-2 cursor-pointer z-10" onclick="this.nextElementSibling.showPicker()"><i class="far fa-calendar-alt text-slate-400 hover:text-purple-600"></i></div><input type="date" class="absolute w-0 h-0 opacity-0 pointer-events-none" tabindex="-1" onchange="applyRowPicker(this)"></div></td>
+                <td class="p-2" data-label="Data Fim Planejada:"><div class="relative"><input type="hidden" name="frente_data_planejada[]" class="frente-date-hidden"><input type="text" class="form-control-std h-9 text-sm text-left pr-8 frente-date-visual cursor-pointer" placeholder="DD/MM/AAAA" maxlength="10" oninput="mascaraData(this); syncRowDate(this)"><div class="absolute inset-y-0 right-0 flex items-center pr-2 cursor-pointer z-10" onclick="this.nextElementSibling.showPicker()"><i class="far fa-calendar-alt text-slate-400 hover:text-purple-600"></i></div><input type="date" class="absolute w-0 h-0 opacity-0 pointer-events-none" tabindex="-1" onchange="applyRowPicker(this)"></div></td>
+                <td class="p-2" data-label="Data Fim:"><div class="relative"><input type="hidden" name="frente_data_fim[]" class="frente-date-hidden"><input type="text" class="form-control-std h-9 text-sm text-left pr-8 frente-date-visual cursor-pointer" placeholder="DD/MM/AAAA" maxlength="10" oninput="mascaraData(this); syncRowDate(this)"><div class="absolute inset-y-0 right-0 flex items-center pr-2 cursor-pointer z-10" onclick="this.nextElementSibling.showPicker()"><i class="far fa-calendar-alt text-slate-400 hover:text-purple-600"></i></div><input type="date" class="absolute w-0 h-0 opacity-0 pointer-events-none" tabindex="-1" onchange="applyRowPicker(this)"></div></td>
+                <td class="p-2" data-label="Colaboradores:"><div class="flex justify-center gap-1 text-[11px] font-bold"><span class="px-2 py-1 rounded-md bg-slate-100 text-slate-700">-</span><span class="px-2 py-1 rounded-md bg-emerald-50 text-emerald-700">-</span><span class="px-2 py-1 rounded-md bg-red-50 text-red-700">-</span></div></td>
+                <td class="p-2" data-label="Status:"><select name="frente_ativo[]" class="form-control-std h-9 text-sm text-center bg-white"><option value="1" selected>Ativa</option><option value="0">Inativa</option></select></td>
+                <td class="p-2 text-center action-cell" data-label="Ações:"><div class="flex items-center justify-center gap-2"><button type="button" class="px-3 h-9 rounded-lg text-xs font-bold bg-indigo-50 text-indigo-400 border border-indigo-100 flex items-center gap-2 cursor-not-allowed" disabled><i class="fas fa-users"></i><span class="hidden sm:inline">Gerenciar</span></button><button type="button" onclick="removeRow(this, null)" class="w-9 h-9 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center"><i class="fas fa-trash-alt"></i></button></div></td>
+            `;
             tbody.appendChild(tr);
+            const nome = tr.querySelector('[name="frente_nome[]"]');
+            if (nome) nome.focus();
+            saveDraft();
         }
 
-        function removeRow(btn, id) {
+        function removeRow(button, id) {
             if (id) frentesRemovidas.push(id);
-            btn.closest('tr').remove();
+            const row = button && button.closest ? button.closest('tr') : null;
+            if (row) row.remove();
+            saveDraft();
+        }
+
+        function canAddEquipeRow() {
+            const rows = Array.from(document.querySelectorAll('#lista-equipe-obra tr'));
+            const lastRow = rows[rows.length - 1];
+            if (!lastRow) return true;
+            const select = lastRow.querySelector('.select-equipe-obra');
+            const quantidade = lastRow.querySelector('.input-equipe-qtd');
+            if (select && !select.value && quantidade && (!quantidade.value || quantidade.value === '1')) {
+                showToast('Preencha o vínculo de equipe vazio antes de adicionar outro.', 'warning');
+                scrollToField(select);
+                return false;
+            }
+            return true;
         }
 
         function addEquipeObraRow(selectedId = '', quantidade = '1') {
             const tbody = el('lista-equipe-obra');
-            if (!tbody) return;
-
+            if (!tbody || (!selectedId && !canAddEquipeRow())) return;
             const tr = document.createElement('tr');
             tr.className = 'group hover:bg-slate-50 transition-colors animate-fade-in-up';
             tr.innerHTML = `
-                <td class="p-2 full-width-mobile" data-label="Mão de Obra:">
-                    <select class="form-control-std h-9 text-sm select-equipe-obra bg-white">
-                        <option value="">Selecione...</option>
-                        {% for op in mao_de_obra_options %}
-                        <option value="{{ op.id }}" ${String(selectedId) === '{{ op.id }}' ? 'selected' : ''}>{{ op.nome }}{% if op.tipo %} ({{ op.tipo }}){% endif %}</option>
-                        {% endfor %}
-                    </select>
-                </td>
-                <td class="p-2" data-label="Quantidade:">
-                    <input type="number" min="1" step="1" value="${quantidade}" class="form-control-std h-9 text-sm text-center font-bold input-equipe-qtd">
-                </td>
-                <td class="p-2 text-center action-cell">
-                    <button type="button" onclick="removeEquipeObraRow(this)" class="w-8 h-8 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition flex items-center justify-center">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>
-                </td>
+                <td class="p-2 full-width-mobile" data-label="Mão de Obra:"><select class="form-control-std h-9 text-sm select-equipe-obra bg-white">${EQUIPE_OPTIONS_HTML}</select></td>
+                <td class="p-2" data-label="Quantidade:"><input type="number" min="1" step="1" value="${escapeHtml(quantidade)}" class="form-control-std h-9 text-sm text-center font-bold input-equipe-qtd"></td>
+                <td class="p-2 text-center action-cell"><button type="button" onclick="removeEquipeObraRow(this)" class="w-8 h-8 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition flex items-center justify-center"><i class="fas fa-trash-alt"></i></button></td>
             `;
             tbody.appendChild(tr);
+            const select = tr.querySelector('.select-equipe-obra');
+            if (select) select.value = String(selectedId || '');
+            saveDraft();
         }
 
-        function removeEquipeObraRow(btn) {
-            btn.closest('tr').remove();
+        function removeEquipeObraRow(button) {
+            const row = button && button.closest ? button.closest('tr') : null;
+            if (row) row.remove();
+            saveDraft();
         }
 
-        // --- SUBMISSÃƒO DO FORM ---
-        function submitObraForm() {
-            if (!checkDateLogic()) return alert("Verifique as datas globais da obra.");
-
-            // Limpeza do CNPJ da obra
-            const cnpjInput = el('cnpj_obra');
-            if (cnpjInput) cnpjInput.value = cnpjInput.value.replace(/\D/g, '');
-
-            // --- CORREÃ‡ÃƒO CEP ---
-            // Remove mÃ¡scara do CEP antes de enviar (transforma '12345-678' em '12345678')
-            const cepInput = el('cep');
-            if (cepInput) cepInput.value = cepInput.value.replace(/\D/g, '');
-
-            // Monta o JSON das frentes para o Backend processar
-            const frentes = [];
-            document.querySelectorAll('#lista-frentes tr').forEach(row => {
-                // Ignora a linha se for a mensagem de "vazio"
-                if (!row.querySelector('[name="frente_nome[]"]')) return;
-
-                const id = row.querySelector('[name="frente_id[]"]').value;
-                frentes.push({
-                    id_frente_trabalho: id || null,
-                    nome_frente: row.querySelector('[name="frente_nome[]"]').value,
-                    centro_custo: row.querySelector('[name=\"centro_custo[]\"]').value,
-                    data_inicio: row.querySelector('[name="frente_data_inicio[]"]').value,
-                    data_planejada: row.querySelector('[name="frente_data_planejada[]"]').value,
-                    data_fim: row.querySelector('[name="frente_data_fim[]"]').value
+        function initGerenciarColaboradoresButtons() {
+            document.querySelectorAll('.js-gerenciar-colaboradores').forEach((button) => {
+                if (button.dataset.bound === '1') return;
+                button.dataset.bound = '1';
+                button.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    const rowFrenteId = button.getAttribute('data-frente-id');
+                    if (!rowFrenteId) {
+                        showToast('Salve a obra antes de gerenciar colaboradores desta frente.', 'warning');
+                        return;
+                    }
+                    openColaboradoresModal(rowFrenteId, button);
                 });
             });
+        }
 
-            // Payload formatado para a lÃ³gica "novas/editadas/removidas" do Python
-            const jsonPayload = {
-                novas: frentes.filter(f => !f.id_frente_trabalho),
-                editadas: frentes.filter(f => f.id_frente_trabalho),
+        function collectFrentesPayload() {
+            const frentes = [];
+            const rows = Array.from(document.querySelectorAll('#lista-frentes tr')).filter((row) => row.querySelector('[name="frente_nome[]"]'));
+            for (const row of rows) {
+                if (isFrenteRowEmpty(row)) continue;
+                if (!isFrenteRowValid(row)) return null;
+                const idInput = row.querySelector('[name="frente_id[]"]');
+                const ativoSelect = row.querySelector('[name="frente_ativo[]"]');
+                frentes.push({
+                    id_frente_trabalho: idInput && idInput.value ? idInput.value : null,
+                    nome_frente: row.querySelector('[name="frente_nome[]"]').value.trim(),
+                    centro_custo: row.querySelector('[name="centro_custo[]"]') ? row.querySelector('[name="centro_custo[]"]').value.trim() : '',
+                    data_inicio: row.querySelector('[name="frente_data_inicio[]"]') ? row.querySelector('[name="frente_data_inicio[]"]').value : '',
+                    data_planejada: row.querySelector('[name="frente_data_planejada[]"]') ? row.querySelector('[name="frente_data_planejada[]"]').value : '',
+                    data_fim: row.querySelector('[name="frente_data_fim[]"]') ? row.querySelector('[name="frente_data_fim[]"]').value : '',
+                    ativo: ((ativoSelect && ativoSelect.value) ? ativoSelect.value : '1') === '1'
+                });
+            }
+            return {
+                novas: frentes.filter((frente) => !frente.id_frente_trabalho),
+                editadas: frentes.filter((frente) => frente.id_frente_trabalho),
                 removidas: frentesRemovidas
             };
+        }
 
-            el('frentes_json').value = JSON.stringify(jsonPayload);
-
+        function collectEquipePayload() {
             const equipe = [];
-            document.querySelectorAll('#lista-equipe-obra tr').forEach(row => {
+            document.querySelectorAll('#lista-equipe-obra tr').forEach((row) => {
                 const select = row.querySelector('.select-equipe-obra');
                 const quantidadeInput = row.querySelector('.input-equipe-qtd');
                 if (!select || !quantidadeInput || !select.value) return;
-
                 equipe.push({
                     id_lista_opcoes: select.value,
                     quantidade_mao_obra: quantidadeInput.value || 0
                 });
             });
-
-            el('equipe_obra_json').value = JSON.stringify(equipe);
-
-            const btn = el("submitBtn");
-            el("btnText").classList.add("hidden");
-            el("spinner").classList.remove("hidden");
-            btn.disabled = true;
-
-            el("mainForm").submit();
+            return equipe;
         }
 
-        document.addEventListener("DOMContentLoaded", () => {
+        function getDraftFieldKey(field) {
+            if (!field || !field.name || field.disabled) return '';
+            if (['categoria', 'frentes_json', 'equipe_obra_json'].includes(field.name)) return '';
+            if (field.name.endsWith('[]')) return '';
+            return field.name;
+        }
+
+        function getFieldDraftValue(field) {
+            if (field.type === 'checkbox') return field.checked;
+            if (field.type === 'radio') return field.checked ? field.value : null;
+            return field.value;
+        }
+
+        function setFieldDraftValue(field, value) {
+            if (value === undefined || value === null) return;
+            if (field.type === 'checkbox') {
+                field.checked = Boolean(value);
+                return;
+            }
+            if (field.type === 'radio') {
+                field.checked = field.value === String(value);
+                return;
+            }
+            field.value = value;
+        }
+
+        function collectDraftFields(form) {
+            const fields = {};
+            form.querySelectorAll('input[name], select[name], textarea[name]').forEach((field) => {
+                const key = getDraftFieldKey(field);
+                if (!key) return;
+                const value = getFieldDraftValue(field);
+                if (value === null) return;
+                fields[key] = value;
+            });
+            return fields;
+        }
+
+        function restoreDraftFields(form, fields) {
+            if (!form || !fields) return;
+            Object.keys(fields).forEach((key) => {
+                const escapedKey = key.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+                form.querySelectorAll(`[name="${escapedKey}"]`).forEach((field) => {
+                    setFieldDraftValue(field, fields[key]);
+                });
+            });
+        }
+
+        function collectFrentesDraft() {
+            return Array.from(document.querySelectorAll('#lista-frentes tr'))
+                .filter((row) => !isFrenteRowEmpty(row))
+                .map((row) => ({
+                    id: row.querySelector('[name="frente_id[]"]') ? row.querySelector('[name="frente_id[]"]').value : '',
+                    nome: row.querySelector('[name="frente_nome[]"]') ? row.querySelector('[name="frente_nome[]"]').value : '',
+                    centro_custo: row.querySelector('[name="centro_custo[]"]') ? row.querySelector('[name="centro_custo[]"]').value : '',
+                    data_inicio: row.querySelector('[name="frente_data_inicio[]"]') ? row.querySelector('[name="frente_data_inicio[]"]').value : '',
+                    data_planejada: row.querySelector('[name="frente_data_planejada[]"]') ? row.querySelector('[name="frente_data_planejada[]"]').value : '',
+                    data_fim: row.querySelector('[name="frente_data_fim[]"]') ? row.querySelector('[name="frente_data_fim[]"]').value : '',
+                    ativo: row.querySelector('[name="frente_ativo[]"]') ? row.querySelector('[name="frente_ativo[]"]').value : '1'
+                }));
+        }
+
+        function collectEquipeDraft() {
+            return Array.from(document.querySelectorAll('#lista-equipe-obra tr')).map((row) => ({
+                selectedId: row.querySelector('.select-equipe-obra') ? row.querySelector('.select-equipe-obra').value : '',
+                quantidade: row.querySelector('.input-equipe-qtd') ? row.querySelector('.input-equipe-qtd').value : '1'
+            })).filter((item) => item.selectedId || item.quantidade);
+        }
+
+        function setRowDateDraft(row, index, value) {
+            const hidden = row.querySelectorAll('.frente-date-hidden')[index];
+            const visual = row.querySelectorAll('.frente-date-visual')[index];
+            if (hidden) hidden.value = value || '';
+            if (visual) {
+                visual.value = '';
+                if (value) {
+                    const parts = value.split('-');
+                    if (parts.length === 3) visual.value = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                }
+            }
+        }
+
+        function restoreFrentesDraft(frentes) {
+            const tbody = el('lista-frentes');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            if (!Array.isArray(frentes) || !frentes.length) {
+                addFrenteRow(true);
+                return;
+            }
+            frentes.forEach((frente) => {
+                addFrenteRow(true);
+                const row = tbody.lastElementChild;
+                if (row.querySelector('[name="frente_id[]"]')) row.querySelector('[name="frente_id[]"]').value = frente.id || '';
+                if (row.querySelector('[name="frente_nome[]"]')) row.querySelector('[name="frente_nome[]"]').value = frente.nome || '';
+                if (row.querySelector('[name="centro_custo[]"]')) row.querySelector('[name="centro_custo[]"]').value = frente.centro_custo || '';
+                setRowDateDraft(row, 0, frente.data_inicio || '');
+                setRowDateDraft(row, 1, frente.data_planejada || '');
+                setRowDateDraft(row, 2, frente.data_fim || '');
+                if (row.querySelector('[name="frente_ativo[]"]')) row.querySelector('[name="frente_ativo[]"]').value = frente.ativo || '1';
+            });
+        }
+
+        function restoreEquipeDraft(equipe) {
+            const tbody = el('lista-equipe-obra');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            if (!Array.isArray(equipe)) return;
+            equipe.forEach((item) => addEquipeObraRow(item.selectedId || '', item.quantidade || '1'));
+        }
+
+        function saveDraft() {
+            if (isViewMode || hasBackendItem || restoringDraft) return;
+            const form = el('mainForm');
+            if (!form) return;
+            const draft = {
+                fields: collectDraftFields(form)
+            };
+            draft.visualDates = {
+                data_inicio_visual: el('data_inicio_visual') ? el('data_inicio_visual').value : '',
+                data_fim_planejada_visual: el('data_fim_planejada_visual') ? el('data_fim_planejada_visual').value : '',
+                data_fim_visual: el('data_fim_visual') ? el('data_fim_visual').value : ''
+            };
+            draft.frentes = collectFrentesDraft();
+            draft.equipe = collectEquipeDraft();
+            localStorage.setItem(draftKey, JSON.stringify(draft));
+        }
+
+        async function restoreDraft() {
+            if (isViewMode || hasBackendItem) return;
+            const raw = localStorage.getItem(draftKey);
+            if (!raw) {
+                if (!document.querySelector('#lista-frentes tr [name="frente_nome[]"]')) {
+                    restoringDraft = true;
+                    addFrenteRow(true);
+                    restoringDraft = false;
+                }
+                return;
+            }
+            try {
+                restoringDraft = true;
+                const draft = JSON.parse(raw);
+                const form = el('mainForm');
+                restoreDraftFields(form, draft.fields || draft);
+                if (draft.visualDates) {
+                    Object.keys(draft.visualDates).forEach((id) => {
+                        if (el(id)) el(id).value = draft.visualDates[id];
+                    });
+                }
+                const fields = draft.fields || draft;
+                if (fields.estado) await selectEstadoCidade(fields.estado, fields.cidade || '');
+                restoreFrentesDraft(draft.frentes || []);
+                restoreEquipeDraft(draft.equipe || []);
+                showToast('Rascunho restaurado.', 'success');
+            } catch (error) {
+                localStorage.removeItem(draftKey);
+            } finally {
+                restoringDraft = false;
+            }
+        }
+
+        function clearObraDraft() {
+            localStorage.removeItem(draftKey);
+            showToast('Rascunho removido.', 'success');
+        }
+
+        async function clearNewObraForm() {
+            if (hasBackendItem || isViewMode) return;
+            if (!confirm('Deseja limpar todos os campos deste novo cadastro?')) return;
+
+            restoringDraft = true;
+            localStorage.removeItem(draftKey);
+            frentesRemovidas = [];
+
+            const form = el('mainForm');
+            if (form) {
+                form.querySelectorAll('input, select, textarea').forEach((field) => {
+                    if (field.type === 'hidden' && !['data_inicio', 'data_fim_planejada', 'data_fim', 'ibge_municipio', 'frentes_json', 'equipe_obra_json'].includes(field.name)) return;
+                    if (field.name === 'categoria') return;
+                    if (field.type === 'checkbox' || field.type === 'radio') {
+                        field.checked = false;
+                    } else {
+                        field.value = '';
+                    }
+                    clearFieldError(field);
+                });
+            }
+
+            if (document.querySelector('[name="ativo"]')) document.querySelector('[name="ativo"]').value = '1';
+            if (document.querySelector('[name="hora_entrada_padrao"]')) document.querySelector('[name="hora_entrada_padrao"]').value = '07:00';
+            if (document.querySelector('[name="intervalo_entrada_padrao"]')) document.querySelector('[name="intervalo_entrada_padrao"]').value = '12:00';
+            if (document.querySelector('[name="intervalo_saida_padrao"]')) document.querySelector('[name="intervalo_saida_padrao"]').value = '13:00';
+            if (document.querySelector('[name="hora_saida_padrao"]')) document.querySelector('[name="hora_saida_padrao"]').value = '17:00';
+
+            if (el('cep')) el('cep').dataset.validatedCep = '';
+            setInlineMessage('cep-message', '');
+            setInlineMessage('cnpj-message', '');
+            if (el('estado')) el('estado').value = '';
+            await loadCidades('');
+
+            const tbodyFrentes = el('lista-frentes');
+            if (tbodyFrentes) {
+                tbodyFrentes.innerHTML = '';
+                addFrenteRow(true);
+            }
+
+            const tbodyEquipe = el('lista-equipe-obra');
+            if (tbodyEquipe) tbodyEquipe.innerHTML = '';
+
+            clearDateErrors();
+            restoringDraft = false;
+            showToast('Formulário limpo.', 'success');
+            const nomeInput = document.querySelector('[name="nome"]');
+            if (nomeInput) nomeInput.focus();
+        }
+
+        function applyMasks() {
+            const cnpjInput = el('cnpj_obra');
+            if (cnpjInput) {
+                cnpjInput.value = formatCnpj(cnpjInput.value);
+                cnpjInput.addEventListener('input', (event) => {
+                    event.target.value = formatCnpj(event.target.value);
+                    clearFieldError(event.target);
+                    setInlineMessage('cnpj-message', '');
+                });
+                cnpjInput.addEventListener('blur', () => searchCnpj());
+            }
+            const cepInput = el('cep');
+            if (cepInput) {
+                cepInput.value = formatCep(cepInput.value);
+                cepInput.addEventListener('input', (event) => {
+                    event.target.value = formatCep(event.target.value);
+                    clearFieldError(event.target);
+                    event.target.dataset.validatedCep = '';
+                    if (el('ibge_municipio')) el('ibge_municipio').value = '';
+                    setInlineMessage('cep-message', '');
+                    saveDraft();
+                });
+                cepInput.addEventListener('blur', () => searchCep(cepInput.value));
+            }
+        }
+
+        function initListeners() {
+            initGerenciarColaboradoresButtons();
+            const estadoSelect = el('estado');
+            if (estadoSelect && !isViewMode) {
+                estadoSelect.addEventListener('change', async () => {
+                    await loadCidades(estadoSelect.value);
+                    saveDraft();
+                });
+            }
+            const cidadeSelect = el('cidade');
+            if (cidadeSelect && !isViewMode) {
+                cidadeSelect.addEventListener('change', () => {
+                    updateIbgeMunicipio();
+                    saveDraft();
+                });
+            }
+            ['buscar-q', 'buscar-cpf', 'buscar-tipo'].forEach((id) => {
+                const input = el(id);
+                if (input) input.addEventListener(id === 'buscar-tipo' ? 'change' : 'input', buscarColaboradoresDebounced);
+            });
+            const form = el('mainForm');
+            if (form && !isViewMode && !hasBackendItem) {
+                form.addEventListener('input', debounce(saveDraft, 350));
+                form.addEventListener('change', debounce(saveDraft, 350));
+            }
+            const addDataInicio = el('add-data-inicio');
+            const addDataFim = el('add-data-fim');
+            [addDataInicio, addDataFim].forEach((input) => {
+                if (input) input.addEventListener('change', () => validateVinculoDates(addDataInicio, addDataFim, false));
+            });
+        }
+
+        function validateRequiredFields() {
+            const nome = document.querySelector('[name="nome"]');
+            const cliente = document.querySelector('[name="cliente_id"]');
+            [nome, cliente].forEach(clearFieldError);
+            if (nome && !nome.value.trim()) {
+                markFieldError(nome, 'Nome da obra obrigatório.');
+                scrollToField(nome);
+                showToast('Nome da obra é obrigatório.', 'error');
+                return false;
+            }
+            if (cliente && !cliente.value) {
+                markFieldError(cliente, 'Cliente obrigatório.');
+                scrollToField(cliente);
+                showToast('Cliente é obrigatório.', 'error');
+                return false;
+            }
+            return true;
+        }
+
+        function submitObraForm() {
+            if (submittingForm) return;
+            if (!validateRequiredFields()) return;
+            if (!checkDateLogic(true)) return;
+            if (!validateEnderecoObra()) {
+                showToast('Verifique o endereço da obra.', 'error');
+                return;
+            }
+            const frentesPayload = collectFrentesPayload();
+            if (!frentesPayload) return;
+
+            const cnpjInput = el('cnpj_obra');
+            if (cnpjInput) cnpjInput.value = onlyDigits(cnpjInput.value);
+            const cepInput = el('cep');
+            if (cepInput) cepInput.value = onlyDigits(cepInput.value);
+            if (el('frentes_json')) el('frentes_json').value = JSON.stringify(frentesPayload);
+            if (el('equipe_obra_json')) el('equipe_obra_json').value = JSON.stringify(collectEquipePayload());
+
+            const button = el('submitBtn');
+            submittingForm = true;
+            if (button) button.disabled = true;
+            if (el('btnText')) el('btnText').classList.add('hidden');
+            if (el('spinner')) el('spinner').classList.remove('hidden');
+            localStorage.removeItem(draftKey);
+            el('mainForm').submit();
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
             applyMasks();
-            if (el('cep') && !isViewMode) el('cep').addEventListener('blur', e => searchCep(e.target.value));
+            await loadEstados();
+            await restoreDraft();
+            initListeners();
+            refreshFrenteCounts();
+            checkDateLogic(false);
         });
+
+        window.openColaboradoresModal = openColaboradoresModal;
+        window.closeColaboradoresModal = closeColaboradoresModal;
+        window.openBuscarColaboradorModal = openBuscarColaboradorModal;
+        window.closeBuscarColaboradorModal = closeBuscarColaboradorModal;
+        window.buscarColaboradores = buscarColaboradores;
+        window.selecionarColaborador = selecionarColaborador;
+        window.confirmarAdicionarColaborador = confirmarAdicionarColaborador;
+        window.salvarVinculo = salvarVinculo;
+        window.toggleVinculo = toggleVinculo;
+        window.addFrenteRow = addFrenteRow;
+        window.removeRow = removeRow;
+        window.addEquipeObraRow = addEquipeObraRow;
+        window.removeEquipeObraRow = removeEquipeObraRow;
+        window.submitObraForm = submitObraForm;
+        window.clearObraDraft = clearObraDraft;
+        window.clearNewObraForm = clearNewObraForm;
+        window.mascaraData = mascaraData;
+        window.syncDate = syncDate;
+        window.syncRowDate = syncRowDate;
+        window.applyPicker = applyPicker;
+        window.applyRowPicker = applyRowPicker;
+        window.setToday = setToday;
     </script>
     {% endblock %}

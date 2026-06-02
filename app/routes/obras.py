@@ -1,6 +1,6 @@
 ﻿from app.routes.auth_common import *
 from app.models.cliente import Cliente
-from app.models.obra import FrenteTrabalho
+from app.models.obra import FrenteTrabalho, FrenteColaborador, ObraUsuario
 from app.utils.export_service import make_csv_response, make_xlsx_response, make_pdf_response
 from app.models.usuario import Colaborador
 from sqlalchemy import func
@@ -31,6 +31,147 @@ def _get_centros_custo_options(empresa_id):
     )
     values = sorted({(v or "").strip() for (v,) in rows if (v or "").strip()})
     return values
+
+
+def _current_empresa_id(user=None):
+    return session.get("empresa_id") or getattr(user, "empresa_id", None)
+
+
+def _get_obras_permitidas_ids(user, empresa_id):
+    if not user or not empresa_id:
+        return []
+
+    if getattr(user, "is_admin", False):
+        return [
+            obra_id
+            for (obra_id,) in (
+                db.session.query(Obra.id)
+                .filter(Obra.empresa_id == empresa_id)
+                .all()
+            )
+        ]
+
+    return [
+        obra_id
+        for (obra_id,) in (
+            db.session.query(ObraUsuario.obra_id)
+            .filter(
+                ObraUsuario.usuario_id == user.id,
+                ObraUsuario.empresa_id == empresa_id,
+                ObraUsuario.ativo.is_(True),
+            )
+            .all()
+        )
+    ]
+
+
+def _apply_obras_usuario_scope(query, user, empresa_id):
+    if not user or not empresa_id:
+        return query.filter(False)
+
+    if getattr(user, "is_admin", False):
+        return query.filter(Obra.empresa_id == empresa_id)
+
+    return (
+        query
+        .join(
+            ObraUsuario,
+            db.and_(
+                ObraUsuario.obra_id == Obra.id,
+                ObraUsuario.empresa_id == Obra.empresa_id,
+            ),
+        )
+        .filter(
+            Obra.empresa_id == empresa_id,
+            ObraUsuario.usuario_id == user.id,
+            ObraUsuario.ativo.is_(True),
+        )
+        .distinct()
+    )
+
+
+def _get_admin_users_empresa(empresa_id):
+    if not empresa_id:
+        return []
+
+    admin_names = {ROLE_ADMIN, "ADMINISTRADOR"}
+    admins = (
+        Usuario.query
+        .join(UsuarioPapel, UsuarioPapel.usuario_id == Usuario.id)
+        .join(Papel, Papel.id == UsuarioPapel.papel_id)
+        .filter(
+            Usuario.empresa_id == empresa_id,
+            db.or_(UsuarioPapel.empresa_id.is_(None), UsuarioPapel.empresa_id == empresa_id),
+            Usuario.ativo.is_(True),
+            UsuarioPapel.ativo.is_(True),
+            Papel.ativo.is_(True),
+            func.upper(func.trim(Papel.nome)).in_(admin_names),
+            db.or_(Papel.empresa_id.is_(None), Papel.empresa_id == empresa_id),
+        )
+        .distinct()
+        .all()
+    )
+    admin_ids = {admin.id for admin in admins}
+
+    for usuario in Usuario.query.filter_by(empresa_id=empresa_id, ativo=True).all():
+        if usuario.id not in admin_ids and getattr(usuario, "is_admin", False):
+            admins.append(usuario)
+            admin_ids.add(usuario.id)
+
+    return admins
+
+
+def _ensure_obra_usuario_access(obra, usuario_id, criado_por=None):
+    if not obra or not usuario_id:
+        return
+
+    obra_usuario = ObraUsuario.query.filter_by(
+        empresa_id=obra.empresa_id,
+        obra_id=obra.id,
+        usuario_id=usuario_id,
+    ).first()
+    if obra_usuario:
+        obra_usuario.ativo = True
+        obra_usuario.modificado_por = criado_por
+        return
+
+    db.session.add(ObraUsuario(
+        empresa_id=obra.empresa_id,
+        obra_id=obra.id,
+        usuario_id=usuario_id,
+        ativo=True,
+        criado_por=criado_por,
+    ))
+
+
+def _sync_admin_obras_empresa(empresa_id, criado_por=None):
+    if not empresa_id:
+        return 0
+
+    admins = _get_admin_users_empresa(empresa_id)
+    obras = Obra.query.filter_by(empresa_id=empresa_id).all()
+    if not admins or not obras:
+        return 0
+
+    existentes = {
+        (obra_id, usuario_id): ativo
+        for obra_id, usuario_id, ativo in (
+            db.session.query(ObraUsuario.obra_id, ObraUsuario.usuario_id, ObraUsuario.ativo)
+            .filter(ObraUsuario.empresa_id == empresa_id)
+            .all()
+        )
+    }
+
+    alterados = 0
+    for admin in admins:
+        for obra in obras:
+            chave = (obra.id, admin.id)
+            if chave not in existentes or existentes[chave] is not True:
+                _ensure_obra_usuario_access(obra, admin.id, criado_por=criado_por or admin.id)
+                existentes[chave] = True
+                alterados += 1
+
+    return alterados
 
 
 def _parse_export_columns(default_columns):
@@ -96,13 +237,17 @@ def _build_obra_export_cell(obra, key):
 @auth_bp.get("/lista-obras")
 @login_required
 def lista_obras():
-    # SCOPING:
     user = Usuario.query.get(session.get("user_id"))
+    empresa_id = _current_empresa_id(user)
+    if user and getattr(user, "is_admin", False):
+        try:
+            if _sync_admin_obras_empresa(empresa_id, criado_por=user.id):
+                db.session.commit()
+        except Exception:
+            db.session.rollback()
+
     query = Obra.query.order_by(Obra.id.asc())
-    
-    if user.papel != ROLE_ADMIN:
-        meus_ids = [o.id for o in Obra.query.filter_by(empresa_id=session.get('empresa_id')).all()]
-        query = query.filter(Obra.id.in_(meus_ids))
+    query = _apply_obras_usuario_scope(query, user, empresa_id)
         
     resultados = query.all()
 
@@ -150,15 +295,20 @@ def lista_obras():
 @auth_bp.get('/lista-obras/export/<string:export_format>')
 @login_required
 def export_lista_obras(export_format):
-    empresa_id = session.get("empresa_id")
     user = Usuario.query.get(session.get("user_id"))
+    empresa_id = _current_empresa_id(user)
+    if user and getattr(user, "is_admin", False):
+        try:
+            if _sync_admin_obras_empresa(empresa_id, criado_por=user.id):
+                db.session.commit()
+        except Exception:
+            db.session.rollback()
+
     ids = _parse_export_ids()
     requested_columns = _parse_export_columns(OBRA_EXPORT_COLUMNS)
 
     query = Obra.query.filter_by(empresa_id=empresa_id).order_by(Obra.nome.asc())
-    if user.papel != ROLE_ADMIN:
-        meus_ids = [o.id for o in Obra.query.filter_by(empresa_id=empresa_id).all()]
-        query = query.filter(Obra.id.in_(meus_ids))
+    query = _apply_obras_usuario_scope(query, user, empresa_id)
 
     if ids:
         query = query.filter(Obra.id.in_(ids))
@@ -187,6 +337,7 @@ def export_lista_obras(export_format):
 def criar_obra():
     usuarios = Usuario.query.filter_by(status=1).all()
     clientes = Cliente.query.filter_by(empresa_id=session.get('empresa_id'), ativo=True).order_by(Cliente.razao_social.asc()).all()
+    tipos_obra = AuxTipoObra.query.filter_by(ativo=True).order_by(AuxTipoObra.nome.asc()).all()
     mao_de_obra_options = AuxFuncoes.query.filter_by(ativo=True).order_by(AuxFuncoes.nome.asc()).all()
     centros_custo = _get_centros_custo_options(session.get('empresa_id'))
     return render_template(
@@ -194,6 +345,7 @@ def criar_obra():
         item=None,
         usuarios=usuarios,
         clientes=clientes,
+        tipos_obra=tipos_obra,
         mao_de_obra_options=mao_de_obra_options,
         equipe_obra=[],
         centros_custo=centros_custo,
@@ -222,6 +374,32 @@ def toggle_user_obras(obraid):
 @login_required
 @permission_required('obra.manage')
 def gerar_obra():
+    def _parse_date(value):
+        value = (value or "").strip()
+        if not value:
+            return None
+        return datetime.strptime(value, "%Y-%m-%d").date()
+
+    def _parse_time(value):
+        value = (value or "").strip()
+        if not value:
+            return None
+        return datetime.strptime(value, "%H:%M").time()
+
+    def _parse_bool(value, default=False):
+        if value is None:
+            return default
+        value = str(value).strip().lower()
+        if value in ("1", "true", "t", "yes", "y", "on"):
+            return True
+        if value in ("0", "false", "f", "no", "n", "off"):
+            return False
+        return default
+
+    def _validation_error(message):
+        flash(message, "danger")
+        return redirect(url_for("auth.lista_obras"))
+
     obra_id = request.form.get("id")
     if obra_id:
         # Security scope
@@ -248,28 +426,96 @@ def gerar_obra():
             flash(f"Erro: O CNPJ {cnpj_obra} já está cadastrado.", "danger")
             return redirect(url_for('auth.lista_obras'))
 
-    nome = request.form.get('nome')
+    nome = (request.form.get("nome") or "").strip()
+    if not nome:
+        flash("Erro: o nome da obra é obrigatório.", "danger")
+        return redirect(url_for("auth.lista_obras"))
+
     criado_por = session.get('user_id')
-    inicio_str = request.form.get('inicio')
-    termino_str = request.form.get('termino')
-    horario_entrada_str = request.form.get('horario_entrada')
-    horario_saida_str = request.form.get('horario_saida')
+
+    # Campos do schema (com fallback para nomes legados)
+    data_inicio_str = request.form.get("data_inicio") or request.form.get("inicio")
+    data_fim_planejada_str = request.form.get("data_fim_planejada")
+    data_fim_str = request.form.get("data_fim") or request.form.get("termino")
+
+    hora_entrada_padrao_str = request.form.get("hora_entrada_padrao") or request.form.get("horario_entrada")
+    intervalo_entrada_padrao_str = request.form.get("intervalo_entrada_padrao")
+    intervalo_saida_padrao_str = request.form.get("intervalo_saida_padrao")
+    hora_saida_padrao_str = request.form.get("hora_saida_padrao") or request.form.get("horario_saida")
+
     cep = request.form.get('cep')
-    endereco = request.form.get('endereco')
+    ibge_municipio = request.form.get('ibge_municipio')
+    logradouro = request.form.get("logradouro") or request.form.get("endereco")
     numero = request.form.get('numero')
     complemento = request.form.get('complemento')
     bairro = request.form.get('bairro')
     cidade = request.form.get('cidade')
     estado = request.form.get('estado')
-    status = 1 if request.form.get('status') == 'on' else 0
+
+    tipo_obra_id_raw = (request.form.get("tipo_obra_id") or "").strip() or None
+    usuario_responsavel_id_raw = (request.form.get("usuario_responsavel_id") or request.form.get("id_responsavel") or "").strip() or None
+    ativo = _parse_bool(request.form.get("ativo"), default=_parse_bool(request.form.get("status"), default=True))
     frentes_payload = request.form.get('frentes_json')
     equipe_payload = request.form.get('equipe_obra_json')
 
     try:
-        inicio = datetime.strptime(inicio_str, '%Y-%m-%d').date() if inicio_str else None
-        termino = datetime.strptime(termino_str, '%Y-%m-%d').date() if termino_str else None
-        horario_entrada = datetime.strptime(horario_entrada_str, '%H:%M').time() if horario_entrada_str else None
-        horario_saida = datetime.strptime(horario_saida_str, '%H:%M').time() if horario_saida_str else None
+        data_inicio = _parse_date(data_inicio_str)
+        data_fim_planejada = _parse_date(data_fim_planejada_str)
+        data_fim = _parse_date(data_fim_str)
+        frentes_data = json.loads(frentes_payload) if frentes_payload else {}
+
+        if data_inicio and data_fim_planejada and data_fim_planejada < data_inicio:
+            return _validation_error("Erro: a data de fim planejada não pode anteceder a data de início da obra.")
+
+        if data_inicio and data_fim and data_fim < data_inicio:
+            return _validation_error("Erro: a data de fim real não pode anteceder a data de início da obra.")
+
+        limite_obra = min([d for d in (data_fim_planejada, data_fim) if d], default=None)
+        frentes_para_validar = list(frentes_data.get("novas", [])) + list(frentes_data.get("editadas", []))
+        for indice, frente_data in enumerate(frentes_para_validar, start=1):
+            frente_nome = (frente_data.get("nome_frente") or f"Frente {indice}").strip()
+            frente_inicio = _parse_date(frente_data.get("data_inicio"))
+            frente_fim_planejada = _parse_date(frente_data.get("data_planejada") or frente_data.get("data_fim_planejada"))
+            frente_fim = _parse_date(frente_data.get("data_fim"))
+
+            if data_inicio and frente_inicio and frente_inicio < data_inicio:
+                return _validation_error(f"Erro: a data de início da frente '{frente_nome}' não pode anteceder a data de início da obra.")
+
+            if frente_inicio and frente_fim_planejada and frente_fim_planejada < frente_inicio:
+                return _validation_error(f"Erro: a data de fim planejada da frente '{frente_nome}' não pode anteceder sua data de início.")
+
+            if frente_inicio and frente_fim and frente_fim < frente_inicio:
+                return _validation_error(f"Erro: a data de fim real da frente '{frente_nome}' não pode anteceder sua data de início.")
+
+            if limite_obra and frente_fim_planejada and frente_fim_planejada > limite_obra:
+                return _validation_error(f"Erro: a data de fim planejada da frente '{frente_nome}' não pode ultrapassar o prazo da obra.")
+
+            if limite_obra and frente_fim and frente_fim > limite_obra:
+                return _validation_error(f"Erro: a data de fim real da frente '{frente_nome}' não pode ultrapassar o prazo da obra.")
+
+        cep_limpo = ''.join(ch for ch in (cep or "") if ch.isdigit())
+        if not obra_id and cep_limpo and (len(cep_limpo) != 8 or not cidade or not estado or not ibge_municipio):
+            return _validation_error("Erro: informe um CEP válido para carregar Cidade, Estado e IBGE.")
+
+        hora_entrada_padrao = _parse_time(hora_entrada_padrao_str)
+        intervalo_entrada_padrao = _parse_time(intervalo_entrada_padrao_str)
+        intervalo_saida_padrao = _parse_time(intervalo_saida_padrao_str)
+        hora_saida_padrao = _parse_time(hora_saida_padrao_str)
+
+        tipo_obra_id = int(tipo_obra_id_raw) if tipo_obra_id_raw else None
+        usuario_responsavel_id = int(usuario_responsavel_id_raw) if usuario_responsavel_id_raw else None
+
+        if usuario_responsavel_id:
+            usuario_resp = Usuario.query.filter_by(id=usuario_responsavel_id, status=1).first()
+            if not usuario_resp:
+                flash("Erro: o responsável da obra deve ser um usuário ativo.", "danger")
+                return redirect(url_for("auth.lista_obras"))
+
+        if tipo_obra_id:
+            tipo_obra = AuxTipoObra.query.filter_by(id=tipo_obra_id, ativo=True).first()
+            if not tipo_obra:
+                flash("Erro: tipo de obra inválido.", "danger")
+                return redirect(url_for("auth.lista_obras"))
 
         if obra_id:
             empresa_id = session.get('empresa_id')
@@ -277,18 +523,23 @@ def gerar_obra():
             obra.nome = nome
             obra.cnpj_obra = cnpj_obra
             obra.cliente_id = cliente.id
-            obra.data_inicio = inicio
-            obra.data_fim = termino
-            obra.hora_entrada_padrao = horario_entrada
-            obra.hora_saida_padrao = horario_saida
+            obra.tipo_obra_id = tipo_obra_id
+            obra.usuario_responsavel_id = usuario_responsavel_id
+            obra.data_inicio = data_inicio
+            obra.data_fim_planejada = data_fim_planejada
+            obra.data_fim = data_fim
+            obra.hora_entrada_padrao = hora_entrada_padrao
+            obra.intervalo_entrada_padrao = intervalo_entrada_padrao
+            obra.intervalo_saida_padrao = intervalo_saida_padrao
+            obra.hora_saida_padrao = hora_saida_padrao
             obra.cep = cep
-            obra.logradouro = endereco
+            obra.logradouro = logradouro
             obra.numero = numero
             obra.complemento = complemento
             obra.bairro = bairro
             obra.cidade = cidade
             obra.estado = estado
-            obra.status = status
+            obra.ativo = ativo
             flash("Obra atualizada com sucesso!", "success")
         else:
             obra = Obra(
@@ -297,54 +548,67 @@ def gerar_obra():
                 cliente_id=cliente.id,
                 cnpj_obra=cnpj_obra,
                 criado_por=criado_por if criado_por else None,
-                data_inicio=inicio,
-                data_fim=termino,
-                hora_entrada_padrao=horario_entrada,
-                hora_saida_padrao=horario_saida,
+                tipo_obra_id=tipo_obra_id,
+                usuario_responsavel_id=usuario_responsavel_id,
+                data_inicio=data_inicio,
+                data_fim_planejada=data_fim_planejada,
+                data_fim=data_fim,
+                hora_entrada_padrao=hora_entrada_padrao,
+                intervalo_entrada_padrao=intervalo_entrada_padrao,
+                intervalo_saida_padrao=intervalo_saida_padrao,
+                hora_saida_padrao=hora_saida_padrao,
                 cep=cep,
-                logradouro=endereco,
+                logradouro=logradouro,
                 numero=numero,
                 complemento=complemento,
                 bairro=bairro,
                 cidade=cidade,
                 estado=estado,
-                ativo=status
+                ativo=ativo
             )
             db.session.add(obra)
             db.session.flush() 
             flash("Obra cadastrada com sucesso!", "success")
 
-            # Se quem criou foi um Gestor, adiciona automaticamente permissão pra ele
-            current_user_obj = Usuario.query.get(session.get("user_id"))
-            if current_user_obj.papel == ROLE_GESTOR:
-                current_user_obj.obras_permitidas.append(obra)
+            usuarios_com_acesso = {criado_por} if criado_por else set()
+            usuarios_com_acesso.update(admin.id for admin in _get_admin_users_empresa(obra.empresa_id))
+            for usuario_id in usuarios_com_acesso:
+                _ensure_obra_usuario_access(obra, usuario_id, criado_por=criado_por)
 
         if frentes_payload:
-            data = json.loads(frentes_payload)
+            data = frentes_data
             for f_id in data.get('removidas', []):
-                if f_id: FrenteTrabalho.query.filter_by(frente_trabalho_id=f_id, obra_id=obra.id).delete()
+                if not f_id:
+                    continue
+                frente = FrenteTrabalho.query.filter_by(frente_trabalho_id=f_id, obra_id=obra.id, empresa_id=obra.empresa_id).first()
+                if frente:
+                    frente.ativo = False
             
             for f_nova in data.get('novas', []):
                 nova_frente = FrenteTrabalho(
+                    empresa_id=session.get('empresa_id'),
                     obra_id=obra.id,
-                    nome_frente=f_nova['nome_frente'],
+                    nome_frente=(f_nova.get('nome_frente') or '').strip() or None,
                     centro_custo=f_nova.get('centro_custo'),
                     data_inicio=datetime.strptime(f_nova.get('data_inicio'), '%Y-%m-%d').date() if f_nova.get('data_inicio') else None,
                     data_planejada=datetime.strptime(f_nova.get('data_planejada'), '%Y-%m-%d').date() if f_nova.get('data_planejada') else None,
                     data_fim=datetime.strptime(f_nova.get('data_fim'), '%Y-%m-%d').date() if f_nova.get('data_fim') else None,
+                    ativo=_parse_bool(f_nova.get('ativo'), default=True),
                     criado_por=f_nova['criado_por'] if f_nova.get('criado_por') else None
                 )
                 db.session.add(nova_frente)
 
             for f_edit in data.get('editadas', []):
-                frente_existente = FrenteTrabalho.query.get(f_edit['frente_trabalho_id'])
+                frente_id = f_edit.get('frente_trabalho_id') or f_edit.get('id_frente_trabalho')
+                frente_existente = FrenteTrabalho.query.get(frente_id)
                 if frente_existente and frente_existente.obra_id == obra.id:
-                    frente_existente.nome_frente = f_edit['nome_frente']
+                    frente_existente.nome_frente = (f_edit.get('nome_frente') or '').strip() or None
                     frente_existente.centro_custo = f_edit.get('centro_custo')
                     frente_existente.data_inicio = datetime.strptime(f_edit.get('data_inicio'), '%Y-%m-%d').date() if f_edit.get('data_inicio') else None
                     frente_existente.data_planejada = datetime.strptime(f_edit.get('data_planejada'), '%Y-%m-%d').date() if f_edit.get('data_planejada') else None
                     frente_existente.data_fim = datetime.strptime(f_edit.get('data_fim'), '%Y-%m-%d').date() if f_edit.get('data_fim') else None
                     frente_existente.criado_por = f_edit['criado_por'] if f_edit.get('criado_por') else None
+                    frente_existente.ativo = _parse_bool(f_edit.get('ativo'), default=True)
 
         # Legacy equipe de obra não possui modelo compatível com o schema atual.
         # O payload é preservado no formulário, mas não é gravado enquanto a tabela de suporte não estiver disponível.
@@ -367,9 +631,16 @@ def editar_obra(id):
 
     empresa_id = session.get('empresa_id')
     obra = Obra.query.filter_by(id=id, empresa_id=empresa_id).first_or_404()
-    frentes = FrenteTrabalho.query.filter_by(obra_id=id).all()
+    frentes = (
+        FrenteTrabalho.query
+        .filter_by(obra_id=id, empresa_id=empresa_id)
+        # MySQL não suporta "NULLS LAST" no ORDER BY. Usamos expressão booleana para empurrar NULLs pro fim.
+        .order_by(FrenteTrabalho.data_inicio.is_(None), FrenteTrabalho.data_inicio.asc(), FrenteTrabalho.id.asc())
+        .all()
+    )
     usuarios = Usuario.query.filter_by(status=1).all()
     clientes = Cliente.query.filter_by(empresa_id=session.get('empresa_id'), ativo=True).order_by(Cliente.razao_social.asc()).all()
+    tipos_obra = AuxTipoObra.query.filter_by(ativo=True).order_by(AuxTipoObra.nome.asc()).all()
     mao_de_obra_options = AuxFuncoes.query.filter_by(ativo=True).order_by(AuxFuncoes.nome.asc()).all()
     equipe_obra = _get_equipe_obra_payload(id)
     centros_custo = _get_centros_custo_options(session.get('empresa_id'))
@@ -379,6 +650,7 @@ def editar_obra(id):
         frentes=frentes,
         usuarios=usuarios,
         clientes=clientes,
+        tipos_obra=tipos_obra,
         mao_de_obra_options=mao_de_obra_options,
         equipe_obra=equipe_obra,
         centros_custo=centros_custo,
@@ -397,7 +669,13 @@ def visualizar_obra(id):
     item = Obra.query.filter_by(id=id, empresa_id=empresa_id).first_or_404()
     usuarios = Usuario.query.filter_by(status=1).all()
     clientes = Cliente.query.filter_by(empresa_id=session.get('empresa_id'), ativo=True).order_by(Cliente.razao_social.asc()).all()
-    frentes = FrenteTrabalho.query.filter_by(obra_id=id).all()
+    tipos_obra = AuxTipoObra.query.filter_by(ativo=True).order_by(AuxTipoObra.nome.asc()).all()
+    frentes = (
+        FrenteTrabalho.query
+        .filter_by(obra_id=id, empresa_id=empresa_id)
+        .order_by(FrenteTrabalho.data_inicio.is_(None), FrenteTrabalho.data_inicio.asc(), FrenteTrabalho.id.asc())
+        .all()
+    )
     usuario = (
         Usuario.query.filter_by(status=1)
         .outerjoin(Colaborador, Usuario.colaborador_id == Colaborador.id)
@@ -417,10 +695,188 @@ def visualizar_obra(id):
         usuario=usuario,
         usuarios=usuarios,
         clientes=clientes,
+        tipos_obra=tipos_obra,
         mao_de_obra_options=mao_de_obra_options,
         equipe_obra=equipe_obra,
         centros_custo=centros_custo,
     )
+
+
+def _get_frente_or_404(frente_id: int):
+    empresa_id = session.get("empresa_id")
+    frente = FrenteTrabalho.query.filter_by(id=frente_id, empresa_id=empresa_id).first_or_404()
+
+    scope_ids = get_user_scope_ids()
+    if scope_ids is not None and frente.obra_id not in scope_ids:
+        abort(403)
+
+    return frente
+
+
+@auth_bp.get("/api/frente/<int:frente_id>/colaboradores")
+@login_required
+def api_frente_colaboradores_list(frente_id):
+    frente = _get_frente_or_404(frente_id)
+
+    rows = (
+        FrenteColaborador.query
+        .filter(FrenteColaborador.frente_id == frente.id, FrenteColaborador.empresa_id == frente.empresa_id)
+        .outerjoin(Colaborador, Colaborador.id == FrenteColaborador.colaborador_id)
+        .order_by(func.coalesce(Colaborador.nome, FrenteColaborador.id).asc())
+        .all()
+    )
+
+    items = []
+    for r in rows:
+        items.append({
+            "id": r.id,
+            "colaborador_id": r.colaborador_id,
+            "colaborador_nome": r.colaborador.nome if r.colaborador else "",
+            "funcao_id": r.funcao_id,
+            "funcao_nome": r.funcao.nome if r.funcao else "",
+            "data_inicio": r.data_inicio.isoformat() if r.data_inicio else None,
+            "data_fim": r.data_fim.isoformat() if r.data_fim else None,
+            "ativo": bool(r.ativo),
+        })
+
+    total = len(items)
+    ativos = sum(1 for p in items if p["ativo"])
+    inativos = total - ativos
+
+    return jsonify({
+        "ok": True,
+        "frente": {"id": frente.id, "obra_id": frente.obra_id, "nome": frente.nome},
+        "counts": {"total": total, "ativos": ativos, "inativos": inativos},
+        "items": items,
+    })
+
+
+@auth_bp.get("/api/colaboradores/search")
+@login_required
+def api_colaboradores_search():
+    empresa_id = session.get("empresa_id")
+    q = (request.args.get("q") or "").strip()
+    tipo = (request.args.get("tipo") or "").strip().upper()
+    cpf = (request.args.get("cpf") or "").strip()
+
+    query = Colaborador.query.filter(Colaborador.empresa_id == empresa_id)
+
+    if q:
+        query = query.filter(Colaborador.nome.ilike(f"%{q}%"))
+    if cpf:
+        query = query.filter(Colaborador.cadastro_pessoa_fisica.ilike(f"%{cpf}%"))
+    if tipo in ("PROPRIO", "TERCEIRO", "CLIENTE"):
+        query = query.filter(Colaborador.tipo == tipo)
+
+    colaboradores = query.order_by(Colaborador.nome.asc()).limit(50).all()
+
+    items = []
+    for c in colaboradores:
+        vinculo = (
+            FrenteColaborador.query
+            .filter(
+                FrenteColaborador.empresa_id == empresa_id,
+                FrenteColaborador.colaborador_id == c.id,
+                FrenteColaborador.ativo.is_(True),
+                FrenteColaborador.data_fim.is_(None),
+            )
+            .order_by(
+                FrenteColaborador.data_inicio.is_(None),
+                FrenteColaborador.data_inicio.desc(),
+                FrenteColaborador.id.desc(),
+            )
+            .first()
+        )
+        items.append({
+            "id": c.id,
+            "nome": c.nome,
+            "tipo": c.tipo,
+            "cpf": c.cadastro_pessoa_fisica,
+            "ativo": bool(c.ativo),
+            "funcao_atual": vinculo.funcao.nome if (vinculo and vinculo.funcao) else None,
+        })
+
+    return jsonify({"ok": True, "items": items})
+
+
+@auth_bp.post("/api/frente/<int:frente_id>/colaboradores")
+@login_required
+@permission_required("obra.manage")
+def api_frente_colaboradores_create(frente_id):
+    def _parse_date(value):
+        value = (value or "").strip()
+        if not value:
+            return None
+        return datetime.strptime(value, "%Y-%m-%d").date()
+
+    frente = _get_frente_or_404(frente_id)
+
+    data = request.get_json(silent=True) or {}
+    colaborador_id = data.get("colaborador_id")
+    funcao_id = data.get("funcao_id")
+    data_inicio = data.get("data_inicio")
+    data_fim = data.get("data_fim")
+    ativo = data.get("ativo", True)
+
+    if not colaborador_id:
+        return jsonify({"ok": False, "error": "Colaborador é obrigatório."}), 400
+
+    colaborador = Colaborador.query.filter_by(id=colaborador_id, empresa_id=frente.empresa_id).first()
+    if not colaborador:
+        return jsonify({"ok": False, "error": "Colaborador inválido."}), 400
+
+    novo = FrenteColaborador(
+        empresa_id=frente.empresa_id,
+        frente_id=frente.id,
+        colaborador_id=int(colaborador_id),
+        funcao_id=int(funcao_id) if funcao_id else None,
+        data_inicio=_parse_date(data_inicio) if data_inicio else None,
+        data_fim=_parse_date(data_fim) if data_fim else None,
+        ativo=bool(ativo),
+        criado_por=session.get("user_id"),
+    )
+    db.session.add(novo)
+    db.session.commit()
+    return jsonify({"ok": True, "id": novo.id})
+
+
+@auth_bp.put("/api/frente-colaborador/<int:vinculo_id>")
+@login_required
+@permission_required("obra.manage")
+def api_frente_colaborador_update(vinculo_id):
+    def _parse_date(value):
+        value = (value or "").strip()
+        if not value:
+            return None
+        return datetime.strptime(value, "%Y-%m-%d").date()
+
+    empresa_id = session.get("empresa_id")
+    vinculo = FrenteColaborador.query.filter_by(id=vinculo_id, empresa_id=empresa_id).first_or_404()
+    _get_frente_or_404(vinculo.frente_id)
+
+    data = request.get_json(silent=True) or {}
+    vinculo.funcao_id = int(data.get("funcao_id")) if data.get("funcao_id") else None
+    vinculo.data_inicio = _parse_date(data.get("data_inicio")) if data.get("data_inicio") else None
+    vinculo.data_fim = _parse_date(data.get("data_fim")) if data.get("data_fim") else None
+    vinculo.ativo = bool(data.get("ativo", vinculo.ativo))
+    vinculo.modificado_por = session.get("user_id")
+
+    db.session.commit()
+    return jsonify({"ok": True})
+
+
+@auth_bp.post("/api/frente-colaborador/<int:vinculo_id>/toggle")
+@login_required
+@permission_required("obra.manage")
+def api_frente_colaborador_toggle(vinculo_id):
+    empresa_id = session.get("empresa_id")
+    vinculo = FrenteColaborador.query.filter_by(id=vinculo_id, empresa_id=empresa_id).first_or_404()
+    _get_frente_or_404(vinculo.frente_id)
+
+    vinculo.ativo = not bool(vinculo.ativo)
+    vinculo.modificado_por = session.get("user_id")
+    db.session.commit()
+    return jsonify({"ok": True, "ativo": bool(vinculo.ativo)})
 
 @auth_bp.post("/obra/toggle-status/<int:id>")
 @login_required
