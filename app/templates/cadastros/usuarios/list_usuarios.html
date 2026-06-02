@@ -113,11 +113,11 @@
 
                 <td data-label="Cargo" class="px-6 py-4 whitespace-nowrap">
                     {% set badge_class = 'bg-slate-100 text-slate-600 border-slate-200' %}
-                    {% if user.papel == 'Admin' %}
+                    {% if user.is_admin %}
                     {% set badge_class = 'bg-purple-50 text-purple-700 border-purple-200 ring-1 ring-purple-500/10' %}
-                    {% elif user.papel == 'Gestor' %}
+                    {% elif (user.papel or '')|upper == 'GESTOR' %}
                     {% set badge_class = 'bg-indigo-50 text-indigo-700 border-indigo-200 ring-1 ring-indigo-500/10' %}
-                    {% elif user.papel == 'Operador' %}
+                    {% elif (user.papel or '')|upper == 'OPERADOR' %}
                     {% set badge_class = 'bg-blue-50 text-blue-700 border-blue-200 ring-1 ring-blue-500/10' %}
                     {% endif %}
 

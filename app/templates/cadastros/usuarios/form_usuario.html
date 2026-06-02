@@ -40,14 +40,14 @@
 
         <div>
           <label for="papel" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Papel <span class="text-rose-500">*</span></label>
-          {% set current_role = (item.papel if item and item.papel else 'Leitor') %}
+          {% set current_role = ((item.papel if item and item.papel else 'Leitor')|upper) %}
           <select name="papel" id="papel"
             class="block w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm shadow-xs bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-500 disabled:border-slate-200 transition-all"
             {{ 'disabled' if view_mode }} required>
-            <option value="Admin" {% if current_role == 'Admin' %}selected{% endif %}>Admin</option>
-            <option value="Gestor" {% if current_role == 'Gestor' %}selected{% endif %}>Gestor</option>
-            <option value="Operador" {% if current_role == 'Operador' %}selected{% endif %}>Operador</option>
-            <option value="Leitor" {% if current_role == 'Leitor' %}selected{% endif %}>Leitor</option>
+            <option value="Admin" {% if current_role == 'ADMIN' %}selected{% endif %}>Admin</option>
+            <option value="Gestor" {% if current_role == 'GESTOR' %}selected{% endif %}>Gestor</option>
+            <option value="Operador" {% if current_role == 'OPERADOR' %}selected{% endif %}>Operador</option>
+            <option value="Leitor" {% if current_role == 'LEITOR' %}selected{% endif %}>Leitor</option>
           </select>
         </div>
       </div>
@@ -80,11 +80,11 @@
     {% endcall %}
 
     {% call ui_form.section('Obras Permitidas', icon='fa-building', icon_box_class='bg-slate-50 text-slate-700') %}
-      {% set is_admin = item and item.papel == 'Admin' %}
+      {% set is_admin = item and item.is_admin %}
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 {{ 'opacity-60 pointer-events-none grayscale' if is_admin else '' }}">
         {% if obras %}
           {% for obra in obras %}
-            {% set checked = (item and (obra in item.obras_permitidas or item.papel == 'Admin')) %}
+            {% set checked = (item and (obra in item.obras_permitidas or item.is_admin)) %}
             <label class="flex items-start p-3 rounded-xl bg-white border border-slate-200 shadow-xs hover:border-blue-300 transition-colors gap-3">
               <input type="checkbox" name="obras_permitidas" value="{{ obra.id }}"
                 class="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"

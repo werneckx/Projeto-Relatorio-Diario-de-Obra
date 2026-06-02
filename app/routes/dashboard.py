@@ -14,7 +14,7 @@ def inicio():
     # SCOPING: Filtra KPIs baseados nas obras permitidas do usuário
     user_id = session.get("user_id")
     user = Usuario.query.get(user_id)
-    scope_ids = [o.id for o in Obra.query.filter_by(empresa_id=session.get('empresa_id')).all()] if user.papel != ROLE_ADMIN else None
+    scope_ids = None if user and user.is_admin else [o.id for o in user.obras_permitidas] if user else []
 
     # --- 1. KPIs PRINCIPAIS ---
     
