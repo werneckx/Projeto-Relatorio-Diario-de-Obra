@@ -22,12 +22,12 @@
 }
 
 .page-shell {
-    padding-top: 6rem;
+    padding-top: var(--spacing-lg);
 }
 
 @media (min-width: 1024px) {
     .page-shell {
-        padding-top: 7rem;
+        padding-top: var(--spacing-xl);
     }
 }
 

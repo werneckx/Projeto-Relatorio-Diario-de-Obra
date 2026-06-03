@@ -32,6 +32,11 @@
             theme: {
                 extend: {
                     colors: {
+                        primary: {
+                            DEFAULT: '#2563eb',
+                            dark: '#1d4ed8'
+                        },
+                        customBg: '#f8fafc',
                         premium: {
                             primary: '#2563eb',
                             border: '#e2e8f0'
@@ -64,6 +69,8 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/utilities.css') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/ds_premium.css') }}">
 
     <link rel="icon" type="image/png" href="{{ url_for('static', filename=icone_empresa) }}">
@@ -77,6 +84,7 @@
 
         html {
             scroll-behavior: smooth;
+            scrollbar-gutter: stable;
         }
 
         body {
@@ -107,7 +115,18 @@
         }
 
         #mobile-menu {
-            transition: all .3s ease;
+            transition: opacity .24s ease, visibility .24s ease, max-height .28s ease, transform .24s ease;
+            transform: translateY(-6px);
+            max-height: 0;
+            overflow: hidden;
+        }
+
+        #mobile-menu.mobile-menu-open {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+            transform: translateY(0);
+            max-height: calc(100vh - 4rem);
         }
 
         .dropdown-panel {
@@ -151,7 +170,7 @@
         /* Animação de saída das notificações */
         .notif-leave {
             transition: transform .26s ease, opacity .26s ease, max-height .26s ease, padding .26s ease, margin .26s ease;
-            transform: translateX(12px);
+            transform: translateX(12px) scale(0.98);
             opacity: 0;
             max-height: 0 !important;
             padding-top: 0 !important;
@@ -658,7 +677,7 @@
                         <!-- MODAL NOTIFICACOES -->
                         <div class="dropdown-panel absolute right-0 top-full pt-3 w-80 z-[120]">
 
-                            <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl overflow-hidden">
+                            <div class="perf-blur-limited perf-gpu bg-white/90 rounded-3xl border border-[var(--ds-border)] shadow-2xl overflow-hidden animate-premium-in">
 
                                 <div class="px-5 py-4 border-b border-slate-100 bg-slate-50">
 
@@ -777,7 +796,7 @@
                         <!-- MODAL PERFIL -->
                         <div class="dropdown-panel absolute right-0 top-full pt-3 w-72 z-[120]">
 
-                            <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl overflow-hidden">
+                            <div class="perf-blur-limited perf-gpu bg-white/90 rounded-3xl border border-[var(--ds-border)] shadow-2xl overflow-hidden animate-premium-in">
 
                                 <div class="px-5 py-5 border-b border-slate-100 bg-slate-50">
 
@@ -870,7 +889,7 @@
         </div>
 
         <!-- MOBILE MENU -->
-        <div id="mobile-menu" class="hidden lg:hidden border-t border-slate-200 bg-white/95 backdrop-blur-xl">
+        <div id="mobile-menu" class="lg:hidden border-t border-slate-200 bg-white/95 backdrop-blur-xl opacity-0 invisible pointer-events-none">
 
             <div class="px-4 py-5 space-y-3">
 
@@ -1005,7 +1024,7 @@
     </nav>
 
     <!-- MAIN -->
-    <main class="flex-grow w-full max-w-7xl mx-auto px-5 sm:px-7 lg:px-9 py-5">
+    <main class="flex-grow w-full premium-container page-shell pb-5">
         {% block content %}{% endblock %}
     </main>
 
@@ -1052,7 +1071,10 @@
             const menu = document.getElementById('mobile-menu');
             const icon = document.getElementById('menu-icon');
 
-            menu.classList.toggle('hidden');
+            menu.classList.toggle('mobile-menu-open');
+            menu.classList.toggle('opacity-0');
+            menu.classList.toggle('invisible');
+            menu.classList.toggle('pointer-events-none');
 
             icon.classList.toggle('fa-bars');
             icon.classList.toggle('fa-times');
@@ -1076,7 +1098,10 @@
                 const menu = document.getElementById('mobile-menu');
                 const icon = document.getElementById('menu-icon');
 
-                if (menu) menu.classList.add('hidden');
+                if (menu) {
+                    menu.classList.remove('mobile-menu-open');
+                    menu.classList.add('opacity-0', 'invisible', 'pointer-events-none');
+                }
 
                 if (icon) {
                     icon.classList.remove('fa-times');
@@ -1128,6 +1153,12 @@
             });
         });
     </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
+    <script src="{{ url_for('static', filename='js/date-time-picker.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
+    <script src="{{ url_for('static', filename='js/select-picker.js') }}"></script>
 
     <script>
         function markNotificacaoLidaFromElement(event, el) {
@@ -1188,13 +1219,6 @@
 
             setTimeout(() => { window.location = href; }, ANIM_MS);
         }
-    </script>
-
-    <script>
-        (function () {
-            if (document.documentElement.getAttribute('data-ui-theme') !== 'premium') return;
-            document.querySelectorAll('form').forEach((form) => form.classList.add('ds-form'));
-        })();
     </script>
 
 </body>
