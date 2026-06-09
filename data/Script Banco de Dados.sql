@@ -28,6 +28,8 @@ DROP TABLE IF EXISTS rdo_assinaturas;
 DROP TABLE IF EXISTS rdo_aprovacoes;
 DROP TABLE IF EXISTS rdo_fotos;
 DROP TABLE IF EXISTS auditoria_log;
+DROP TABLE IF EXISTS rdo_programacao_atividades;
+DROP TABLE IF EXISTS rdo_programacao;
 DROP TABLE IF EXISTS rdo_atividades;
 DROP TABLE IF EXISTS rdo_ocorrencias;
 DROP TABLE IF EXISTS rdo_equipamentos;
@@ -37,6 +39,7 @@ DROP TABLE IF EXISTS rdo;
 DROP TABLE IF EXISTS frente_colaborador;
 DROP TABLE IF EXISTS frente_trabalho;
 DROP TABLE IF EXISTS obra_usuario;
+DROP TABLE IF EXISTS obra_eap;
 DROP TABLE IF EXISTS obras;
 
 DROP TABLE IF EXISTS papel_permissao;
@@ -68,6 +71,7 @@ CREATE TABLE empresa (
     logo_empresa VARCHAR(255),
     icone_empresa VARCHAR(255),
     ativo BOOLEAN DEFAULT TRUE,
+    data_expiracao DATE NULL,
 
     criado_por INT NULL,
     modificado_por INT NULL,
@@ -451,6 +455,57 @@ CREATE TABLE obras (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 /* =========================
+   EAP FORMAL DA OBRA
+   Vínculo opcional para programação de RDO
+========================= */
+
+CREATE TABLE obra_eap (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    empresa_id INT NOT NULL,
+    obra_id INT NOT NULL,
+
+    eap_pai_id INT NULL,
+
+    codigo VARCHAR(80) NOT NULL,
+    nome VARCHAR(200) NOT NULL,
+    descricao TEXT NULL,
+
+    nivel INT NULL,
+    ordem INT NULL,
+
+    ativo BOOLEAN DEFAULT TRUE,
+
+    criado_por INT NULL,
+    modificado_por INT NULL,
+    criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+    modificado_em DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    UNIQUE KEY uk_obra_eap_codigo (empresa_id, obra_id, codigo),
+
+    INDEX idx_obra_eap_empresa (empresa_id),
+    INDEX idx_obra_eap_obra (obra_id),
+    INDEX idx_obra_eap_pai (eap_pai_id),
+    INDEX idx_obra_eap_codigo (codigo),
+    INDEX idx_obra_eap_ativo (ativo),
+
+    CONSTRAINT fk_obra_eap_empresa
+        FOREIGN KEY (empresa_id) REFERENCES empresa(id),
+
+    CONSTRAINT fk_obra_eap_obra
+        FOREIGN KEY (obra_id) REFERENCES obras(id),
+
+    CONSTRAINT fk_obra_eap_pai
+        FOREIGN KEY (eap_pai_id) REFERENCES obra_eap(id),
+
+    CONSTRAINT fk_obra_eap_criado_por
+        FOREIGN KEY (criado_por) REFERENCES usuarios(id),
+
+    CONSTRAINT fk_obra_eap_modificado_por
+        FOREIGN KEY (modificado_por) REFERENCES usuarios(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+/* =========================
    FRENTE DE TRABALHO
 ========================= */
 
@@ -683,6 +738,136 @@ CREATE TABLE rdo_atividades (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 /* =========================
+   RDO PROGRAMAÇÃO FUTURA
+========================= */
+
+CREATE TABLE rdo_programacao (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    empresa_id INT NOT NULL,
+    obra_id INT NOT NULL,
+    frente_trabalho_id INT NOT NULL,
+
+    data_programada DATE NOT NULL,
+
+    status ENUM(
+        'PROGRAMADO',
+        'EM_PREENCHIMENTO',
+        'CONVERTIDO_RDO',
+        'CANCELADO'
+    ) NOT NULL DEFAULT 'PROGRAMADO',
+
+    titulo VARCHAR(150) NULL,
+    observacoes_planejamento TEXT NULL,
+
+    rdo_id INT NULL,
+
+    ativo BOOLEAN DEFAULT TRUE,
+
+    criado_por INT NULL,
+    modificado_por INT NULL,
+    criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+    modificado_em DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    UNIQUE KEY uk_rdo_programacao_dia (empresa_id, obra_id, frente_trabalho_id, data_programada),
+
+    INDEX idx_rdo_prog_empresa (empresa_id),
+    INDEX idx_rdo_prog_obra (obra_id),
+    INDEX idx_rdo_prog_frente (frente_trabalho_id),
+    INDEX idx_rdo_prog_data (data_programada),
+    INDEX idx_rdo_prog_status (status),
+    INDEX idx_rdo_prog_rdo (rdo_id),
+    INDEX idx_rdo_prog_ativo (ativo),
+
+    CONSTRAINT fk_rdo_prog_empresa
+        FOREIGN KEY (empresa_id) REFERENCES empresa(id),
+
+    CONSTRAINT fk_rdo_prog_obra
+        FOREIGN KEY (obra_id) REFERENCES obras(id),
+
+    CONSTRAINT fk_rdo_prog_frente
+        FOREIGN KEY (frente_trabalho_id) REFERENCES frente_trabalho(id),
+
+    CONSTRAINT fk_rdo_prog_rdo
+        FOREIGN KEY (rdo_id) REFERENCES rdo(id),
+
+    CONSTRAINT fk_rdo_prog_criado_por
+        FOREIGN KEY (criado_por) REFERENCES usuarios(id),
+
+    CONSTRAINT fk_rdo_prog_modificado_por
+        FOREIGN KEY (modificado_por) REFERENCES usuarios(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE rdo_programacao_atividades (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    empresa_id INT NOT NULL,
+    programacao_id INT NOT NULL,
+
+    -- Opcional: quando a obra possuir EAP formal cadastrada.
+    obra_eap_id INT NULL,
+
+    -- Campos livres para obras sem EAP formal ou para compatibilidade com cronogramas externos.
+    eap_codigo VARCHAR(80) NULL,
+    atividade_codigo VARCHAR(80) NULL,
+
+    descricao_planejada TEXT NOT NULL,
+
+    prioridade ENUM('BAIXA','MEDIA','ALTA','CRITICA') NOT NULL DEFAULT 'MEDIA',
+
+    quantidade_planejada DECIMAL(12,2) NULL,
+    unidade_medida VARCHAR(20) NULL,
+
+    status_planejado ENUM('PLANEJADO','REPROGRAMADO','CANCELADO') NOT NULL DEFAULT 'PLANEJADO',
+
+    status_execucao ENUM(
+        'NAO_AVALIADO',
+        'EXECUTADO',
+        'PARCIAL',
+        'NAO_EXECUTADO',
+        'EXECUTADO_EXTRA'
+    ) NOT NULL DEFAULT 'NAO_AVALIADO',
+
+    quantidade_executada DECIMAL(12,2) NULL,
+    observacao_execucao TEXT NULL,
+
+    rdo_atividade_id INT NULL,
+
+    ativo BOOLEAN DEFAULT TRUE,
+
+    criado_por INT NULL,
+    modificado_por INT NULL,
+    criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+    modificado_em DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    INDEX idx_rdo_prog_atv_empresa (empresa_id),
+    INDEX idx_rdo_prog_atv_programacao (programacao_id),
+    INDEX idx_rdo_prog_atv_obra_eap (obra_eap_id),
+    INDEX idx_rdo_prog_atv_eap_codigo (eap_codigo),
+    INDEX idx_rdo_prog_atv_status_planejado (status_planejado),
+    INDEX idx_rdo_prog_atv_status_execucao (status_execucao),
+    INDEX idx_rdo_prog_atv_rdo_atividade (rdo_atividade_id),
+    INDEX idx_rdo_prog_atv_ativo (ativo),
+
+    CONSTRAINT fk_rdo_prog_atv_empresa
+        FOREIGN KEY (empresa_id) REFERENCES empresa(id),
+
+    CONSTRAINT fk_rdo_prog_atv_programacao
+        FOREIGN KEY (programacao_id) REFERENCES rdo_programacao(id),
+
+    CONSTRAINT fk_rdo_prog_atv_obra_eap
+        FOREIGN KEY (obra_eap_id) REFERENCES obra_eap(id),
+
+    CONSTRAINT fk_rdo_prog_atv_rdo_atividade
+        FOREIGN KEY (rdo_atividade_id) REFERENCES rdo_atividades(id),
+
+    CONSTRAINT fk_rdo_prog_atv_criado_por
+        FOREIGN KEY (criado_por) REFERENCES usuarios(id),
+
+    CONSTRAINT fk_rdo_prog_atv_modificado_por
+        FOREIGN KEY (modificado_por) REFERENCES usuarios(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+/* =========================
    FOTOS
 ========================= */
 
@@ -873,6 +1058,17 @@ INSERT INTO permissoes (empresa_id, chave, descricao, is_system, ativo) VALUES
 (NULL, 'tipo_obra.update', 'Editar tipos de obra',                    TRUE, TRUE),
 (NULL, 'tipo_obra.delete', 'Excluir tipos de obra',                   TRUE, TRUE),
 
+
+(NULL, 'obra_eap.view', 'Visualizar EAP da obra', TRUE, TRUE),
+(NULL, 'obra_eap.create', 'Criar EAP da obra', TRUE, TRUE),
+(NULL, 'obra_eap.update', 'Editar EAP da obra', TRUE, TRUE),
+(NULL, 'obra_eap.delete', 'Excluir EAP da obra', TRUE, TRUE),
+(NULL, 'rdo_programacao.view', 'Visualizar programações futuras de RDO', TRUE, TRUE),
+(NULL, 'rdo_programacao.create', 'Criar programações futuras de RDO', TRUE, TRUE),
+(NULL, 'rdo_programacao.update', 'Editar programações futuras de RDO', TRUE, TRUE),
+(NULL, 'rdo_programacao.delete', 'Cancelar programações futuras de RDO', TRUE, TRUE),
+(NULL, 'rdo_programacao.execute', 'Conferir e converter programação em RDO', TRUE, TRUE),
+
 -- Auxiliares (clima)
 (NULL, 'clima.view',       'Visualizar climas',                      TRUE, TRUE),
 (NULL, 'clima.create',     'Criar climas',                            TRUE, TRUE),
@@ -917,6 +1113,8 @@ WHERE p.nome = 'GESTOR' AND p.empresa_id IS NULL
     'obra.manage',
     'colaborador.view','colaborador.manage',
     'workflow.manage',
+    'obra_eap.view','obra_eap.create','obra_eap.update','obra_eap.delete',
+    'rdo_programacao.view','rdo_programacao.create','rdo_programacao.update','rdo_programacao.delete','rdo_programacao.execute',
     'tipo_obra.view','tipo_obra.create','tipo_obra.update','tipo_obra.delete'
   );
 
@@ -926,7 +1124,7 @@ SELECT NULL, p.id, perm.id, TRUE
 FROM papeis p, permissoes perm
 WHERE p.nome = 'OPERADOR' AND p.empresa_id IS NULL
   AND perm.empresa_id IS NULL
-  AND perm.chave IN ('rdo.create','rdo.update','rdo.view','empresa.view','cliente.view','fornecedor.view','colaborador.view','colaborador.manage','tipo_obra.view');
+  AND perm.chave IN ('rdo.create','rdo.update','rdo.view','empresa.view','cliente.view','fornecedor.view','colaborador.view','colaborador.manage','obra_eap.view','rdo_programacao.view','rdo_programacao.execute','tipo_obra.view');
 
 -- Mapeamento LEITOR
 INSERT INTO papel_permissao (empresa_id, papel_id, permissao_id, ativo)
@@ -1440,6 +1638,9 @@ INSERT INTO cad_listas (titulo, nome_interno, slug, modulo, tipo_lista, origem_d
 ('Tags de Ocorrência', 'aux_tag_ocorrencia', 'tags-ocorrencia', 'RDO', 'Auxiliar', 'MySQL', TRUE, TRUE),
 
 -- RDO (TRANSACIONAL)
+('Obra - EAP', 'obra_eap', 'obra-eap', 'Engenharia', 'Cadastro', 'MySQL', TRUE, TRUE),
+('RDO - Programação Futura', 'rdo_programacao', 'rdo-programacao', 'RDO', 'Transacional', 'MySQL', TRUE, TRUE),
+('RDO - Programação de Atividades', 'rdo_programacao_atividades', 'rdo-programacao-atividades', 'RDO', 'Transacional', 'MySQL', TRUE, TRUE),
 ('RDO (Capa)', 'rdo', 'rdo', 'RDO', 'Transacional', 'MySQL', TRUE, TRUE),
 ('RDO - Mão de Obra', 'rdo_mao_obra', 'rdo-mao-obra', 'RDO', 'Transacional', 'MySQL', TRUE, TRUE),
 ('RDO - Equipamentos', 'rdo_equipamentos', 'rdo-equipamentos', 'RDO', 'Transacional', 'MySQL', TRUE, TRUE),
@@ -1589,6 +1790,39 @@ INSERT INTO frente_colaborador (id, empresa_id, frente_id, colaborador_id, funca
 (22, 2, 20, 24, 10, '2026-01-10', TRUE, 22),
 (23, 2, 20, 25, 21, '2026-01-15', TRUE, 22),
 (24, 2, 21, 26, NULL, '2026-02-01', TRUE, 21);
+
+
+-- EAP formal da obra e programação futura de RDO
+INSERT INTO obra_eap (
+    id, empresa_id, obra_id, eap_pai_id, codigo, nome, descricao, nivel, ordem, ativo, criado_por
+) VALUES
+(20, 2, 20, NULL, '1', 'Linha de recalque', 'Macroatividade da linha de recalque.', 1, 1, TRUE, 21),
+(21, 2, 20, 20, '1.1', 'Escavação', 'Escavação da vala da linha de recalque.', 2, 1, TRUE, 21),
+(22, 2, 20, 20, '1.2', 'Assentamento de tubulação', 'Assentamento e alinhamento da tubulação.', 2, 2, TRUE, 21);
+
+INSERT INTO rdo_programacao (
+    id, empresa_id, obra_id, frente_trabalho_id, data_programada, status,
+    titulo, observacoes_planejamento, ativo, criado_por
+) VALUES
+(20, 2, 20, 20, '2026-05-10', 'PROGRAMADO',
+ 'Programação diária - Linha de recalque norte',
+ 'Programação prévia das atividades previstas para execução em campo.',
+ TRUE, 21);
+
+INSERT INTO rdo_programacao_atividades (
+    id, empresa_id, programacao_id, obra_eap_id, eap_codigo, atividade_codigo,
+    descricao_planejada, prioridade, quantidade_planejada, unidade_medida,
+    status_planejado, status_execucao, ativo, criado_por
+) VALUES
+(20, 2, 20, 21, '1.1', 'ATV-001',
+ 'Escavação mecanizada da vala da linha de recalque norte.',
+ 'ALTA', 60.00, 'm', 'PLANEJADO', 'NAO_AVALIADO', TRUE, 21),
+(21, 2, 20, 22, '1.2', 'ATV-002',
+ 'Assentamento inicial da tubulação da linha de recalque.',
+ 'MEDIA', 36.00, 'm', 'PLANEJADO', 'NAO_AVALIADO', TRUE, 21),
+(22, 2, 20, NULL, NULL, 'ATV-003',
+ 'Conferência de interferências e liberação da frente com segurança.',
+ 'CRITICA', NULL, NULL, 'PLANEJADO', 'NAO_AVALIADO', TRUE, 21);
 
 -- Workflow de aprovacao
 INSERT INTO workflow_definicoes (id, empresa_id, obra_id, nome, descricao, aprovacao_paralela, rejeicao_cancela_fluxo, sla_horas, ativo, criado_por) VALUES
