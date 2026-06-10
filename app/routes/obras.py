@@ -713,6 +713,39 @@ def _get_frente_or_404(frente_id: int):
     return frente
 
 
+def _serialize_frente_colaborador(vinculo: FrenteColaborador):
+    colaborador = vinculo.colaborador
+    return {
+        "id": vinculo.id,
+        "vinculo_id": vinculo.id,
+        "colaborador_id": vinculo.colaborador_id,
+        "colaborador_nome": colaborador.nome if colaborador else "",
+        "cpf": (colaborador.cadastro_pessoa_fisica if colaborador else None),
+        "colaborador_cpf": (colaborador.cadastro_pessoa_fisica if colaborador else None),
+        "funcao_id": vinculo.funcao_id,
+        "funcao_nome": vinculo.funcao.nome if vinculo.funcao else "",
+        "data_inicio": vinculo.data_inicio.isoformat() if vinculo.data_inicio else None,
+        "data_fim": vinculo.data_fim.isoformat() if vinculo.data_fim else None,
+        "ativo": bool(vinculo.ativo),
+        "observacao": getattr(vinculo, "observacao", None),
+    }
+
+
+def _frente_colaboradores_counts(frente_id: int, empresa_id: int):
+    rows = (
+        FrenteColaborador.query
+        .filter(
+            FrenteColaborador.frente_id == frente_id,
+            FrenteColaborador.empresa_id == empresa_id,
+        )
+        .all()
+    )
+    total = len(rows)
+    ativos = sum(1 for row in rows if bool(row.ativo))
+    inativos = total - ativos
+    return {"total": total, "ativos": ativos, "inativos": inativos}
+
+
 @auth_bp.get("/api/frente/<int:frente_id>/colaboradores")
 @login_required
 def api_frente_colaboradores_list(frente_id):
@@ -726,27 +759,13 @@ def api_frente_colaboradores_list(frente_id):
         .all()
     )
 
-    items = []
-    for r in rows:
-        items.append({
-            "id": r.id,
-            "colaborador_id": r.colaborador_id,
-            "colaborador_nome": r.colaborador.nome if r.colaborador else "",
-            "funcao_id": r.funcao_id,
-            "funcao_nome": r.funcao.nome if r.funcao else "",
-            "data_inicio": r.data_inicio.isoformat() if r.data_inicio else None,
-            "data_fim": r.data_fim.isoformat() if r.data_fim else None,
-            "ativo": bool(r.ativo),
-        })
-
-    total = len(items)
-    ativos = sum(1 for p in items if p["ativo"])
-    inativos = total - ativos
+    items = [_serialize_frente_colaborador(row) for row in rows]
+    counts = _frente_colaboradores_counts(frente.id, frente.empresa_id)
 
     return jsonify({
         "ok": True,
         "frente": {"id": frente.id, "obra_id": frente.obra_id, "nome": frente.nome},
-        "counts": {"total": total, "ativos": ativos, "inativos": inativos},
+        "counts": counts,
         "items": items,
     })
 
@@ -762,7 +781,12 @@ def api_colaboradores_search():
     query = Colaborador.query.filter(Colaborador.empresa_id == empresa_id)
 
     if q:
-        query = query.filter(Colaborador.nome.ilike(f"%{q}%"))
+        query = query.filter(
+            db.or_(
+                Colaborador.nome.ilike(f"%{q}%"),
+                Colaborador.cadastro_pessoa_fisica.ilike(f"%{q}%"),
+            )
+        )
     if cpf:
         query = query.filter(Colaborador.cadastro_pessoa_fisica.ilike(f"%{cpf}%"))
     if tipo in ("PROPRIO", "TERCEIRO", "CLIENTE"):
@@ -837,7 +861,18 @@ def api_frente_colaboradores_create(frente_id):
     )
     db.session.add(novo)
     db.session.commit()
-    return jsonify({"ok": True, "id": novo.id})
+    novo = (
+        FrenteColaborador.query
+        .filter_by(id=novo.id, empresa_id=frente.empresa_id)
+        .outerjoin(Colaborador, Colaborador.id == FrenteColaborador.colaborador_id)
+        .first()
+    )
+    return jsonify({
+        "ok": True,
+        "id": novo.id,
+        "item": _serialize_frente_colaborador(novo),
+        "counts": _frente_colaboradores_counts(frente.id, frente.empresa_id),
+    })
 
 
 @auth_bp.put("/api/frente-colaborador/<int:vinculo_id>")
@@ -862,7 +897,11 @@ def api_frente_colaborador_update(vinculo_id):
     vinculo.modificado_por = session.get("user_id")
 
     db.session.commit()
-    return jsonify({"ok": True})
+    return jsonify({
+        "ok": True,
+        "item": _serialize_frente_colaborador(vinculo),
+        "counts": _frente_colaboradores_counts(vinculo.frente_id, vinculo.empresa_id),
+    })
 
 
 @auth_bp.post("/api/frente-colaborador/<int:vinculo_id>/toggle")
@@ -874,9 +913,18 @@ def api_frente_colaborador_toggle(vinculo_id):
     _get_frente_or_404(vinculo.frente_id)
 
     vinculo.ativo = not bool(vinculo.ativo)
+    if vinculo.ativo and vinculo.data_fim is not None:
+        vinculo.data_fim = None
+    elif not vinculo.ativo and vinculo.data_fim is None:
+        vinculo.data_fim = datetime.utcnow().date()
     vinculo.modificado_por = session.get("user_id")
     db.session.commit()
-    return jsonify({"ok": True, "ativo": bool(vinculo.ativo)})
+    return jsonify({
+        "ok": True,
+        "ativo": bool(vinculo.ativo),
+        "item": _serialize_frente_colaborador(vinculo),
+        "counts": _frente_colaboradores_counts(vinculo.frente_id, vinculo.empresa_id),
+    })
 
 @auth_bp.post("/obra/toggle-status/<int:id>")
 @login_required

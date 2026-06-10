@@ -614,203 +614,276 @@ shadow-sm placeholder:text-slate-400" %}
             </div>
         </div>
 
-        <!-- Modal: Colaboradores da Frente -->
-        <div id="modal-colaboradores" class="fixed inset-0 z-50 hidden" data-disable-global-picker-enhancer="true">
-            <div class="absolute inset-0 bg-slate-900/40" onclick="closeColaboradoresModal()"></div>
-            <div class="absolute inset-0 flex items-end sm:items-center justify-center p-4">
-                <div class="w-full max-w-5xl bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+        <div id="modal-colaboradores" class="fixed inset-0 z-50 hidden" data-disable-global-picker-enhancer="true"
+            aria-hidden="true">
+
+            <div class="absolute inset-0 bg-slate-950/45 backdrop-blur-[2px]" onclick="closeColaboradoresModal()"></div>
+
+            <div class="absolute inset-0 flex items-end lg:items-center justify-center p-3 sm:p-5">
+                <div
+                    class="w-full max-w-[1520px] max-h-[94vh] bg-white rounded-[28px] shadow-2xl border border-slate-200 overflow-hidden flex flex-col">
+
                     <div
-                        class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between gap-3">
-                        <div>
-                            <h3 class="text-sm font-bold text-slate-900 uppercase tracking-wide">Colaboradores da Frente
-                            </h3>
-                            <p class="text-xs text-slate-500 mt-1" id="modal-frente-titulo">-</p>
+                        class="px-6 sm:px-8 py-6 border-b border-slate-200 bg-white flex items-start justify-between gap-4">
+                        <div class="flex items-start gap-4 min-w-0">
+                            <div class="min-w-0">
+                                <h3 class="text-[1.08rem] sm:text-[1.18rem] font-bold text-slate-800 tracking-tight">
+                                    Gerenciar Colaboradores da Frente de Trabalho
+                                </h3>
+                                <p id="modal-frente-titulo" class="text-sm font-medium text-slate-600 mt-1">-</p>
+                            </div>
                         </div>
+
                         <button type="button" onclick="closeColaboradoresModal()"
-                            class="w-10 h-10 rounded-lg hover:bg-slate-100 text-slate-500 flex items-center justify-center">
-                            <i class="fas fa-times"></i>
+                            class="w-11 h-11 rounded-2xl hover:bg-slate-50 text-slate-400 hover:text-slate-600 flex items-center justify-center transition">
+                            <i class="fas fa-times text-lg"></i>
                         </button>
                     </div>
 
-                    <div class="px-6 py-4 flex flex-wrap gap-2 items-center justify-between">
-                        <div class="flex gap-2 text-[11px] font-bold">
-                            <span class="px-2 py-1 rounded-md bg-slate-100 text-slate-700">Total: <span
-                                    id="modal-count-total">0</span></span>
-                            <span class="px-2 py-1 rounded-md bg-emerald-50 text-emerald-700">Ativos: <span
-                                    id="modal-count-ativos">0</span></span>
-                            <span class="px-2 py-1 rounded-md bg-red-50 text-red-700">Inativos: <span
-                                    id="modal-count-inativos">0</span></span>
-                        </div>
-                        {% if not view_mode %}
-                        <button type="button" onclick="openBuscarColaboradorModal()"
-                            class="px-4 h-10 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-2">
-                            <i class="fas fa-plus"></i> Adicionar colaborador
-                        </button>
-                        {% endif %}
-                    </div>
-
-                    <div class="px-6 pb-6 overflow-x-auto">
-                        <table class="w-full text-left">
-                            <thead>
-                                <tr
-                                    class="bg-slate-50 text-[10px] uppercase text-slate-500 font-bold border-b border-slate-200">
-                                    <th class="p-3">Colaborador</th>
-                                    <th class="p-3">Função</th>
-                                    <th class="p-3 text-center">Data Início</th>
-                                    <th class="p-3 text-center">Data Fim</th>
-                                    <th class="p-3 text-center">Status</th>
-                                    {% if not view_mode %}<th class="p-3 text-center">Ações</th>{% endif %}
-                                </tr>
-                            </thead>
-                            <tbody id="modal-vinculos-body" class="divide-y divide-slate-100 bg-white"></tbody>
-                        </table>
-                    </div>
-
-                    <input type="hidden" id="modal-frente-id" value="">
-                </div>
-            </div>
-        </div>
-
-        <!-- Modal: Buscar Colaborador -->
-        <div id="modal-buscar-colaborador" class="fixed inset-0 z-[60] hidden"
-            data-disable-global-picker-enhancer="true">
-            <div class="absolute inset-0 bg-slate-900/40" onclick="closeBuscarColaboradorModal()"></div>
-            <div class="absolute inset-0 flex items-end sm:items-center justify-center p-4">
-                <div class="w-full max-w-4xl bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
-                    <div
-                        class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between gap-3">
-                        <div>
-                            <h3 class="text-sm font-bold text-slate-900 uppercase tracking-wide">Buscar Colaboradores
-                            </h3>
-                            <p class="text-xs text-slate-500 mt-1">Pesquise por nome, CPF/Cadastro Pessoa Física e tipo.
-                            </p>
-                        </div>
-                        <button type="button" onclick="closeBuscarColaboradorModal()"
-                            class="w-10 h-10 rounded-lg hover:bg-slate-100 text-slate-500 flex items-center justify-center">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-
-                    <div class="p-6 grid grid-cols-12 gap-4">
-                        <div class="col-span-12 sm:col-span-6">
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Nome</label>
-                            <input type="text" id="buscar-q" class="{{ input_base_css }} {{ input_edit_css }}"
-                                placeholder="Digite para pesquisar...">
-                        </div>
-                        <div class="col-span-12 sm:col-span-3">
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">CPF/Cadastro</label>
-                            <input type="text" id="buscar-cpf" class="{{ input_base_css }} {{ input_edit_css }}"
-                                placeholder="Opcional">
-                        </div>
-                        <div class="col-span-12 sm:col-span-3">
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Tipo</label>
-                            <select id="buscar-tipo" class="{{ input_base_css }} {{ input_edit_css }}">
-                                <option value="">Todos</option>
-                                <option value="PROPRIO">Próprio</option>
-                                <option value="TERCEIRO">Terceiro</option>
-                                <option value="CLIENTE">Cliente</option>
-                            </select>
-                        </div>
-                        <div class="col-span-12 flex justify-end">
-                            <button type="button" id="btn-buscar-colaboradores" onclick="buscarColaboradores(this)"
-                                class="px-4 h-10 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-2">
-                                <i class="fas fa-search"></i> Buscar
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="px-6 pb-6 overflow-x-auto">
-                        <table class="w-full text-left">
-                            <thead>
-                                <tr
-                                    class="bg-slate-50 text-[10px] uppercase text-slate-500 font-bold border-b border-slate-200">
-                                    <th class="p-3">Nome</th>
-                                    <th class="p-3">Tipo</th>
-                                    <th class="p-3">Função atual</th>
-                                    <th class="p-3 text-center">Status</th>
-                                    <th class="p-3 text-center">Selecionar</th>
-                                </tr>
-                            </thead>
-                            <tbody id="buscar-body" class="divide-y divide-slate-100 bg-white"></tbody>
-                        </table>
-                    </div>
-
-                    <div class="px-6 pb-6">
-                        <div class="surface-card rounded-xl border border-slate-200 p-4 bg-slate-50/50">
-                            <div class="grid grid-cols-12 gap-4">
-                                <div class="col-span-12 sm:col-span-6">
-                                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Função</label>
-                                    <select id="add-funcao-id" class="{{ input_base_css }} {{ input_edit_css }}">
-                                        <option value="">Selecione...</option>
-                                        {% for op in mao_de_obra_options %}
-                                        <option value="{{ op.id }}">{{ op.nome }}{% if op.tipo %} ({{ op.tipo }}){%
-                                            endif %}</option>
-                                        {% endfor %}
-                                    </select>
+                    <div class="px-6 sm:px-8 py-5 border-b border-slate-200 bg-white">
+                        <input type="hidden" id="buscar-status" value="">
+                        <input type="hidden" id="buscar-cpf" value="">
+                        <div class="flex flex-col xl:flex-row gap-3 xl:items-center">
+                            <div class="flex-1">
+                                <div class="relative">
+                                    <input type="text" id="buscar-q"
+                                        class="form-control-std h-11 rounded-2xl pl-11 pr-4 text-sm bg-white"
+                                        placeholder="Buscar por nome ou CPF...">
                                 </div>
-                                <div class="col-span-12 sm:col-span-3">
-                                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Data
-                                        Início</label>
-                                    <input type="text" id="add-data-inicio"
-                                        class="{{ input_base_css }} {{ input_edit_css }} js-date-picker"
-                                        placeholder="dd/mm/aaaa">
-                                </div>
-                                <div class="col-span-12 sm:col-span-3">
-                                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Data
-                                        Fim</label>
-                                    <input type="text" id="add-data-fim"
-                                        class="{{ input_base_css }} {{ input_edit_css }} js-date-picker"
-                                        placeholder="dd/mm/aaaa">
-                                </div>
-                                <div class="col-span-12 sm:col-span-3">
-                                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Status</label>
-                                    <select id="add-ativo" class="{{ input_base_css }} {{ input_edit_css }}">
-                                        <option value="1" selected>Ativo</option>
-                                        <option value="0">Inativo</option>
-                                    </select>
-                                </div>
-                                <div class="col-span-12 sm:col-span-9 flex items-end">
-                                    <p class="text-xs text-slate-500">Selecione um colaborador acima e preencha os dados
-                                        do vínculo.</p>
-                                </div>
-                                <div class="col-span-12 flex justify-end gap-2">
-                                    <input type="hidden" id="add-colaborador-id" value="">
-                                    <button type="button" id="btn-vincular-colaborador"
-                                        onclick="confirmarAdicionarColaborador(this)"
-                                        class="px-4 h-10 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-2">
-                                        <i class="fas fa-check"></i> Vincular
+                            </div>
+                            <div class="flex flex-col sm:flex-row gap-3 xl:items-center">
+                                <div
+                                    class="inline-flex p-1 rounded-2xl border border-slate-200 bg-slate-50 gap-1 h-11 items-center">
+                                    <button type="button" id="modal-status-todos" onclick="setModalStatusFilter('')"
+                                        class="modal-status-chip px-4 h-9 rounded-xl text-sm font-medium bg-white text-slate-700 shadow-sm">
+                                        Todos
+                                    </button>
+                                    <button type="button" id="modal-status-ativo"
+                                        onclick="setModalStatusFilter('ATIVO')"
+                                        class="modal-status-chip px-4 h-9 rounded-xl text-sm font-medium text-slate-500 hover:text-slate-700">
+                                        Ativos
+                                    </button>
+                                    <button type="button" id="modal-status-encerrado"
+                                        onclick="setModalStatusFilter('ENCERRADO')"
+                                        class="modal-status-chip px-4 h-9 rounded-xl text-sm font-medium text-slate-500 hover:text-slate-700">
+                                        Inativos
                                     </button>
                                 </div>
+                                {% if not view_mode %}
+                                <button type="button" onclick="toggleAdicionarColaborador(true)"
+                                    class="px-5 h-11 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold flex items-center justify-center gap-2 shadow-sm whitespace-nowrap">
+                                    <i class="fas fa-plus"></i> Adicionar Colaborador
+                                </button>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
 
+                    <div class="flex-1 min-h-0 relative bg-slate-50/50 overflow-hidden">
+                        <div class="h-full flex flex-col min-h-0">
+                            <div
+                                class="hidden px-5 sm:px-8 py-4 bg-white border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+                                <div>
+                                    <p class="text-xs font-bold text-slate-700 uppercase">Colaboradores vinculados</p>
+                                    <p class="text-[11px] text-slate-400 mt-0.5">Ativos primeiro, depois Inativos,
+                                        ordenados por nome.</p>
+                                </div>
+                            </div>
+
+                            <div class="flex-1 min-h-0 overflow-auto px-6 sm:px-8 py-4">
+                                <div
+                                    class="rounded-3xl border border-slate-200 bg-white overflow-hidden min-h-full flex flex-col">
+                                    <table class="w-full min-w-[1120px] text-left">
+                                        <thead class="sticky top-0 z-10 bg-slate-50">
+                                            <tr
+                                                class="text-[11px] uppercase tracking-wide text-slate-500 font-bold border-b border-slate-200">
+                                                <th class="px-5 py-4">Colaborador</th>
+                                                <th class="px-5 py-4">CPF</th>
+                                                <th class="p-3">Função Atribuída</th>
+                                                <th class="p-3">Data Início</th>
+                                                <th class="p-3">Data Fim</th>
+                                                <th class="px-5 py-4 text-center">Status</th>
+                                                <th class="p-3 text-right">Ações</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="modal-colaboradores-selecionados"
+                                            class="divide-y divide-slate-100 bg-white">
+                                            <tr>
+                                                <td colspan="7" class="p-10 text-center text-slate-400 italic">Nenhum
+                                                    colaborador associado.</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div
+                                class="px-6 sm:px-8 py-4 border-t border-slate-200 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                <p id="modal-pagination-info" class="text-xs text-slate-500">Exibindo 0 registros</p>
+                                <div class="flex items-center gap-2 self-end sm:self-auto">
+                                    <button type="button" onclick="mudarPaginaVinculos(-1)"
+                                        class="px-3 h-10 rounded-2xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50">Anterior</button>
+                                    <span id="modal-pagination-page" class="text-xs font-bold text-slate-700 px-2">1 /
+                                        1</span>
+                                    <button type="button" onclick="mudarPaginaVinculos(1)"
+                                        class="px-3 h-9 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50">Próxima</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="modal-colaborador-sidepanel"
+                            class="hidden absolute inset-y-0 right-0 w-full max-w-[560px] border-l border-slate-200 bg-white shadow-2xl overflow-hidden">
+                            <div id="add-colaborador-panel" class="hidden h-full overflow-auto bg-slate-50/50">
+                                <div class="h-full flex flex-col">
+                                    <div
+                                        class="px-6 py-5 border-b border-slate-200 bg-white flex items-start justify-between gap-3">
+                                        <div>
+                                            <p class="text-base font-bold text-slate-800">Adicionar colaborador</p>
+                                            <p class="text-xs text-slate-500 mt-1">Pesquise por nome ou CPF. Apenas
+                                                colaboradores ativos e ainda não associados serão exibidos.</p>
+                                        </div>
+                                        <button type="button" onclick="toggleAdicionarColaborador(false)"
+                                            class="w-10 h-10 rounded-2xl hover:bg-slate-50 text-slate-500 flex items-center justify-center transition"><i
+                                                class="fas fa-times"></i></button>
+                                    </div>
+
+                                    <div class="flex-1 overflow-auto px-6 py-5 space-y-4">
+                                        <div
+                                            class="rounded-3xl border border-slate-200 bg-white p-4 space-y-4 shadow-sm">
+                                            <label
+                                                class="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-2">Buscar
+                                                colaborador</label>
+                                            <div class="relative">
+                                                <i
+                                                    class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                                                <input type="text" id="add-colaborador-search"
+                                                    class="form-control-std h-11 rounded-2xl pl-11 pr-4 text-sm bg-white"
+                                                    placeholder="Nome ou CPF">
+                                            </div>
+                                            <div id="add-colaborador-results"
+                                                class="mt-3 rounded-2xl border border-slate-200 bg-white overflow-hidden hidden max-h-64 overflow-y-auto">
+                                            </div>
+                                        </div>
+
+                                        <div id="add-colaborador-form"
+                                            class="hidden rounded-3xl border border-slate-200 bg-slate-50/80 p-4 space-y-4">
+                                            <div class="grid grid-cols-1 gap-4">
+                                                <div>
+                                                    <label
+                                                        class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Colaborador</label>
+                                                    <input type="text" id="add-colaborador-nome"
+                                                        class="form-control-std h-11 rounded-2xl bg-slate-100 border-slate-200 text-slate-800 font-semibold"
+                                                        readonly>
+                                                </div>
+                                                <div>
+                                                    <label
+                                                        class="block text-[10px] font-bold text-slate-500 uppercase mb-1">CPF</label>
+                                                    <input type="text" id="add-colaborador-cpf"
+                                                        class="form-control-std h-11 rounded-2xl bg-slate-100 border-slate-200 text-slate-800 font-mono"
+                                                        readonly>
+                                                </div>
+                                                <div>
+                                                    <label
+                                                        class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Função
+                                                        na Frente</label>
+                                                    <select id="add-colaborador-funcao"
+                                                        class="form-control-std h-11 rounded-2xl text-sm bg-white">
+                                                        <option value="">Selecione...</option>
+                                                        {% for op in mao_de_obra_options %}
+                                                        <option value="{{ op.id }}">{{ op.nome }}{% if op.tipo %} ({{
+                                                            op.tipo }}){% endif %}</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+                                                <div class="grid grid-cols-2 gap-3">
+                                                    <div>
+                                                        <label
+                                                            class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Data
+                                                            de Início</label>
+                                                        <input type="text" id="add-colaborador-data-inicio"
+                                                            class="form-control-std h-11 rounded-2xl text-sm js-date-picker"
+                                                            placeholder="dd/mm/aaaa">
+                                                    </div>
+                                                    <div>
+                                                        <label
+                                                            class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Data
+                                                            de Fim</label>
+                                                        <input type="text" id="add-colaborador-data-fim"
+                                                            class="form-control-std h-11 rounded-2xl text-sm js-date-picker"
+                                                            placeholder="dd/mm/aaaa">
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <label
+                                                        class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Observação</label>
+                                                    <textarea id="add-colaborador-observacao"
+                                                        class="form-control-std min-h-[96px] rounded-2xl px-4 py-3 text-sm resize-y"
+                                                        placeholder="Opcional"></textarea>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center justify-end gap-2">
+                                                <button type="button" onclick="cancelarNovoVinculo()"
+                                                    class="px-4 h-11 rounded-2xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-white">Cancelar</button>
+                                                <button type="button" onclick="salvarNovoVinculo(this)"
+                                                    class="px-5 h-11 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold">Vincular</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div id="detail-colaborador-panel" class="h-full overflow-auto bg-slate-50/50">
+                                    <div
+                                        class="h-full px-6 py-6 text-center text-slate-400 flex flex-col items-center justify-center">
+                                        <div
+                                            class="w-16 h-16 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mb-4">
+                                            <i class="fas fa-user-clock text-2xl"></i>
+                                        </div>
+                                        <p class="text-sm font-semibold text-slate-600">Selecione Visualizar ou Editar
+                                            em uma linha.</p>
+                                        <p class="text-xs mt-1">Os dados históricos permanecem preservados.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div
+                            class="px-6 sm:px-8 py-4 border-t border-slate-200 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <input type="hidden" id="modal-frente-id" value="">
+                            <p class="text-xs text-slate-500 flex items-center gap-2">
+                                <i class="fas fa-circle-info text-slate-400"></i>
+                                Registros Inativos sao preservados como historico e nao podem ser excluidos.
+                            </p>
+                            <button type="button" onclick="closeColaboradoresModal()"
+                                class="px-5 h-11 rounded-2xl border border-slate-200 text-slate-600 text-sm font-bold hover:bg-slate-50 self-end sm:self-auto">
+                                Fechar
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
+
+            <div class="flex flex-col-reverse sm:flex-row gap-3 pt-4 border-t border-slate-200">
+                <a href="{{ url_for('auth.lista_obras') }}"
+                    class="flex-1 px-4 py-3 bg-white border border-slate-300 text-slate-700 font-bold rounded-xl shadow-sm hover:bg-slate-50 transition-colors text-center text-sm">
+                    {{ 'Voltar' if view_mode else 'Cancelar' }}
+                </a>
+
+                {% if view_mode %}
+                <a href="{{ url_for('auth.editar_obra', id=item.id) }}"
+                    class="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md shadow-blue-500/20 transition-all text-center text-sm flex items-center justify-center gap-2">
+                    <i class="fas fa-edit"></i> Editar Obra
+                </a>
+                {% else %}
+                <button type="button" onclick="submitObraForm()" id="submitBtn"
+                    class="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md shadow-blue-500/20 transition-all text-center text-sm flex items-center justify-center gap-2">
+                    <span id="btnText">{{ 'Salvar Alterações' if item and item.id else 'Cadastrar Obra' }}</span>
+                    <i class="fas fa-spinner fa-spin hidden" id="spinner"></i>
+                </button>
+                {% endif %}
+            </div>
+
         </div>
-
-        <div class="flex flex-col-reverse sm:flex-row gap-3 pt-4 border-t border-slate-200">
-            <a href="{{ url_for('auth.lista_obras') }}"
-                class="flex-1 px-4 py-3 bg-white border border-slate-300 text-slate-700 font-bold rounded-xl shadow-sm hover:bg-slate-50 transition-colors text-center text-sm">
-                {{ 'Voltar' if view_mode else 'Cancelar' }}
-            </a>
-
-            {% if view_mode %}
-            <a href="{{ url_for('auth.editar_obra', id=item.id) }}"
-                class="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md shadow-blue-500/20 transition-all text-center text-sm flex items-center justify-center gap-2">
-                <i class="fas fa-edit"></i> Editar Obra
-            </a>
-            {% else %}
-            <button type="button" onclick="submitObraForm()" id="submitBtn"
-                class="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md shadow-blue-500/20 transition-all text-center text-sm flex items-center justify-center gap-2">
-                <span id="btnText">{{ 'Salvar Alterações' if item and item.id else 'Cadastrar Obra' }}</span>
-                <i class="fas fa-spinner fa-spin hidden" id="spinner"></i>
-            </button>
-            {% endif %}
-        </div>
-
-    </div>
-    {% endcall %}
+        {% endcall %}
     </div>
 
     <style>
@@ -973,6 +1046,9 @@ shadow-sm placeholder:text-slate-400" %}
         let restoringDraft = false;
         let submittingForm = false;
         const asyncLocks = {};
+        let modalColaboradoresSelecionados = new Map();
+        let modalColaboradoresRemovidos = new Map();
+        let modalColaboradoresDisponiveis = [];
         const FUNCOES_OPTIONS_HTML = `
             <option value="">Selecione...</option>
             {% for op in mao_de_obra_options %}
@@ -1002,6 +1078,11 @@ shadow-sm placeholder:text-slate-400" %}
                 '"': '&quot;',
                 "'": '&#39;'
             })[char]);
+        }
+
+        function cssEscape(value) {
+            if (window.CSS && typeof window.CSS.escape === 'function') return window.CSS.escape(String(value || ''));
+            return String(value || '').replace(/["\\\]]/g, '\\$&');
         }
 
         function normalizeText(value) {
@@ -1555,19 +1636,98 @@ shadow-sm placeholder:text-slate-400" %}
             if (el('modal-count-inativos')) el('modal-count-inativos').textContent = counts.inativos;
         }
 
+        let modalVinculosFiltro = { q: '', cpf: '', status: '', funcao: '' };
+        let modalVinculosPagina = 1;
+        const MODAL_VINCULOS_PAGE_SIZE = 10;
+        let colaboradorSelecionadoParaAdicionar = null;
+        let modalInlineEditor = null;
+        let modalInlineSearchResults = [];
+
+        function setModalStatusFilter(status = '') {
+            if (el('buscar-status')) el('buscar-status').value = status;
+            modalVinculosFiltro.status = status;
+            modalVinculosPagina = 1;
+            document.querySelectorAll('.modal-status-chip').forEach((chip) => {
+                chip.classList.remove('bg-white', 'text-slate-700', 'shadow-sm');
+                chip.classList.add('text-slate-500');
+            });
+            const activeChip = status === 'ATIVO'
+                ? el('modal-status-ativo')
+                : status === 'ENCERRADO'
+                    ? el('modal-status-encerrado')
+                    : el('modal-status-todos');
+            if (activeChip) {
+                activeChip.classList.add('bg-white', 'text-slate-700', 'shadow-sm');
+                activeChip.classList.remove('text-slate-500');
+            }
+            renderColaboradoresSelecionados();
+        }
+
+        function toggleModalSidepanel(open) {
+            const panel = el('modal-colaborador-sidepanel');
+            if (!panel) return;
+            panel.classList.toggle('hidden', !open);
+        }
+
+        function getColaboradorInitials(nome) {
+            const parts = String(nome || '').trim().split(/\s+/).filter(Boolean);
+            if (!parts.length) return '--';
+            return parts.slice(0, 2).map((part) => part.charAt(0).toUpperCase()).join('');
+        }
+
+        function ensureModalFuncoesCard() {
+            const countEl = el('modal-count-funcoes');
+            const card = countEl ? countEl.closest('.rounded-3xl') : null;
+            if (!card || card.dataset.enhanced === '1') return;
+            const value = escapeHtml(countEl.textContent || '0');
+            card.dataset.enhanced = '1';
+            card.innerHTML = `
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Funções</p>
+                        <p id="modal-count-funcoes" class="text-[2.05rem] leading-none font-bold text-slate-800 mt-5">${value}</p>
+                    </div>
+                    <div class="w-10 h-10 rounded-2xl border border-blue-200 bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                        <i class="fas fa-briefcase"></i>
+                    </div>
+                </div>
+            `;
+        }
+
         function openColaboradoresModal(frenteId, btn) {
             const modal = el('modal-colaboradores');
             if (!modal || !frenteId) return;
             if (modal.parentElement !== document.body) document.body.appendChild(modal);
+
+            modalColaboradoresSelecionados = new Map();
+            modalColaboradoresRemovidos = new Map();
+            modalColaboradoresDisponiveis = [];
+            modalVinculosPagina = 1;
+            colaboradorSelecionadoParaAdicionar = null;
+            modalInlineEditor = null;
+            modalInlineSearchResults = [];
+
             if (el('modal-frente-id')) el('modal-frente-id').value = String(frenteId);
             const row = btn && btn.closest ? btn.closest('tr') : null;
             const nomeInput = row ? row.querySelector('[name="frente_nome[]"]') : null;
-            if (el('modal-frente-titulo')) el('modal-frente-titulo').textContent = nomeInput && nomeInput.value ? `Frente: ${nomeInput.value}` : `Frente #${frenteId}`;
+            if (el('modal-frente-titulo')) el('modal-frente-titulo').textContent = nomeInput && nomeInput.value ? nomeInput.value : `Frente #${frenteId}`;
+
+            ['buscar-q', 'buscar-cpf', 'buscar-status', 'buscar-funcao', 'add-colaborador-search'].forEach((id) => {
+                if (el(id)) el(id).value = '';
+            });
+            modalVinculosFiltro = { q: '', cpf: '', status: '', funcao: '' };
+            setModalStatusFilter('');
+            toggleAdicionarColaborador(false);
+
             modal.classList.remove('hidden');
             modal.style.display = 'block';
             modal.setAttribute('aria-hidden', 'false');
             document.body.classList.add('overflow-hidden');
+
+            ensureModalFuncoesCard();
+            if (window.initSelectPickers) window.initSelectPickers(modal);
             enhanceObraDatePickers(modal);
+            renderColaboradoresSelecionados();
             loadVinculos(frenteId);
         }
 
@@ -1578,216 +1738,1039 @@ shadow-sm placeholder:text-slate-400" %}
             modal.style.display = '';
             modal.setAttribute('aria-hidden', 'true');
             document.body.classList.remove('overflow-hidden');
-            if (el('modal-vinculos-body')) el('modal-vinculos-body').innerHTML = '';
+            modalInlineEditor = null;
+            modalInlineSearchResults = [];
+            toggleModalSidepanel(false);
         }
 
         async function loadVinculos(frenteId) {
-            const body = el('modal-vinculos-body');
-            if (!body) return;
-            body.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400 italic">Carregando...</td></tr>`;
+            const body = el('modal-colaboradores-selecionados');
+            if (body) body.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-slate-400 italic"><i class="fas fa-spinner fa-spin mr-2"></i>Carregando colaboradores...</td></tr>`;
             try {
                 const res = await fetch(`/auth/api/frente/${frenteId}/colaboradores`);
                 const data = await res.json();
                 if (!res.ok || !data || !data.ok) throw new Error('Falha ao carregar colaboradores');
-                updateFrenteCounters(frenteId, data.counts || { total: 0, ativos: 0, inativos: 0 });
-                renderVinculos(data.items || []);
+                modalColaboradoresSelecionados = new Map();
+                modalColaboradoresRemovidos = new Map();
+                (data.items || []).forEach((item) => addVinculoToMap(item, true));
+                renderColaboradoresSelecionados();
+                updateFrenteCounters(frenteId, data.counts || getModalCounts());
             } catch (error) {
-                body.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-red-600 bg-red-50">Erro ao carregar colaboradores.</td></tr>`;
+                if (body) body.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-red-600 bg-red-50">Erro ao carregar colaboradores.</td></tr>`;
             }
         }
 
-        function renderVinculos(items) {
-            const body = el('modal-vinculos-body');
-            if (!body) return;
-            if (!items.length) {
-                body.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400 italic">Nenhum colaborador vinculado.</td></tr>`;
-                return;
-            }
-            body.innerHTML = '';
-            items.forEach((item) => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td class="p-3 text-sm font-semibold text-slate-800">${escapeHtml(item.colaborador_nome)}</td>
-                    <td class="p-3">${isViewMode ? `<span class="text-sm text-slate-700">${escapeHtml(item.funcao_nome)}</span>` : `<select class="form-control-std h-9 text-sm bg-white" data-field="funcao_id" data-id="${item.id}">${FUNCOES_OPTIONS_HTML}</select>`}</td>
-                    <td class="p-3 text-center">${isViewMode ? `<span class="text-sm text-slate-700">${escapeHtml(item.data_inicio)}</span>` : `<input type="text" class="form-control-std h-9 text-sm text-center bg-white js-date-picker" data-field="data_inicio" data-id="${item.id}" value="${item.data_inicio || ''}" placeholder="dd/mm/aaaa">`}</td>
-                    <td class="p-3 text-center">${isViewMode ? `<span class="text-sm text-slate-700">${escapeHtml(item.data_fim)}</span>` : `<input type="text" class="form-control-std h-9 text-sm text-center bg-white js-date-picker" data-field="data_fim" data-id="${item.id}" value="${item.data_fim || ''}" placeholder="dd/mm/aaaa">`}</td>
-                    <td class="p-3 text-center">${isViewMode ? `<span class="text-xs font-bold ${item.ativo ? 'text-emerald-700' : 'text-slate-400'}">${item.ativo ? 'Ativo' : 'Inativo'}</span>` : `<select class="form-control-std h-9 text-sm text-center bg-white" data-field="ativo" data-id="${item.id}"><option value="1" ${item.ativo ? 'selected' : ''}>Ativo</option><option value="0" ${!item.ativo ? 'selected' : ''}>Inativo</option></select>`}</td>
-                    ${isViewMode ? '' : `<td class="p-3 text-center"><button type="button" class="px-3 h-9 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold" onclick="salvarVinculo(${item.id}, this)">Salvar</button></td>`}
-                `;
-                body.appendChild(tr);
-                const funcaoSelect = tr.querySelector('select[data-field="funcao_id"]');
-                if (funcaoSelect) funcaoSelect.value = item.funcao_id ? String(item.funcao_id) : '';
-                const dataInicioInput = tr.querySelector('input[data-field="data_inicio"]');
-                const dataFimInput = tr.querySelector('input[data-field="data_fim"]');
-                [dataInicioInput, dataFimInput].forEach((input) => {
-                    if (input) input.addEventListener('change', () => validateVinculoDates(dataInicioInput, dataFimInput, false));
-                });
-                enhanceObraDatePickers(tr);
+        function addVinculoToMap(item, existente = true) {
+            const colaboradorId = String(item.colaborador_id || item.colaboradorId || item.id_colaborador || item.colaborador || item.id || '');
+            const fallbackKey = item.vinculo_id || item.id ? `vinculo-${item.vinculo_id || item.id}` : colaboradorId;
+            const key = colaboradorId || fallbackKey;
+            if (!key) return;
+            modalColaboradoresSelecionados.set(key, {
+                id: colaboradorId || item.id,
+                key,
+                vinculo_id: item.vinculo_id || (existente ? item.id : null),
+                nome: item.colaborador_nome || item.nome || '',
+                cpf: item.cpf || item.colaborador_cpf || item.cadastro || '',
+                tipo: item.tipo || '',
+                funcao_atual: item.funcao_nome || item.funcao_atual || '',
+                funcao_id: item.funcao_id || '',
+                data_inicio: item.data_inicio || '',
+                data_fim: item.data_fim || '',
+                ativo: item.ativo !== false,
+                programado: Boolean(item.programado),
+                observacao: item.observacao || '',
+                criado_por: item.criado_por || item.created_by || '',
+                criado_em: item.criado_em || item.created_at || item.data_criacao || '',
+                alterado_por: item.alterado_por || item.updated_by || '',
+                alterado_em: item.alterado_em || item.updated_at || item.data_alteracao || '',
+                existente
             });
         }
 
-        async function salvarVinculo(vinculoId, button) {
-            if (asyncLocks[`vinculo-${vinculoId}`]) return;
-            const releaseButton = setButtonLoading(button, 'Salvando...');
-            if (releaseButton === null) return;
-            asyncLocks[`vinculo-${vinculoId}`] = true;
-            const funcaoEl = document.querySelector(`select[data-field="funcao_id"][data-id="${vinculoId}"]`);
-            const dataInicioEl = document.querySelector(`input[data-field="data_inicio"][data-id="${vinculoId}"]`);
-            const dataFimEl = document.querySelector(`input[data-field="data_fim"][data-id="${vinculoId}"]`);
-            const ativoEl = document.querySelector(`select[data-field="ativo"][data-id="${vinculoId}"]`);
-            if (!validateVinculoDates(dataInicioEl, dataFimEl, true)) {
-                releaseButton();
-                asyncLocks[`vinculo-${vinculoId}`] = false;
+        function renderVinculos(items) {
+            modalColaboradoresSelecionados = new Map();
+            (items || []).forEach((item) => addVinculoToMap(item, true));
+            renderColaboradoresSelecionados();
+        }
+
+        function colaboradorKey(item) {
+            return String(item && (item.colaborador_id || item.id || item.key || item.vinculo_id) || '');
+        }
+
+        function isColaboradorSelecionado(key) {
+            key = String(key || '');
+            if (modalColaboradoresSelecionados.has(key)) return true;
+            return Array.from(modalColaboradoresSelecionados.values()).some((item) => String(item.id || '') === key);
+        }
+
+        function getModalStatus(item) {
+            if (item.programado) return 'PROGRAMADO';
+            return item.ativo === false ? 'ENCERRADO' : 'ATIVO';
+        }
+
+        function getStatusBadge(item) {
+            const status = getModalStatus(item);
+            if (status === 'ENCERRADO') return '<span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-50 text-red-700 text-xs font-bold border border-red-200"><span class="w-2 h-2 rounded-full bg-red-500"></span>Encerrado</span>';
+            if (status === 'PROGRAMADO') return '<span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 text-amber-700 text-xs font-bold border border-amber-200"><span class="w-2 h-2 rounded-full bg-amber-500"></span>Programado</span>';
+            return '<span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>Ativo</span>';
+        }
+
+        function getModalCounts() {
+            const items = Array.from(modalColaboradoresSelecionados.values());
+            const funcoes = new Set(items.map((item) => String(item.funcao_id || item.funcao_atual || '')).filter(Boolean));
+            return {
+                total: items.length,
+                ativos: items.filter((item) => getModalStatus(item) === 'ATIVO').length,
+                inativos: items.filter((item) => getModalStatus(item) === 'ENCERRADO').length,
+                funcoes: funcoes.size
+            };
+        }
+
+        function updateModalCountersFromSelection() {
+            const counts = getModalCounts();
+            if (el('modal-count-total')) el('modal-count-total').textContent = counts.total;
+            if (el('modal-count-ativos')) el('modal-count-ativos').textContent = counts.ativos;
+            if (el('modal-count-inativos')) el('modal-count-inativos').textContent = counts.inativos;
+            if (el('modal-count-funcoes')) el('modal-count-funcoes').textContent = counts.funcoes;
+        }
+
+        function getVinculosFiltrados() {
+            const q = normalizeText(modalVinculosFiltro.q);
+            const status = modalVinculosFiltro.status;
+            const funcao = String(modalVinculosFiltro.funcao || '');
+            return Array.from(modalColaboradoresSelecionados.values())
+                .filter((item) => {
+                    if (q) {
+                        const matchesNome = normalizeText(item.nome).includes(q);
+                        const matchesCpf = onlyDigits(item.cpf).includes(onlyDigits(modalVinculosFiltro.q));
+                        if (!matchesNome && !matchesCpf) return false;
+                    }
+                    if (status && getModalStatus(item) !== status) return false;
+                    if (funcao && String(item.funcao_id || '') !== funcao) return false;
+                    return true;
+                })
+                .sort((a, b) => {
+                    const statusA = getModalStatus(a) === 'ATIVO' ? 0 : getModalStatus(a) === 'PROGRAMADO' ? 1 : 2;
+                    const statusB = getModalStatus(b) === 'ATIVO' ? 0 : getModalStatus(b) === 'PROGRAMADO' ? 1 : 2;
+                    if (statusA !== statusB) return statusA - statusB;
+                    return String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR');
+                });
+        }
+
+        function aplicarFiltrosVinculos() {
+            modalVinculosFiltro = {
+                q: el('buscar-q') ? el('buscar-q').value : '',
+                cpf: el('buscar-cpf') ? el('buscar-cpf').value : '',
+                status: el('buscar-status') ? el('buscar-status').value : '',
+                funcao: el('buscar-funcao') ? el('buscar-funcao').value : ''
+            };
+            modalVinculosPagina = 1;
+            renderColaboradoresSelecionados();
+        }
+
+        function mudarPaginaVinculos(delta) {
+            const total = getVinculosFiltrados().length;
+            const maxPage = Math.max(1, Math.ceil(total / MODAL_VINCULOS_PAGE_SIZE));
+            modalVinculosPagina = Math.min(maxPage, Math.max(1, modalVinculosPagina + delta));
+            renderColaboradoresSelecionados();
+        }
+
+        function renderColaboradoresSelecionados() {
+            const body = el('modal-colaboradores-selecionados');
+            if (!body) return;
+            updateModalCountersFromSelection();
+            const filtrados = getVinculosFiltrados();
+            const total = filtrados.length;
+            const maxPage = Math.max(1, Math.ceil(total / MODAL_VINCULOS_PAGE_SIZE));
+            if (modalVinculosPagina > maxPage) modalVinculosPagina = maxPage;
+            const start = (modalVinculosPagina - 1) * MODAL_VINCULOS_PAGE_SIZE;
+            const pageItems = filtrados.slice(start, start + MODAL_VINCULOS_PAGE_SIZE);
+
+            if (el('modal-pagination-info')) el('modal-pagination-info').textContent = total ? `Exibindo ${start + 1}-${start + pageItems.length} de ${total} registros` : 'Exibindo 0 registros';
+            if (el('modal-pagination-page')) el('modal-pagination-page').textContent = `${modalVinculosPagina} / ${maxPage}`;
+
+            if (!pageItems.length) {
+                body.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-slate-400 italic">Nenhum colaborador encontrado.</td></tr>`;
                 return;
             }
-            try {
-                const res = await fetch(`/auth/api/frente-colaborador/${vinculoId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        funcao_id: funcaoEl && funcaoEl.value ? Number(funcaoEl.value) : null,
-                        data_inicio: dataInicioEl && dataInicioEl.value ? dataInicioEl.value : null,
-                        data_fim: dataFimEl && dataFimEl.value ? dataFimEl.value : null,
-                        ativo: (ativoEl && ativoEl.value ? ativoEl.value : '1') === '1'
-                    })
-                });
-                if (!res.ok) throw new Error('Erro ao salvar vínculo');
-                showToast('Vínculo salvo com sucesso.', 'success');
-                loadVinculos(el('modal-frente-id').value);
-            } catch (error) {
-                showToast('Erro ao salvar vínculo.', 'error');
-            } finally {
-                releaseButton();
-                asyncLocks[`vinculo-${vinculoId}`] = false;
+            body.innerHTML = '';
+            pageItems.forEach((item) => {
+                const key = String(item.key || item.id || item.vinculo_id);
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition-colors';
+                tr.dataset.colaboradorKey = key;
+                tr.innerHTML = `
+                    <td class="p-3"><div class="text-sm font-semibold text-slate-800">${escapeHtml(item.nome || '-')}</div><div class="text-[11px] text-slate-400">${item.existente ? 'Histórico preservado' : 'Novo vínculo'}</div></td>
+                    <td class="p-3 text-sm text-slate-600 font-mono">${escapeHtml(item.cpf || '-')}</td>
+                    <td class="p-3 text-sm text-slate-700">${escapeHtml(item.funcao_atual || getFuncaoText(item.funcao_id) || '-')}</td>
+                    <td class="p-3 text-sm text-slate-700">${escapeHtml(item.data_inicio || '-')}</td>
+                    <td class="p-3 text-sm text-slate-700">${escapeHtml(item.data_fim || '-')}</td>
+                    <td class="p-3 text-center">${getStatusBadge(item)}</td>
+                    <td class="p-3"><div class="flex items-center justify-end gap-1">
+                        <button type="button" class="w-8 h-8 rounded-lg text-slate-500 hover:bg-slate-100" title="Visualizar" onclick="visualizarVinculo('${escapeHtml(key)}')"><i class="fas fa-eye"></i></button>
+                        {% if not view_mode %}<button type="button" class="w-8 h-8 rounded-lg text-blue-600 hover:bg-blue-50" title="Editar" onclick="editarVinculo('${escapeHtml(key)}')"><i class="fas fa-pen"></i></button>
+                        <button type="button" class="w-8 h-8 rounded-lg text-red-600 hover:bg-red-50 ${item.ativo === false ? 'opacity-40 pointer-events-none' : ''}" title="Inativar" onclick="inativar('${escapeHtml(key)}')"><i class="fas fa-user-slash"></i></button>{% endif %}
+                    </div></td>
+                `;
+                body.appendChild(tr);
+            });
+        }
+
+        function getFuncaoText(funcaoId) {
+            if (!funcaoId) return '';
+            const temp = document.createElement('select');
+            temp.innerHTML = FUNCOES_OPTIONS_HTML;
+            const option = temp.querySelector(`option[value="${cssEscape(funcaoId)}"]`);
+            return option ? option.textContent.trim() : '';
+        }
+
+        function renderDetailPanel(item, mode = 'view') {
+            const panel = el('detail-colaborador-panel');
+            if (!panel || !item) return;
+            const key = String(item.key || item.id || item.vinculo_id);
+            const readonly = mode === 'view' || isViewMode;
+            panel.classList.remove('hidden');
+            if (el('add-colaborador-panel')) el('add-colaborador-panel').classList.add('hidden');
+            panel.innerHTML = `
+                <div class="p-5 sm:p-6 space-y-4">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <p class="text-sm font-bold text-slate-800">${readonly ? 'Consultar associação' : 'Editar associação'}</p>
+                            <p class="text-xs text-slate-500 mt-1">Nome e CPF não podem ser alterados neste registro.</p>
+                        </div>
+                        <button type="button" onclick="resetDetailPanel()" class="w-9 h-9 rounded-lg hover:bg-white text-slate-500"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="rounded-2xl border border-slate-200 bg-white p-4 space-y-4" data-colaborador-key="${escapeHtml(key)}">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Colaborador</label>
+                            <input type="text" class="form-control-std h-10 text-sm bg-slate-100 font-semibold" value="${escapeHtml(item.nome || '')}" readonly>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">CPF</label>
+                            <input type="text" class="form-control-std h-10 text-sm bg-slate-100 font-mono" value="${escapeHtml(item.cpf || '')}" readonly>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Função</label>
+                            <select class="form-control-std h-10 text-sm bg-white js-vinculo-funcao" ${readonly ? 'disabled' : ''}>${FUNCOES_OPTIONS_HTML}</select>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Data Início</label>
+                                <input type="text" class="form-control-std h-10 text-sm js-date-picker js-vinculo-data-inicio" value="${escapeHtml(item.data_inicio || '')}" placeholder="dd/mm/aaaa" ${readonly ? 'disabled' : ''}>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Data Fim</label>
+                                <input type="text" class="form-control-std h-10 text-sm js-date-picker js-vinculo-data-fim" value="${escapeHtml(item.data_fim || '')}" placeholder="dd/mm/aaaa" ${readonly ? 'disabled' : ''}>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Observação</label>
+                            <textarea class="form-control-std min-h-[76px] py-2 text-sm js-vinculo-observacao" ${readonly ? 'disabled' : ''}>${escapeHtml(item.observacao || '')}</textarea>
+                        </div>
+                        <div class="rounded-xl bg-slate-50 border border-slate-100 p-3 text-[11px] text-slate-500 space-y-1">
+                            <p><strong>Criado por:</strong> ${escapeHtml(item.criado_por || '-')} <strong>em:</strong> ${escapeHtml(item.criado_em || '-')}</p>
+                            <p><strong>Última alteração por:</strong> ${escapeHtml(item.alterado_por || '-')} <strong>em:</strong> ${escapeHtml(item.alterado_em || '-')}</p>
+                        </div>
+                        ${readonly ? '' : `<div class="flex items-center justify-end gap-2"><button type="button" onclick="visualizarVinculo('${escapeHtml(key)}')" class="px-4 h-10 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50">Cancelar</button><button type="button" onclick="salvarEdicaoVinculo('${escapeHtml(key)}', this)" class="px-4 h-10 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold">Salvar</button></div>`}
+                    </div>
+                </div>
+            `;
+            const select = panel.querySelector('.js-vinculo-funcao');
+            if (select) select.value = item.funcao_id ? String(item.funcao_id) : '';
+            enhanceObraDatePickers(panel);
+        }
+
+        function resetDetailPanel() {
+            const panel = el('detail-colaborador-panel');
+            if (!panel) return;
+            panel.classList.remove('hidden');
+            panel.innerHTML = `<div class="p-5 sm:p-6 text-center text-slate-400"><i class="fas fa-user-clock text-3xl mb-3"></i><p class="text-sm font-semibold">Selecione Visualizar ou Editar em uma linha.</p><p class="text-xs mt-1">Os dados históricos permanecem preservados.</p></div>`;
+        }
+
+        function visualizarVinculo(key) {
+            const item = modalColaboradoresSelecionados.get(String(key));
+            if (item) renderDetailPanel(item, 'view');
+        }
+
+        function editarVinculo(key) {
+            const item = modalColaboradoresSelecionados.get(String(key));
+            if (item) renderDetailPanel(item, 'edit');
+        }
+
+        async function salvarEdicaoVinculo(key, button) {
+            const item = modalColaboradoresSelecionados.get(String(key));
+            const panel = el('detail-colaborador-panel');
+            if (!item || !panel) return;
+            const dataInicioInput = panel.querySelector('.js-vinculo-data-inicio');
+            const dataFimInput = panel.querySelector('.js-vinculo-data-fim');
+            const funcaoSelect = panel.querySelector('.js-vinculo-funcao');
+            if (!funcaoSelect || !funcaoSelect.value) {
+                showToast('Informe a função atribuída ao colaborador.', 'error');
+                scrollToField(funcaoSelect);
+                return;
+            }
+            if (!dataInicioInput || !dataInicioInput.value) {
+                showToast('Informe a data de início.', 'error');
+                scrollToField(dataInicioInput);
+                return;
+            }
+            if (!validateVinculoDates(dataInicioInput, dataFimInput, true)) return;
+            item.funcao_id = funcaoSelect.value;
+            item.funcao_atual = getFuncaoText(item.funcao_id);
+            item.data_inicio = dataInicioInput.value;
+            item.data_fim = dataFimInput ? dataFimInput.value : '';
+            item.observacao = panel.querySelector('.js-vinculo-observacao') ? panel.querySelector('.js-vinculo-observacao').value : '';
+            item.ativo = !item.data_fim;
+            await persistirVinculo(item, button);
+            renderColaboradoresSelecionados();
+            renderDetailPanel(item, 'view');
+        }
+
+        function inativar(key) {
+            const item = modalColaboradoresSelecionados.get(String(key));
+            if (!item || item.ativo === false) return;
+            if (!confirm('Deseja encerrar a participação deste colaborador nesta frente de trabalho?')) return;
+            item.data_fim = item.data_fim || hojeBR();
+            item.ativo = false;
+            persistirVinculo(item).then(() => {
+                showToast('Participação encerrada com sucesso.', 'success');
+                renderColaboradoresSelecionados();
+                refreshFrenteCounts();
+            });
+        }
+
+        function hojeBR() {
+            const d = new Date();
+            return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+        }
+
+        function toggleAdicionarColaborador(open) {
+            const panel = el('add-colaborador-panel');
+            const detail = el('detail-colaborador-panel');
+            if (!panel || !detail) return;
+            panel.classList.toggle('hidden', !open);
+            detail.classList.toggle('hidden', open);
+            if (open) {
+                cancelarNovoVinculo();
+                setTimeout(() => el('add-colaborador-search') && el('add-colaborador-search').focus(), 50);
+            } else {
+                resetDetailPanel();
             }
         }
 
-        async function toggleVinculo(vinculoId, button) {
-            if (asyncLocks[`toggle-${vinculoId}`]) return;
-            const releaseButton = setButtonLoading(button, 'Atualizando...');
-            if (releaseButton === null) return;
-            asyncLocks[`toggle-${vinculoId}`] = true;
-            try {
-                const res = await fetch(`/auth/api/frente-colaborador/${vinculoId}/toggle`, { method: 'POST' });
-                if (!res.ok) throw new Error('Erro ao alterar status');
-                loadVinculos(el('modal-frente-id').value);
-            } catch (error) {
-                showToast('Erro ao alterar status do vínculo.', 'error');
-            } finally {
-                releaseButton();
-                asyncLocks[`toggle-${vinculoId}`] = false;
-            }
-        }
-
-        function openBuscarColaboradorModal() {
-            const modal = el('modal-buscar-colaborador');
-            if (!modal) return;
-            if (modal.parentElement !== document.body) document.body.appendChild(modal);
-            modal.classList.remove('hidden');
-            modal.style.display = 'block';
-            modal.setAttribute('aria-hidden', 'false');
-            enhanceObraDatePickers(modal);
-            if (el('buscar-body')) el('buscar-body').innerHTML = '';
-            if (el('add-colaborador-id')) el('add-colaborador-id').value = '';
-            if (el('buscar-q')) el('buscar-q').focus();
-        }
-
-        function closeBuscarColaboradorModal() {
-            const modal = el('modal-buscar-colaborador');
-            if (!modal) return;
-            modal.classList.add('hidden');
-            modal.style.display = '';
-            modal.setAttribute('aria-hidden', 'true');
+        function cancelarNovoVinculo() {
+            colaboradorSelecionadoParaAdicionar = null;
+            ['add-colaborador-search', 'add-colaborador-nome', 'add-colaborador-cpf', 'add-colaborador-funcao', 'add-colaborador-data-inicio', 'add-colaborador-data-fim', 'add-colaborador-observacao'].forEach((id) => {
+                if (el(id)) el(id).value = '';
+            });
+            if (el('add-colaborador-results')) el('add-colaborador-results').classList.add('hidden');
+            if (el('add-colaborador-form')) el('add-colaborador-form').classList.add('hidden');
         }
 
         async function buscarColaboradores(button) {
-            const releaseButton = setButtonLoading(button || el('btn-buscar-colaboradores'), 'Buscando...');
-            if (releaseButton === null) return;
+            const query = el('add-colaborador-search') ? el('add-colaborador-search').value.trim() : '';
+            const results = el('add-colaborador-results');
+            if (!results) return;
+            if (query.length < 2) {
+                results.classList.add('hidden');
+                results.innerHTML = '';
+                return;
+            }
             const params = new URLSearchParams();
-            if (el('buscar-q') && el('buscar-q').value) params.set('q', el('buscar-q').value);
-            if (el('buscar-cpf') && el('buscar-cpf').value) params.set('cpf', onlyDigits(el('buscar-cpf').value));
-            if (el('buscar-tipo') && el('buscar-tipo').value) params.set('tipo', el('buscar-tipo').value);
-            const body = el('buscar-body');
-            if (body) body.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400 italic">Buscando...</td></tr>`;
+            params.set('q', query);
+            params.set('status', 'ATIVO');
+            results.classList.remove('hidden');
+            results.innerHTML = `<div class="p-3 text-xs text-slate-400"><i class="fas fa-spinner fa-spin mr-2"></i>Buscando...</div>`;
             try {
                 const res = await fetch(`/auth/api/colaboradores/search?${params.toString()}`);
                 const data = await res.json();
                 if (!res.ok || !data || !data.ok) throw new Error('Falha na busca');
-                renderBuscaColaboradores(data.items || []);
+                const items = (data.items || []).filter((item) => item.ativo !== false && !isColaboradorSelecionado(colaboradorKey(item)));
+                if (!items.length) {
+                    results.innerHTML = `<div class="p-3 text-xs text-slate-400">Nenhum colaborador ativo disponível.</div>`;
+                    return;
+                }
+                results.innerHTML = '';
+                items.slice(0, 20).forEach((item) => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'w-full text-left px-4 py-3 hover:bg-slate-50 transition border-b border-slate-100 last:border-b-0';
+                    btn.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 font-bold text-sm flex items-center justify-center shrink-0">${escapeHtml(getColaboradorInitials(item.nome || ''))}</div>
+                            <div class="min-w-0">
+                                <div class="text-sm font-semibold text-slate-800 truncate">${escapeHtml(item.nome || '-')}</div>
+                                <div class="text-[11px] text-slate-500 mt-1">CPF: ${escapeHtml(item.cpf || item.cadastro || '-')}</div>
+                            </div>
+                        </div>
+                    `;
+                    btn.addEventListener('click', () => selecionarColaboradorParaAdicionar(item));
+                    results.appendChild(btn);
+                });
             } catch (error) {
-                if (body) body.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-red-600 bg-red-50">Erro ao buscar colaboradores.</td></tr>`;
-            } finally {
-                releaseButton();
+                results.innerHTML = `<div class="p-3 text-xs text-red-600 bg-red-50">Erro ao buscar colaboradores.</div>`;
             }
         }
 
-        const buscarColaboradoresDebounced = debounce(() => buscarColaboradores(el('btn-buscar-colaboradores')), 450);
+        const buscarColaboradoresDebounced = debounce(() => buscarColaboradores(), 350);
 
-        function renderBuscaColaboradores(items) {
-            const body = el('buscar-body');
-            if (!body) return;
-            if (!items.length) {
-                body.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400 italic">Nenhum resultado.</td></tr>`;
+        function selecionarColaboradorParaAdicionar(item) {
+            const key = colaboradorKey(item);
+            if (isColaboradorSelecionado(key)) {
+                showToast('Este colaborador já está vinculado a esta frente de trabalho.', 'warning');
                 return;
             }
+            colaboradorSelecionadoParaAdicionar = { ...item, key };
+            if (el('add-colaborador-nome')) el('add-colaborador-nome').value = item.nome || '';
+            if (el('add-colaborador-cpf')) el('add-colaborador-cpf').value = item.cpf || item.cadastro || '';
+            if (el('add-colaborador-results')) el('add-colaborador-results').classList.add('hidden');
+            if (el('add-colaborador-form')) el('add-colaborador-form').classList.remove('hidden');
+        }
+
+        function selecionarColaborador(colaboradorId, button) {
+            const item = modalColaboradoresDisponiveis.find((col) => String(colaboradorKey(col)) === String(colaboradorId));
+            if (item) selecionarColaboradorParaAdicionar(item);
+        }
+
+        async function salvarNovoVinculo(button) {
+            if (!colaboradorSelecionadoParaAdicionar) {
+                showToast('Selecione um colaborador.', 'error');
+                return;
+            }
+            const key = String(colaboradorSelecionadoParaAdicionar.key || colaboradorSelecionadoParaAdicionar.id || '');
+            if (isColaboradorSelecionado(key)) {
+                showToast('Este colaborador já está vinculado a esta frente de trabalho.', 'warning');
+                return;
+            }
+            const funcao = el('add-colaborador-funcao');
+            const dataInicio = el('add-colaborador-data-inicio');
+            const dataFim = el('add-colaborador-data-fim');
+            if (!funcao || !funcao.value) {
+                showToast('Informe a função atribuída ao colaborador.', 'error');
+                scrollToField(funcao);
+                return;
+            }
+            if (!dataInicio || !dataInicio.value) {
+                showToast('Informe a data de início.', 'error');
+                scrollToField(dataInicio);
+                return;
+            }
+            if (!validateVinculoDates(dataInicio, dataFim, true)) return;
+            const item = {
+                id: colaboradorSelecionadoParaAdicionar.id || colaboradorSelecionadoParaAdicionar.colaborador_id,
+                key,
+                vinculo_id: null,
+                nome: colaboradorSelecionadoParaAdicionar.nome || '',
+                cpf: colaboradorSelecionadoParaAdicionar.cpf || colaboradorSelecionadoParaAdicionar.cadastro || '',
+                tipo: colaboradorSelecionadoParaAdicionar.tipo || '',
+                funcao_id: funcao.value,
+                funcao_atual: getFuncaoText(funcao.value),
+                data_inicio: dataInicio.value,
+                data_fim: dataFim ? dataFim.value : '',
+                ativo: !(dataFim && dataFim.value),
+                observacao: el('add-colaborador-observacao') ? el('add-colaborador-observacao').value : '',
+                existente: false
+            };
+            const saved = await persistirVinculo(item, button);
+            if (!saved) return;
+            modalColaboradoresSelecionados.set(key, item);
+            cancelarNovoVinculo();
+            renderColaboradoresSelecionados();
+            refreshFrenteCounts();
+            showToast('Colaborador vinculado com sucesso.', 'success');
+        }
+
+        async function persistirVinculo(item, button) {
+            const frenteId = el('modal-frente-id') ? el('modal-frente-id').value : '';
+            if (!frenteId) {
+                showToast('Frente de trabalho não identificada.', 'error');
+                return false;
+            }
+            const releaseButton = button ? setButtonLoading(button, 'Salvando...') : null;
+            if (releaseButton === null && button) return false;
+            try {
+                const payload = {
+                    funcao_id: item.funcao_id ? Number(item.funcao_id) : null,
+                    data_inicio: item.data_inicio || null,
+                    data_fim: item.data_fim || null,
+                    ativo: item.ativo !== false,
+                    observacao: item.observacao || null
+                };
+                let res;
+                if (item.vinculo_id) {
+                    res = await fetch(`/auth/api/frente-colaborador/${item.vinculo_id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                } else {
+                    res = await fetch(`/auth/api/frente/${frenteId}/colaboradores`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ ...payload, colaborador_id: Number(item.id || item.key) })
+                    });
+                }
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.error || 'Erro ao salvar associação.');
+                if (data.item) addVinculoToMap(data.item, true);
+                else item.existente = true;
+                if (data.counts) updateFrenteCounters(frenteId, data.counts);
+                return true;
+            } catch (error) {
+                showToast(error.message || 'Erro ao salvar associação.', 'error');
+                return false;
+            } finally {
+                if (typeof releaseButton === 'function') releaseButton();
+            }
+        }
+
+        async function salvarColaboradoresFrente(button) {
+            showToast('As alterações são salvas diretamente ao adicionar, editar ou Inativar.', 'info');
+        }
+
+        async function confirmarAdicionarColaborador(button) {
+            return salvarNovoVinculo(button);
+        }
+
+        function renderColaboradoresDisponiveis(items) {
+            modalColaboradoresDisponiveis = items || [];
+        }
+
+        function renderBuscaColaboradores(items) {
+            modalColaboradoresDisponiveis = items || [];
+        }
+
+        function updateDisponiveisSelectionState() { }
+        function toggleColaboradorSelecionado() { }
+        function removerColaboradorSelecionado(key) { inativar(key); }
+        function toggleTodosColaboradores() { }
+        function limparColaboradoresSelecionados() { }
+        function openBuscarColaboradorModal() { toggleAdicionarColaborador(true); }
+        function closeBuscarColaboradorModal() { }
+        function validarColaboradoresSelecionados() { return true; }
+
+        function renderColaboradoresSelecionados() {
+            const body = el('modal-colaboradores-selecionados');
+            if (!body) return;
+            updateModalCountersFromSelection();
+            const filtrados = getVinculosFiltrados();
+            const total = filtrados.length;
+            const maxPage = Math.max(1, Math.ceil(total / MODAL_VINCULOS_PAGE_SIZE));
+            if (modalVinculosPagina > maxPage) modalVinculosPagina = maxPage;
+            const start = (modalVinculosPagina - 1) * MODAL_VINCULOS_PAGE_SIZE;
+            const pageItems = filtrados.slice(start, start + MODAL_VINCULOS_PAGE_SIZE);
+
+            if (el('modal-pagination-info')) el('modal-pagination-info').textContent = total ? `Exibindo ${start + 1}-${start + pageItems.length} de ${total} registros` : 'Exibindo 0 registros';
+            if (el('modal-pagination-page')) el('modal-pagination-page').textContent = `${modalVinculosPagina} / ${maxPage}`;
+
+            if (!pageItems.length) {
+                body.innerHTML = `<tr><td colspan="7" class="p-10 text-center text-slate-400 italic">Nenhum colaborador encontrado.</td></tr>`;
+                return;
+            }
+
             body.innerHTML = '';
-            items.forEach((item) => {
+            pageItems.forEach((item) => {
+                const key = String(item.key || item.id || item.vinculo_id);
+                const funcao = escapeHtml(item.funcao_atual || getFuncaoText(item.funcao_id) || '-');
+                const dataInicio = escapeHtml(item.data_inicio || '-');
+                const dataFim = escapeHtml(item.data_fim || '—');
+                const historico = item.existente ? 'Histórico preservado' : 'Vínculo recém-adicionado';
                 const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50/80 transition-colors';
+                tr.dataset.colaboradorKey = key;
                 tr.innerHTML = `
-                    <td class="p-3 text-sm font-semibold text-slate-800">${escapeHtml(item.nome)}</td>
-                    <td class="p-3 text-sm text-slate-700">${escapeHtml(item.tipo)}</td>
-                    <td class="p-3 text-sm text-slate-700">${escapeHtml(item.funcao_atual)}</td>
-                    <td class="p-3 text-center"><span class="text-xs font-bold ${item.ativo ? 'text-emerald-700' : 'text-slate-400'}">${item.ativo ? 'Ativo' : 'Inativo'}</span></td>
-                    <td class="p-3 text-center"><button type="button" class="px-3 h-9 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold" onclick="selecionarColaborador(${item.id}, this)">Selecionar</button></td>
+                    <td class="px-5 py-4">
+                        <div class="flex items-center gap-4 min-w-0">
+                            <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 font-bold text-sm flex items-center justify-center shrink-0">${escapeHtml(getColaboradorInitials(item.nome || ''))}</div>
+                            <div class="min-w-0">
+                                <div class="text-[1.02rem] font-semibold text-slate-800 truncate">${escapeHtml(item.nome || '-')}</div>
+                                <div class="text-[11px] text-slate-400 mt-1">${historico}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-5 py-4 text-sm text-slate-600 font-mono">${escapeHtml(item.cpf || '-')}</td>
+                    <td class="px-5 py-4 text-sm text-slate-700">${funcao}</td>
+                    <td class="px-5 py-4 text-sm text-slate-700">${dataInicio}</td>
+                    <td class="px-5 py-4 text-sm text-slate-700">${dataFim}</td>
+                    <td class="px-5 py-4 text-center">${getStatusBadge(item)}</td>
+                    <td class="px-5 py-4">
+                        <div class="flex items-center justify-end gap-1">
+                            {% if not view_mode %}<button type="button" class="w-9 h-9 rounded-xl text-slate-500 hover:bg-slate-100" title="Editar" onclick="editarVinculo('${escapeHtml(key)}')"><i class="fas fa-pen"></i></button>
+                            <button type="button" class="w-9 h-9 rounded-xl text-rose-500 hover:bg-rose-50 ${item.ativo === false ? 'opacity-40 pointer-events-none' : ''}" title="Inativar" onclick="inativar('${escapeHtml(key)}')"><i class="fas fa-trash-alt"></i></button>{% endif %}
+                        </div>
+                    </td>
                 `;
                 body.appendChild(tr);
             });
         }
 
-        function selecionarColaborador(colaboradorId, button) {
-            if (el('add-colaborador-id')) el('add-colaborador-id').value = String(colaboradorId || '');
-            document.querySelectorAll('#buscar-body button').forEach((btn) => btn.classList.remove('bg-indigo-600', 'text-white'));
-            if (button) button.classList.add('bg-indigo-600', 'text-white');
+        function resetDetailPanel() {
+            const panel = el('detail-colaborador-panel');
+            if (!panel) return;
+            toggleModalSidepanel(false);
+            panel.classList.remove('hidden');
+            panel.innerHTML = `
+                <div class="h-full px-6 py-6 text-center text-slate-400 flex flex-col items-center justify-center">
+                    <div class="w-16 h-16 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mb-4">
+                        <i class="fas fa-user-clock text-2xl"></i>
+                    </div>
+                    <p class="text-sm font-semibold text-slate-600">Selecione Visualizar ou Editar em uma linha.</p>
+                    <p class="text-xs mt-2 max-w-[260px] text-slate-400">Os dados históricos permanecem preservados e podem ser consultados sempre que necessário.</p>
+                </div>
+            `;
         }
 
-        async function confirmarAdicionarColaborador(button) {
-            const releaseButton = setButtonLoading(button || el('btn-vincular-colaborador'), 'Vinculando...');
-            if (releaseButton === null) return;
-            const frenteId = el('modal-frente-id') ? el('modal-frente-id').value : '';
-            const colaboradorId = el('add-colaborador-id') ? el('add-colaborador-id').value : '';
-            const dataInicioInput = el('add-data-inicio');
-            const dataFimInput = el('add-data-fim');
-            if (!frenteId || !colaboradorId) {
-                showToast('Selecione um colaborador.', 'warning');
-                releaseButton();
+        function renderDetailPanel(item, mode = 'view') {
+            const panel = el('detail-colaborador-panel');
+            if (!panel || !item) return;
+            toggleModalSidepanel(true);
+            const key = String(item.key || item.id || item.vinculo_id);
+            const readonly = mode === 'view' || isViewMode;
+            panel.classList.remove('hidden');
+            if (el('add-colaborador-panel')) el('add-colaborador-panel').classList.add('hidden');
+            panel.innerHTML = `
+                <div class="h-full flex flex-col">
+                    <div class="px-6 py-5 border-b border-slate-200 bg-white flex items-start justify-between gap-3">
+                        <div>
+                            <p class="text-base font-bold text-slate-800">${readonly ? 'Visualizar vínculo' : 'Editar vínculo'}</p>
+                            <p class="text-sm text-slate-500 mt-1">Nome e CPF permanecem fixos neste vínculo.</p>
+                        </div>
+                        <button type="button" onclick="resetDetailPanel()" class="w-10 h-10 rounded-2xl hover:bg-slate-50 text-slate-500 flex items-center justify-center transition"><i class="fas fa-times"></i></button>
+                    </div>
+
+                    <div class="flex-1 overflow-auto px-6 py-5 space-y-4 bg-slate-50/50">
+                        <div class="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm" data-colaborador-key="${escapeHtml(key)}">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 rounded-full bg-blue-50 text-blue-600 font-bold text-sm flex items-center justify-center shrink-0">${escapeHtml(getColaboradorInitials(item.nome || ''))}</div>
+                                <div class="min-w-0">
+                                    <p class="text-base font-semibold text-slate-800 truncate">${escapeHtml(item.nome || '-')}</p>
+                                    <p class="text-xs text-slate-500 font-mono mt-1">${escapeHtml(item.cpf || '-')}</p>
+                                </div>
+                                <div class="ml-auto">${getStatusBadge(item)}</div>
+                            </div>
+                        </div>
+
+                        <div class="rounded-3xl border border-slate-200 bg-white p-4 space-y-4 shadow-sm" data-colaborador-key="${escapeHtml(key)}">
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-2">Função</label>
+                                <select class="form-control-std h-11 rounded-2xl text-sm bg-white js-vinculo-funcao" ${readonly ? 'disabled' : ''}>${FUNCOES_OPTIONS_HTML}</select>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-2">Data de início</label>
+                                    <input type="text" class="form-control-std h-11 rounded-2xl text-sm js-date-picker js-vinculo-data-inicio" value="${escapeHtml(item.data_inicio || '')}" placeholder="dd/mm/aaaa" ${readonly ? 'disabled' : ''}>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-2">Data de fim</label>
+                                    <input type="text" class="form-control-std h-11 rounded-2xl text-sm js-date-picker js-vinculo-data-fim" value="${escapeHtml(item.data_fim || '')}" placeholder="dd/mm/aaaa" ${readonly ? 'disabled' : ''}>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-2">Observação</label>
+                                <textarea class="form-control-std min-h-[96px] rounded-2xl px-4 py-3 text-sm js-vinculo-observacao" ${readonly ? 'disabled' : ''}>${escapeHtml(item.observacao || '')}</textarea>
+                            </div>
+
+                            <div class="rounded-2xl bg-slate-50 border border-slate-200 p-4 text-[11px] text-slate-500 space-y-1">
+                                <p><strong>Criado por:</strong> ${escapeHtml(item.criado_por || '-')} <strong>em:</strong> ${escapeHtml(item.criado_em || '-')}</p>
+                                <p><strong>Última alteração por:</strong> ${escapeHtml(item.alterado_por || '-')} <strong>em:</strong> ${escapeHtml(item.alterado_em || '-')}</p>
+                            </div>
+
+                            ${readonly ? '' : `<div class="flex items-center justify-end gap-2 pt-1"><button type="button" onclick="visualizarVinculo('${escapeHtml(key)}')" class="px-4 h-11 rounded-2xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50">Cancelar</button><button type="button" onclick="salvarEdicaoVinculo('${escapeHtml(key)}', this)" class="px-5 h-11 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold">Salvar</button></div>`}
+                        </div>
+                    </div>
+                </div>
+            `;
+            const select = panel.querySelector('.js-vinculo-funcao');
+            if (select) select.value = item.funcao_id ? String(item.funcao_id) : '';
+            enhanceObraDatePickers(panel);
+        }
+
+        function toggleAdicionarColaborador(open) {
+            const panel = el('add-colaborador-panel');
+            const detail = el('detail-colaborador-panel');
+            if (!panel || !detail) return;
+            toggleModalSidepanel(open);
+            panel.classList.toggle('hidden', !open);
+            detail.classList.toggle('hidden', open);
+            if (open) {
+                cancelarNovoVinculo();
+                setTimeout(() => el('add-colaborador-search') && el('add-colaborador-search').focus(), 50);
+            } else {
+                detail.classList.remove('hidden');
+            }
+        }
+
+        function cancelarNovoVinculo() {
+            colaboradorSelecionadoParaAdicionar = null;
+            ['add-colaborador-search', 'add-colaborador-nome', 'add-colaborador-cpf', 'add-colaborador-funcao', 'add-colaborador-data-inicio', 'add-colaborador-data-fim', 'add-colaborador-observacao'].forEach((id) => {
+                if (el(id)) el(id).value = '';
+            });
+            if (el('add-colaborador-results')) {
+                el('add-colaborador-results').classList.add('hidden');
+                el('add-colaborador-results').innerHTML = '';
+            }
+            if (el('add-colaborador-form')) el('add-colaborador-form').classList.add('hidden');
+        }
+
+        function formatCpfDisplay(value) {
+            const digits = onlyDigits(value).slice(0, 11);
+            if (!digits) return '-';
+            const parts = digits.match(/^(\d{0,3})(\d{0,3})(\d{0,3})(\d{0,2})$/);
+            if (!parts) return digits;
+            return [parts[1], parts[2], parts[3]].filter(Boolean).join('.') + (parts[4] ? `-${parts[4]}` : '');
+        }
+
+        function getInlineEditorSelected() {
+            return modalInlineEditor && modalInlineEditor.selected ? modalInlineEditor.selected : null;
+        }
+
+        function startInlineAdd() {
+            if (modalInlineEditor && modalInlineEditor.mode === 'add') {
+                showToast('Já existe uma nova linha em edição.', 'warning');
                 return;
             }
-            if (!validateVinculoDates(dataInicioInput, dataFimInput, true)) {
-                releaseButton();
+            modalInlineEditor = {
+                mode: 'add',
+                key: '',
+                selected: null,
+                funcao_id: '',
+                data_inicio: '',
+                data_fim: '',
+                ativo: true
+            };
+            modalInlineSearchResults = [];
+            toggleModalSidepanel(false);
+            renderColaboradoresSelecionados();
+            setTimeout(() => {
+                const input = el('inline-colaborador-search');
+                if (input) input.focus();
+            }, 60);
+        }
+
+        function startInlineEdit(key) {
+            const item = modalColaboradoresSelecionados.get(String(key));
+            if (!item) return;
+            modalInlineEditor = {
+                mode: 'edit',
+                key: String(key),
+                selected: {
+                    id: item.id,
+                    nome: item.nome,
+                    cpf: item.cpf,
+                    tipo: item.tipo || ''
+                },
+                funcao_id: String(item.funcao_id || ''),
+                data_inicio: normalizeApiDate(item.data_inicio || ''),
+                data_fim: normalizeApiDate(item.data_fim || ''),
+                ativo: item.ativo !== false
+            };
+            modalInlineSearchResults = [];
+            toggleModalSidepanel(false);
+            renderColaboradoresSelecionados();
+        }
+
+        function cancelInlineEditor() {
+            modalInlineEditor = null;
+            modalInlineSearchResults = [];
+            renderColaboradoresSelecionados();
+        }
+
+        async function buscarColaboradoresInline() {
+            const editor = modalInlineEditor;
+            const results = el('inline-colaborador-results');
+            const queryInput = el('inline-colaborador-search');
+            const query = queryInput ? queryInput.value.trim() : '';
+            if (!editor || editor.mode !== 'add' || !results) return;
+            if (query.length < 2) {
+                modalInlineSearchResults = [];
+                results.classList.add('hidden');
+                results.innerHTML = '';
                 return;
             }
+            results.classList.remove('hidden');
+            results.innerHTML = `<div class="px-3 py-2 text-xs text-slate-400"><i class="fas fa-spinner fa-spin mr-2"></i>Buscando...</div>`;
             try {
-                const res = await fetch(`/auth/api/frente/${frenteId}/colaboradores`, {
+                const params = new URLSearchParams({ q: query, status: 'ATIVO' });
+                const res = await fetch(`/auth/api/colaboradores/search?${params.toString()}`);
+                const data = await res.json();
+                if (!res.ok || !data || !data.ok) throw new Error('Falha ao buscar colaboradores.');
+                modalInlineSearchResults = (data.items || [])
+                    .filter((item) => item.ativo !== false && !isColaboradorSelecionado(colaboradorKey(item)));
+                if (!modalInlineSearchResults.length) {
+                    results.innerHTML = `<div class="px-3 py-2 text-xs text-slate-400">Nenhum colaborador disponível.</div>`;
+                    return;
+                }
+                results.innerHTML = modalInlineSearchResults.slice(0, 20).map((item) => `
+                    <button type="button"
+                        class="w-full text-left px-3 py-2 hover:bg-slate-50 border-b border-slate-100 last:border-b-0"
+                        onclick="selectInlineColaborador('${escapeHtml(String(item.id || ''))}')">
+                        <div class="text-sm font-semibold text-slate-800">${escapeHtml(item.nome || '-')}</div>
+                        <div class="text-[11px] text-slate-500 mt-1">CPF: ${escapeHtml(formatCpfDisplay(item.cpf || item.cadastro || ''))}</div>
+                    </button>
+                `).join('');
+            } catch (error) {
+                modalInlineSearchResults = [];
+                results.innerHTML = `<div class="px-3 py-2 text-xs text-red-600 bg-red-50">Erro ao buscar colaboradores.</div>`;
+            }
+        }
+
+        const buscarColaboradoresInlineDebounced = debounce(() => buscarColaboradoresInline(), 300);
+
+        function selectInlineColaborador(colaboradorId) {
+            const selected = modalInlineSearchResults.find((item) => String(item.id) === String(colaboradorId));
+            if (!selected || !modalInlineEditor) return;
+            modalInlineEditor.selected = {
+                id: selected.id,
+                nome: selected.nome || '',
+                cpf: selected.cpf || selected.cadastro || '',
+                tipo: selected.tipo || ''
+            };
+            modalInlineSearchResults = [];
+            renderColaboradoresSelecionados();
+        }
+
+        function clearInlineColaborador() {
+            if (!modalInlineEditor) return;
+            modalInlineEditor.selected = null;
+            modalInlineSearchResults = [];
+            renderColaboradoresSelecionados();
+            setTimeout(() => {
+                const input = el('inline-colaborador-search');
+                if (input) input.focus();
+            }, 60);
+        }
+
+        function renderInlineEditorRow() {
+            if (!modalInlineEditor) return '';
+            const editor = modalInlineEditor;
+            const selected = getInlineEditorSelected();
+            const statusBadge = editor.ativo !== false
+                ? '<span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>Ativo</span>'
+                : '<span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-50 text-red-700 text-xs font-bold border border-red-200"><span class="w-2 h-2 rounded-full bg-red-500"></span>Inativo</span>';
+            const resultsHtml = modalInlineSearchResults.length ? modalInlineSearchResults.map((item) => `
+                <button type="button"
+                    class="w-full text-left px-3 py-2 hover:bg-slate-50 border-b border-slate-100 last:border-b-0"
+                    onclick="selectInlineColaborador('${escapeHtml(String(item.id || ''))}')">
+                    <div class="text-sm font-semibold text-slate-800">${escapeHtml(item.nome || '-')}</div>
+                    <div class="text-[11px] text-slate-500 mt-1">CPF: ${escapeHtml(formatCpfDisplay(item.cpf || item.cadastro || ''))}</div>
+                </button>
+            `).join('') : '';
+
+            return `
+                <tr class="bg-blue-50/40" data-inline-editor="true">
+                    <td class="px-5 py-4 align-top">
+                        ${selected ? `
+                            <div class="rounded-2xl border border-blue-200 bg-white px-3 py-3">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div class="min-w-0">
+                                        <div class="text-sm font-semibold text-slate-800 truncate">${escapeHtml(selected.nome || '-')}</div>
+                                        <div class="text-[11px] text-slate-500 mt-1">CPF: ${escapeHtml(formatCpfDisplay(selected.cpf || ''))}</div>
+                                    </div>
+                                    ${editor.mode === 'add' ? `<button type="button" class="text-xs font-bold text-blue-600 hover:text-blue-700" onclick="clearInlineColaborador()">Trocar</button>` : ''}
+                                </div>
+                            </div>
+                        ` : `
+                            <div class="relative">
+                                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                                <input type="text" id="inline-colaborador-search"
+                                    class="form-control-std h-11 rounded-2xl pl-9 pr-3 text-sm bg-white"
+                                    placeholder="Buscar por nome ou CPF"
+                                    oninput="buscarColaboradoresInlineDebounced()">
+                                <div id="inline-colaborador-results" class="absolute z-20 mt-2 w-full rounded-2xl border border-slate-200 bg-white shadow-lg overflow-hidden ${resultsHtml ? '' : 'hidden'}">${resultsHtml}</div>
+                            </div>
+                        `}
+                    </td>
+                    <td class="px-5 py-4 align-top text-sm text-slate-600 font-mono">${escapeHtml(formatCpfDisplay(selected && selected.cpf ? selected.cpf : ''))}</td>
+                    <td class="px-5 py-4 align-top">
+                        <select id="inline-funcao-id" class="form-control-std h-11 rounded-2xl text-sm bg-white">
+                            ${FUNCOES_OPTIONS_HTML}
+                        </select>
+                    </td>
+                    <td class="px-5 py-4 align-top">
+                        <input type="text" id="inline-colaborador-data-inicio" class="form-control-std h-11 rounded-2xl text-sm js-date-picker" value="${escapeHtml(editor.data_inicio || '')}" placeholder="dd/mm/aaaa">
+                    </td>
+                    <td class="px-5 py-4 align-top">
+                        <input type="text" id="inline-colaborador-data-fim" class="form-control-std h-11 rounded-2xl text-sm js-date-picker" value="${escapeHtml(editor.data_fim || '')}" placeholder="dd/mm/aaaa">
+                    </td>
+                    <td class="px-5 py-4 align-top text-center">${statusBadge}</td>
+                    <td class="px-5 py-4 align-top">
+                        <div class="flex items-center justify-end gap-2">
+                            <button type="button" class="px-4 h-10 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-white" onclick="cancelInlineEditor()">Cancelar</button>
+                            <button type="button" class="px-4 h-10 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700" onclick="saveInlineEditor(this)">Salvar</button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
+
+        async function saveInlineEditor(button) {
+            const editor = modalInlineEditor;
+            if (!editor) return;
+            const selected = getInlineEditorSelected();
+            const funcaoSelect = el('inline-funcao-id');
+            const dataInicioInput = el('inline-colaborador-data-inicio');
+            const dataFimInput = el('inline-colaborador-data-fim');
+
+            if (editor.mode === 'add' && !selected) {
+                showToast('Selecione um colaborador para continuar.', 'warning');
+                const searchInput = el('inline-colaborador-search');
+                if (searchInput) searchInput.focus();
+                return;
+            }
+            if (!funcaoSelect || !funcaoSelect.value) {
+                showToast('Informe a função atribuída ao colaborador.', 'error');
+                scrollToField(funcaoSelect);
+                return;
+            }
+            if (!dataInicioInput || !dataInicioInput.value) {
+                showToast('Informe a data de início.', 'error');
+                scrollToField(dataInicioInput);
+                return;
+            }
+            if (!validateVinculoDates(dataInicioInput, dataFimInput, true)) return;
+
+            const baseItem = editor.mode === 'edit'
+                ? { ...(modalColaboradoresSelecionados.get(String(editor.key)) || {}) }
+                : {};
+
+            const item = {
+                ...baseItem,
+                id: editor.mode === 'edit' ? baseItem.id : selected.id,
+                key: editor.mode === 'edit' ? baseItem.key : String(selected.id),
+                vinculo_id: editor.mode === 'edit' ? baseItem.vinculo_id : null,
+                nome: editor.mode === 'edit' ? baseItem.nome : selected.nome,
+                cpf: editor.mode === 'edit' ? baseItem.cpf : selected.cpf,
+                tipo: editor.mode === 'edit' ? (baseItem.tipo || '') : (selected.tipo || ''),
+                funcao_id: funcaoSelect.value,
+                funcao_atual: getFuncaoText(funcaoSelect.value),
+                data_inicio: dataInicioInput.value,
+                data_fim: dataFimInput ? dataFimInput.value : '',
+                ativo: editor.mode === 'edit' ? baseItem.ativo !== false : true,
+                observacao: baseItem.observacao || '',
+                existente: editor.mode === 'edit'
+            };
+
+            const saved = await persistirVinculo(item, button);
+            if (!saved) return;
+            modalInlineEditor = null;
+            modalInlineSearchResults = [];
+            renderColaboradoresSelecionados();
+            refreshFrenteCounts();
+            showToast(editor.mode === 'edit' ? 'Vínculo atualizado com sucesso.' : 'Colaborador vinculado com sucesso.', 'success');
+        }
+
+        async function toggleVinculoStatus(key, button) {
+            const item = modalColaboradoresSelecionados.get(String(key));
+            if (!item || !item.vinculo_id) return;
+            const actionText = item.ativo === false ? 'ativar' : 'inativar';
+            const releaseButton = button ? setButtonLoading(button, '...') : null;
+            try {
+                const res = await fetch(`/auth/api/frente-colaborador/${item.vinculo_id}/toggle`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        colaborador_id: Number(colaboradorId),
-                        funcao_id: el('add-funcao-id') && el('add-funcao-id').value ? Number(el('add-funcao-id').value) : null,
-                        data_inicio: dataInicioInput && dataInicioInput.value ? dataInicioInput.value : null,
-                        data_fim: dataFimInput && dataFimInput.value ? dataFimInput.value : null,
-                        ativo: (el('add-ativo') && el('add-ativo').value ? el('add-ativo').value : '1') === '1'
-                    })
+                    headers: { 'Content-Type': 'application/json' }
                 });
                 const data = await res.json().catch(() => ({}));
-                if (!res.ok) throw new Error(data.error || 'Erro ao vincular colaborador');
-                showToast('Colaborador vinculado com sucesso.', 'success');
-                closeBuscarColaboradorModal();
-                loadVinculos(frenteId);
+                if (!res.ok || !data || !data.ok) throw new Error(data.error || `Erro ao ${actionText} vínculo.`);
+                if (data.item) addVinculoToMap(data.item, true);
+                if (data.counts) updateFrenteCounters(el('modal-frente-id') ? el('modal-frente-id').value : '', data.counts);
+                if (modalInlineEditor && modalInlineEditor.key === String(key)) modalInlineEditor = null;
+                renderColaboradoresSelecionados();
+                refreshFrenteCounts();
+                showToast(`Vínculo ${item.ativo === false ? 'ativado' : 'inativado'} com sucesso.`, 'success');
             } catch (error) {
-                showToast(error.message || 'Erro ao vincular colaborador.', 'error');
+                showToast(error.message || `Erro ao ${actionText} vínculo.`, 'error');
             } finally {
-                releaseButton();
+                if (typeof releaseButton === 'function') releaseButton();
             }
+        }
+
+        function editarVinculo(key) {
+            startInlineEdit(key);
+        }
+
+        function inativar(key, button) {
+            toggleVinculoStatus(key, button);
+        }
+
+        function toggleAdicionarColaborador(open) {
+            if (open) {
+                startInlineAdd();
+                return;
+            }
+            cancelInlineEditor();
+        }
+
+        function renderColaboradoresSelecionados() {
+            const body = el('modal-colaboradores-selecionados');
+            if (!body) return;
+            updateModalCountersFromSelection();
+            const filtrados = getVinculosFiltrados();
+            const total = filtrados.length;
+            const maxPage = Math.max(1, Math.ceil(total / MODAL_VINCULOS_PAGE_SIZE));
+            if (modalVinculosPagina > maxPage) modalVinculosPagina = maxPage;
+            const start = (modalVinculosPagina - 1) * MODAL_VINCULOS_PAGE_SIZE;
+            const pageItems = filtrados.slice(start, start + MODAL_VINCULOS_PAGE_SIZE);
+
+            if (el('modal-pagination-info')) el('modal-pagination-info').textContent = total ? `Exibindo ${start + 1}-${start + pageItems.length} de ${total} registros` : 'Exibindo 0 registros';
+            if (el('modal-pagination-page')) el('modal-pagination-page').textContent = `${modalVinculosPagina} / ${maxPage}`;
+
+            if (!pageItems.length && !modalInlineEditor) {
+                body.innerHTML = `<tr><td colspan="7" class="p-10 text-center text-slate-400 italic">Nenhum colaborador encontrado.</td></tr>`;
+                return;
+            }
+
+            const rows = [];
+            if (modalInlineEditor && modalInlineEditor.mode === 'add') {
+                rows.push(renderInlineEditorRow());
+            }
+
+            pageItems.forEach((item) => {
+                const key = String(item.key || item.id || item.vinculo_id);
+                if (modalInlineEditor && modalInlineEditor.mode === 'edit' && modalInlineEditor.key === key) {
+                    rows.push(renderInlineEditorRow());
+                    return;
+                }
+                const funcao = escapeHtml(item.funcao_atual || getFuncaoText(item.funcao_id) || '-');
+                const dataInicio = escapeHtml(item.data_inicio || '-');
+                const dataFim = escapeHtml(item.data_fim || '—');
+                const historico = item.existente ? 'Histórico preservado' : 'Vínculo recém-adicionado';
+                const actionLabel = item.ativo === false ? 'Ativar' : 'Inativar';
+                const actionIcon = item.ativo === false ? 'fa-power-off text-emerald-600' : 'fa-power-off text-rose-500';
+                rows.push(`
+                    <tr class="hover:bg-slate-50/80 transition-colors" data-colaborador-key="${escapeHtml(key)}">
+                        <td class="px-5 py-4">
+                            <div class="flex items-center gap-4 min-w-0">
+                                <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 font-bold text-sm flex items-center justify-center shrink-0">${escapeHtml(getColaboradorInitials(item.nome || ''))}</div>
+                                <div class="min-w-0">
+                                    <div class="text-[1.02rem] font-semibold text-slate-800 truncate">${escapeHtml(item.nome || '-')}</div>
+                                    <div class="text-[11px] text-slate-400 mt-1">${historico}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-5 py-4 text-sm text-slate-600 font-mono">${escapeHtml(formatCpfDisplay(item.cpf || ''))}</td>
+                        <td class="px-5 py-4 text-sm text-slate-700">${funcao}</td>
+                        <td class="px-5 py-4 text-sm text-slate-700">${dataInicio}</td>
+                        <td class="px-5 py-4 text-sm text-slate-700">${dataFim}</td>
+                        <td class="px-5 py-4 text-center">${getStatusBadge(item)}</td>
+                        <td class="px-5 py-4">
+                            <div class="flex items-center justify-end gap-1">
+                                <button type="button" class="w-9 h-9 rounded-xl text-slate-500 hover:bg-slate-100" title="Visualizar" onclick="visualizarVinculo('${escapeHtml(key)}')"><i class="fas fa-eye"></i></button>
+                                {% if not view_mode %}<button type="button" class="w-9 h-9 rounded-xl text-slate-500 hover:bg-slate-100" title="Editar" onclick="editarVinculo('${escapeHtml(key)}')"><i class="fas fa-pen"></i></button>
+                                <button type="button" class="w-9 h-9 rounded-xl hover:bg-slate-100" title="${actionLabel}" onclick="toggleVinculoStatus('${escapeHtml(key)}', this)"><i class="fas ${actionIcon}"></i></button>{% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                `);
+            });
+
+            body.innerHTML = rows.join('');
+            if (modalInlineEditor) {
+                const funcaoSelect = el('inline-funcao-id');
+                if (funcaoSelect) funcaoSelect.value = String(modalInlineEditor.funcao_id || '');
+            }
+            enhanceObraDatePickers(body);
         }
 
         function isFrenteRowEmpty(row) {
@@ -2233,21 +3216,22 @@ shadow-sm placeholder:text-slate-400" %}
                     saveDraft();
                 });
             }
-            ['buscar-q', 'buscar-cpf', 'buscar-tipo'].forEach((id) => {
+            ['buscar-q', 'buscar-cpf'].forEach((id) => {
                 const input = el(id);
-                if (input) input.addEventListener(id === 'buscar-tipo' ? 'change' : 'input', buscarColaboradoresDebounced);
+                if (input) input.addEventListener('input', debounce(aplicarFiltrosVinculos, 250));
             });
+            ['buscar-status', 'buscar-funcao'].forEach((id) => {
+                const input = el(id);
+                if (input) input.addEventListener('change', aplicarFiltrosVinculos);
+            });
+            const addSearch = el('add-colaborador-search');
+            if (addSearch) addSearch.addEventListener('input', buscarColaboradoresDebounced);
             const form = el('mainForm');
             if (form && !isViewMode && !hasBackendItem) {
                 form.addEventListener('input', debounce(saveDraft, 350));
                 form.addEventListener('change', debounce(saveDraft, 350));
             }
-            const addDataInicio = el('add-data-inicio');
-            const addDataFim = el('add-data-fim');
             enhanceObraDatePickers();
-            [addDataInicio, addDataFim].forEach((input) => {
-                if (input) input.addEventListener('change', () => validateVinculoDates(addDataInicio, addDataFim, false));
-            });
         }
 
         function validateRequiredFields() {
@@ -2297,6 +3281,7 @@ shadow-sm placeholder:text-slate-400" %}
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
+            ensureModalFuncoesCard();
             applyMasks();
             await loadEstados();
             await restoreDraft();
@@ -2311,10 +3296,18 @@ shadow-sm placeholder:text-slate-400" %}
         window.openBuscarColaboradorModal = openBuscarColaboradorModal;
         window.closeBuscarColaboradorModal = closeBuscarColaboradorModal;
         window.buscarColaboradores = buscarColaboradores;
+        window.buscarColaboradoresInlineDebounced = buscarColaboradoresInlineDebounced;
         window.selecionarColaborador = selecionarColaborador;
+        window.selectInlineColaborador = selectInlineColaborador;
         window.confirmarAdicionarColaborador = confirmarAdicionarColaborador;
-        window.salvarVinculo = salvarVinculo;
-        window.toggleVinculo = toggleVinculo;
+        window.salvarColaboradoresFrente = salvarColaboradoresFrente;
+        window.toggleTodosColaboradores = toggleTodosColaboradores;
+        window.limparColaboradoresSelecionados = limparColaboradoresSelecionados;
+        window.removerColaboradorSelecionado = removerColaboradorSelecionado;
+        window.clearInlineColaborador = clearInlineColaborador;
+        window.cancelInlineEditor = cancelInlineEditor;
+        window.saveInlineEditor = saveInlineEditor;
+        window.toggleVinculoStatus = toggleVinculoStatus;
         window.addFrenteRow = addFrenteRow;
         window.removeRow = removeRow;
         window.addEquipeObraRow = addEquipeObraRow;
