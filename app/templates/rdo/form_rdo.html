@@ -9,7 +9,6 @@
 
 <!-- Dependências de UI -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
 
 <style>
@@ -83,40 +82,6 @@
         text-align: center;
         padding-left: 0.5rem;
         padding-right: 0.5rem;
-    }
-
-    /* --- Select2 --- */
-    .select2-container .select2-search__field {
-        width: 100% !important;
-    }
-
-    .select2-container .select2-selection--single {
-        height: 40px !important;
-        border-color: var(--input-border) !important;
-        border-radius: 0.5rem !important;
-        display: flex;
-        align-items: center;
-        background-color: #fff;
-    }
-
-    .select2-container--default .select2-selection--single .select2-selection__rendered {
-        padding-left: 0.75rem;
-        padding-right: 2rem;
-        color: #1e293b;
-        font-size: 0.9rem;
-        line-height: normal;
-    }
-
-    .select2-container--default .select2-selection--single .select2-selection__arrow {
-        height: 38px !important;
-        right: 8px !important;
-    }
-
-    .select2-dropdown {
-        border-radius: 0.5rem;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-        border-color: var(--input-border);
-        z-index: 10005;
     }
 
     /* --- Workflow Styles --- */
@@ -503,7 +468,7 @@
                     <input type="hidden" name="obra_id" value="{{ item.obra_id }}">
                     {% endif %}
 
-                    <select name="obra_id" id="select_obra" class="form-control-std select2-enable" {% if item
+                    <select name="obra_id" id="select_obra" class="form-control-std rdo-enhanced-select" {% if item
                         %}disabled{% endif %} required onchange="fetchObra(this.value)">
                         <option value="">Selecione...</option>
                         {% for obra in obras %}
@@ -518,31 +483,11 @@
                     <label for="data_rdo" class="block text-sm font-bold text-slate-700">Data do RDO <span
                             class="text-red-500">*</span></label>
                     <div class="flex gap-2">
-                        <div class="relative flex-1">
-                            <!-- INPUT OCULTO QUE ENVIA AO SERVIDOR (Formato YYYY-MM-DD) -->
-                            <input type="hidden" name="data_rdo" id="data_rdo_hidden"
-                                value="{{ item.data.strftime('%Y-%m-%d') if item and item.data else '' }}">
-
-                            <!-- INPUT VISUAL PARA O USUÁRIO (Formato DD/MM/AAAA) -->
-                            <input type="text" id="data_rdo_visual"
-                                value="{{ item.data.strftime('%d/%m/%Y') if item and item.data else '' }}"
-                                class="form-control-std cursor-pointer pr-10" required {{ 'disabled' if view_mode }}
-                                placeholder="DD/MM/AAAA" maxlength="10"
-                                oninput="mascaraData(this); syncDateToHidden(this)" onblur="syncDateToHidden(this)">
-
-                            {% if not view_mode %}
-                            <!-- Botão Ícone Calendário (Gatilho) -->
-                            <div class="absolute inset-y-0 right-0 flex items-center pr-3 z-10" title="Selecionar Data">
-                                <!-- Ícone clicável -->
-                                <i class="far fa-calendar-alt text-lg text-slate-400 hover:text-blue-600 cursor-pointer"
-                                    onclick="document.getElementById('hidden_date_picker').showPicker()"></i>
-
-                                <!-- Input Oculto -->
-                                <input type="date" id="hidden_date_picker"
-                                    class="absolute w-0 h-0 opacity-0 pointer-events-none" tabindex="-1"
-                                    onchange="aplicarDataPicker(this)">
-                            </div>
-                            {% endif %}
+                        <div class="flex-1">
+                            <input type="text" name="data_rdo" id="data_rdo_hidden"
+                                value="{{ item.data.strftime('%Y-%m-%d') if item and item.data else '' }}"
+                                class="form-control-std cursor-pointer js-date-picker" required {{ 'disabled' if view_mode }}
+                                placeholder="dd/mm/aaaa">
                         </div>
 
                         {% if not view_mode %}
@@ -567,7 +512,7 @@
                         <input type="hidden" name="frente_trabalho_id" value="{{ item.frente_trabalho_id }}">
                         {% endif %}
 
-                        <select name="frente_trabalho_id" id="select_frente" class="form-control-std select2-enable"
+                        <select name="frente_trabalho_id" id="select_frente" class="form-control-std rdo-enhanced-select"
                             required {% if not item or not item.obra_id %} disabled {% endif %} {% if view_mode %}
                             disabled {% endif %} {% if item %}disabled{% endif %}>
                             <option value="">{% if item and item.obra_id %}Carregando...{% else %}Selecione a Obra...{%
@@ -710,27 +655,27 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div class="space-y-1">
                         <label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Entrada</label>
-                        <input type="time" name="hora_entrada"
+                        <input type="text" name="hora_entrada"
                             value="{{ item.hora_entrada.strftime('%H:%M') if item and item.hora_entrada else '08:00' }}"
-                            class="form-control-std time-calc font-mono font-medium" {{ 'readonly' if view_mode }}>
+                            class="form-control-std time-calc font-mono font-medium js-time-picker" {{ 'readonly' if view_mode }}>
                     </div>
                     <div class="space-y-1">
                         <label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Saída</label>
-                        <input type="time" name="hora_saida"
+                        <input type="text" name="hora_saida"
                             value="{{ item.hora_saida.strftime('%H:%M') if item and item.hora_saida else '17:00' }}"
-                            class="form-control-std time-calc font-mono font-medium" {{ 'readonly' if view_mode }}>
+                            class="form-control-std time-calc font-mono font-medium js-time-picker" {{ 'readonly' if view_mode }}>
                     </div>
                     <div class="space-y-1">
                         <label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Início Intervalo</label>
-                        <input type="time" name="intervalo_entrada"
+                        <input type="text" name="intervalo_entrada"
                             value="{{ item.intervalo_entrada.strftime('%H:%M') if item and item.intervalo_entrada else '12:00' }}"
-                            class="form-control-std time-calc font-mono font-medium" {{ 'readonly' if view_mode }}>
+                            class="form-control-std time-calc font-mono font-medium js-time-picker" {{ 'readonly' if view_mode }}>
                     </div>
                     <div class="space-y-1">
                         <label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Fim Intervalo</label>
-                        <input type="time" name="intervalo_saida"
+                        <input type="text" name="intervalo_saida"
                             value="{{ item.intervalo_saida.strftime('%H:%M') if item and item.intervalo_saida else '13:00' }}"
-                            class="form-control-std time-calc font-mono font-medium" {{ 'readonly' if view_mode }}>
+                            class="form-control-std time-calc font-mono font-medium js-time-picker" {{ 'readonly' if view_mode }}>
                     </div>
                 </div>
             </div>
@@ -748,7 +693,7 @@
                     <div class="space-y-1.5">
                         <label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Manhã <span
                                 class="text-red-500">*</span></label>
-                        <select name="climas_manha" class="form-control-std select2-enable" required {{ 'disabled' if
+                        <select name="climas_manha" class="form-control-std rdo-enhanced-select" required {{ 'disabled' if
                             view_mode }}>
                             <option value="">Selecione...</option>
                             {% for c in clima %}
@@ -760,7 +705,7 @@
                     <div class="space-y-1.5">
                         <label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Tarde <span
                                 class="text-red-500">*</span></label>
-                        <select name="climas_tarde" class="form-control-std select2-enable" required {{ 'disabled' if
+                        <select name="climas_tarde" class="form-control-std rdo-enhanced-select" required {{ 'disabled' if
                             view_mode }}>
                             <option value="">Selecione...</option>
                             {% for c in clima %}
@@ -810,7 +755,7 @@
                                     }}>{{ atv.descricao }}</textarea>
                             </td>
                             <td class="p-3 align-top" data-label="Status:">
-                                <select name="atividade_status[]" class="form-control-std text-sm select2-enable"
+                                <select name="atividade_status[]" class="form-control-std text-sm rdo-enhanced-select"
                                     {{ 'disabled' if view_mode }}>
                                     <option value="Em andamento" {{ 'selected' if atv.status=='Em andamento' }}>Em
                                         andamento</option>
@@ -876,7 +821,7 @@
                             {% for mo in item.maos_obra %}
                             <tr>
                                 <td class="p-2" data-label="Função:">
-                                    <select name="mo_funcao[]" class="form-control-std text-sm select2-enable"
+                                    <select name="mo_funcao[]" class="form-control-std text-sm rdo-enhanced-select"
                                         {{ 'disabled' if view_mode }}>
                                         {% for op in mao_de_obra_options %}
                                         <option value="{{ op.nome }}" {% if op.nome==mo.nome_funcao %}selected{% endif
@@ -935,7 +880,7 @@
                             {% for eq in item.equipamentos %}
                             <tr>
                                 <td class="p-2" data-label="Equipamento:">
-                                    <select name="eq_id[]" class="form-control-std text-sm select2-enable" {{ 'disabled'
+                                    <select name="eq_id[]" class="form-control-std text-sm rdo-enhanced-select" {{ 'disabled'
                                         if view_mode }}>
                                         {% for opt in equipamentos_options %}
                                         <option value="{{ opt.id }}" {% if opt.id==eq.id_equipamento_lista %}selected{%
@@ -991,7 +936,7 @@
                         {% for oc in item.ocorrencias %}
                         <tr>
                             <td class="p-2 align-top" data-label="Tipo:">
-                                <select name="oc_tag[]" class="form-control-std text-sm select2-enable" {{ 'disabled' if
+                                <select name="oc_tag[]" class="form-control-std text-sm rdo-enhanced-select" {{ 'disabled' if
                                     view_mode }}>
                                     {% for t in tags_options %}
                                     <option value="{{ t.id }}" {% if t.id==oc.id_tag_lista %}selected{% endif %}>{{
@@ -1003,9 +948,9 @@
                                     value="{{ oc.descricao }}" class="form-control-std"
                                     placeholder="Detalhe a ocorrência..." {{ 'readonly' if view_mode }}></td>
                             <td class="p-2 full-width-mobile" data-label="Tempo Parado:">
-                                <input type="time" name="oc_tempo_parado[]"
+                                <input type="text" name="oc_tempo_parado[]"
                                     value="{{ oc.tempo_parado.strftime('%H:%M') if oc.tempo_parado else '' }}"
-                                    class="form-control-std" {{ 'readonly' if view_mode }}>
+                                    class="form-control-std js-time-picker" {{ 'readonly' if view_mode }}>
                             </td>
                             {% if not view_mode %}<td class="p-2 align-middle text-center action-cell"><button
                                     type="button" onclick="removeRow(this)"
@@ -1534,7 +1479,6 @@
 <!-- SCRIPTS (Lógica Preservada + Aprimorada) -->
 <!-- ========================================== -->
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <script>
     const isViewMode = {{ 'true' if view_mode else 'false' }};
@@ -1563,20 +1507,31 @@
     {% endfor %}
     {% endif %}
 
+    function refreshRdoControls(context = document) {
+        if (window.initSelectPickers) window.initSelectPickers(context);
+        if (window.initDateTimePickers) window.initDateTimePickers(context);
+    }
+
+    function destroyRdoSelect(select) {
+        if (select && window.destroySelectPicker) window.destroySelectPicker(select);
+    }
+
+    function refreshRdoSelect(select) {
+        if (!select) return;
+        if (window.refreshSelectPicker) window.refreshSelectPicker(select);
+        else if (window.initSelectPickers) window.initSelectPickers(select);
+    }
+
     $(document).ready(function () {
         // CORREÇÃO CRÍTICA DE Z-INDEX DO MODAL
         $('.modal-overlay').appendTo('body');
 
         if (!isViewMode) {
-            $('.select2-enable').select2({
-                width: '100%',
-                language: { noResults: () => "Nada encontrado" },
-                dropdownAutoWidth: true
-            });
             if ($('#table_atividades tbody tr').length === 0) addAtividadeRow();
         } else {
-            $('.select2-enable').prop('disabled', true);
+            $('.rdo-enhanced-select').prop('disabled', true);
         }
+        refreshRdoControls(document);
 
         window.addEventListener('resize', () => {
             document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`);
@@ -1637,48 +1592,21 @@
         });
     });
 
-    // --- MASCARA E DATA TOOLS ---
-    function mascaraData(val) {
-        let v = val.value;
-        v = v.replace(/\D/g, ""); // Remove tudo o que não é dígito
-        v = v.replace(/^(\d{2})(\d)/, "$1/$2"); // Coloca barra entre o segundo e o terceiro dígitos
-        v = v.replace(/\/(\d{2})(\d)/, "/$1/$2"); // Coloca barra entre o quinto e o sexto dígitos
-        val.value = v;
-    }
-
-    function syncDateToHidden(input) {
-        const hidden = document.getElementById('data_rdo_hidden');
-        const visualVal = input.value;
-
-        // Regex verify DD/MM/YYYY
-        if (/^\d{2}\/\d{2}\/\d{4}$/.test(visualVal)) {
-            const parts = visualVal.split('/');
-            // YYYY-MM-DD
-            hidden.value = `${parts[2]}-${parts[1]}-${parts[0]}`;
-        } else {
-            hidden.value = ''; // Invalid or incomplete
-        }
-    }
-
     function setDataHoje() {
         const now = new Date();
-        const dia = String(now.getDate()).padStart(2, '0');
-        const mes = String(now.getMonth() + 1).padStart(2, '0');
-        const ano = now.getFullYear();
-        document.getElementById('data_rdo_visual').value = `${dia}/${mes}/${ano}`;
-        document.getElementById('data_rdo_hidden').value = `${ano}-${mes}-${dia}`;
-    }
-
-    function aplicarDataPicker(input) {
-        if (!input.value) return;
-        const [ano, mes, dia] = input.value.split('-');
-        document.getElementById('data_rdo_visual').value = `${dia}/${mes}/${ano}`;
-        document.getElementById('data_rdo_hidden').value = `${ano}-${mes}-${dia}`;
+        const iso = now.toISOString().split('T')[0];
+        const input = document.getElementById('data_rdo_hidden');
+        if (!input) return;
+        input.value = iso;
+        if (input._flatpickr) input._flatpickr.setDate(iso, true);
+        else input.dispatchEvent(new Event('change', { bubbles: true }));
     }
 
     // --- LÓGICA DE OBRA/FRENTE ---
     async function fetchObra(obraId) {
         const selectFrente = $('#select_frente');
+        const selectFrenteEl = document.getElementById('select_frente');
+        destroyRdoSelect(selectFrenteEl);
         selectFrente.empty().append('<option value="">Selecione a Frente...</option>');
         $('#error_frente').addClass('hidden');
 
@@ -1686,7 +1614,8 @@
         document.getElementById('block_progresso').classList.add('hidden');
 
         if (!obraId) {
-            selectFrente.prop('disabled', true).trigger('change.select2');
+            selectFrente.prop('disabled', true).trigger('change');
+            refreshRdoSelect(selectFrenteEl);
             return;
         }
 
@@ -1722,6 +1651,7 @@
             $('#error_frente').removeClass('hidden');
         } finally {
             loader.classList.add('hidden');
+            refreshRdoSelect(selectFrenteEl);
             selectFrente.trigger('change');
         }
     }
@@ -2084,7 +2014,7 @@
                 <textarea name="atividade_descricao[]" class="form-control-std text-sm min-h-[80px]" rows="2" placeholder="Descreva..." required></textarea>
             </td>
             <td class="p-3 align-top" data-label="Status:">
-                <select name="atividade_status[]" class="form-control-std text-sm select2-enable">
+                <select name="atividade_status[]" class="form-control-std text-sm rdo-enhanced-select">
                     <option value="Em andamento">Em andamento</option>
                     <option value="Iniciada">Iniciada</option>
                     <option value="Concluída">Concluída</option>
@@ -2096,7 +2026,7 @@
             </td>
         </tr>`;
         $('#table_atividades tbody').append(row);
-        $('.select2-enable').last().select2({ width: '100%' });
+        refreshRdoControls(document);
     }
 
     function addSelectedMO() {
@@ -2105,7 +2035,7 @@
             const row = `
                 <tr>
                     <td class="p-2" data-label="Função:">
-                        <select name="mo_funcao[]" class="form-control-std text-sm select2-enable">
+                        <select name="mo_funcao[]" class="form-control-std text-sm rdo-enhanced-select">
                             {% for op in mao_de_obra_options %}
                             <option value="{{ op.nome }}" ${'{{ op.nome }}' === funcao ? 'selected' : ''}>{{ op.nome }}</option>
                             {% endfor %}
@@ -2118,7 +2048,7 @@
             $('#table_mao_obra tbody').append(row);
             $(this).prop('checked', false);
         });
-        $('.select2-enable').select2({ width: '100%' });
+        refreshRdoControls(document);
         closeModal('modal_mo');
     }
 
@@ -2128,7 +2058,7 @@
             const row = `
                 <tr>
                     <td class="p-2" data-label="Equipamento:">
-                        <select name="eq_id[]" class="form-control-std text-sm select2-enable">
+                        <select name="eq_id[]" class="form-control-std text-sm rdo-enhanced-select">
                             {% for opt in equipamentos_options %}
                             <option value="{{ opt.id }}" ${'{{ opt.id }}' == id ? 'selected' : ''}>{{ opt.nome }}</option>
                             {% endfor %}
@@ -2140,18 +2070,18 @@
             $('#table_equipamentos tbody').append(row);
             $(this).prop('checked', false);
         });
-        $('.select2-enable').select2({ width: '100%' });
+        refreshRdoControls(document);
         closeModal('modal_eq');
     }
 
     function addSelectedOc() {
         $('.chk-oc:checked').each(function () {
             const id = $(this).val();
-            // Correção: Input agora é type="time" e removemos a classe mask-hora
+            // Correção: Input agora é type="text" e removemos a classe mask-hora
             const row = `
             <tr>
                 <td class="p-2 align-top" data-label="Tipo:">
-                    <select name="oc_tag[]" class="form-control-std text-sm select2-enable">
+                    <select name="oc_tag[]" class="form-control-std text-sm rdo-enhanced-select">
                         {% for t in tags_options %}
                         <option value="{{ t.id }}" ${'{{ t.id }}' == id ? 'selected' : ''}>{{ t.nome }}</option>
                         {% endfor %}
@@ -2161,7 +2091,7 @@
                     <input type="text" name="oc_desc[]" class="form-control-std" placeholder="Detalhes...">
                 </td>
                 <td class="p-2 full-width-mobile" data-label="Tempo Parado:">
-                    <input type="time" name="oc_tempo_parado[]" class="form-control-std">
+                    <input type="text" name="oc_tempo_parado[]" class="form-control-std js-time-picker">
                 </td>
                 <td class="p-2 text-center align-middle action-cell">
                     <button type="button" onclick="removeRow(this)" class="text-slate-400 hover:text-red-500 p-2">
@@ -2172,9 +2102,15 @@
             $('#table_ocorrencias tbody').append(row);
             $(this).prop('checked', false);
         });
-        $('.select2-enable').select2({ width: '100%' });
-        // Removemos a chamada de .mask() pois type="time" já resolve
+        refreshRdoControls(document);
+        // Removemos a chamada de .mask() pois type="text" já resolve
         closeModal('modal_oc');
     }
 </script>
 {% endblock %}
+
+
+
+
+
+
