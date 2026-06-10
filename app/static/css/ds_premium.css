@@ -534,12 +534,19 @@ html[data-ui-theme="premium"] .ds-tom-select .ts-control input {
 }
 
 html[data-ui-theme="premium"] .ds-tom-select.single.input-active .ts-control .item {
-  display: none;
+  display: inline-flex;
+  flex: 1 1 auto;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 html[data-ui-theme="premium"] .ds-tom-select.single.input-active .ts-control input {
-  opacity: 1 !important;
-  width: 100% !important;
+  opacity: 0 !important;
+  position: absolute !important;
+  width: 1px !important;
+  min-width: 1px !important;
+  pointer-events: none !important;
 }
 
 html[data-ui-theme="premium"] .ds-tom-select-searchable.input-active .ts-control {
@@ -635,6 +642,7 @@ html[data-ui-theme="premium"] :where(form, .ds-form) :where(
 )[aria-invalid="true"],
 html[data-ui-theme="premium"] :where(form, .ds-form) .is-error :where(input, select, textarea) {
   border-color: rgba(220, 38, 38, 0.55);
+  background: rgba(254, 242, 242, 0.72);
 }
 
 html[data-ui-theme="premium"] :where(form, .ds-form) :where(
@@ -643,7 +651,9 @@ html[data-ui-theme="premium"] :where(form, .ds-form) :where(
   textarea
 )[aria-invalid="true"]:focus,
 html[data-ui-theme="premium"] :where(form, .ds-form) .is-error :where(input, select, textarea):focus {
-  box-shadow: var(--ds-ring-danger);
+  border-color: rgba(37, 99, 235, 0.55);
+  box-shadow: var(--ds-ring);
+  background: #fff;
 }
 
 html[data-ui-theme="premium"] :where(form, .ds-form) .is-success :where(input, select, textarea) {

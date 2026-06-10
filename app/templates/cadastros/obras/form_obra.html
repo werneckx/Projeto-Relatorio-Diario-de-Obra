@@ -8,10 +8,8 @@
 {% import "components/form/macros.html" as ui_form %}
 
 <!-- Definição de Estilos Dinâmicos -->
-{% set input_base_css = "block w-full px-3 py-2.5 text-sm rounded-lg border transition-all outline-none appearance-none"
-%}
-{% set input_edit_css = "bg-white border-slate-300 text-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-shadow-sm placeholder:text-slate-400" %}
+{% set input_base_css = "form-control-std h-9 text-sm block w-full rounded-2xl appearance-none" %}
+{% set input_edit_css = "bg-white border-slate-300 text-slate-600 shadow-sm placeholder:text-slate-400" %}
 {% set input_view_css = "bg-slate-100/60 border-slate-200 text-slate-800 font-semibold shadow-none cursor-default" %}
 
 {% set final_input_css = input_base_css ~ " " ~ (input_view_css if view_mode else input_edit_css) %}
@@ -126,19 +124,11 @@ shadow-sm placeholder:text-slate-400" %}
                         <!-- Status da Obra -->
                         {% if view_mode %}
                         <span class="inline-flex items-center gap-1.5">
-                            <i
-                                class="fas {{ 'fa-check-circle' if (item and item.ativo) else 'fa-times-circle' }} text-xs"></i>
                             {% set text = 'Ativa' if (item and item.ativo) else 'Inativa' %}
                             {% set variant = 'success' if (item and item.ativo) else 'danger' %}
                             {% include "components/badge.html" %}
                         </span>
                         {% else %}
-                        {% if not item %}
-                        <button type="button" onclick="clearNewObraForm()"
-                            class="px-4 py-3 bg-white border border-slate-300 text-slate-600 font-bold rounded-xl shadow-sm hover:bg-slate-50 transition-colors text-center text-sm flex items-center justify-center gap-2">
-                            Limpar formulário
-                        </button>
-                        {% endif %}
                         <div class="min-w-[160px]">
                             <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Status</label>
                             <div class="relative">
@@ -313,15 +303,9 @@ shadow-sm placeholder:text-slate-400" %}
                 <div>
                     <div class="flex justify-between items-center mb-2">
                         <label class="text-xs font-bold text-slate-500 uppercase">Data de Início</label>
-                        {% if not view_mode %}
-                        <button type="button" onclick="setToday('data_inicio_visual', 'data_inicio_hidden')"
-                            class="text-[10px] font-bold text-emerald-600 hover:bg-emerald-50 px-2 py-1 rounded transition-colors border border-emerald-100 shadow-sm flex items-center">
-                            <i class="fas fa-magic mr-1"></i> HOJE
-                        </button>
-                        {% endif %}
                     </div>
-                    <input type="text" name="data_inicio" id="data_inicio_hidden"
-                        value="{{ item.data_inicio | string if item and item.data_inicio else '' }}"
+                    <input type="text" name="data_inicio" id="data_inicio_hidden" data-range-start="true"
+                        value="{{ item.data_inicio.strftime('%d/%m/%Y') if view_mode and item and item.data_inicio else (item.data_inicio | string if item and item.data_inicio else '') }}"
                         placeholder="dd/mm/aaaa" class="{{ final_input_css }} js-date-picker" {{ 'readonly disabled' if
                         view_mode }}>
                 </div>
@@ -330,16 +314,9 @@ shadow-sm placeholder:text-slate-400" %}
                 <div>
                     <div class="flex justify-between items-center mb-2">
                         <label class="text-xs font-bold text-slate-500 uppercase">Data de Fim Planejada</label>
-                        {% if not view_mode %}
-                        <button type="button"
-                            onclick="setToday('data_fim_planejada_visual', 'data_fim_planejada_hidden')"
-                            class="text-[10px] font-bold text-emerald-600 hover:bg-emerald-50 px-2 py-1 rounded transition-colors border border-emerald-100 shadow-sm flex items-center">
-                            <i class="fas fa-magic mr-1"></i> HOJE
-                        </button>
-                        {% endif %}
                     </div>
-                    <input type="text" name="data_fim_planejada" id="data_fim_planejada_hidden"
-                        value="{{ item.data_fim_planejada | string if item and item.data_fim_planejada else '' }}"
+                    <input type="text" name="data_fim_planejada" id="data_fim_planejada_hidden" data-range-end="true"
+                        value="{{ item.data_fim_planejada.strftime('%d/%m/%Y') if view_mode and item and item.data_fim_planejada else (item.data_fim_planejada | string if item and item.data_fim_planejada else '') }}"
                         placeholder="dd/mm/aaaa" class="{{ final_input_css }} js-date-picker" {{ 'readonly disabled' if
                         view_mode }}>
                 </div>
@@ -348,16 +325,11 @@ shadow-sm placeholder:text-slate-400" %}
                 <div>
                     <div class="flex justify-between items-center mb-2">
                         <label class="text-xs font-bold text-slate-500 uppercase">Data de Fim Real</label>
-                        {% if not view_mode %}
-                        <button type="button" onclick="setToday('data_fim_visual', 'data_fim_hidden')"
-                            class="text-[10px] font-bold text-emerald-600 hover:bg-emerald-50 px-2 py-1 rounded transition-colors border border-emerald-100 shadow-sm flex items-center">
-                            <i class="fas fa-magic mr-1"></i> HOJE
-                        </button>
-                        {% endif %}
                     </div>
-                    <input type="text" name="data_fim" id="data_fim_hidden"
-                        value="{{ item.data_fim | string if item and item.data_fim else '' }}" placeholder="dd/mm/aaaa"
-                        class="{{ final_input_css }} js-date-picker" {{ 'readonly disabled' if view_mode }}>
+                    <input type="text" name="data_fim" id="data_fim_hidden" data-range-end="true"
+                        value="{{ item.data_fim.strftime('%d/%m/%Y') if view_mode and item and item.data_fim else (item.data_fim | string if item and item.data_fim else '') }}"
+                        placeholder="dd/mm/aaaa" class="{{ final_input_css }} js-date-picker" {{ 'readonly disabled' if
+                        view_mode }}>
                     <div id="erro_data"
                         class="hidden items-center gap-2 mt-2 text-red-600 bg-red-50 p-2 rounded-lg text-xs font-medium animate-pulse">
                         <i class="fas fa-exclamation-triangle"></i><span>A data de fim deve ser igual ou posterior à
@@ -386,8 +358,6 @@ shadow-sm placeholder:text-slate-400" %}
                     <p id="cep-message" class="text-[10px] mt-1 h-3"></p>
                 </div>
                 <div class="col-span-12 sm:col-span-8 flex items-end pb-1">
-                    {% if not view_mode %}<span class="text-[10px] text-slate-400 italic"><i
-                            class="fas fa-search mr-1"></i>Digite o CEP para buscar</span>{% endif %}
                 </div>
 
                 <div class="col-span-12 sm:col-span-8">
@@ -407,7 +377,7 @@ shadow-sm placeholder:text-slate-400" %}
                 </div>
                 <div class="col-span-12 sm:col-span-5">
                     <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Bairro</label>
-                    <input type="text" name="bairro" id="bairro" list="bairro-options" value="{{ item.bairro if item }}"
+                    <input type="text" name="bairro" id="bairro" value="{{ item.bairro if item }}"
                         class="{{ final_input_css }}" {{ 'readonly disabled' if view_mode }}>
                     {% if not view_mode %}
                     <datalist id="bairro-options">
@@ -529,7 +499,8 @@ shadow-sm placeholder:text-slate-400" %}
 
                             <!-- DATA INÍCIO -->
                             <td class="p-2" data-label="Data Inicio:">
-                                <input type="text" name="frente_data_inicio[]" value="{{ f.data_inicio or '' }}"
+                                <input type="text" name="frente_data_inicio[]" data-range-start="true"
+                                    value="{{ f.data_inicio.strftime('%d/%m/%Y') if view_mode and f.data_inicio else (f.data_inicio or '') }}"
                                     class="{{ 'w-full h-9 text-sm text-center px-2 rounded-md bg-transparent border-none text-slate-700' if view_mode else 'form-control-std h-9 text-sm text-left frente-date-visual js-date-picker' }}"
                                     placeholder="{{ '-' if view_mode else 'dd/mm/aaaa' }}" {{ 'readonly' if view_mode
                                     }}>
@@ -537,7 +508,8 @@ shadow-sm placeholder:text-slate-400" %}
 
                             <!-- DATA PLANEJADA -->
                             <td class="p-2" data-label="Data Fim Planejada:">
-                                <input type="text" name="frente_data_planejada[]" value="{{ f.data_planejada or '' }}"
+                                <input type="text" name="frente_data_planejada[]" data-range-end="true"
+                                    value="{{ f.data_planejada.strftime('%d/%m/%Y') if view_mode and f.data_planejada else (f.data_planejada or '') }}"
                                     class="{{ 'w-full h-9 text-sm text-center px-2 rounded-md bg-transparent border-none text-slate-700' if view_mode else 'form-control-std h-9 text-sm text-left frente-date-visual js-date-picker' }}"
                                     placeholder="{{ '-' if view_mode else 'dd/mm/aaaa' }}" {{ 'readonly' if view_mode
                                     }}>
@@ -545,7 +517,8 @@ shadow-sm placeholder:text-slate-400" %}
 
                             <!-- DATA FIM -->
                             <td class="p-2" data-label="Data Fim:">
-                                <input type="text" name="frente_data_fim[]" value="{{ f.data_fim or '' }}"
+                                <input type="text" name="frente_data_fim[]" data-range-end="true"
+                                    value="{{ f.data_fim.strftime('%d/%m/%Y') if view_mode and f.data_fim else (f.data_fim or '') }}"
                                     class="{{ 'w-full h-9 text-sm text-center px-2 rounded-md bg-transparent border-none text-slate-700' if view_mode else 'form-control-std h-9 text-sm text-left frente-date-visual js-date-picker' }}"
                                     placeholder="{{ '-' if view_mode else 'dd/mm/aaaa' }}" {{ 'readonly' if view_mode
                                     }}>
@@ -581,10 +554,11 @@ shadow-sm placeholder:text-slate-400" %}
                                 {% endif %}
                             </td>
 
-                            <!-- AÇÕES -->
+                            <!-- Ações -->
                             <td class="p-2 text-center action-cell" data-label="Ações:">
                                 <div class="flex items-center justify-center gap-2">
                                     <button type="button" data-frente-id="{{ f.id }}"
+                                        onclick="openColaboradoresModal('{{ f.id }}', this)"
                                         class="js-gerenciar-colaboradores px-3 h-9 rounded-lg text-xs font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition flex items-center gap-2">
                                         <i class="fas fa-users"></i><span class="hidden sm:inline">Gerenciar</span>
                                     </button>
@@ -647,8 +621,8 @@ shadow-sm placeholder:text-slate-400" %}
                             <div class="flex-1">
                                 <div class="relative">
                                     <input type="text" id="buscar-q"
-                                        class="form-control-std h-11 rounded-2xl pl-11 pr-4 text-sm bg-white"
-                                        placeholder="Buscar por nome ou CPF...">
+                                        class="form-control-std h-9 rounded-2xl pl-11 pr-4 text-sm bg-white"
+                                        placeholder="Buscar por nome, CPF, função ou data...">
                                 </div>
                             </div>
                             <div class="flex flex-col sm:flex-row gap-3 xl:items-center">
@@ -685,8 +659,8 @@ shadow-sm placeholder:text-slate-400" %}
                                 class="hidden px-5 sm:px-8 py-4 bg-white border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
                                 <div>
                                     <p class="text-xs font-bold text-slate-700 uppercase">Colaboradores vinculados</p>
-                                    <p class="text-[11px] text-slate-400 mt-0.5">Ativos primeiro, depois Inativos,
-                                        ordenados por nome.</p>
+                                    <p class="text-[11px] text-slate-400 mt-0.5">Registros ordenados alfabeticamente,
+                                        com filtros por nome, CPF, função e datas.</p>
                                 </div>
                             </div>
 
@@ -697,13 +671,42 @@ shadow-sm placeholder:text-slate-400" %}
                                         <thead class="sticky top-0 z-10 bg-slate-50">
                                             <tr
                                                 class="text-[11px] uppercase tracking-wide text-slate-500 font-bold border-b border-slate-200">
-                                                <th class="px-5 py-4">Colaborador</th>
-                                                <th class="px-5 py-4">CPF</th>
-                                                <th class="p-3">Função Atribuída</th>
-                                                <th class="p-3">Data Início</th>
-                                                <th class="p-3">Data Fim</th>
-                                                <th class="px-5 py-4 text-center">Status</th>
-                                                <th class="p-3 text-right">Ações</th>
+                                                <th class="px-5 py-4"><button type="button"
+                                                        class="modal-sort-trigger inline-flex items-center gap-2 hover:text-slate-700 transition"
+                                                        onclick="setModalSort('nome')">Colaborador <span
+                                                            id="modal-sort-nome"
+                                                            class="sort-indicator text-[10px] text-slate-400"></span></button>
+                                                </th>
+                                                <th class="px-5 py-4"><button type="button"
+                                                        class="modal-sort-trigger inline-flex items-center gap-2 hover:text-slate-700 transition"
+                                                        onclick="setModalSort('cpf')">CPF <span id="modal-sort-cpf"
+                                                            class="sort-indicator text-[10px] text-slate-400"></span></button>
+                                                </th>
+                                                <th class="p-3"><button type="button"
+                                                        class="modal-sort-trigger inline-flex items-center gap-2 hover:text-slate-700 transition"
+                                                        onclick="setModalSort('funcao')">Função Atribuida <span
+                                                            id="modal-sort-funcao"
+                                                            class="sort-indicator text-[10px] text-slate-400"></span></button>
+                                                </th>
+                                                <th class="p-3"><button type="button"
+                                                        class="modal-sort-trigger inline-flex items-center gap-2 hover:text-slate-700 transition"
+                                                        onclick="setModalSort('data_inicio')">Data Início <span
+                                                            id="modal-sort-data_inicio"
+                                                            class="sort-indicator text-[10px] text-slate-400"></span></button>
+                                                </th>
+                                                <th class="p-3"><button type="button"
+                                                        class="modal-sort-trigger inline-flex items-center gap-2 hover:text-slate-700 transition"
+                                                        onclick="setModalSort('data_fim')">Data Fim <span
+                                                            id="modal-sort-data_fim"
+                                                            class="sort-indicator text-[10px] text-slate-400"></span></button>
+                                                </th>
+                                                <th class="px-5 py-4 text-center"><button type="button"
+                                                        class="modal-sort-trigger inline-flex items-center gap-2 hover:text-slate-700 transition"
+                                                        onclick="setModalSort('status')">Status <span
+                                                            id="modal-sort-status"
+                                                            class="sort-indicator text-[10px] text-slate-400"></span></button>
+                                                </th>
+                                                <th class="p-3 text-right">A&ccedil;&otilde;es</th>
                                             </tr>
                                         </thead>
                                         <tbody id="modal-colaboradores-selecionados"
@@ -757,7 +760,7 @@ shadow-sm placeholder:text-slate-400" %}
                                                 <i
                                                     class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
                                                 <input type="text" id="add-colaborador-search"
-                                                    class="form-control-std h-11 rounded-2xl pl-11 pr-4 text-sm bg-white"
+                                                    class="form-control-std h-9 rounded-2xl pl-11 pr-4 text-sm bg-white"
                                                     placeholder="Nome ou CPF">
                                             </div>
                                             <div id="add-colaborador-results"
@@ -772,14 +775,14 @@ shadow-sm placeholder:text-slate-400" %}
                                                     <label
                                                         class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Colaborador</label>
                                                     <input type="text" id="add-colaborador-nome"
-                                                        class="form-control-std h-11 rounded-2xl bg-slate-100 border-slate-200 text-slate-800 font-semibold"
+                                                        class="form-control-std h-9 rounded-2xl bg-slate-100 border-slate-200 text-slate-800 font-semibold"
                                                         readonly>
                                                 </div>
                                                 <div>
                                                     <label
                                                         class="block text-[10px] font-bold text-slate-500 uppercase mb-1">CPF</label>
                                                     <input type="text" id="add-colaborador-cpf"
-                                                        class="form-control-std h-11 rounded-2xl bg-slate-100 border-slate-200 text-slate-800 font-mono"
+                                                        class="form-control-std h-9 rounded-2xl bg-slate-100 border-slate-200 text-slate-800 font-mono"
                                                         readonly>
                                                 </div>
                                                 <div>
@@ -787,7 +790,7 @@ shadow-sm placeholder:text-slate-400" %}
                                                         class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Função
                                                         na Frente</label>
                                                     <select id="add-colaborador-funcao"
-                                                        class="form-control-std h-11 rounded-2xl text-sm bg-white">
+                                                        class="form-control-std h-9 rounded-2xl text-sm bg-white">
                                                         <option value="">Selecione...</option>
                                                         {% for op in mao_de_obra_options %}
                                                         <option value="{{ op.id }}">{{ op.nome }}{% if op.tipo %} ({{
@@ -801,7 +804,7 @@ shadow-sm placeholder:text-slate-400" %}
                                                             class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Data
                                                             de Início</label>
                                                         <input type="text" id="add-colaborador-data-inicio"
-                                                            class="form-control-std h-11 rounded-2xl text-sm js-date-picker"
+                                                            class="form-control-std h-9 rounded-2xl text-sm js-date-picker"
                                                             placeholder="dd/mm/aaaa">
                                                     </div>
                                                     <div>
@@ -809,7 +812,7 @@ shadow-sm placeholder:text-slate-400" %}
                                                             class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Data
                                                             de Fim</label>
                                                         <input type="text" id="add-colaborador-data-fim"
-                                                            class="form-control-std h-11 rounded-2xl text-sm js-date-picker"
+                                                            class="form-control-std h-9 rounded-2xl text-sm js-date-picker"
                                                             placeholder="dd/mm/aaaa">
                                                     </div>
                                                 </div>
@@ -830,18 +833,18 @@ shadow-sm placeholder:text-slate-400" %}
                                         </div>
                                     </div>
                                 </div>
+                            </div>
 
-                                <div id="detail-colaborador-panel" class="h-full overflow-auto bg-slate-50/50">
+                            <div id="detail-colaborador-panel" class="h-full overflow-auto bg-slate-50/50">
+                                <div
+                                    class="h-full px-6 py-6 text-center text-slate-400 flex flex-col items-center justify-center">
                                     <div
-                                        class="h-full px-6 py-6 text-center text-slate-400 flex flex-col items-center justify-center">
-                                        <div
-                                            class="w-16 h-16 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mb-4">
-                                            <i class="fas fa-user-clock text-2xl"></i>
-                                        </div>
-                                        <p class="text-sm font-semibold text-slate-600">Selecione Visualizar ou Editar
-                                            em uma linha.</p>
-                                        <p class="text-xs mt-1">Os dados históricos permanecem preservados.</p>
+                                        class="w-16 h-16 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mb-4">
+                                        <i class="fas fa-user-clock text-2xl"></i>
                                     </div>
+                                    <p class="text-sm font-semibold text-slate-600">Selecione Visualizar ou Editar
+                                        em uma linha.</p>
+                                    <p class="text-xs mt-1">Os dados históricos permanecem preservados.</p>
                                 </div>
                             </div>
                         </div>
@@ -861,46 +864,113 @@ shadow-sm placeholder:text-slate-400" %}
                     </div>
                 </div>
             </div>
+        </div>
 
-            <div class="flex flex-col-reverse sm:flex-row gap-3 pt-4 border-t border-slate-200">
-                <a href="{{ url_for('auth.lista_obras') }}"
-                    class="flex-1 px-4 py-3 bg-white border border-slate-300 text-slate-700 font-bold rounded-xl shadow-sm hover:bg-slate-50 transition-colors text-center text-sm">
-                    {{ 'Voltar' if view_mode else 'Cancelar' }}
-                </a>
+        <div class="sticky bottom-4 z-30 w-full flex justify-center pointer-events-none">
+
+            <div
+                class="pointer-events-auto flex w-[calc(100%-1.5rem)] max-w-5xl flex-col-reverse gap-3 rounded-[24px] border border-slate-200 bg-white/96 p-3 shadow-2xl shadow-slate-900/10 backdrop-blur-md sm:flex-row sm:items-center sm:justify-between">
+
+                <div class="flex flex-1 flex-col-reverse gap-3 sm:flex-row sm:items-center">
+
+                    {% if view_mode %}
+                    <a href="{{ url_for('auth.lista_obras') }}"
+                        class="flex-1 px-4 py-3 bg-white border border-slate-300 text-slate-700 font-bold rounded-2xl shadow-sm hover:bg-slate-50 transition-colors text-center text-sm">
+                        Voltar
+                    </a>
+                    {% else %}
+                    {% if item and item.id %}
+                    <a href="{{ url_for('auth.visualizar_obra', id=item.id) }}"
+                        class="flex-1 px-4 py-3 bg-white border border-slate-300 text-slate-700 font-bold rounded-2xl shadow-sm hover:bg-slate-50 transition-colors text-center text-sm">
+                        Cancelar
+                    </a>
+                    {% else %}
+                    <a href="{{ url_for('auth.lista_obras') }}"
+                        class="flex-1 px-4 py-3 bg-white border border-slate-300 text-slate-700 font-bold rounded-2xl shadow-sm hover:bg-slate-50 transition-colors text-center text-sm">
+                        Voltar
+                    </a>
+                    <button type="button" onclick="clearNewObraForm()"
+                        class="flex-1 px-4 py-3 bg-white border border-slate-300 text-slate-700 font-bold rounded-2xl shadow-sm hover:bg-slate-50 transition-colors text-center text-sm">
+                        Limpar
+                    </button>
+                    {% endif %}
+                    {% endif %}
+
+                </div>
 
                 {% if view_mode %}
                 <a href="{{ url_for('auth.editar_obra', id=item.id) }}"
-                    class="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md shadow-blue-500/20 transition-all text-center text-sm flex items-center justify-center gap-2">
+                    class="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl shadow-md shadow-blue-500/20 transition-all text-center text-sm flex items-center justify-center gap-2">
                     <i class="fas fa-edit"></i> Editar Obra
                 </a>
                 {% else %}
                 <button type="button" onclick="submitObraForm()" id="submitBtn"
-                    class="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md shadow-blue-500/20 transition-all text-center text-sm flex items-center justify-center gap-2">
+                    class="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl shadow-md shadow-blue-500/20 transition-all text-center text-sm flex items-center justify-center gap-2">
                     <span id="btnText">{{ 'Salvar Alterações' if item and item.id else 'Cadastrar Obra' }}</span>
                     <i class="fas fa-spinner fa-spin hidden" id="spinner"></i>
                 </button>
                 {% endif %}
-            </div>
 
+            </div>
         </div>
+
+
         {% endcall %}
     </div>
 
+
+    </div>
     <style>
         /* Estilos auxiliares */
         .form-control-std {
             width: 100%;
             border: 1px solid #cbd5e1;
-            border-radius: 0.5rem;
-            padding: 0 0.5rem;
+            border-radius: 1rem;
+            padding: 0 1rem;
             transition: all 0.2s;
             outline: none;
             color: #334155;
         }
 
         .form-control-std:focus {
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+            border-color: rgba(37, 99, 235, 0.55);
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+        }
+
+        .obra-form-scope :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+            select,
+            textarea):focus {
+            border-color: rgba(37, 99, 235, 0.55) !important;
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12) !important;
+            outline: none !important;
+        }
+
+        .obra-form-scope :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+            select,
+            textarea):focus:invalid {
+            border-color: rgba(37, 99, 235, 0.55) !important;
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12) !important;
+        }
+
+        .modal-sort-trigger {
+            color: #64748b;
+        }
+
+        .modal-sort-trigger.is-active {
+            color: #1e40af;
+        }
+
+        .modal-sort-trigger .sort-indicator {
+            width: 0.875rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .form-control-std.date-invalid:focus,
+        .form-control-std[aria-invalid="true"]:focus {
+            border-color: rgba(37, 99, 235, 0.55) !important;
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12) !important;
         }
 
         .frentes-table-wrap {
@@ -1062,8 +1132,47 @@ shadow-sm placeholder:text-slate-400" %}
             {% endfor %}
         `;
 
+        function ensureDateRangeBindings(root = document) {
+            const scope = root && root.querySelectorAll ? root : document;
+            const markRange = (startInput, endInputs = []) => {
+                if (!startInput) return;
+                startInput.dataset.rangeStart = 'true';
+                endInputs.filter(Boolean).forEach((field) => {
+                    field.dataset.rangeEnd = 'true';
+                    applyDateRangeConstraint(startInput, field);
+                });
+            };
+
+            markRange(
+                document.querySelector('[name="data_inicio"]'),
+                [
+                    document.querySelector('[name="data_fim_planejada"]'),
+                    document.querySelector('[name="data_fim"]')
+                ]
+            );
+
+            scope.querySelectorAll('#lista-frentes tr').forEach((row) => {
+                markRange(
+                    row.querySelector('[name="frente_data_inicio[]"]'),
+                    [
+                        row.querySelector('[name="frente_data_planejada[]"]'),
+                        row.querySelector('[name="frente_data_fim[]"]')
+                    ]
+                );
+            });
+
+            scope.querySelectorAll('[data-inline-editor="true"], [data-colaborador-key]').forEach((container) => {
+                markRange(
+                    container.querySelector('.js-vinculo-data-inicio, #inline-colaborador-data-inicio'),
+                    [container.querySelector('.js-vinculo-data-fim, #inline-colaborador-data-fim')]
+                );
+            });
+        }
+
         function enhanceObraDatePickers(root = document) {
+            ensureDateRangeBindings(root || document);
             if (window.initDateTimePickers) window.initDateTimePickers(root || document);
+            if (window.applyRequiredMarkers) window.applyRequiredMarkers(root || document);
         }
 
         function onlyDigits(value) {
@@ -1116,6 +1225,58 @@ shadow-sm placeholder:text-slate-400" %}
             return normalizeText(logradouro).startsWith(normalizeText(tipo)) ? logradouro : `${tipo} ${logradouro}`;
         }
 
+        function formatDateSearchValue(value) {
+            const raw = String(value || '').trim();
+            const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            return match ? `${match[3]}/${match[2]}/${match[1]}` : raw;
+        }
+
+        function formatDisplayDate(value) {
+            const raw = String(value || '').trim();
+            if (!raw) return '';
+            const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
+            return raw;
+        }
+
+        function parseFlexibleDate(value) {
+            const raw = String(value || '').trim();
+            if (!raw) return null;
+            return parseISODate(parseBRDate(raw) || raw);
+        }
+
+        function applyDateRangeConstraint(startInput, endInput) {
+            if (!startInput || !endInput) return;
+            const sync = () => {
+                const startDate = parseFlexibleDate(startInput.value);
+                const endDate = parseFlexibleDate(endInput.value);
+                if (endInput._flatpickr) {
+                    endInput._flatpickr.set('minDate', startDate || null);
+                    endInput._flatpickr.set('disable', startDate ? [function (date) {
+                        return date < startDate;
+                    }] : []);
+                    endInput._flatpickr.redraw();
+                }
+                if (startDate && endDate && endDate < startDate) {
+                    if (endInput._flatpickr) endInput._flatpickr.clear();
+                    endInput.value = '';
+                    clearFieldError(endInput);
+                }
+            };
+
+            if (!startInput.dataset.rangeConstraintBound) {
+                startInput.addEventListener('change', sync);
+                startInput.addEventListener('input', sync);
+                startInput.dataset.rangeConstraintBound = 'true';
+            }
+            if (!endInput.dataset.rangeConstraintBound) {
+                endInput.addEventListener('focus', sync);
+                endInput.addEventListener('click', sync);
+                endInput.dataset.rangeConstraintBound = 'true';
+            }
+            sync();
+        }
+
         function debounce(fn, wait) {
             let timer = null;
             return function debounced() {
@@ -1127,24 +1288,40 @@ shadow-sm placeholder:text-slate-400" %}
         }
 
         function showToast(message, type = 'info') {
-            let wrap = el('obra-toast-container');
-            if (!wrap) {
-                wrap = document.createElement('div');
-                wrap.id = 'obra-toast-container';
-                wrap.className = 'fixed top-4 right-4 z-[9999] space-y-2 max-w-sm';
-                document.body.appendChild(wrap);
-            }
-            const colors = {
-                success: 'bg-emerald-600 text-white',
-                error: 'bg-red-600 text-white',
-                warning: 'bg-amber-500 text-white',
-                info: 'bg-slate-900 text-white'
+            const wrap = el('flash-container');
+            if (!wrap) return;
+            const variants = {
+                success: { iconWrap: 'text-emerald-500', icon: 'fa-circle-check', title: 'Sucesso' },
+                error: { iconWrap: 'text-red-500', icon: 'fa-circle-exclamation', title: 'Atenção' },
+                warning: { iconWrap: 'text-amber-500', icon: 'fa-triangle-exclamation', title: 'Aviso' },
+                info: { iconWrap: 'text-blue-500', icon: 'fa-circle-info', title: 'Informação' }
             };
+            const variant = variants[type] || variants.info;
             const toast = document.createElement('div');
-            toast.className = `${colors[type] || colors.info} rounded-xl px-4 py-3 text-sm font-semibold shadow-lg animate-fade-in-up`;
-            toast.textContent = message;
+            toast.className = 'toast-message pointer-events-auto toast-enter bg-white border border-slate-200 rounded-2xl shadow-xl p-4 flex gap-3';
+            toast.innerHTML = `
+                <div class="shrink-0 ${variant.iconWrap}">
+                    <i class="fas ${variant.icon}"></i>
+                </div>
+                <div class="flex-1">
+                    <p class="font-bold text-sm text-slate-800">${variant.title}</p>
+                    <p class="text-xs text-slate-500 mt-1">${escapeHtml(message)}</p>
+                </div>
+                <button type="button" class="shrink-0 w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition" aria-label="Fechar notificação">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            const closeButton = toast.querySelector('button');
+            if (closeButton) closeButton.addEventListener('click', () => toast.remove());
             wrap.appendChild(toast);
-            setTimeout(() => toast.remove(), 4500);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                toast.style.transition = 'all .4s ease';
+                setTimeout(() => {
+                    if (toast.parentElement) toast.remove();
+                }, 400);
+            }, 6000);
         }
 
         function setButtonLoading(button, loadingText) {
@@ -1165,13 +1342,15 @@ shadow-sm placeholder:text-slate-400" %}
 
         function markFieldError(input, message) {
             if (!input) return;
-            input.classList.add('border-red-300', 'bg-red-50', 'date-invalid');
+            input.classList.add('date-invalid');
+            input.setAttribute('aria-invalid', 'true');
             if (message) input.setAttribute('title', message);
         }
 
         function clearFieldError(input) {
             if (!input) return;
             input.classList.remove('border-red-300', 'bg-red-50', 'date-invalid');
+            input.removeAttribute('aria-invalid');
             input.removeAttribute('title');
         }
 
@@ -1255,6 +1434,14 @@ shadow-sm placeholder:text-slate-400" %}
             const parts = digits.match(/^(\d{0,2})(\d{0,3})(\d{0,3})(\d{0,4})(\d{0,2})$/);
             if (!parts) return digits;
             return !parts[2] ? parts[1] : parts[1] + '.' + parts[2] + '.' + parts[3] + '/' + parts[4] + (parts[5] ? '-' + parts[5] : '');
+        }
+
+        function formatCpfDisplay(value) {
+            const digits = onlyDigits(value).slice(0, 11);
+            if (!digits) return '-';
+            const parts = digits.match(/^(\d{0,3})(\d{0,3})(\d{0,3})(\d{0,2})$/);
+            if (!parts) return digits;
+            return [parts[1], parts[2], parts[3]].filter(Boolean).join('.') + (parts[4] ? `-${parts[4]}` : '');
         }
 
         function isValidCnpj(value) {
@@ -1637,6 +1824,7 @@ shadow-sm placeholder:text-slate-400" %}
         }
 
         let modalVinculosFiltro = { q: '', cpf: '', status: '', funcao: '' };
+        let modalVinculosSort = { key: 'nome', direction: 'asc' };
         let modalVinculosPagina = 1;
         const MODAL_VINCULOS_PAGE_SIZE = 10;
         let colaboradorSelecionadoParaAdicionar = null;
@@ -1660,6 +1848,28 @@ shadow-sm placeholder:text-slate-400" %}
                 activeChip.classList.add('bg-white', 'text-slate-700', 'shadow-sm');
                 activeChip.classList.remove('text-slate-500');
             }
+            renderColaboradoresSelecionados();
+        }
+
+        function updateModalSortIndicators() {
+            ['nome', 'cpf', 'funcao', 'data_inicio', 'data_fim', 'status'].forEach((key) => {
+                const marker = el(`modal-sort-${key}`);
+                if (!marker) return;
+                const trigger = marker.closest('.modal-sort-trigger');
+                const isActive = modalVinculosSort.key === key;
+                if (trigger) trigger.classList.toggle('is-active', isActive);
+                marker.innerHTML = isActive
+                    ? `<i class="fas ${modalVinculosSort.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'}"></i>`
+                    : '<i class="fas fa-sort text-slate-300"></i>';
+            });
+        }
+
+        function setModalSort(key) {
+            if (!key) return;
+            modalVinculosSort = modalVinculosSort.key === key
+                ? { key, direction: modalVinculosSort.direction === 'asc' ? 'desc' : 'asc' }
+                : { key, direction: key === 'nome' ? 'asc' : 'desc' };
+            modalVinculosPagina = 1;
             renderColaboradoresSelecionados();
         }
 
@@ -1703,6 +1913,7 @@ shadow-sm placeholder:text-slate-400" %}
             modalColaboradoresRemovidos = new Map();
             modalColaboradoresDisponiveis = [];
             modalVinculosPagina = 1;
+            modalVinculosSort = { key: 'nome', direction: 'asc' };
             colaboradorSelecionadoParaAdicionar = null;
             modalInlineEditor = null;
             modalInlineSearchResults = [];
@@ -1725,6 +1936,7 @@ shadow-sm placeholder:text-slate-400" %}
             document.body.classList.add('overflow-hidden');
 
             ensureModalFuncoesCard();
+            updateModalSortIndicators();
             if (window.initSelectPickers) window.initSelectPickers(modal);
             enhanceObraDatePickers(modal);
             renderColaboradoresSelecionados();
@@ -1747,16 +1959,36 @@ shadow-sm placeholder:text-slate-400" %}
             const body = el('modal-colaboradores-selecionados');
             if (body) body.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-slate-400 italic"><i class="fas fa-spinner fa-spin mr-2"></i>Carregando colaboradores...</td></tr>`;
             try {
-                const res = await fetch(`/auth/api/frente/${frenteId}/colaboradores`);
-                const data = await res.json();
-                if (!res.ok || !data || !data.ok) throw new Error('Falha ao carregar colaboradores');
+                const res = await fetch(`/auth/api/frente/${frenteId}/colaboradores`, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    credentials: 'same-origin'
+                });
+                const rawText = await res.text();
+                let data = null;
+                try {
+                    data = rawText ? JSON.parse(rawText) : null;
+                } catch (parseError) {
+                    throw new Error(res.status === 401
+                        ? 'Sua sessão expirou. Faça login novamente.'
+                        : res.status === 403
+                            ? 'Você não tem permissão para visualizar os colaboradores desta frente.'
+                            : 'A resposta do servidor ao carregar colaboradores foi inválida.');
+                }
+                if (!res.ok || !data || !data.ok) {
+                    throw new Error((data && (data.error || data.message)) || 'Falha ao carregar colaboradores.');
+                }
                 modalColaboradoresSelecionados = new Map();
                 modalColaboradoresRemovidos = new Map();
                 (data.items || []).forEach((item) => addVinculoToMap(item, true));
                 renderColaboradoresSelecionados();
                 updateFrenteCounters(frenteId, data.counts || getModalCounts());
             } catch (error) {
+                console.error('Erro ao carregar colaboradores da frente:', error);
                 if (body) body.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-red-600 bg-red-50">Erro ao carregar colaboradores.</td></tr>`;
+                showToast(error.message || 'Erro ao carregar colaboradores.', 'error');
             }
         }
 
@@ -1810,7 +2042,7 @@ shadow-sm placeholder:text-slate-400" %}
 
         function getStatusBadge(item) {
             const status = getModalStatus(item);
-            if (status === 'ENCERRADO') return '<span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-50 text-red-700 text-xs font-bold border border-red-200"><span class="w-2 h-2 rounded-full bg-red-500"></span>Encerrado</span>';
+            if (status === 'ENCERRADO') return '<span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-50 text-red-700 text-xs font-bold border border-red-200"><span class="w-2 h-2 rounded-full bg-red-500"></span>Inativo</span>';
             if (status === 'PROGRAMADO') return '<span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 text-amber-700 text-xs font-bold border border-amber-200"><span class="w-2 h-2 rounded-full bg-amber-500"></span>Programado</span>';
             return '<span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>Ativo</span>';
         }
@@ -1841,19 +2073,54 @@ shadow-sm placeholder:text-slate-400" %}
             return Array.from(modalColaboradoresSelecionados.values())
                 .filter((item) => {
                     if (q) {
+                        const cpfQuery = onlyDigits(modalVinculosFiltro.q);
                         const matchesNome = normalizeText(item.nome).includes(q);
-                        const matchesCpf = onlyDigits(item.cpf).includes(onlyDigits(modalVinculosFiltro.q));
-                        if (!matchesNome && !matchesCpf) return false;
+                        const matchesCpf = cpfQuery ? onlyDigits(item.cpf).includes(cpfQuery) : false;
+                        const matchesFuncao = normalizeText(item.funcao_atual || getFuncaoText(item.funcao_id) || '').includes(q);
+                        const matchesDataInicio = normalizeText(`${item.data_inicio || ''} ${formatDateSearchValue(item.data_inicio)}`).includes(q);
+                        const matchesDataFim = normalizeText(`${item.data_fim || ''} ${formatDateSearchValue(item.data_fim)}`).includes(q);
+                        if (!matchesNome && !matchesCpf && !matchesFuncao && !matchesDataInicio && !matchesDataFim) return false;
                     }
                     if (status && getModalStatus(item) !== status) return false;
                     if (funcao && String(item.funcao_id || '') !== funcao) return false;
                     return true;
                 })
                 .sort((a, b) => {
-                    const statusA = getModalStatus(a) === 'ATIVO' ? 0 : getModalStatus(a) === 'PROGRAMADO' ? 1 : 2;
-                    const statusB = getModalStatus(b) === 'ATIVO' ? 0 : getModalStatus(b) === 'PROGRAMADO' ? 1 : 2;
-                    if (statusA !== statusB) return statusA - statusB;
-                    return String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR');
+                    const factor = modalVinculosSort.direction === 'desc' ? -1 : 1;
+                    const compareText = (first, second) => String(first || '').localeCompare(String(second || ''), 'pt-BR');
+                    const compareDate = (first, second) => {
+                        const aDate = parseISODate(parseBRDate(first || '') || String(first || ''));
+                        const bDate = parseISODate(parseBRDate(second || '') || String(second || ''));
+                        const aTime = aDate ? aDate.getTime() : 0;
+                        const bTime = bDate ? bDate.getTime() : 0;
+                        return aTime - bTime;
+                    };
+
+                    let result = 0;
+                    switch (modalVinculosSort.key) {
+                        case 'cpf':
+                            result = compareText(onlyDigits(a.cpf), onlyDigits(b.cpf));
+                            break;
+                        case 'funcao':
+                            result = compareText(a.funcao_atual || getFuncaoText(a.funcao_id), b.funcao_atual || getFuncaoText(b.funcao_id));
+                            break;
+                        case 'data_inicio':
+                            result = compareDate(a.data_inicio, b.data_inicio);
+                            break;
+                        case 'data_fim':
+                            result = compareDate(a.data_fim, b.data_fim);
+                            break;
+                        case 'status':
+                            result = compareText(getModalStatus(a), getModalStatus(b));
+                            break;
+                        case 'nome':
+                        default:
+                            result = compareText(a.nome, b.nome);
+                            break;
+                    }
+
+                    if (result === 0) result = compareText(a.nome, b.nome);
+                    return result * factor;
                 });
         }
 
@@ -1875,47 +2142,6 @@ shadow-sm placeholder:text-slate-400" %}
             renderColaboradoresSelecionados();
         }
 
-        function renderColaboradoresSelecionados() {
-            const body = el('modal-colaboradores-selecionados');
-            if (!body) return;
-            updateModalCountersFromSelection();
-            const filtrados = getVinculosFiltrados();
-            const total = filtrados.length;
-            const maxPage = Math.max(1, Math.ceil(total / MODAL_VINCULOS_PAGE_SIZE));
-            if (modalVinculosPagina > maxPage) modalVinculosPagina = maxPage;
-            const start = (modalVinculosPagina - 1) * MODAL_VINCULOS_PAGE_SIZE;
-            const pageItems = filtrados.slice(start, start + MODAL_VINCULOS_PAGE_SIZE);
-
-            if (el('modal-pagination-info')) el('modal-pagination-info').textContent = total ? `Exibindo ${start + 1}-${start + pageItems.length} de ${total} registros` : 'Exibindo 0 registros';
-            if (el('modal-pagination-page')) el('modal-pagination-page').textContent = `${modalVinculosPagina} / ${maxPage}`;
-
-            if (!pageItems.length) {
-                body.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-slate-400 italic">Nenhum colaborador encontrado.</td></tr>`;
-                return;
-            }
-            body.innerHTML = '';
-            pageItems.forEach((item) => {
-                const key = String(item.key || item.id || item.vinculo_id);
-                const tr = document.createElement('tr');
-                tr.className = 'hover:bg-slate-50 transition-colors';
-                tr.dataset.colaboradorKey = key;
-                tr.innerHTML = `
-                    <td class="p-3"><div class="text-sm font-semibold text-slate-800">${escapeHtml(item.nome || '-')}</div><div class="text-[11px] text-slate-400">${item.existente ? 'Histórico preservado' : 'Novo vínculo'}</div></td>
-                    <td class="p-3 text-sm text-slate-600 font-mono">${escapeHtml(item.cpf || '-')}</td>
-                    <td class="p-3 text-sm text-slate-700">${escapeHtml(item.funcao_atual || getFuncaoText(item.funcao_id) || '-')}</td>
-                    <td class="p-3 text-sm text-slate-700">${escapeHtml(item.data_inicio || '-')}</td>
-                    <td class="p-3 text-sm text-slate-700">${escapeHtml(item.data_fim || '-')}</td>
-                    <td class="p-3 text-center">${getStatusBadge(item)}</td>
-                    <td class="p-3"><div class="flex items-center justify-end gap-1">
-                        <button type="button" class="w-8 h-8 rounded-lg text-slate-500 hover:bg-slate-100" title="Visualizar" onclick="visualizarVinculo('${escapeHtml(key)}')"><i class="fas fa-eye"></i></button>
-                        {% if not view_mode %}<button type="button" class="w-8 h-8 rounded-lg text-blue-600 hover:bg-blue-50" title="Editar" onclick="editarVinculo('${escapeHtml(key)}')"><i class="fas fa-pen"></i></button>
-                        <button type="button" class="w-8 h-8 rounded-lg text-red-600 hover:bg-red-50 ${item.ativo === false ? 'opacity-40 pointer-events-none' : ''}" title="Inativar" onclick="inativar('${escapeHtml(key)}')"><i class="fas fa-user-slash"></i></button>{% endif %}
-                    </div></td>
-                `;
-                body.appendChild(tr);
-            });
-        }
-
         function getFuncaoText(funcaoId) {
             if (!funcaoId) return '';
             const temp = document.createElement('select');
@@ -1924,77 +2150,9 @@ shadow-sm placeholder:text-slate-400" %}
             return option ? option.textContent.trim() : '';
         }
 
-        function renderDetailPanel(item, mode = 'view') {
-            const panel = el('detail-colaborador-panel');
-            if (!panel || !item) return;
-            const key = String(item.key || item.id || item.vinculo_id);
-            const readonly = mode === 'view' || isViewMode;
-            panel.classList.remove('hidden');
-            if (el('add-colaborador-panel')) el('add-colaborador-panel').classList.add('hidden');
-            panel.innerHTML = `
-                <div class="p-5 sm:p-6 space-y-4">
-                    <div class="flex items-start justify-between gap-3">
-                        <div>
-                            <p class="text-sm font-bold text-slate-800">${readonly ? 'Consultar associação' : 'Editar associação'}</p>
-                            <p class="text-xs text-slate-500 mt-1">Nome e CPF não podem ser alterados neste registro.</p>
-                        </div>
-                        <button type="button" onclick="resetDetailPanel()" class="w-9 h-9 rounded-lg hover:bg-white text-slate-500"><i class="fas fa-times"></i></button>
-                    </div>
-                    <div class="rounded-2xl border border-slate-200 bg-white p-4 space-y-4" data-colaborador-key="${escapeHtml(key)}">
-                        <div>
-                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Colaborador</label>
-                            <input type="text" class="form-control-std h-10 text-sm bg-slate-100 font-semibold" value="${escapeHtml(item.nome || '')}" readonly>
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">CPF</label>
-                            <input type="text" class="form-control-std h-10 text-sm bg-slate-100 font-mono" value="${escapeHtml(item.cpf || '')}" readonly>
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Função</label>
-                            <select class="form-control-std h-10 text-sm bg-white js-vinculo-funcao" ${readonly ? 'disabled' : ''}>${FUNCOES_OPTIONS_HTML}</select>
-                        </div>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Data Início</label>
-                                <input type="text" class="form-control-std h-10 text-sm js-date-picker js-vinculo-data-inicio" value="${escapeHtml(item.data_inicio || '')}" placeholder="dd/mm/aaaa" ${readonly ? 'disabled' : ''}>
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Data Fim</label>
-                                <input type="text" class="form-control-std h-10 text-sm js-date-picker js-vinculo-data-fim" value="${escapeHtml(item.data_fim || '')}" placeholder="dd/mm/aaaa" ${readonly ? 'disabled' : ''}>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Observação</label>
-                            <textarea class="form-control-std min-h-[76px] py-2 text-sm js-vinculo-observacao" ${readonly ? 'disabled' : ''}>${escapeHtml(item.observacao || '')}</textarea>
-                        </div>
-                        <div class="rounded-xl bg-slate-50 border border-slate-100 p-3 text-[11px] text-slate-500 space-y-1">
-                            <p><strong>Criado por:</strong> ${escapeHtml(item.criado_por || '-')} <strong>em:</strong> ${escapeHtml(item.criado_em || '-')}</p>
-                            <p><strong>Última alteração por:</strong> ${escapeHtml(item.alterado_por || '-')} <strong>em:</strong> ${escapeHtml(item.alterado_em || '-')}</p>
-                        </div>
-                        ${readonly ? '' : `<div class="flex items-center justify-end gap-2"><button type="button" onclick="visualizarVinculo('${escapeHtml(key)}')" class="px-4 h-10 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50">Cancelar</button><button type="button" onclick="salvarEdicaoVinculo('${escapeHtml(key)}', this)" class="px-4 h-10 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold">Salvar</button></div>`}
-                    </div>
-                </div>
-            `;
-            const select = panel.querySelector('.js-vinculo-funcao');
-            if (select) select.value = item.funcao_id ? String(item.funcao_id) : '';
-            enhanceObraDatePickers(panel);
-        }
-
-        function resetDetailPanel() {
-            const panel = el('detail-colaborador-panel');
-            if (!panel) return;
-            panel.classList.remove('hidden');
-            panel.innerHTML = `<div class="p-5 sm:p-6 text-center text-slate-400"><i class="fas fa-user-clock text-3xl mb-3"></i><p class="text-sm font-semibold">Selecione Visualizar ou Editar em uma linha.</p><p class="text-xs mt-1">Os dados históricos permanecem preservados.</p></div>`;
-        }
-
         function visualizarVinculo(key) {
             const item = modalColaboradoresSelecionados.get(String(key));
             if (item) renderDetailPanel(item, 'view');
-        }
-
-        function editarVinculo(key) {
-            const item = modalColaboradoresSelecionados.get(String(key));
-            if (item) renderDetailPanel(item, 'edit');
         }
 
         async function salvarEdicaoVinculo(key, button) {
@@ -2005,6 +2163,7 @@ shadow-sm placeholder:text-slate-400" %}
             const dataFimInput = panel.querySelector('.js-vinculo-data-fim');
             const funcaoSelect = panel.querySelector('.js-vinculo-funcao');
             if (!funcaoSelect || !funcaoSelect.value) {
+                showToast('Informe a função atribuída ao colaborador.', 'error');
                 showToast('Informe a função atribuída ao colaborador.', 'error');
                 scrollToField(funcaoSelect);
                 return;
@@ -2026,45 +2185,9 @@ shadow-sm placeholder:text-slate-400" %}
             renderDetailPanel(item, 'view');
         }
 
-        function inativar(key) {
-            const item = modalColaboradoresSelecionados.get(String(key));
-            if (!item || item.ativo === false) return;
-            if (!confirm('Deseja encerrar a participação deste colaborador nesta frente de trabalho?')) return;
-            item.data_fim = item.data_fim || hojeBR();
-            item.ativo = false;
-            persistirVinculo(item).then(() => {
-                showToast('Participação encerrada com sucesso.', 'success');
-                renderColaboradoresSelecionados();
-                refreshFrenteCounts();
-            });
-        }
-
         function hojeBR() {
             const d = new Date();
             return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-        }
-
-        function toggleAdicionarColaborador(open) {
-            const panel = el('add-colaborador-panel');
-            const detail = el('detail-colaborador-panel');
-            if (!panel || !detail) return;
-            panel.classList.toggle('hidden', !open);
-            detail.classList.toggle('hidden', open);
-            if (open) {
-                cancelarNovoVinculo();
-                setTimeout(() => el('add-colaborador-search') && el('add-colaborador-search').focus(), 50);
-            } else {
-                resetDetailPanel();
-            }
-        }
-
-        function cancelarNovoVinculo() {
-            colaboradorSelecionadoParaAdicionar = null;
-            ['add-colaborador-search', 'add-colaborador-nome', 'add-colaborador-cpf', 'add-colaborador-funcao', 'add-colaborador-data-inicio', 'add-colaborador-data-fim', 'add-colaborador-observacao'].forEach((id) => {
-                if (el(id)) el(id).value = '';
-            });
-            if (el('add-colaborador-results')) el('add-colaborador-results').classList.add('hidden');
-            if (el('add-colaborador-form')) el('add-colaborador-form').classList.add('hidden');
         }
 
         async function buscarColaboradores(button) {
@@ -2088,6 +2211,7 @@ shadow-sm placeholder:text-slate-400" %}
                 const items = (data.items || []).filter((item) => item.ativo !== false && !isColaboradorSelecionado(colaboradorKey(item)));
                 if (!items.length) {
                     results.innerHTML = `<div class="p-3 text-xs text-slate-400">Nenhum colaborador ativo disponível.</div>`;
+                    results.innerHTML = `<div class="p-3 text-xs text-slate-400">Nenhum colaborador ativo disponível.</div>`;
                     return;
                 }
                 results.innerHTML = '';
@@ -2097,9 +2221,8 @@ shadow-sm placeholder:text-slate-400" %}
                     btn.className = 'w-full text-left px-4 py-3 hover:bg-slate-50 transition border-b border-slate-100 last:border-b-0';
                     btn.innerHTML = `
                         <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 font-bold text-sm flex items-center justify-center shrink-0">${escapeHtml(getColaboradorInitials(item.nome || ''))}</div>
                             <div class="min-w-0">
-                                <div class="text-sm font-semibold text-slate-800 truncate">${escapeHtml(item.nome || '-')}</div>
+                                <div class="text-[1.02rem] font-semibold text-slate-800 truncate">${escapeHtml(item.nome || '-')}</div>
                                 <div class="text-[11px] text-slate-500 mt-1">CPF: ${escapeHtml(item.cpf || item.cadastro || '-')}</div>
                             </div>
                         </div>
@@ -2248,60 +2371,16 @@ shadow-sm placeholder:text-slate-400" %}
         function openBuscarColaboradorModal() { toggleAdicionarColaborador(true); }
         function closeBuscarColaboradorModal() { }
         function validarColaboradoresSelecionados() { return true; }
-
-        function renderColaboradoresSelecionados() {
-            const body = el('modal-colaboradores-selecionados');
-            if (!body) return;
-            updateModalCountersFromSelection();
-            const filtrados = getVinculosFiltrados();
-            const total = filtrados.length;
-            const maxPage = Math.max(1, Math.ceil(total / MODAL_VINCULOS_PAGE_SIZE));
-            if (modalVinculosPagina > maxPage) modalVinculosPagina = maxPage;
-            const start = (modalVinculosPagina - 1) * MODAL_VINCULOS_PAGE_SIZE;
-            const pageItems = filtrados.slice(start, start + MODAL_VINCULOS_PAGE_SIZE);
-
-            if (el('modal-pagination-info')) el('modal-pagination-info').textContent = total ? `Exibindo ${start + 1}-${start + pageItems.length} de ${total} registros` : 'Exibindo 0 registros';
-            if (el('modal-pagination-page')) el('modal-pagination-page').textContent = `${modalVinculosPagina} / ${maxPage}`;
-
-            if (!pageItems.length) {
-                body.innerHTML = `<tr><td colspan="7" class="p-10 text-center text-slate-400 italic">Nenhum colaborador encontrado.</td></tr>`;
-                return;
-            }
-
-            body.innerHTML = '';
-            pageItems.forEach((item) => {
-                const key = String(item.key || item.id || item.vinculo_id);
-                const funcao = escapeHtml(item.funcao_atual || getFuncaoText(item.funcao_id) || '-');
-                const dataInicio = escapeHtml(item.data_inicio || '-');
-                const dataFim = escapeHtml(item.data_fim || '—');
-                const historico = item.existente ? 'Histórico preservado' : 'Vínculo recém-adicionado';
-                const tr = document.createElement('tr');
-                tr.className = 'hover:bg-slate-50/80 transition-colors';
-                tr.dataset.colaboradorKey = key;
-                tr.innerHTML = `
-                    <td class="px-5 py-4">
-                        <div class="flex items-center gap-4 min-w-0">
-                            <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 font-bold text-sm flex items-center justify-center shrink-0">${escapeHtml(getColaboradorInitials(item.nome || ''))}</div>
-                            <div class="min-w-0">
-                                <div class="text-[1.02rem] font-semibold text-slate-800 truncate">${escapeHtml(item.nome || '-')}</div>
-                                <div class="text-[11px] text-slate-400 mt-1">${historico}</div>
-                            </div>
-                        </div>
-                    </td>
-                    <td class="px-5 py-4 text-sm text-slate-600 font-mono">${escapeHtml(item.cpf || '-')}</td>
-                    <td class="px-5 py-4 text-sm text-slate-700">${funcao}</td>
-                    <td class="px-5 py-4 text-sm text-slate-700">${dataInicio}</td>
-                    <td class="px-5 py-4 text-sm text-slate-700">${dataFim}</td>
-                    <td class="px-5 py-4 text-center">${getStatusBadge(item)}</td>
-                    <td class="px-5 py-4">
-                        <div class="flex items-center justify-end gap-1">
-                            {% if not view_mode %}<button type="button" class="w-9 h-9 rounded-xl text-slate-500 hover:bg-slate-100" title="Editar" onclick="editarVinculo('${escapeHtml(key)}')"><i class="fas fa-pen"></i></button>
-                            <button type="button" class="w-9 h-9 rounded-xl text-rose-500 hover:bg-rose-50 ${item.ativo === false ? 'opacity-40 pointer-events-none' : ''}" title="Inativar" onclick="inativar('${escapeHtml(key)}')"><i class="fas fa-trash-alt"></i></button>{% endif %}
-                        </div>
-                    </td>
-                `;
-                body.appendChild(tr);
+        function cancelarNovoVinculo() {
+            colaboradorSelecionadoParaAdicionar = null;
+            ['add-colaborador-search', 'add-colaborador-nome', 'add-colaborador-cpf', 'add-colaborador-funcao', 'add-colaborador-data-inicio', 'add-colaborador-data-fim', 'add-colaborador-observacao'].forEach((id) => {
+                if (el(id)) el(id).value = '';
             });
+            if (el('add-colaborador-results')) {
+                el('add-colaborador-results').classList.add('hidden');
+                el('add-colaborador-results').innerHTML = '';
+            }
+            if (el('add-colaborador-form')) el('add-colaborador-form').classList.add('hidden');
         }
 
         function resetDetailPanel() {
@@ -2352,18 +2431,18 @@ shadow-sm placeholder:text-slate-400" %}
 
                         <div class="rounded-3xl border border-slate-200 bg-white p-4 space-y-4 shadow-sm" data-colaborador-key="${escapeHtml(key)}">
                             <div>
-                                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-2">Função</label>
-                                <select class="form-control-std h-11 rounded-2xl text-sm bg-white js-vinculo-funcao" ${readonly ? 'disabled' : ''}>${FUNCOES_OPTIONS_HTML}</select>
+                                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-2">função</label>
+                                <select class="form-control-std h-9 rounded-2xl text-sm bg-white js-vinculo-funcao" ${readonly ? 'disabled' : ''}>${FUNCOES_OPTIONS_HTML}</select>
                             </div>
 
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-2">Data de início</label>
-                                    <input type="text" class="form-control-std h-11 rounded-2xl text-sm js-date-picker js-vinculo-data-inicio" value="${escapeHtml(item.data_inicio || '')}" placeholder="dd/mm/aaaa" ${readonly ? 'disabled' : ''}>
+                                    <input type="text" class="form-control-std h-9 rounded-2xl text-sm js-date-picker js-vinculo-data-inicio" data-range-start="true" value="${escapeHtml(item.data_inicio || '')}" placeholder="dd/mm/aaaa" ${readonly ? 'disabled' : ''}>
                                 </div>
                                 <div>
                                     <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-2">Data de fim</label>
-                                    <input type="text" class="form-control-std h-11 rounded-2xl text-sm js-date-picker js-vinculo-data-fim" value="${escapeHtml(item.data_fim || '')}" placeholder="dd/mm/aaaa" ${readonly ? 'disabled' : ''}>
+                                    <input type="text" class="form-control-std h-9 rounded-2xl text-sm js-date-picker js-vinculo-data-fim" data-range-end="true" value="${escapeHtml(item.data_fim || '')}" placeholder="dd/mm/aaaa" ${readonly ? 'disabled' : ''}>
                                 </div>
                             </div>
 
@@ -2385,41 +2464,6 @@ shadow-sm placeholder:text-slate-400" %}
             const select = panel.querySelector('.js-vinculo-funcao');
             if (select) select.value = item.funcao_id ? String(item.funcao_id) : '';
             enhanceObraDatePickers(panel);
-        }
-
-        function toggleAdicionarColaborador(open) {
-            const panel = el('add-colaborador-panel');
-            const detail = el('detail-colaborador-panel');
-            if (!panel || !detail) return;
-            toggleModalSidepanel(open);
-            panel.classList.toggle('hidden', !open);
-            detail.classList.toggle('hidden', open);
-            if (open) {
-                cancelarNovoVinculo();
-                setTimeout(() => el('add-colaborador-search') && el('add-colaborador-search').focus(), 50);
-            } else {
-                detail.classList.remove('hidden');
-            }
-        }
-
-        function cancelarNovoVinculo() {
-            colaboradorSelecionadoParaAdicionar = null;
-            ['add-colaborador-search', 'add-colaborador-nome', 'add-colaborador-cpf', 'add-colaborador-funcao', 'add-colaborador-data-inicio', 'add-colaborador-data-fim', 'add-colaborador-observacao'].forEach((id) => {
-                if (el(id)) el(id).value = '';
-            });
-            if (el('add-colaborador-results')) {
-                el('add-colaborador-results').classList.add('hidden');
-                el('add-colaborador-results').innerHTML = '';
-            }
-            if (el('add-colaborador-form')) el('add-colaborador-form').classList.add('hidden');
-        }
-
-        function formatCpfDisplay(value) {
-            const digits = onlyDigits(value).slice(0, 11);
-            if (!digits) return '-';
-            const parts = digits.match(/^(\d{0,3})(\d{0,3})(\d{0,3})(\d{0,2})$/);
-            if (!parts) return digits;
-            return [parts[1], parts[2], parts[3]].filter(Boolean).join('.') + (parts[4] ? `-${parts[4]}` : '');
         }
 
         function getInlineEditorSelected() {
@@ -2502,17 +2546,10 @@ shadow-sm placeholder:text-slate-400" %}
                     results.innerHTML = `<div class="px-3 py-2 text-xs text-slate-400">Nenhum colaborador disponível.</div>`;
                     return;
                 }
-                results.innerHTML = modalInlineSearchResults.slice(0, 20).map((item) => `
-                    <button type="button"
-                        class="w-full text-left px-3 py-2 hover:bg-slate-50 border-b border-slate-100 last:border-b-0"
-                        onclick="selectInlineColaborador('${escapeHtml(String(item.id || ''))}')">
-                        <div class="text-sm font-semibold text-slate-800">${escapeHtml(item.nome || '-')}</div>
-                        <div class="text-[11px] text-slate-500 mt-1">CPF: ${escapeHtml(formatCpfDisplay(item.cpf || item.cadastro || ''))}</div>
-                    </button>
-                `).join('');
+                renderColaboradoresSelecionados();
             } catch (error) {
                 modalInlineSearchResults = [];
-                results.innerHTML = `<div class="px-3 py-2 text-xs text-red-600 bg-red-50">Erro ao buscar colaboradores.</div>`;
+                results.innerHTML = `<div class="px-3 py-2 text-xs text-red-500">Não foi possível buscar colaboradores.</div>`;
             }
         }
 
@@ -2559,23 +2596,21 @@ shadow-sm placeholder:text-slate-400" %}
             `).join('') : '';
 
             return `
-                <tr class="bg-blue-50/40" data-inline-editor="true">
+                <tr class="bg-blue-50/40 animate-fade-in-up" data-inline-editor="true">
                     <td class="px-5 py-4 align-top">
                         ${selected ? `
-                            <div class="rounded-2xl border border-blue-200 bg-white px-3 py-3">
+                            <div class="">
                                 <div class="flex items-start justify-between gap-3">
                                     <div class="min-w-0">
-                                        <div class="text-sm font-semibold text-slate-800 truncate">${escapeHtml(selected.nome || '-')}</div>
-                                        <div class="text-[11px] text-slate-500 mt-1">CPF: ${escapeHtml(formatCpfDisplay(selected.cpf || ''))}</div>
+                                        <div class="text-[1.02rem] font-semibold text-slate-800 truncate">${escapeHtml(selected.nome || '-')}</div>
                                     </div>
                                     ${editor.mode === 'add' ? `<button type="button" class="text-xs font-bold text-blue-600 hover:text-blue-700" onclick="clearInlineColaborador()">Trocar</button>` : ''}
                                 </div>
                             </div>
                         ` : `
                             <div class="relative">
-                                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
                                 <input type="text" id="inline-colaborador-search"
-                                    class="form-control-std h-11 rounded-2xl pl-9 pr-3 text-sm bg-white"
+                                    class="form-control-std h-9 rounded-2xl pl-9 pr-3 text-sm bg-white"
                                     placeholder="Buscar por nome ou CPF"
                                     oninput="buscarColaboradoresInlineDebounced()">
                                 <div id="inline-colaborador-results" class="absolute z-20 mt-2 w-full rounded-2xl border border-slate-200 bg-white shadow-lg overflow-hidden ${resultsHtml ? '' : 'hidden'}">${resultsHtml}</div>
@@ -2584,15 +2619,15 @@ shadow-sm placeholder:text-slate-400" %}
                     </td>
                     <td class="px-5 py-4 align-top text-sm text-slate-600 font-mono">${escapeHtml(formatCpfDisplay(selected && selected.cpf ? selected.cpf : ''))}</td>
                     <td class="px-5 py-4 align-top">
-                        <select id="inline-funcao-id" class="form-control-std h-11 rounded-2xl text-sm bg-white">
+                        <select id="inline-funcao-id" class="form-control-std h-9 rounded-2xl text-sm bg-white">
                             ${FUNCOES_OPTIONS_HTML}
                         </select>
                     </td>
                     <td class="px-5 py-4 align-top">
-                        <input type="text" id="inline-colaborador-data-inicio" class="form-control-std h-11 rounded-2xl text-sm js-date-picker" value="${escapeHtml(editor.data_inicio || '')}" placeholder="dd/mm/aaaa">
+                        <input type="text" id="inline-colaborador-data-inicio" data-range-start="true" class="form-control-std h-9 rounded-2xl text-sm js-date-picker" value="${escapeHtml(editor.data_inicio || '')}" placeholder="dd/mm/aaaa">
                     </td>
                     <td class="px-5 py-4 align-top">
-                        <input type="text" id="inline-colaborador-data-fim" class="form-control-std h-11 rounded-2xl text-sm js-date-picker" value="${escapeHtml(editor.data_fim || '')}" placeholder="dd/mm/aaaa">
+                        <input type="text" id="inline-colaborador-data-fim" data-range-end="true" class="form-control-std h-9 rounded-2xl text-sm js-date-picker" value="${escapeHtml(editor.data_fim || '')}" placeholder="dd/mm/aaaa">
                     </td>
                     <td class="px-5 py-4 align-top text-center">${statusBadge}</td>
                     <td class="px-5 py-4 align-top">
@@ -2705,6 +2740,7 @@ shadow-sm placeholder:text-slate-400" %}
         function renderColaboradoresSelecionados() {
             const body = el('modal-colaboradores-selecionados');
             if (!body) return;
+            updateModalSortIndicators();
             updateModalCountersFromSelection();
             const filtrados = getVinculosFiltrados();
             const total = filtrados.length;
@@ -2733,19 +2769,16 @@ shadow-sm placeholder:text-slate-400" %}
                     return;
                 }
                 const funcao = escapeHtml(item.funcao_atual || getFuncaoText(item.funcao_id) || '-');
-                const dataInicio = escapeHtml(item.data_inicio || '-');
-                const dataFim = escapeHtml(item.data_fim || '—');
-                const historico = item.existente ? 'Histórico preservado' : 'Vínculo recém-adicionado';
+                const dataInicio = escapeHtml(formatDisplayDate(item.data_inicio) || '-');
+                const dataFim = escapeHtml(formatDisplayDate(item.data_fim) || '—');
                 const actionLabel = item.ativo === false ? 'Ativar' : 'Inativar';
                 const actionIcon = item.ativo === false ? 'fa-power-off text-emerald-600' : 'fa-power-off text-rose-500';
                 rows.push(`
                     <tr class="hover:bg-slate-50/80 transition-colors" data-colaborador-key="${escapeHtml(key)}">
                         <td class="px-5 py-4">
                             <div class="flex items-center gap-4 min-w-0">
-                                <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 font-bold text-sm flex items-center justify-center shrink-0">${escapeHtml(getColaboradorInitials(item.nome || ''))}</div>
                                 <div class="min-w-0">
                                     <div class="text-[1.02rem] font-semibold text-slate-800 truncate">${escapeHtml(item.nome || '-')}</div>
-                                    <div class="text-[11px] text-slate-400 mt-1">${historico}</div>
                                 </div>
                             </div>
                         </td>
@@ -2756,7 +2789,6 @@ shadow-sm placeholder:text-slate-400" %}
                         <td class="px-5 py-4 text-center">${getStatusBadge(item)}</td>
                         <td class="px-5 py-4">
                             <div class="flex items-center justify-end gap-1">
-                                <button type="button" class="w-9 h-9 rounded-xl text-slate-500 hover:bg-slate-100" title="Visualizar" onclick="visualizarVinculo('${escapeHtml(key)}')"><i class="fas fa-eye"></i></button>
                                 {% if not view_mode %}<button type="button" class="w-9 h-9 rounded-xl text-slate-500 hover:bg-slate-100" title="Editar" onclick="editarVinculo('${escapeHtml(key)}')"><i class="fas fa-pen"></i></button>
                                 <button type="button" class="w-9 h-9 rounded-xl hover:bg-slate-100" title="${actionLabel}" onclick="toggleVinculoStatus('${escapeHtml(key)}', this)"><i class="fas ${actionIcon}"></i></button>{% endif %}
                             </div>
@@ -2829,15 +2861,15 @@ shadow-sm placeholder:text-slate-400" %}
                 </td>
 
                 <td class="p-2" data-label="Data Inicio:">
-                    <input type="text" name="frente_data_inicio[]" class="form-control-std h-9 text-sm text-left frente-date-visual js-date-picker" placeholder="dd/mm/aaaa">
+                    <input type="text" name="frente_data_inicio[]" data-range-start="true" class="form-control-std h-9 text-sm text-left frente-date-visual js-date-picker" placeholder="dd/mm/aaaa">
                 </td>
 
                 <td class="p-2" data-label="Data Fim Planejada:">
-                    <input type="text" name="frente_data_planejada[]" class="form-control-std h-9 text-sm text-left frente-date-visual js-date-picker" placeholder="dd/mm/aaaa">
+                    <input type="text" name="frente_data_planejada[]" data-range-end="true" class="form-control-std h-9 text-sm text-left frente-date-visual js-date-picker" placeholder="dd/mm/aaaa">
                 </td>
 
                 <td class="p-2" data-label="Data Fim:">
-                    <input type="text" name="frente_data_fim[]" class="form-control-std h-9 text-sm text-left frente-date-visual js-date-picker" placeholder="dd/mm/aaaa">
+                    <input type="text" name="frente_data_fim[]" data-range-end="true" class="form-control-std h-9 text-sm text-left frente-date-visual js-date-picker" placeholder="dd/mm/aaaa">
                 </td>
 
                 <td class="p-2" data-label="Colaboradores:">
@@ -2920,17 +2952,26 @@ shadow-sm placeholder:text-slate-400" %}
 
         function initGerenciarColaboradoresButtons() {
             document.querySelectorAll('.js-gerenciar-colaboradores').forEach((button) => {
-                if (button.dataset.bound === '1') return;
-                button.dataset.bound = '1';
-                button.addEventListener('click', (event) => {
-                    event.preventDefault();
-                    const rowFrenteId = button.getAttribute('data-frente-id');
-                    if (!rowFrenteId) {
-                        showToast('Salve a obra antes de gerenciar colaboradores desta frente.', 'warning');
-                        return;
-                    }
-                    openColaboradoresModal(rowFrenteId, button);
-                });
+                if (button.getAttribute('data-frente-id')) return;
+                button.disabled = true;
+                button.classList.add('cursor-not-allowed', 'opacity-60');
+            });
+        }
+
+        function bindGerenciarColaboradoresDelegation() {
+            if (document.body.dataset.gerenciarColaboradoresDelegated === '1') return;
+            document.body.dataset.gerenciarColaboradoresDelegated = '1';
+            document.addEventListener('click', (event) => {
+                const button = event.target.closest('.js-gerenciar-colaboradores');
+                if (!button || button.disabled) return;
+                if (button.hasAttribute('onclick')) return;
+                event.preventDefault();
+                const rowFrenteId = button.getAttribute('data-frente-id');
+                if (!rowFrenteId) {
+                    showToast('Salve a obra antes de gerenciar colaboradores desta frente.', 'warning');
+                    return;
+                }
+                openColaboradoresModal(rowFrenteId, button);
             });
         }
 
@@ -3201,6 +3242,7 @@ shadow-sm placeholder:text-slate-400" %}
         }
 
         function initListeners() {
+            bindGerenciarColaboradoresDelegation();
             initGerenciarColaboradoresButtons();
             const estadoSelect = el('estado');
             if (estadoSelect && !isViewMode) {
@@ -3299,6 +3341,7 @@ shadow-sm placeholder:text-slate-400" %}
         window.buscarColaboradoresInlineDebounced = buscarColaboradoresInlineDebounced;
         window.selecionarColaborador = selecionarColaborador;
         window.selectInlineColaborador = selectInlineColaborador;
+        window.setModalSort = setModalSort;
         window.confirmarAdicionarColaborador = confirmarAdicionarColaborador;
         window.salvarColaboradoresFrente = salvarColaboradoresFrente;
         window.toggleTodosColaboradores = toggleTodosColaboradores;

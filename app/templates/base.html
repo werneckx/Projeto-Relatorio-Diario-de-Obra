@@ -228,7 +228,9 @@
                 </p>
             </div>
 
-            <button onclick="this.parentElement.remove()" class="text-slate-400 hover:text-slate-700 transition">
+            <button type="button" onclick="this.parentElement.remove()"
+                class="shrink-0 w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"
+                aria-label="Fechar notificação">
                 <i class="fas fa-times"></i>
             </button>
 
@@ -1134,6 +1136,35 @@
             });
         });
 
+        function applyRequiredMarkers(root = document) {
+            const scope = root && root.querySelectorAll ? root : document;
+            const getLabelForField = (field) => {
+                if (!field) return null;
+                if (field.id) {
+                    try {
+                        const explicit = scope.querySelector(`label[for="${CSS.escape(field.id)}"]`)
+                            || document.querySelector(`label[for="${CSS.escape(field.id)}"]`);
+                        if (explicit) return explicit;
+                    } catch (error) { }
+                }
+                return field.closest('label')
+                    || (field.parentElement ? field.parentElement.querySelector(':scope > label') : null)
+                    || field.closest('div')?.querySelector(':scope > label');
+            };
+
+            scope.querySelectorAll('input[required], select[required], textarea[required]').forEach((field) => {
+                const label = getLabelForField(field);
+                if (!label || label.querySelector('.required-marker')) return;
+                const marker = document.createElement('span');
+                marker.className = 'required-marker ml-1 text-red-500';
+                marker.setAttribute('aria-hidden', 'true');
+                marker.textContent = '*';
+                label.appendChild(marker);
+            });
+        }
+
+        window.applyRequiredMarkers = applyRequiredMarkers;
+
         const _csrfToken = '{{ csrf_token() }}';
 
         document.addEventListener('DOMContentLoaded', function () {
@@ -1151,6 +1182,8 @@
                     form.appendChild(hidden);
                 }
             });
+
+            applyRequiredMarkers(document);
         });
     </script>
 

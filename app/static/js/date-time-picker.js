@@ -808,6 +808,7 @@
                     instance.calendarContainer.classList.add('ds-flatpickr-calendar');
                     instance.calendarContainer.setAttribute('data-picker-mode', mode);
                 }
+                syncLinkedRange(input);
             },
             onChange: function () {
                 syncLinkedRange(input);
@@ -821,6 +822,7 @@
                 dispatchNativeEvents(input);
             },
             onOpen: function (_selectedDates, _dateStr, instance) {
+                syncLinkedRange(input);
                 const reference = getSelfOrLinkedDate(input);
                 if (reference) instance.jumpToDate(reference, false);
             },
