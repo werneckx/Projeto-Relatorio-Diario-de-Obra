@@ -20,24 +20,19 @@
             Nome <span class="text-rose-500">*</span>
           </label>
           <input type="text" name="nome" id="nome" value="{{ item.nome if item }}"
-            class="block w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm shadow-xs placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-500 disabled:border-slate-200 transition-all"
+            class="{{ ui_form.control_classes(view_mode=view_mode) }}"
             placeholder="Ex: Civil, Mecânica, Elétrica..." {{ 'readonly disabled' if view_mode }} required>
         </div>
 
         <div class="flex items-end">
-          <label class="inline-flex items-center gap-2 text-sm text-slate-600">
-            <input type="checkbox" name="ativo" id="ativo" value="1"
-              class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-              {% if item is none or item.ativo %}checked{% endif %} {{ 'disabled' if view_mode }}>
-            Ativo
-          </label>
+          {{ ui_form.status_field(name='ativo', selected=(item.ativo if item else True), view_mode=view_mode, id='ativo') }}
         </div>
       </div>
 
       <div>
         <label for="descricao" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Descrição</label>
         <textarea name="descricao" id="descricao" rows="3"
-          class="block w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm shadow-xs placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-500 disabled:border-slate-200 transition-all"
+          class="{{ ui_form.textarea_classes(view_mode=view_mode) }}"
           placeholder="Detalhes e critérios de uso" {{ 'readonly disabled' if view_mode }}>{{ item.descricao if item }}</textarea>
       </div>
     {% endcall %}

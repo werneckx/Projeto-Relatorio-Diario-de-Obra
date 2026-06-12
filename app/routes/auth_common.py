@@ -152,6 +152,10 @@ def role_required(allowed_roles):
                 return redirect(url_for('auth.login'))
 
             user_role = session.get("user_role")
+            user = get_current_user()
+
+            if user and getattr(user, "is_admin", False) and ROLE_ADMIN in allowed_roles:
+                return f(*args, **kwargs)
 
             if user_role not in allowed_roles:
                 print(
@@ -188,6 +192,9 @@ def permission_required(chave: str):
                 return redirect(url_for('auth.inicio'))
 
             empresa_id = user.empresa_id
+
+            if getattr(user, "is_admin", False):
+                return f(*args, **kwargs)
 
             # A) Permissões globais (empresa_id IS NULL)
             perm_global = Permissao.query.filter(
@@ -262,9 +269,30 @@ def permission_required(chave: str):
 # Helper para verificação de escopo (Scoping)
 def get_user_scope_ids():
     """
-    Legado: a lógica de scope agora deve ser aplicada diretamente nas queries (por empresa_id).
+    Retorna None para Admin (sem restrição dentro da empresa) e lista de obras permitidas
+    para os demais perfis.
     """
-    return None
+    user = get_current_user()
+    if not user:
+        return []
+    if getattr(user, "is_admin", False):
+        return None
+
+    from app.models.obra import ObraUsuario
+
+    empresa_id = session.get("empresa_id") or user.empresa_id
+    return [
+        obra_id
+        for (obra_id,) in (
+            db.session.query(ObraUsuario.obra_id)
+            .filter(
+                ObraUsuario.usuario_id == user.id,
+                ObraUsuario.empresa_id == empresa_id,
+                ObraUsuario.ativo.is_(True),
+            )
+            .all()
+        )
+    ]
 
 
 def _normalize_option_text(value):

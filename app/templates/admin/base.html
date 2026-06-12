@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Admin | RDO Platform{% endblock %}</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css">
     <style>
         :root {
             --primary: #6366f1;
@@ -251,6 +253,7 @@
             border: 1px solid var(--card-border);
             border-radius: 10px;
             color: var(--text-main);
+            min-height: 42px;
             padding: 0.7rem 1rem;
             font-family: 'Outfit', sans-serif;
             font-size: 0.9rem;
@@ -267,6 +270,218 @@
         }
 
         .form-group textarea { min-height: 90px; resize: vertical; }
+
+        .flatpickr-calendar,
+        .ts-dropdown {
+            z-index: 99999 !important;
+        }
+
+        .flatpickr-calendar {
+            box-sizing: border-box;
+            max-width: min(340px, calc(100vw - 24px));
+            overflow: visible;
+            padding: 10px;
+            width: min(340px, calc(100vw - 24px));
+        }
+
+        .flatpickr-calendar::before,
+        .flatpickr-calendar::after {
+            display: none;
+        }
+
+        .flatpickr-months {
+            align-items: center;
+            min-height: 46px;
+        }
+
+        .flatpickr-months .flatpickr-prev-month,
+        .flatpickr-months .flatpickr-next-month {
+            align-items: center;
+            border-radius: 999px;
+            display: flex;
+            height: 36px;
+            justify-content: center;
+            padding: 0;
+            top: 12px;
+            width: 36px;
+        }
+
+        .flatpickr-month,
+        .flatpickr-rContainer,
+        .flatpickr-days,
+        .dayContainer {
+            width: 100%;
+        }
+
+        .flatpickr-rContainer,
+        .flatpickr-days,
+        .dayContainer {
+            min-width: 100%;
+            overflow: visible;
+        }
+
+        .flatpickr-weekdays {
+            display: flex;
+            width: 100%;
+        }
+
+        .flatpickr-weekdaycontainer {
+            width: 100%;
+        }
+
+        .flatpickr-day,
+        .flatpickr-weekday {
+            max-width: calc((100% - 6px) / 7);
+            width: calc((100% - 6px) / 7);
+        }
+
+        .flatpickr-current-month {
+            align-items: center;
+            display: flex;
+            gap: 8px;
+            height: 44px;
+            justify-content: center;
+            left: 44px;
+            padding: 0;
+            top: 2px;
+            width: calc(100% - 88px);
+        }
+
+        .flatpickr-current-month .cur-month,
+        .flatpickr-current-month .flatpickr-monthDropdown-months,
+        .flatpickr-current-month input.cur-year {
+            background: var(--input-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 700;
+            height: 36px;
+            padding: 0 12px;
+        }
+
+        .flatpickr-current-month .cur-month {
+            align-items: center;
+            display: inline-flex;
+            justify-content: center;
+            min-width: 126px;
+        }
+
+        .flatpickr-current-month .flatpickr-monthDropdown-months {
+            min-width: 126px;
+        }
+
+        .flatpickr-current-month .numInputWrapper {
+            display: inline-flex;
+            flex: 0 0 82px;
+            height: 36px;
+            width: 82px;
+        }
+
+        .flatpickr-current-month input.cur-year {
+            display: block;
+            padding-right: 22px;
+            width: 82px;
+        }
+
+        .flatpickr-day.ds-range-start,
+        .flatpickr-day.ds-range-end {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+        }
+
+        .flatpickr-day.ds-range-selected {
+            background: rgba(99,102,241,0.18);
+            border-color: rgba(99,102,241,0.18);
+            color: var(--primary-light);
+        }
+
+        .flatpickr-day.ds-range-middle {
+            background: rgba(99,102,241,0.18);
+            border-color: transparent;
+            color: var(--primary-light);
+        }
+
+        .flatpickr-day.ds-range-start,
+        .flatpickr-day.ds-range-end,
+        .flatpickr-day.selected.ds-range-selected {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+        }
+
+        .flatpickr-day.flatpickr-disabled,
+        .flatpickr-day.flatpickr-disabled:hover,
+        .flatpickr-day.prevMonthDay.flatpickr-disabled,
+        .flatpickr-day.nextMonthDay.flatpickr-disabled {
+            background: transparent;
+            border-color: transparent;
+            color: rgba(148,163,184,0.42);
+            cursor: not-allowed;
+            opacity: 0.45;
+            pointer-events: none;
+            text-decoration: line-through;
+        }
+
+        .flatpickr-day:hover {
+            background: rgba(99,102,241,0.08);
+            border-color: rgba(99,102,241,0.18);
+        }
+
+        .flatpickr-day.prevMonthDay,
+        .flatpickr-day.nextMonthDay {
+            color: rgba(148,163,184,0.65);
+        }
+
+        .flatpickr-alt-input,
+        .ds-tom-select .ts-control {
+            background: var(--input-bg) !important;
+            border: 1px solid var(--card-border) !important;
+            border-radius: 10px !important;
+            box-shadow: none !important;
+            color: var(--text-main) !important;
+            font-family: 'Outfit', sans-serif !important;
+            font-size: 0.9rem !important;
+            min-height: 42px !important;
+            padding: 0.7rem 1rem !important;
+            width: 100% !important;
+        }
+
+        .ds-tom-select {
+            background: transparent !important;
+            border: 0 !important;
+            padding: 0 !important;
+            width: 100%;
+        }
+
+        .ds-tom-select.focus .ts-control,
+        .flatpickr-alt-input:focus {
+            border-color: var(--primary) !important;
+            box-shadow: 0 0 0 3px rgba(99,102,241,0.2) !important;
+            outline: none !important;
+        }
+
+        .ts-dropdown {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            color: var(--text-main);
+            overflow: hidden;
+        }
+
+        .ts-dropdown .option,
+        .ts-dropdown .no-results {
+            cursor: pointer;
+            padding: 0.7rem 1rem;
+        }
+
+        .ts-dropdown .active,
+        .ts-dropdown .selected {
+            background: rgba(99,102,241,0.18);
+            color: var(--primary-light);
+        }
 
         .form-group input[type="file"] {
             padding: 0.5rem;
@@ -387,5 +602,10 @@
             {% block content %}{% endblock %}
         </div>
     </main>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
+    <script src="{{ url_for('static', filename='js/date-time-picker.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
+    <script src="{{ url_for('static', filename='js/select-picker.js') }}"></script>
 </body>
 </html>

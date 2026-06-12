@@ -20,34 +20,34 @@
         <div>
           <label for="nome" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Nome <span class="text-rose-500">*</span></label>
           <input type="text" name="nome" id="nome" value="{{ item.nome if item }}"
-            class="block w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm shadow-xs placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-500 disabled:border-slate-200 transition-all"
+            class="{{ ui_form.control_classes(view_mode=view_mode) }}"
             placeholder="Nome completo" {{ 'readonly disabled' if view_mode }} required>
         </div>
 
         <div>
           <label for="email" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">E-mail <span class="text-rose-500">*</span></label>
           <input type="email" name="email" id="email" value="{{ item.email if item }}"
-            class="block w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm shadow-xs placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-500 disabled:border-slate-200 transition-all"
+            class="{{ ui_form.control_classes(view_mode=view_mode) }}"
             placeholder="exemplo@empresa.com" {{ 'readonly disabled' if view_mode }} required>
         </div>
 
         <div>
           <label for="cpf" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">CPF</label>
           <input type="text" name="cpf" id="cpf" value="{{ item.cpf if item }}"
-            class="block w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm shadow-xs placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-500 disabled:border-slate-200 transition-all font-mono"
+            class="{{ ui_form.control_classes(view_mode=view_mode, extra='font-mono') }}"
             placeholder="000.000.000-00" {{ 'readonly disabled' if view_mode }}>
         </div>
 
         <div>
           <label for="papel" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Papel <span class="text-rose-500">*</span></label>
-          {% set current_role = (item.papel if item and item.papel else 'Leitor') %}
+          {% set current_role = ((item.papel if item and item.papel else 'Leitor')|upper) %}
           <select name="papel" id="papel"
-            class="block w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm shadow-xs bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-500 disabled:border-slate-200 transition-all"
+            class="{{ ui_form.select_classes(view_mode=view_mode) }}"
             {{ 'disabled' if view_mode }} required>
-            <option value="Admin" {% if current_role == 'Admin' %}selected{% endif %}>Admin</option>
-            <option value="Gestor" {% if current_role == 'Gestor' %}selected{% endif %}>Gestor</option>
-            <option value="Operador" {% if current_role == 'Operador' %}selected{% endif %}>Operador</option>
-            <option value="Leitor" {% if current_role == 'Leitor' %}selected{% endif %}>Leitor</option>
+            <option value="Admin" {% if current_role == 'ADMIN' %}selected{% endif %}>Admin</option>
+            <option value="Gestor" {% if current_role == 'GESTOR' %}selected{% endif %}>Gestor</option>
+            <option value="Operador" {% if current_role == 'OPERADOR' %}selected{% endif %}>Operador</option>
+            <option value="Leitor" {% if current_role == 'LEITOR' %}selected{% endif %}>Leitor</option>
           </select>
         </div>
       </div>
@@ -57,7 +57,7 @@
           <label for="supervisor_search" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Supervisor</label>
           <div class="relative">
             <input type="text" id="supervisor_search" autocomplete="off"
-              class="block w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm shadow-xs placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-500 disabled:border-slate-200 transition-all"
+              class="{{ ui_form.control_classes(view_mode=view_mode) }}"
               placeholder="Buscar supervisor..." {{ 'readonly disabled' if view_mode }}>
             <ul id="supervisor_results"
               class="hidden absolute z-20 mt-1 w-full max-h-64 overflow-auto bg-white border border-slate-200 rounded-lg shadow-lg"></ul>
@@ -70,21 +70,17 @@
         </div>
 
         <div class="flex items-end">
-          <label class="inline-flex items-center gap-2 text-sm text-slate-600">
-            <input type="checkbox" name="status" class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-              {{ 'checked' if (item and item.status) or not item }} {{ 'disabled' if view_mode }}>
-            Ativo
-          </label>
+          {{ ui_form.status_field(name='status', selected=((item and item.status) or not item), view_mode=view_mode, id='status') }}
         </div>
       </div>
     {% endcall %}
 
     {% call ui_form.section('Obras Permitidas', icon='fa-building', icon_box_class='bg-slate-50 text-slate-700') %}
-      {% set is_admin = item and item.papel == 'Admin' %}
+      {% set is_admin = item and item.is_admin %}
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 {{ 'opacity-60 pointer-events-none grayscale' if is_admin else '' }}">
         {% if obras %}
           {% for obra in obras %}
-            {% set checked = (item and (obra in item.obras_permitidas or item.papel == 'Admin')) %}
+            {% set checked = (item and (obra in item.obras_permitidas or item.is_admin)) %}
             <label class="flex items-start p-3 rounded-xl bg-white border border-slate-200 shadow-xs hover:border-blue-300 transition-colors gap-3">
               <input type="checkbox" name="obras_permitidas" value="{{ obra.id }}"
                 class="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
@@ -114,14 +110,14 @@
           <div>
             <label for="senha" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Senha</label>
             <input type="password" name="senha" id="senha"
-              class="block w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm shadow-xs placeholder-slate-400 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition-all"
+              class="{{ ui_form.control_classes(extra='placeholder:text-slate-400') }}"
               placeholder="Padrão: Usuario123">
             <p class="mt-1 text-[11px] text-slate-400">Mínimo 8 caracteres, 1 maiúscula, 1 minúscula e 1 número.</p>
           </div>
           <div>
             <label for="senha_confirm" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Confirmar Senha</label>
             <input type="password" id="senha_confirm"
-              class="block w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm shadow-xs placeholder-slate-400 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition-all"
+              class="{{ ui_form.control_classes(extra='placeholder:text-slate-400') }}"
               placeholder="Repita a senha">
           </div>
         </div>

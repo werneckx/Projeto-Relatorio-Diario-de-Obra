@@ -20,14 +20,14 @@
             Razão Social <span class="text-rose-500">*</span>
           </label>
           <input type="text" name="razao_social" id="razao_social" value="{{ item.razao_social if item }}"
-            class="block w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm shadow-xs placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-500 disabled:border-slate-200 transition-all"
+            class="{{ ui_form.control_classes(view_mode=view_mode) }}"
             placeholder="Ex: Empresa XYZ S/A" {{ 'readonly disabled' if view_mode }} required>
         </div>
 
         <div>
           <label for="nome_fantasia" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Nome Fantasia</label>
           <input type="text" name="nome_fantasia" id="nome_fantasia" value="{{ item.nome_fantasia if item }}"
-            class="block w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm shadow-xs placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-500 disabled:border-slate-200 transition-all"
+            class="{{ ui_form.control_classes(view_mode=view_mode) }}"
             placeholder="Ex: XYZ" {{ 'readonly disabled' if view_mode }}>
         </div>
 
@@ -36,17 +36,12 @@
             CNPJ <span class="text-rose-500">*</span>
           </label>
           <input type="text" name="cnpj" id="cnpj" value="{{ item.cnpj if item }}"
-            class="block w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm shadow-xs placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-500 disabled:border-slate-200 transition-all font-mono"
+            class="{{ ui_form.control_classes(view_mode=view_mode, extra='font-mono') }}"
             placeholder="00.000.000/0000-00" {{ 'readonly disabled' if view_mode }} required>
         </div>
 
         <div class="flex items-end">
-          <label class="inline-flex items-center gap-2 text-sm text-slate-600">
-            <input type="checkbox" name="ativo" id="ativo" value="1"
-              class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-              {% if item is none or item.ativo %}checked{% endif %} {{ 'disabled' if view_mode }}>
-            Ativo
-          </label>
+          {{ ui_form.status_field(name='ativo', selected=(item.ativo if item else True), view_mode=view_mode, id='ativo') }}
         </div>
       </div>
 
@@ -54,19 +49,19 @@
         <div>
           <label for="contato_nome" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Contato (Nome)</label>
           <input type="text" name="contato_nome" id="contato_nome" value="{{ item.contato_nome if item }}"
-            class="block w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm shadow-xs placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-500 disabled:border-slate-200 transition-all"
+            class="{{ ui_form.control_classes(view_mode=view_mode) }}"
             placeholder="Ex: João Silva" {{ 'readonly disabled' if view_mode }}>
         </div>
         <div>
           <label for="contato_email" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Contato (E-mail)</label>
           <input type="email" name="contato_email" id="contato_email" value="{{ item.contato_email if item }}"
-            class="block w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm shadow-xs placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-500 disabled:border-slate-200 transition-all"
+            class="{{ ui_form.control_classes(view_mode=view_mode) }}"
             placeholder="exemplo@cliente.com" {{ 'readonly disabled' if view_mode }}>
         </div>
         <div>
           <label for="contato_telefone" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Contato (Telefone)</label>
           <input type="text" name="contato_telefone" id="contato_telefone" value="{{ item.contato_telefone if item }}"
-            class="block w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm shadow-xs placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-500 disabled:border-slate-200 transition-all"
+            class="{{ ui_form.control_classes(view_mode=view_mode) }}"
             placeholder="(00) 00000-0000" {{ 'readonly disabled' if view_mode }}>
         </div>
       </div>

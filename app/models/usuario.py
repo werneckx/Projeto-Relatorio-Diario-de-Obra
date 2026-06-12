@@ -258,6 +258,9 @@ class Usuario(db.Model, UserMixin):
 
     @property
     def obras_permitidas(self):
+        if self.is_admin:
+            from app.models.obra import Obra
+            return Obra.query.filter_by(empresa_id=self.empresa_id).all()
         return [rel.obra for rel in getattr(self, "obras_alocadas", []) if rel.ativo and rel.obra]
 
     @obras_permitidas.setter
@@ -289,6 +292,45 @@ class Usuario(db.Model, UserMixin):
         return None
 
     @property
+    def is_admin(self):
+        if not self.id:
+            return False
+
+        admin_names = {"ADMIN", "ADMINISTRADOR"}
+
+        try:
+            strict_admin = db.session.query(UsuarioPapel).join(
+                Papel,
+                Papel.id == UsuarioPapel.papel_id,
+            ).filter(
+                UsuarioPapel.usuario_id == self.id,
+                or_(UsuarioPapel.empresa_id.is_(None), UsuarioPapel.empresa_id == self.empresa_id),
+                UsuarioPapel.ativo.is_(True),
+                Papel.ativo.is_(True),
+                db.func.upper(db.func.trim(Papel.nome)).in_(admin_names),
+                or_(Papel.empresa_id.is_(None), Papel.empresa_id == self.empresa_id),
+            ).first()
+            if strict_admin:
+                return True
+        except Exception:
+            pass
+
+        try:
+            if any(
+                papel is not None
+                and papel.ativo
+                and (papel.nome or "").strip().upper() in admin_names
+                and (papel.empresa_id is None or papel.empresa_id == self.empresa_id)
+                for papel in (self.papeis or [])
+            ):
+                return True
+        except Exception:
+            pass
+
+        legacy_role = getattr(self, "_papel", None) or self.__dict__.get("papel")
+        return bool(legacy_role and str(legacy_role).strip().upper() in admin_names)
+
+    @property
     def is_system(self):
         """Usuário é considerado system quando possui ao menos um papel global ativo."""
         return any(
@@ -304,6 +346,9 @@ class Usuario(db.Model, UserMixin):
         """
         if not self.id:
             return False
+
+        if self.is_admin:
+            return True
 
         empresa_id = self.empresa_id
         permissao_ids = (

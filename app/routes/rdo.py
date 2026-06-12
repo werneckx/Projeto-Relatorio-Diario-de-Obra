@@ -66,11 +66,10 @@ def criar_rdo():
     # Carregar apenas obras ativas da empresa atual
     empresa_id = session.get("empresa_id")
     user = Usuario.query.get(session.get("user_id"))
-    if user and user.papel == ROLE_ADMIN:
+    if user and user.is_admin:
         obras = Obra.query.filter_by(empresa_id=empresa_id, status=1).all()
     else:
-        # Filtra na memória as obras ativas do usuário
-        obras = [o for o in Obra.query.filter_by(empresa_id=empresa_id).all() if o.status == 1]
+        obras = [o for o in (user.obras_permitidas if user else []) if o.empresa_id == empresa_id and o.status == 1]
     
     mao_de_obra_options = [{"id": m.id, "nome": m.nome, "tipo": m.tipo} for m in AuxFuncoes.query.filter_by(ativo=True).order_by(AuxFuncoes.nome.asc()).all()]
     equipamentos_options = [{"id": e.id, "nome": e.nome} for e in AuxEquipamentos.query.filter_by(ativo=True).order_by(AuxEquipamentos.nome.asc()).all()]
@@ -724,7 +723,7 @@ def lista_rdo():
 
     # SCOPING: Filtra RDOs ativos da empresa atual
     if user:
-        if user.papel == ROLE_ADMIN:
+        if user.is_admin:
              rdos = RDO.query.filter_by(ativo=True, empresa_id=empresa_id).order_by(RDO.data_rdo.desc()).all()
         else:
             ids_obras_permitidas = [obra.id for obra in user.obras_permitidas]
@@ -767,7 +766,7 @@ def export_lista_rdo(export_format):
         RDO.empresa_id == empresa_id,
     )
 
-    if user and user.papel != ROLE_ADMIN:
+    if user and not user.is_admin:
         ids_obras_permitidas = [obra.id for obra in user.obras_permitidas] if user else []
         query = query.filter(RDO.obra_id.in_(ids_obras_permitidas))
 
