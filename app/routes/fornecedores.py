@@ -47,8 +47,14 @@ def gerar_fornecedor():
 
     fornecedor_id = request.form.get('id')
     nome = _normalize_option_input(request.form.get('nome', ''))
-    cnpj = _normalize_option_input(request.form.get('cnpj', ''))
-    endereco = _normalize_option_input(request.form.get('endereco', ''))
+    cnpj = ''.join(ch for ch in request.form.get('cnpj', '') if ch.isdigit())
+    cep = ''.join(ch for ch in request.form.get('cep', '') if ch.isdigit())
+    logradouro = _normalize_option_input(request.form.get('logradouro', ''))
+    numero = _normalize_option_input(request.form.get('numero', ''))
+    complemento = _normalize_option_input(request.form.get('complemento', ''))
+    bairro = _normalize_option_input(request.form.get('bairro', ''))
+    cidade = _normalize_option_input(request.form.get('cidade', ''))
+    estado = _normalize_option_input(request.form.get('estado', '')).upper()
     ativo = request.form.get('ativo') == '1'
 
     if not nome:
@@ -59,14 +65,26 @@ def gerar_fornecedor():
         fornecedor = Fornecedor.query.filter_by(id=fornecedor_id, empresa_id=empresa_id).first_or_404()
         fornecedor.nome = nome
         fornecedor.cnpj = cnpj or None
-        fornecedor.endereco = endereco or None
+        fornecedor.cep = cep or None
+        fornecedor.logradouro = logradouro or None
+        fornecedor.numero = numero or None
+        fornecedor.complemento = complemento or None
+        fornecedor.bairro = bairro or None
+        fornecedor.cidade = cidade or None
+        fornecedor.estado = estado or None
         fornecedor.ativo = ativo
     else:
         novo = Fornecedor(
             empresa_id=empresa_id,
             nome=nome,
             cnpj=cnpj or None,
-            endereco=endereco or None,
+            cep=cep or None,
+            logradouro=logradouro or None,
+            numero=numero or None,
+            complemento=complemento or None,
+            bairro=bairro or None,
+            cidade=cidade or None,
+            estado=estado or None,
             ativo=ativo,
         )
         db.session.add(novo)

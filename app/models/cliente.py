@@ -10,7 +10,15 @@ class Cliente(db.Model):
 
     razao_social = db.Column(db.String(200), nullable=False)
     nome_fantasia = db.Column(db.String(200), nullable=True)
-    cnpj = db.Column(db.String(18), nullable=False)
+    cnpj = db.Column(db.String(14), nullable=False)
+
+    logradouro = db.Column(db.String(200), nullable=True)
+    numero = db.Column(db.String(20), nullable=True)
+    complemento = db.Column(db.String(100), nullable=True)
+    bairro = db.Column(db.String(100), nullable=True)
+    cidade = db.Column(db.String(100), nullable=True, index=True)
+    estado = db.Column(db.String(2), nullable=True, index=True)
+    cep = db.Column(db.String(10), nullable=True)
 
     contato_nome = db.Column(db.String(150), nullable=True)
     contato_email = db.Column(db.String(150), nullable=True)
@@ -45,3 +53,19 @@ class Cliente(db.Model):
 
     def __repr__(self):
         return f'<Cliente {self.id}: {self.razao_social}>'
+
+    @property
+    def endereco(self):
+        partes = [self.logradouro]
+        if self.numero:
+            partes.append(f"nº {self.numero}")
+        if self.complemento:
+            partes.append(self.complemento)
+        if self.bairro:
+            partes.append(self.bairro)
+        cidade_uf = "/".join(filter(None, [self.cidade, self.estado]))
+        if cidade_uf:
+            partes.append(cidade_uf)
+        if self.cep:
+            partes.append(f"CEP {self.cep}")
+        return ", ".join([parte for parte in partes if parte])
