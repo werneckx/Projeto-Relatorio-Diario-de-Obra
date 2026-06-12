@@ -23,13 +23,62 @@
 {% endmacro %}
 
 {% macro form_start(action, form_id, item=None, extra_class='space-y-4', method='POST', enctype=None, id_name='id') %}
-<form action="{{ action }}" method="{{ method }}" id="{{ form_id }}" class="ds-form {{ extra_class }}" autocomplete="off"
-  {% if enctype %}enctype="{{ enctype }}"{% endif %}>
+<form action="{{ action }}" method="{{ method }}" id="{{ form_id }}" class="ds-form  {{ extra_class }}"
+  autocomplete="off" {% if enctype %}enctype="{{ enctype }}" {% endif %}>
   {% if id_name %}
   <input type="hidden" name="{{ id_name }}" value="{{ item.id if item and item.id }}">
   {% endif %}
   {{ caller() }}
 </form>
+{% endmacro %}
+
+{% macro control_classes(view_mode=false, extra='') -%}
+form-control-std h-9 text-sm block w-full rounded-2xl appearance-none {{ 'bg-slate-100/60 border-slate-200
+text-slate-800 font-semibold cursor-default' if view_mode else 'bg-white border-slate-300 text-slate-600 shadow-sm
+placeholder:text-slate-400' }} {{ extra }}
+{%- endmacro %}
+
+{% macro select_classes(view_mode=false, extra='') -%}
+{{ control_classes(view_mode=view_mode, extra='pr-10 ' ~ extra) }}
+{%- endmacro %}
+
+{% macro textarea_classes(view_mode=false, extra='') -%}
+form-control-std text-sm block w-full rounded-2xl px-4 py-3 min-h-[96px] resize-y {{ 'bg-slate-100/60 border-slate-200
+text-slate-800 font-semibold cursor-default' if view_mode else 'bg-white border-slate-300 text-slate-600 shadow-sm
+placeholder:text-slate-400' }} {{ extra }}
+{%- endmacro %}
+
+{% macro button_primary_classes(extra='') -%}
+flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl shadow-md shadow-blue-500/20
+transition-all text-center text-sm flex items-center justify-center gap-2 {{ extra }}
+{%- endmacro %}
+
+{% macro button_secondary_classes(extra='') -%}
+flex-1 px-4 py-3 bg-white border border-slate-300 text-slate-700 font-bold rounded-2xl shadow-sm hover:bg-slate-50
+transition-colors text-center text-sm flex items-center justify-center gap-2 {{ extra }}
+{%- endmacro %}
+
+{% macro action_primary_classes(extra='') -%}
+flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl shadow-md shadow-blue-500/20
+transition-all text-center text-sm flex items-center justify-center gap-2 disabled:opacity-60
+disabled:cursor-not-allowed {{ extra }}
+{%- endmacro %}
+
+{% macro action_secondary_classes(extra='') -%}
+flex-1 px-4 py-3 bg-white border border-slate-300 text-slate-700 font-bold rounded-2xl shadow-sm hover:bg-slate-50
+transition-colors text-center text-sm inline-flex items-center justify-center gap-2 {{ extra }}
+{%- endmacro %}
+
+{% macro status_field(name='ativo', selected=true, view_mode=false, label='Status', id='status', active_label='Ativo',
+inactive_label='Inativo', wrapper_class='min-w-[160px]') %}
+<div class="{{ wrapper_class }}">
+  <label for="{{ id }}" class="block text-[10px] font-bold text-slate-500 uppercase mb-1">{{ label }}</label>
+  <select name="{{ name }}" id="{{ id }}" class="{{ select_classes(view_mode=view_mode) }}" {{ 'disabled' if view_mode
+    }}>
+    <option value="1" {% if selected %}selected{% endif %}>{{ active_label }}</option>
+    <option value="0" {% if not selected %}selected{% endif %}>{{ inactive_label }}</option>
+  </select>
+</div>
 {% endmacro %}
 
 {% macro section(title, icon='fa-pen', icon_box_class='bg-blue-50 text-blue-600') %}
@@ -47,23 +96,26 @@
 {% endmacro %}
 
 {% macro actions(list_url, view_mode=false, edit_url=None, submit_label='Salvar Registro', cancel_label='Cancelar',
-back_label='Voltar', submit_btn_id='submitBtn') %}
-<div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-3 border-t border-slate-100">
-  <a href="{{ list_url }}"
-    class="w-full sm:w-auto px-4 py-2 bg-white border border-slate-300 text-slate-700 font-medium rounded-lg text-xs shadow-xs hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-200 transition-all text-center">
-    {{ back_label if view_mode else cancel_label }}
-  </a>
-  {% if view_mode and edit_url %}
-  <a href="{{ edit_url }}"
-    class="w-full sm:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg text-xs shadow-xs shadow-blue-500/10 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-center flex items-center justify-center gap-1.5">
-    <i class="fas fa-edit text-[10px]"></i> Editar
-  </a>
-  {% else %}
-  <button type="submit" id="{{ submit_btn_id }}"
-    class="w-full sm:w-auto px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-xs shadow-sm shadow-blue-500/20 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-center flex items-center justify-center gap-1.5">
-    <i class="fas fa-save text-[10px]"></i> {{ submit_label }}
-  </button>
-  {% endif %}
+back_label='Voltar', submit_btn_id='submitBtn', edit_label='Editar', keyboard_hint=true, cancel_url=None) %}
+{% set resolved_cancel_url = cancel_url or list_url %}
+<div class="sticky bottom-4 z-30 w-full flex justify-center pointer-events-none">
+  <div
+    class="pointer-events-auto flex w-[calc(100%-1.5rem)] max-w-5xl flex-col-reverse gap-3 rounded-[24px] border border-slate-200 bg-white/96 p-3 shadow-2xl shadow-slate-900/10 backdrop-blur-md sm:flex-row sm:items-center sm:justify-between">
+    <div class="flex flex-1 flex-col-reverse gap-3 sm:flex-row sm:items-center">
+      <a href="{{ resolved_cancel_url }}" class="{{ action_secondary_classes() }}">
+        {{ back_label if view_mode else cancel_label }}
+      </a>
+    </div>
+    {% if view_mode and edit_url %}
+    <a href="{{ edit_url }}" class="{{ action_primary_classes() }}">
+      <i class="fas fa-edit"></i> {{ edit_label }}
+    </a>
+    {% else %}
+    <button type="submit" id="{{ submit_btn_id }}" class="{{ action_primary_classes() }}">
+      {{ submit_label }}
+    </button>
+    {% endif %}
+  </div>
 </div>
 {% endmacro %}
 

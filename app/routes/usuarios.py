@@ -94,7 +94,8 @@ def gerar_usuario():
         papel = request.form.get("papel")
         cpf = request.form.get("cpf") 
         senha = request.form.get("senha")
-        status = True if request.form.get("status") == "on" else False
+        status_raw = (request.form.get("status") or "").strip().lower()
+        status = status_raw in {"1", "true", "on", "ativo"}
         obras_ids = request.form.getlist("obras_permitidas")
         id_supervisor_raw = request.form.get('id_supervisor')
 
