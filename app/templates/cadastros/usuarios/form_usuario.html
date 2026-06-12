@@ -12,6 +12,8 @@
 {% call ui_form.page_shell() %}
   {{ ui_form.hero(page_title, subtitle=subtitle, back_url=url_for('auth.lista_usuarios')) }}
 
+  {{ ui_form.metadata(item) }}
+
   {% call ui_form.form_start(action=url_for('auth.gerar_usuario'), form_id='mainForm', item=item, extra_class='space-y-5') %}
     <input type="hidden" name="categoria" value="usuario">
 
@@ -19,21 +21,21 @@
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label for="nome" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Nome <span class="text-rose-500">*</span></label>
-          <input type="text" name="nome" id="nome" value="{{ item.nome if item }}"
+          <input type="text" name="nome" id="nome" value="{{ ui_form.blank(item.nome if item else none) }}"
             class="{{ ui_form.control_classes(view_mode=view_mode) }}"
             placeholder="Nome completo" {{ 'readonly disabled' if view_mode }} required>
         </div>
 
         <div>
           <label for="email" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">E-mail <span class="text-rose-500">*</span></label>
-          <input type="email" name="email" id="email" value="{{ item.email if item }}"
+          <input type="email" name="email" id="email" value="{{ ui_form.blank(item.email if item else none) }}"
             class="{{ ui_form.control_classes(view_mode=view_mode) }}"
             placeholder="exemplo@empresa.com" {{ 'readonly disabled' if view_mode }} required>
         </div>
 
         <div>
           <label for="cpf" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">CPF</label>
-          <input type="text" name="cpf" id="cpf" value="{{ item.cpf if item }}"
+          <input type="text" name="cpf" id="cpf" value="{{ ui_form.blank(item.cpf if item else none) }}"
             class="{{ ui_form.control_classes(view_mode=view_mode, extra='font-mono') }}"
             placeholder="000.000.000-00" {{ 'readonly disabled' if view_mode }}>
         </div>
@@ -63,7 +65,7 @@
               class="hidden absolute z-20 mt-1 w-full max-h-64 overflow-auto bg-white border border-slate-200 rounded-lg shadow-lg"></ul>
           </div>
           <input type="hidden" name="id_supervisor" id="id_supervisor_input"
-            value="{% if item and item.id_supervisor %}{{ item.id_supervisor }}{% elif default_supervisor %}{{ default_supervisor.id }}{% endif %}">
+            value="{{ (item.id_supervisor if item and item.id_supervisor else (default_supervisor.id if default_supervisor else '')) }}">
           {% if default_supervisor and not item %}
             <p class="mt-1 text-[11px] text-slate-400">Padrão: {{ default_supervisor.nome }}</p>
           {% endif %}
@@ -225,4 +227,3 @@
   </script>
 {% endcall %}
 {% endblock %}
-

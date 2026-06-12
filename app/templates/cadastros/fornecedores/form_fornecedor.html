@@ -12,6 +12,8 @@
 {% call ui_form.page_shell() %}
   {{ ui_form.hero(page_title, subtitle=subtitle, back_url=url_for('auth.lista_fornecedores')) }}
 
+  {{ ui_form.metadata(item) }}
+
   {% call ui_form.form_start(action=url_for('auth.gerar_fornecedor'), form_id='fornecedorForm', item=item) %}
     {% call ui_form.section('Dados do Fornecedor', icon='fa-truck-loading', icon_box_class='bg-cyan-50 text-cyan-700') %}
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -19,14 +21,14 @@
           <label for="nome" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">
             Nome <span class="text-rose-500">*</span>
           </label>
-          <input type="text" name="nome" id="nome" value="{{ item.nome if item }}"
+          <input type="text" name="nome" id="nome" value="{{ ui_form.blank(item.nome if item else none) }}"
             class="{{ ui_form.control_classes(view_mode=view_mode) }}"
             placeholder="Ex: Prestadora ABC Ltda" {{ 'readonly disabled' if view_mode }} required>
         </div>
 
         <div>
           <label for="cnpj" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">CNPJ</label>
-          <input type="text" name="cnpj" id="cnpj" value="{{ item.cnpj if item }}"
+          <input type="text" name="cnpj" id="cnpj" value="{{ ui_form.blank(item.cnpj if item else none) }}"
             class="{{ ui_form.control_classes(view_mode=view_mode, extra='font-mono') }}"
             placeholder="00.000.000/0000-00" {{ 'readonly disabled' if view_mode }}>
         </div>
@@ -36,7 +38,7 @@
         <label for="endereco" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Endereço</label>
         <textarea name="endereco" id="endereco" rows="3"
           class="{{ ui_form.textarea_classes(view_mode=view_mode) }}"
-          placeholder="Rua, número, bairro, cidade – UF, CEP" {{ 'readonly disabled' if view_mode }}>{{ item.endereco if item }}</textarea>
+          placeholder="Rua, número, bairro, cidade – UF, CEP" {{ 'readonly disabled' if view_mode }}>{{ ui_form.blank(item.endereco if item else none) }}</textarea>
       </div>
 
       {{ ui_form.status_field(name='ativo', selected=(item.ativo if item else True), view_mode=view_mode, id='ativo') }}
@@ -56,4 +58,3 @@
   {{ ui_form.submit_script(form_id='fornecedorForm', submit_btn_id='submitBtn', loading_label='Salvando...') }}
 {% endcall %}
 {% endblock %}
-

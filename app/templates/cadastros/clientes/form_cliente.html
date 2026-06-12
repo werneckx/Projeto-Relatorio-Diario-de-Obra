@@ -12,30 +12,32 @@
 {% call ui_form.page_shell() %}
   {{ ui_form.hero(page_title, subtitle=subtitle, back_url=url_for('auth.lista_clientes')) }}
 
+  {{ ui_form.metadata(item) }}
+
   {% call ui_form.form_start(action=url_for('auth.gerar_cliente'), form_id='clienteForm', item=item) %}
     {% call ui_form.section('Dados do Cliente', icon='fa-handshake', icon_box_class='bg-emerald-50 text-emerald-700') %}
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label for="razao_social" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">
-            Razão Social <span class="text-rose-500">*</span>
+            Razão Social
           </label>
-          <input type="text" name="razao_social" id="razao_social" value="{{ item.razao_social if item }}"
+          <input type="text" name="razao_social" id="razao_social" value="{{ ui_form.blank(item.razao_social if item else none) }}"
             class="{{ ui_form.control_classes(view_mode=view_mode) }}"
             placeholder="Ex: Empresa XYZ S/A" {{ 'readonly disabled' if view_mode }} required>
         </div>
 
         <div>
           <label for="nome_fantasia" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Nome Fantasia</label>
-          <input type="text" name="nome_fantasia" id="nome_fantasia" value="{{ item.nome_fantasia if item }}"
+          <input type="text" name="nome_fantasia" id="nome_fantasia" value="{{ ui_form.blank(item.nome_fantasia if item else none) }}"
             class="{{ ui_form.control_classes(view_mode=view_mode) }}"
             placeholder="Ex: XYZ" {{ 'readonly disabled' if view_mode }}>
         </div>
 
         <div>
           <label for="cnpj" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">
-            CNPJ <span class="text-rose-500">*</span>
+            CNPJ
           </label>
-          <input type="text" name="cnpj" id="cnpj" value="{{ item.cnpj if item }}"
+          <input type="text" name="cnpj" id="cnpj" value="{{ ui_form.blank(item.cnpj if item else none) }}"
             class="{{ ui_form.control_classes(view_mode=view_mode, extra='font-mono') }}"
             placeholder="00.000.000/0000-00" {{ 'readonly disabled' if view_mode }} required>
         </div>
@@ -48,19 +50,19 @@
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
           <label for="contato_nome" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Contato (Nome)</label>
-          <input type="text" name="contato_nome" id="contato_nome" value="{{ item.contato_nome if item }}"
+          <input type="text" name="contato_nome" id="contato_nome" value="{{ ui_form.blank(item.contato_nome if item else none) }}"
             class="{{ ui_form.control_classes(view_mode=view_mode) }}"
             placeholder="Ex: João Silva" {{ 'readonly disabled' if view_mode }}>
         </div>
         <div>
           <label for="contato_email" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Contato (E-mail)</label>
-          <input type="email" name="contato_email" id="contato_email" value="{{ item.contato_email if item }}"
+          <input type="email" name="contato_email" id="contato_email" value="{{ ui_form.blank(item.contato_email if item else none) }}"
             class="{{ ui_form.control_classes(view_mode=view_mode) }}"
             placeholder="exemplo@cliente.com" {{ 'readonly disabled' if view_mode }}>
         </div>
         <div>
           <label for="contato_telefone" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Contato (Telefone)</label>
-          <input type="text" name="contato_telefone" id="contato_telefone" value="{{ item.contato_telefone if item }}"
+          <input type="text" name="contato_telefone" id="contato_telefone" value="{{ ui_form.blank(item.contato_telefone if item else none) }}"
             class="{{ ui_form.control_classes(view_mode=view_mode) }}"
             placeholder="(00) 00000-0000" {{ 'readonly disabled' if view_mode }}>
         </div>
@@ -81,4 +83,3 @@
   {{ ui_form.submit_script(form_id='clienteForm', submit_btn_id='submitBtn', loading_label='Salvando...') }}
 {% endcall %}
 {% endblock %}
-

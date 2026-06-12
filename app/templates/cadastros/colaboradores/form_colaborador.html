@@ -12,6 +12,8 @@
 {% call ui_form.page_shell() %}
   {{ ui_form.hero(page_title, subtitle=subtitle, back_url=url_for('auth.lista_colaboradores')) }}
 
+  {{ ui_form.metadata(item) }}
+
   {% call ui_form.form_start(action=url_for('auth.gerar_colaborador'), form_id='colaboradorForm', item=item) %}
     {% call ui_form.section('Dados do Colaborador', icon='fa-users', icon_box_class='bg-orange-50 text-orange-700') %}
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -19,14 +21,14 @@
           <label for="nome" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">
             Nome <span class="text-rose-500">*</span>
           </label>
-          <input type="text" name="nome" id="nome" value="{{ item.nome if item }}"
+          <input type="text" name="nome" id="nome" value="{{ ui_form.blank(item.nome if item else none) }}"
             class="{{ ui_form.control_classes(view_mode=view_mode) }}"
             placeholder="Ex: Maria Souza" {{ 'readonly disabled' if view_mode }} required>
         </div>
 
         <div>
           <label for="cadastro_pessoa_fisica" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">CPF / Registro</label>
-          <input type="text" name="cadastro_pessoa_fisica" id="cadastro_pessoa_fisica" value="{{ item.cadastro_pessoa_fisica if item }}"
+          <input type="text" name="cadastro_pessoa_fisica" id="cadastro_pessoa_fisica" value="{{ ui_form.blank(item.cadastro_pessoa_fisica if item else none) }}"
             class="{{ ui_form.control_classes(view_mode=view_mode, extra='font-mono') }}"
             placeholder="Ex: 000.000.000-00" {{ 'readonly disabled' if view_mode }}>
         </div>
@@ -93,4 +95,3 @@
   {{ ui_form.submit_script(form_id='colaboradorForm', submit_btn_id='submitBtn', loading_label='Salvando...') }}
 {% endcall %}
 {% endblock %}
-
