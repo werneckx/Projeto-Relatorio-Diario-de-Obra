@@ -145,6 +145,20 @@ html[data-ui-theme="premium"] select.ds-control {
   padding-right: 2.75rem !important;
 }
 
+html[data-ui-theme="premium"] input[list].form-control-std,
+html[data-ui-theme="premium"] input[list].ds-control,
+html[data-ui-theme="premium"] input[list].premium-input {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  background-image: none !important;
+  padding-right: var(--ds-control-px) !important;
+}
+
+html[data-ui-theme="premium"] input[list]::-webkit-calendar-picker-indicator {
+  display: none !important;
+  -webkit-appearance: none !important;
+}
+
 html[data-ui-theme="premium"] .form-control-std.h-9,
 html[data-ui-theme="premium"] select.form-control-std.h-9,
 html[data-ui-theme="premium"] input.form-control-std.h-9 {

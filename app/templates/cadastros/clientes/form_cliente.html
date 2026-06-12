@@ -56,15 +56,19 @@
         </div>
         <div>
           <label for="contato_email" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Contato (E-mail)</label>
-          <input type="email" name="contato_email" id="contato_email" value="{{ ui_form.blank(item.contato_email if item else none) }}"
-            class="{{ ui_form.control_classes(view_mode=view_mode) }}"
-            placeholder="exemplo@cliente.com" {{ 'readonly disabled' if view_mode }}>
+          <div class="relative">
+            <input type="email" name="contato_email" id="contato_email" value="{{ ui_form.blank(item.contato_email if item else none) }}"
+              class="{{ ui_form.control_classes(view_mode=view_mode) }}"
+              placeholder="exemplo@cliente.com" autocomplete="email" autocapitalize="none" spellcheck="false"
+              {{ 'readonly disabled' if view_mode }}>
+            <div id="contato_email_suggestions" class="ds-autocomplete-panel" role="listbox" aria-label="Sugestões de e-mail"></div>
+          </div>
         </div>
         <div>
           <label for="contato_telefone" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Contato (Telefone)</label>
           <input type="text" name="contato_telefone" id="contato_telefone" value="{{ ui_form.blank(item.contato_telefone if item else none) }}"
             class="{{ ui_form.control_classes(view_mode=view_mode) }}"
-            placeholder="(00) 00000-0000" {{ 'readonly disabled' if view_mode }}>
+            placeholder="(00) 00000-0000" inputmode="numeric" maxlength="15" {{ 'readonly disabled' if view_mode }}>
         </div>
       </div>
     {% endcall %}
@@ -83,5 +87,178 @@
   {% endcall %}
 
   {{ ui_form.submit_script(form_id='clienteForm', submit_btn_id='submitBtn', loading_label='Salvando...') }}
+  <script>
+    (function () {
+      const phoneInput = document.getElementById('contato_telefone');
+      const emailInput = document.getElementById('contato_email');
+      const emailSuggestions = document.getElementById('contato_email_suggestions');
+      const commonDomains = ['gmail.com', 'outlook.com', 'hotmail.com', 'yahoo.com.br', 'empresa.com', 'cliente.com'];
+      let activeSuggestionIndex = -1;
+      let currentSuggestions = [];
+      let suggestionCleanupBound = false;
+
+      function formatPhone(value) {
+        const digits = (value || '').replace(/\D/g, '').slice(0, 11);
+        if (!digits) return '';
+        if (digits.length <= 2) return `(${digits}`;
+        if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+        if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+        return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+      }
+
+      function positionEmailSuggestions() {
+        if (!emailInput || !emailSuggestions || !emailSuggestions.classList.contains('is-open')) return;
+
+        const rect = emailInput.getBoundingClientRect();
+        const viewportPadding = 12;
+        const gap = 6;
+        const availableBelow = window.innerHeight - rect.bottom - viewportPadding;
+        const availableAbove = rect.top - viewportPadding;
+        const desiredHeight = Math.min(emailSuggestions.scrollHeight || 0, 256);
+        const shouldOpenAbove = availableBelow < Math.min(desiredHeight, 140) && availableAbove > availableBelow;
+        const panelHeight = Math.max(48, Math.min(desiredHeight, shouldOpenAbove ? availableAbove : availableBelow, 256));
+        const panelWidth = Math.min(rect.width, window.innerWidth - (viewportPadding * 2));
+        const left = Math.min(Math.max(rect.left, viewportPadding), window.innerWidth - panelWidth - viewportPadding);
+        const top = shouldOpenAbove
+          ? Math.max(viewportPadding, rect.top - panelHeight - gap)
+          : rect.bottom + gap;
+
+        emailSuggestions.style.width = `${panelWidth}px`;
+        emailSuggestions.style.left = `${left}px`;
+        emailSuggestions.style.top = `${top}px`;
+        emailSuggestions.style.maxHeight = `${panelHeight}px`;
+      }
+
+      function bindSuggestionViewportEvents() {
+        if (suggestionCleanupBound) return;
+        suggestionCleanupBound = true;
+        window.addEventListener('resize', positionEmailSuggestions);
+        window.addEventListener('scroll', positionEmailSuggestions, true);
+      }
+
+      function closeEmailSuggestions() {
+        if (!emailSuggestions) return;
+        emailSuggestions.classList.remove('is-open');
+        emailSuggestions.innerHTML = '';
+        emailSuggestions.style.removeProperty('width');
+        emailSuggestions.style.removeProperty('left');
+        emailSuggestions.style.removeProperty('top');
+        emailSuggestions.style.removeProperty('max-height');
+        activeSuggestionIndex = -1;
+        currentSuggestions = [];
+      }
+
+      function selectEmailSuggestion(value) {
+        if (!emailInput) return;
+        emailInput.value = value;
+        closeEmailSuggestions();
+        emailInput.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+
+      function renderEmailSuggestions(items) {
+        if (!emailSuggestions) return;
+        emailSuggestions.innerHTML = '';
+        currentSuggestions = items.slice();
+
+        if (!items.length) {
+          closeEmailSuggestions();
+          return;
+        }
+
+        items.forEach((suggestion, index) => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'ds-autocomplete-option';
+          button.setAttribute('role', 'option');
+          button.dataset.index = String(index);
+          button.textContent = suggestion;
+          button.addEventListener('mousedown', function (event) {
+            event.preventDefault();
+            selectEmailSuggestion(suggestion);
+          });
+          emailSuggestions.appendChild(button);
+        });
+
+        emailSuggestions.classList.add('is-open');
+        activeSuggestionIndex = -1;
+        bindSuggestionViewportEvents();
+        positionEmailSuggestions();
+      }
+
+      function updateActiveEmailSuggestion() {
+        if (!emailSuggestions) return;
+        Array.from(emailSuggestions.querySelectorAll('.ds-autocomplete-option')).forEach((option, index) => {
+          option.classList.toggle('is-active', index === activeSuggestionIndex);
+        });
+      }
+
+      function updateEmailSuggestions(value) {
+        if (!emailInput || !emailSuggestions) return;
+
+        const typedValue = (value || '').trim().toLowerCase();
+        const [localPart, partialDomain = ''] = typedValue.split('@');
+        let suggestions = [];
+
+        if (!localPart) {
+          suggestions = ['contato@empresa.com', 'financeiro@empresa.com', 'comercial@empresa.com', 'administrativo@empresa.com'];
+          renderEmailSuggestions(suggestions);
+          return;
+        }
+
+        suggestions = commonDomains
+          .filter((domain) => !partialDomain || domain.startsWith(partialDomain))
+          .slice(0, 6)
+          .map((domain) => `${localPart}@${domain}`);
+
+        renderEmailSuggestions(suggestions);
+      }
+
+      if (phoneInput && !phoneInput.disabled && !phoneInput.readOnly) {
+        phoneInput.value = formatPhone(phoneInput.value);
+        phoneInput.addEventListener('input', function () {
+          phoneInput.value = formatPhone(phoneInput.value);
+        });
+      }
+
+      if (emailInput && !emailInput.disabled && !emailInput.readOnly) {
+        emailInput.addEventListener('input', function () {
+          updateEmailSuggestions(emailInput.value);
+        });
+        emailInput.addEventListener('focus', function () {
+          updateEmailSuggestions(emailInput.value);
+        });
+        emailInput.addEventListener('keydown', function (event) {
+          if (!currentSuggestions.length) return;
+
+          if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            activeSuggestionIndex = Math.min(activeSuggestionIndex + 1, currentSuggestions.length - 1);
+            updateActiveEmailSuggestion();
+            return;
+          }
+
+          if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            activeSuggestionIndex = Math.max(activeSuggestionIndex - 1, 0);
+            updateActiveEmailSuggestion();
+            return;
+          }
+
+          if (event.key === 'Enter' && activeSuggestionIndex >= 0) {
+            event.preventDefault();
+            selectEmailSuggestion(currentSuggestions[activeSuggestionIndex]);
+            return;
+          }
+
+          if (event.key === 'Escape') {
+            closeEmailSuggestions();
+          }
+        });
+        emailInput.addEventListener('blur', function () {
+          window.setTimeout(closeEmailSuggestions, 120);
+        });
+      }
+    })();
+  </script>
 {% endcall %}
 {% endblock %}
