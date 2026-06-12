@@ -97,6 +97,8 @@
             </a>
         </div>
 
+        {{ ui_form.metadata(item) }}
+
         <!-- Formulário Principal -->
         {% call ui_form.form_start(url_for('auth.gerar_obra'), 'mainForm', item=item, extra_class='space-y-6') %}
 
@@ -155,7 +157,8 @@
                     <!-- Nome -->
                     <div class="lg:col-span-8">
                         <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Nome da Obra</label>
-                        <input type="text" name="nome" id="nome_obra" value="{{ item.nome if item }}"
+                        <input type="text" name="nome" id="nome_obra"
+                            value="{{ ui_form.blank(item.nome if item else none) }}"
                             placeholder="Ex: Reforma do Galpão Logistico" class="{{ final_input_css }}"
                             {{ 'readonly disabled' if view_mode }} required>
                     </div>
@@ -164,7 +167,7 @@
                     <div class="lg:col-span-4">
                         <label class="block text-xs font-bold text-slate-500 uppercase mb-2">CNPJ da Obra</label>
                         <input type="text" name="cnpj_obra" id="cnpj_obra" maxlength="18"
-                            value="{{ item.cnpj if item }}" placeholder="00.000.000/0000-00"
+                            value="{{ ui_form.blank(item.cnpj if item else none) }}" placeholder="00.000.000/0000-00"
                             class="{{ final_input_css }} font-mono" {{ 'readonly disabled' if view_mode }}>
                         <p id="cnpj-message" class="text-[10px] mt-1 h-3"></p>
                     </div>
@@ -174,7 +177,7 @@
                         <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Cliente</label>
                         {% if view_mode %}
                         <input type="text"
-                            value="{% if item and item.cliente %}{{ item.cliente.razao_social }}{% if item.cliente.cnpj %} ({{ item.cliente.cnpj }}){% endif %}{% endif %}"
+                            value="{% if item and item.cliente %}{{ ui_form.blank(item.cliente.razao_social) }}{% if item.cliente.cnpj %} ({{ item.cliente.cnpj }}){% endif %}{% endif %}"
                             class="{{ final_input_css }}" readonly disabled>
                         {% else %}
                         <div class="relative">
@@ -199,7 +202,8 @@
                     <div class="lg:col-span-3">
                         <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Tipo de Obra</label>
                         {% if view_mode %}
-                        <input type="text" value="{{ item.tipo_obra.nome if item and item.tipo_obra else '' }}"
+                        <input type="text"
+                            value="{{ ui_form.blank(item.tipo_obra.nome if item and item.tipo_obra else none) }}"
                             class="{{ final_input_css }}" readonly disabled>
                         {% else %}
                         <div class="relative">
@@ -353,8 +357,9 @@
                 <div class="col-span-12 sm:col-span-4">
                     <label class="block text-xs font-bold text-slate-500 uppercase mb-2">CEP</label>
                     <input type="hidden" name="ibge_municipio" id="ibge_municipio">
-                    <input type="text" name="cep" id="cep" maxlength="9" value="{{ item.cep if item }}"
-                        placeholder="00000-000" class="{{ final_input_css }}" {{ 'readonly disabled' if view_mode }}>
+                    <input type="text" name="cep" id="cep" maxlength="9"
+                        value="{{ ui_form.blank(item.cep if item else none) }}" placeholder="00000-000"
+                        class="{{ final_input_css }}" {{ 'readonly disabled' if view_mode }}>
                     <p id="cep-message" class="text-[10px] mt-1 h-3"></p>
                 </div>
                 <div class="col-span-12 sm:col-span-8 flex items-end pb-1">
@@ -362,23 +367,27 @@
 
                 <div class="col-span-12 sm:col-span-8">
                     <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Logradouro</label>
-                    <input type="text" name="logradouro" id="logradouro" value="{{ item.logradouro if item }}"
-                        class="{{ final_input_css }}" {{ 'readonly disabled' if view_mode }}>
+                    <input type="text" name="logradouro" id="logradouro"
+                        value="{{ ui_form.blank(item.logradouro if item else none) }}" class="{{ final_input_css }}"
+                        {{ 'readonly disabled' if view_mode }}>
                 </div>
                 <div class="col-span-12 sm:col-span-4">
                     <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Número</label>
-                    <input type="text" name="numero" id="numero" value="{{ item.numero if item }}"
-                        class="{{ final_input_css }}" {{ 'readonly disabled' if view_mode }}>
+                    <input type="text" name="numero" id="numero"
+                        value="{{ ui_form.blank(item.numero if item else none) }}" class="{{ final_input_css }}"
+                        {{ 'readonly disabled' if view_mode }}>
                 </div>
                 <div class="col-span-12">
                     <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Complemento</label>
-                    <input type="text" name="complemento" id="complemento" value="{{ item.complemento if item }}"
-                        class="{{ final_input_css }}" {{ 'readonly disabled' if view_mode }}>
+                    <input type="text" name="complemento" id="complemento"
+                        value="{{ ui_form.blank(item.complemento if item else none) }}" class="{{ final_input_css }}"
+                        {{ 'readonly disabled' if view_mode }}>
                 </div>
                 <div class="col-span-12 sm:col-span-5">
                     <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Bairro</label>
-                    <input type="text" name="bairro" id="bairro" value="{{ item.bairro if item }}"
-                        class="{{ final_input_css }}" {{ 'readonly disabled' if view_mode }}>
+                    <input type="text" name="bairro" id="bairro"
+                        value="{{ ui_form.blank(item.bairro if item else none) }}" class="{{ final_input_css }}"
+                        {{ 'readonly disabled' if view_mode }}>
                     {% if not view_mode %}
                     <datalist id="bairro-options">
                         {% if item and item.bairro %}<option value="{{ item.bairro }}">{% endif %}
@@ -388,13 +397,15 @@
                 <div class="col-span-12 sm:col-span-5">
                     <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Cidade</label>
                     {% if view_mode %}
-                    <input type="text" name="cidade" id="cidade" value="{{ item.cidade if item }}"
-                        class="{{ final_input_css }}" readonly disabled
-                        data-current-city="{{ item.cidade if item else '' }}" data-ibge-validated="">
+                    <input type="text" name="cidade" id="cidade"
+                        value="{{ ui_form.blank(item.cidade if item else none) }}" class="{{ final_input_css }}"
+                        readonly disabled data-current-city="{{ ui_form.blank(item.cidade if item else none) }}"
+                        data-ibge-validated="">
                     {% else %}
                     <div class="relative">
                         <select name="cidade" id="cidade" class="{{ final_input_css }} {{ select_view_css }}"
-                            data-current-city="{{ item.cidade if item else '' }}" data-ibge-validated="">
+                            data-current-city="{{ ui_form.blank(item.cidade if item else none) }}"
+                            data-ibge-validated="">
                             <option value="">Selecione o estado...</option>
                         </select>
                         <div
@@ -407,14 +418,16 @@
                 <div class="col-span-12 sm:col-span-2">
                     <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Estado</label>
                     {% if view_mode %}
-                    <input type="text" name="estado" id="estado" maxlength="2" value="{{ item.estado if item }}"
+                    <input type="text" name="estado" id="estado" maxlength="2"
+                        value="{{ ui_form.blank(item.estado if item else none) }}"
                         class="{{ final_input_css }} text-center uppercase" readonly disabled
-                        data-current-state="{{ item.estado if item else '' }}" data-ibge-validated="">
+                        data-current-state="{{ ui_form.blank(item.estado if item else none) }}" data-ibge-validated="">
                     {% else %}
                     <div class="relative">
                         <select name="estado" id="estado"
                             class="{{ final_input_css }} {{ select_view_css }} text-center uppercase"
-                            data-current-state="{{ item.estado if item else '' }}" data-ibge-validated="">
+                            data-current-state="{{ ui_form.blank(item.estado if item else none) }}"
+                            data-ibge-validated="">
                             <option value="">UF</option>
                         </select>
                         <div
@@ -485,7 +498,7 @@
                         <tr class="group hover:bg-slate-50 transition-colors">
                             <td class="p-2 full-width-mobile" data-label="Nome:">
                                 <input type="hidden" name="frente_id[]" value="{{ f.id }}">
-                                <input type="text" name="frente_nome[]" value="{{ f.nome_frente }}"
+                                <input type="text" name="frente_nome[]" value="{{ ui_form.blank(f.nome_frente) }}"
                                     class="{{ 'w-full h-9 text-sm px-2 rounded-md bg-transparent border-none font-semibold text-slate-800' if view_mode else 'form-control-std h-9 text-sm' }}"
                                     placeholder="Nome..." required {{ 'readonly' if view_mode }}>
                             </td>
