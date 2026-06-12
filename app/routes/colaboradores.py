@@ -10,8 +10,8 @@ def lista_colaboradores():
     empresa_id = get_current_empresa_id()
     colaboradores = (
         Colaborador.query
-        .filter(Colaborador.empresa_id == empresa_id, Colaborador.ativo.is_(True))
-        .order_by(Colaborador.nome.asc())
+        .filter(Colaborador.empresa_id == empresa_id)
+        .order_by(Colaborador.ativo.desc(), Colaborador.nome.asc())
         .all()
     )
     return render_template("cadastros/colaboradores/list_colaboradores.html", opcoes=colaboradores, categoria="colaborador")
@@ -32,7 +32,7 @@ def criar_colaborador():
 @role_required(PERM_WRITE_BASIC)
 def editar_colaborador(id):
     empresa_id = get_current_empresa_id()
-    item = Colaborador.query.filter_by(id=id, empresa_id=empresa_id).first_or_404()
+    item = hydrate_audit_metadata(Colaborador.query.filter_by(id=id, empresa_id=empresa_id).first_or_404())
     fornecedores = Fornecedor.query.filter_by(empresa_id=empresa_id, ativo=True).order_by(Fornecedor.nome.asc()).all()
     clientes = Cliente.query.filter_by(empresa_id=empresa_id, ativo=True).order_by(Cliente.razao_social.asc()).all()
     return render_template('cadastros/colaboradores/form_colaborador.html', item=item, view_mode=False, fornecedores=fornecedores, clientes=clientes)
@@ -42,7 +42,7 @@ def editar_colaborador(id):
 @login_required
 def visualizar_colaborador(id):
     empresa_id = get_current_empresa_id()
-    item = Colaborador.query.filter_by(id=id, empresa_id=empresa_id).first_or_404()
+    item = hydrate_audit_metadata(Colaborador.query.filter_by(id=id, empresa_id=empresa_id).first_or_404())
     fornecedores = Fornecedor.query.filter_by(empresa_id=empresa_id, ativo=True).order_by(Fornecedor.nome.asc()).all()
     clientes = Cliente.query.filter_by(empresa_id=empresa_id, ativo=True).order_by(Cliente.razao_social.asc()).all()
     return render_template('cadastros/colaboradores/form_colaborador.html', item=item, view_mode=True, fornecedores=fornecedores, clientes=clientes)
@@ -53,6 +53,7 @@ def visualizar_colaborador(id):
 @role_required(PERM_WRITE_BASIC)
 def gerar_colaborador():
     empresa_id = get_current_empresa_id()
+    user_id = get_current_user_id()
 
     colaborador_id = request.form.get('id')
     nome = _normalize_option_input(request.form.get('nome', ''))
@@ -92,6 +93,7 @@ def gerar_colaborador():
         colaborador.fornecedor_id = fornecedor_id
         colaborador.cliente_id = cliente_id
         colaborador.ativo = ativo
+        set_audit_on_update(colaborador, user_id=user_id)
     else:
         novo = Colaborador(
             empresa_id=empresa_id,
@@ -102,6 +104,7 @@ def gerar_colaborador():
             cliente_id=cliente_id,
             ativo=ativo,
         )
+        set_audit_on_create(novo, user_id=user_id)
         db.session.add(novo)
 
     db.session.commit()
@@ -115,6 +118,6 @@ def excluir_colaborador(id):
     empresa_id = get_current_empresa_id()
     colaborador = Colaborador.query.filter_by(id=id, empresa_id=empresa_id).first()
     if colaborador:
-        colaborador.ativo = False
+        set_audit_on_inactivate(colaborador)
         db.session.commit()
     return redirect(url_for('auth.lista_colaboradores'))

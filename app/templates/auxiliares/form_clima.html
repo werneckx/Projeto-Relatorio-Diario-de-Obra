@@ -23,13 +23,17 @@
             </p>
         </div>
         <!-- Botão Voltar (Desktop) -->
+        {% if view_mode or not (item and item.id) %}
         <a href="{{ url_for('auth.lista_climas') }}"
             class="hidden md:inline-flex items-center text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors">
             <i class="fas fa-arrow-left mr-2"></i> Voltar
         </a>
+        {% endif %}
     </div>
 
     <!-- Formulário -->
+    {{ ui_form.metadata(item) }}
+
     {% call ui_form.form_start(action=url_for('auth.gerar_clima'), form_id='climaForm', item=item, extra_class='space-y-6') %}
 
         <!-- Card Principal -->
@@ -52,7 +56,7 @@
                         Nome do Clima <span class="text-red-500">*</span>
                     </label>
                     <div class="relative">
-                        <input type="text" name="nome" id="nome" value="{{ item.nome if item }}"
+                        <input type="text" name="nome" id="nome" value="{{ ui_form.blank(item.nome if item else none) }}"
                             class="{{ ui_form.control_classes(view_mode=view_mode, extra='pr-10') }}"
                             placeholder="Ex: Ensolarado, Chuva Leve..." {{ 'readonly disabled' if view_mode }} required>
                         {% if not view_mode %}
@@ -77,6 +81,8 @@
             list_url=url_for('auth.lista_climas'),
             view_mode=view_mode,
             edit_url=(url_for('auth.editar_clima', id=item.id) if item and item.id else None),
+            view_url=(url_for('auth.visualizar_clima', id=item.id) if item and item.id else None),
+            item=item,
             submit_label='Salvar Registro',
             cancel_label='Cancelar',
             back_label='Voltar',

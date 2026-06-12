@@ -132,16 +132,18 @@ def _ensure_obra_usuario_access(obra, usuario_id, criado_por=None):
     ).first()
     if obra_usuario:
         obra_usuario.ativo = True
-        obra_usuario.modificado_por = criado_por
+        set_audit_on_update(obra_usuario, user_id=criado_por)
         return
 
-    db.session.add(ObraUsuario(
+    novo_vinculo = ObraUsuario(
         empresa_id=obra.empresa_id,
         obra_id=obra.id,
         usuario_id=usuario_id,
         ativo=True,
         criado_por=criado_por,
-    ))
+    )
+    set_audit_on_create(novo_vinculo, user_id=criado_por)
+    db.session.add(novo_vinculo)
 
 
 def _sync_admin_obras_empresa(empresa_id, criado_por=None):
@@ -363,6 +365,7 @@ def toggle_user_obras(obraid):
     empresa_id = session.get('empresa_id')
     obra = Obra.query.filter_by(id=obraid, empresa_id=empresa_id).first_or_404()
     obra.status = not obra.status 
+    set_audit_on_update(obra)
     try:
         db.session.commit()
         return {"message": "Status atualizado com sucesso"}, 200
@@ -432,6 +435,7 @@ def gerar_obra():
         return redirect(url_for("auth.lista_obras"))
 
     criado_por = session.get('user_id')
+    audit_user_id = get_current_user_id()
 
     # Campos do schema (com fallback para nomes legados)
     data_inicio_str = request.form.get("data_inicio") or request.form.get("inicio")
@@ -540,6 +544,7 @@ def gerar_obra():
             obra.cidade = cidade
             obra.estado = estado
             obra.ativo = ativo
+            set_audit_on_update(obra, user_id=audit_user_id)
             flash("Obra atualizada com sucesso!", "success")
         else:
             obra = Obra(
@@ -566,6 +571,7 @@ def gerar_obra():
                 estado=estado,
                 ativo=ativo
             )
+            set_audit_on_create(obra, user_id=audit_user_id)
             db.session.add(obra)
             db.session.flush() 
             flash("Obra cadastrada com sucesso!", "success")
@@ -582,7 +588,7 @@ def gerar_obra():
                     continue
                 frente = FrenteTrabalho.query.filter_by(frente_trabalho_id=f_id, obra_id=obra.id, empresa_id=obra.empresa_id).first()
                 if frente:
-                    frente.ativo = False
+                    set_audit_on_inactivate(frente, user_id=audit_user_id)
             
             for f_nova in data.get('novas', []):
                 nova_frente = FrenteTrabalho(
@@ -594,8 +600,8 @@ def gerar_obra():
                     data_planejada=datetime.strptime(f_nova.get('data_planejada'), '%Y-%m-%d').date() if f_nova.get('data_planejada') else None,
                     data_fim=datetime.strptime(f_nova.get('data_fim'), '%Y-%m-%d').date() if f_nova.get('data_fim') else None,
                     ativo=_parse_bool(f_nova.get('ativo'), default=True),
-                    criado_por=f_nova['criado_por'] if f_nova.get('criado_por') else None
                 )
+                set_audit_on_create(nova_frente, user_id=audit_user_id)
                 db.session.add(nova_frente)
 
             for f_edit in data.get('editadas', []):
@@ -607,8 +613,8 @@ def gerar_obra():
                     frente_existente.data_inicio = datetime.strptime(f_edit.get('data_inicio'), '%Y-%m-%d').date() if f_edit.get('data_inicio') else None
                     frente_existente.data_planejada = datetime.strptime(f_edit.get('data_planejada'), '%Y-%m-%d').date() if f_edit.get('data_planejada') else None
                     frente_existente.data_fim = datetime.strptime(f_edit.get('data_fim'), '%Y-%m-%d').date() if f_edit.get('data_fim') else None
-                    frente_existente.criado_por = f_edit['criado_por'] if f_edit.get('criado_por') else None
                     frente_existente.ativo = _parse_bool(f_edit.get('ativo'), default=True)
+                    set_audit_on_update(frente_existente, user_id=audit_user_id)
 
         # Legacy equipe de obra não possui modelo compatível com o schema atual.
         # O payload é preservado no formulário, mas não é gravado enquanto a tabela de suporte não estiver disponível.
@@ -630,7 +636,7 @@ def editar_obra(id):
         abort(403)
 
     empresa_id = session.get('empresa_id')
-    obra = Obra.query.filter_by(id=id, empresa_id=empresa_id).first_or_404()
+    obra = hydrate_audit_metadata(Obra.query.filter_by(id=id, empresa_id=empresa_id).first_or_404())
     frentes = (
         FrenteTrabalho.query
         .filter_by(obra_id=id, empresa_id=empresa_id)
@@ -666,7 +672,7 @@ def visualizar_obra(id):
         return redirect(url_for('auth.lista_obras'))
 
     empresa_id = session.get('empresa_id')
-    item = Obra.query.filter_by(id=id, empresa_id=empresa_id).first_or_404()
+    item = hydrate_audit_metadata(Obra.query.filter_by(id=id, empresa_id=empresa_id).first_or_404())
     usuarios = Usuario.query.filter_by(status=1).all()
     clientes = Cliente.query.filter_by(empresa_id=session.get('empresa_id'), ativo=True).order_by(Cliente.razao_social.asc()).all()
     tipos_obra = AuxTipoObra.query.filter_by(ativo=True).order_by(AuxTipoObra.nome.asc()).all()
@@ -857,8 +863,8 @@ def api_frente_colaboradores_create(frente_id):
         data_inicio=_parse_date(data_inicio) if data_inicio else None,
         data_fim=_parse_date(data_fim) if data_fim else None,
         ativo=bool(ativo),
-        criado_por=session.get("user_id"),
     )
+    set_audit_on_create(novo)
     db.session.add(novo)
     db.session.commit()
     novo = (
@@ -894,7 +900,7 @@ def api_frente_colaborador_update(vinculo_id):
     vinculo.data_inicio = _parse_date(data.get("data_inicio")) if data.get("data_inicio") else None
     vinculo.data_fim = _parse_date(data.get("data_fim")) if data.get("data_fim") else None
     vinculo.ativo = bool(data.get("ativo", vinculo.ativo))
-    vinculo.modificado_por = session.get("user_id")
+    set_audit_on_update(vinculo)
 
     db.session.commit()
     return jsonify({
@@ -917,7 +923,7 @@ def api_frente_colaborador_toggle(vinculo_id):
         vinculo.data_fim = None
     elif not vinculo.ativo and vinculo.data_fim is None:
         vinculo.data_fim = datetime.utcnow().date()
-    vinculo.modificado_por = session.get("user_id")
+    set_audit_on_update(vinculo)
     db.session.commit()
     return jsonify({
         "ok": True,
@@ -939,6 +945,7 @@ def toggle_obra_status(id):
     obra = Obra.query.filter_by(id=id, empresa_id=empresa_id).first_or_404()
     if obra.status == 1: obra.status = 0
     else: obra.status = 1
+    set_audit_on_update(obra)
     try:
         db.session.commit()
         return '', 200 

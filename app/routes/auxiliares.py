@@ -3,7 +3,7 @@
 @auth_bp.get("/lista-climas")
 @login_required
 def lista_climas():
-    climas = AuxClima.query.filter_by(ativo=True).order_by(AuxClima.nome.asc()).all()
+    climas = AuxClima.query.order_by(AuxClima.ativo.desc(), AuxClima.nome.asc()).all()
     return render_template("auxiliares/list_climas.html", opcoes=climas, categoria="clima")
 
 @auth_bp.get('/criar-clima')
@@ -17,6 +17,7 @@ def criar_clima():
 @role_required(PERM_WRITE_BASIC)
 def gerar_clima():
     clima_id = request.form.get('id')
+    user_id = get_current_user_id()
     tipo_lista = "Climas"
     nome = _normalize_option_input(request.form.get('nome', ''))
     ativo = request.form.get('ativo') == '1'
@@ -37,11 +38,13 @@ def gerar_clima():
         if not clima: return redirect(url_for('auth.lista_climas'))
         clima.nome = nome
         clima.ativo = ativo
+        set_audit_on_update(clima, user_id=user_id)
         db.session.add(clima)
         db.session.commit()
         return redirect(url_for('auth.lista_climas'))
 
     novo = AuxClima(nome=nome, tipo_lista=tipo_lista, ativo=ativo)
+    set_audit_on_create(novo, user_id=user_id)
     db.session.add(novo)
     db.session.commit()
     return redirect(url_for('auth.lista_climas'))
@@ -49,14 +52,14 @@ def gerar_clima():
 @auth_bp.get('/visualizar-clima/<int:id>')
 @login_required
 def visualizar_clima(id):
-    clima = AuxClima.query.get_or_404(id)
+    clima = hydrate_audit_metadata(AuxClima.query.get_or_404(id))
     return render_template('auxiliares/form_clima.html', item=clima, view_mode=True)
 
 @auth_bp.get('/editar-clima/<int:id>')
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def editar_clima(id):
-    clima = AuxClima.query.get_or_404(id)
+    clima = hydrate_audit_metadata(AuxClima.query.get_or_404(id))
     return render_template('auxiliares/form_clima.html', item=clima, view_mode=False)
 
 @auth_bp.post('/excluir-clima/<int:id>')
@@ -65,7 +68,7 @@ def editar_clima(id):
 def excluir_clima(id):
     clima = AuxClima.query.get(id)
     if clima:
-        clima.ativo = False
+        set_audit_on_inactivate(clima)
         db.session.add(clima)
         db.session.commit()
     return redirect(url_for('auth.lista_climas'))
@@ -75,7 +78,7 @@ def excluir_clima(id):
 @auth_bp.get("/lista-equipamentos")
 @login_required
 def lista_equipamentos():
-    equipamentos = AuxEquipamentos.query.filter_by(ativo=True).order_by(AuxEquipamentos.nome.asc()).all()
+    equipamentos = AuxEquipamentos.query.order_by(AuxEquipamentos.ativo.desc(), AuxEquipamentos.nome.asc()).all()
     return render_template("auxiliares/list_equipamentos.html", opcoes=equipamentos, categoria="equipamento")
 
 @auth_bp.get('/criar-equipamento')
@@ -89,6 +92,7 @@ def criar_equipamento():
 @role_required(PERM_WRITE_BASIC)
 def gerar_equipamento():
     equipamento_id = request.form.get('id')
+    user_id = get_current_user_id()
     tipo_lista = "Equipamentos"
     nome = _normalize_option_input(request.form.get('nome', ''))
     ativo = request.form.get('ativo') == '1'
@@ -107,9 +111,11 @@ def gerar_equipamento():
         equipamento = AuxEquipamentos.query.get(equipamento_id)
         equipamento.nome = nome
         equipamento.ativo = ativo
+        set_audit_on_update(equipamento, user_id=user_id)
         db.session.add(equipamento)
     else:
         novo = AuxEquipamentos(nome=nome, tipo_lista=tipo_lista, ativo=ativo)
+        set_audit_on_create(novo, user_id=user_id)
         db.session.add(novo)
     db.session.commit()
     return redirect(url_for('auth.lista_equipamentos'))
@@ -117,14 +123,14 @@ def gerar_equipamento():
 @auth_bp.get('/visualizar-equipamento/<int:id>')
 @login_required
 def visualizar_equipamento(id):
-    equipamento = AuxEquipamentos.query.get_or_404(id)
+    equipamento = hydrate_audit_metadata(AuxEquipamentos.query.get_or_404(id))
     return render_template('auxiliares/form_equipamento.html', item=equipamento, view_mode=True)
 
 @auth_bp.get('/editar-equipamento/<int:id>')
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def editar_equipamento(id):
-    equipamento = AuxEquipamentos.query.get_or_404(id)
+    equipamento = hydrate_audit_metadata(AuxEquipamentos.query.get_or_404(id))
     return render_template('auxiliares/form_equipamento.html', item=equipamento, view_mode=False)
 
 @auth_bp.post('/excluir-equipamento/<int:id>')
@@ -133,7 +139,7 @@ def editar_equipamento(id):
 def excluir_equipamento(id):
     equipamento = AuxEquipamentos.query.get(id)
     if equipamento:
-        equipamento.ativo = False
+        set_audit_on_inactivate(equipamento)
         db.session.add(equipamento)
         db.session.commit()
     return redirect(url_for('auth.lista_equipamentos'))
@@ -143,7 +149,7 @@ def excluir_equipamento(id):
 @auth_bp.get("/lista-tags-ocorrencias")
 @login_required
 def lista_tags_ocorrencias():
-    tagsOcorrencias = AuxTagOcorrencia.query.filter_by(ativo=True).order_by(AuxTagOcorrencia.nome.asc()).all()
+    tagsOcorrencias = AuxTagOcorrencia.query.order_by(AuxTagOcorrencia.ativo.desc(), AuxTagOcorrencia.nome.asc()).all()
     return render_template("auxiliares/list_tags_ocorrencias.html", opcoes=tagsOcorrencias, categoria="tagsOcorrencias")
 
 @auth_bp.get('/criar-tags-ocorrencias')
@@ -157,6 +163,7 @@ def criar_tags_ocorrencias():
 @role_required(PERM_WRITE_BASIC)
 def gerar_tags_ocorrencias():
     tag_id = request.form.get('id')
+    user_id = get_current_user_id()
     nome = _normalize_option_input(request.form.get('nome', ''))
     ativo = request.form.get('ativo') == '1'
     if not nome:
@@ -174,23 +181,26 @@ def gerar_tags_ocorrencias():
         tag = AuxTagOcorrencia.query.get(tag_id)
         tag.nome = nome
         tag.ativo = ativo
+        set_audit_on_update(tag, user_id=user_id)
         db.session.add(tag)
     else:
-        db.session.add(AuxTagOcorrencia(nome=nome, tipo_lista="Tags Ocorrencias", ativo=ativo))
+        nova_tag = AuxTagOcorrencia(nome=nome, tipo_lista="Tags Ocorrencias", ativo=ativo)
+        set_audit_on_create(nova_tag, user_id=user_id)
+        db.session.add(nova_tag)
     db.session.commit()
     return redirect(url_for('auth.lista_tags_ocorrencias'))
 
 @auth_bp.get('/visualizar-tags-ocorrencias/<int:id>')
 @login_required
 def visualizar_tags_ocorrencias(id):
-    tag = AuxTagOcorrencia.query.get_or_404(id)
+    tag = hydrate_audit_metadata(AuxTagOcorrencia.query.get_or_404(id))
     return render_template('auxiliares/form_tags_ocorrencias.html', item=tag, view_mode=True)
 
 @auth_bp.get('/editar-tags-ocorrencias/<int:id>')
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def editar_tags_ocorrencias(id):
-    tag = AuxTagOcorrencia.query.get_or_404(id)
+    tag = hydrate_audit_metadata(AuxTagOcorrencia.query.get_or_404(id))
     return render_template('auxiliares/form_tags_ocorrencias.html', item=tag, view_mode=False)
 
 @auth_bp.post('/excluir-tags-ocorrencias/<int:id>')
@@ -199,7 +209,7 @@ def editar_tags_ocorrencias(id):
 def excluir_tags_ocorrencias(id):
     tag = AuxTagOcorrencia.query.get(id)
     if tag:
-        tag.ativo = False
+        set_audit_on_inactivate(tag)
         db.session.add(tag)
         db.session.commit()
     return redirect(url_for('auth.lista_tags_ocorrencias'))
@@ -212,7 +222,7 @@ def excluir_tags_ocorrencias(id):
 @auth_bp.get("/lista-funcoes")
 @login_required
 def lista_funcoes():
-    funcoes = AuxFuncoes.query.filter_by(ativo=True).order_by(AuxFuncoes.nome.asc()).all()
+    funcoes = AuxFuncoes.query.order_by(AuxFuncoes.ativo.desc(), AuxFuncoes.nome.asc()).all()
     return render_template("auxiliares/list_funcoes.html", opcoes=funcoes, categoria="funcoes")
 
 @auth_bp.get("/lista-mao-obra")
@@ -239,6 +249,7 @@ def criar_mao_obra():
 @role_required(PERM_WRITE_BASIC)
 def gerar_funcao():
     funcao_id = request.form.get("id")
+    user_id = get_current_user_id()
     nome = _normalize_option_input(request.form.get("nome", ""))
     tipo = _normalize_option_input(request.form.get("tipo", "")) or None
     ativo = request.form.get("ativo") == "1"
@@ -261,9 +272,12 @@ def gerar_funcao():
         funcao.nome = nome
         funcao.tipo = tipo
         funcao.ativo = ativo
+        set_audit_on_update(funcao, user_id=user_id)
         db.session.add(funcao)
     else:
-        db.session.add(AuxFuncoes(nome=nome, tipo_lista="Mao de Obra", tipo=tipo, ativo=ativo))
+        nova_funcao = AuxFuncoes(nome=nome, tipo_lista="Mao de Obra", tipo=tipo, ativo=ativo)
+        set_audit_on_create(nova_funcao, user_id=user_id)
+        db.session.add(nova_funcao)
 
     db.session.commit()
     return redirect(url_for("auth.lista_funcoes"))
@@ -278,7 +292,7 @@ def gerar_mao_obra():
 @auth_bp.get("/visualizar-funcao/<int:id>")
 @login_required
 def visualizar_funcao(id):
-    funcao = AuxFuncoes.query.get_or_404(id)
+    funcao = hydrate_audit_metadata(AuxFuncoes.query.get_or_404(id))
     return render_template("auxiliares/form_funcoes.html", item=funcao, view_mode=True)
 
 @auth_bp.get("/visualizar-mao-obra/<int:id>")
@@ -291,7 +305,7 @@ def visualizar_mao_obra(id):
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def editar_funcao(id):
-    funcao = AuxFuncoes.query.get_or_404(id)
+    funcao = hydrate_audit_metadata(AuxFuncoes.query.get_or_404(id))
     return render_template("auxiliares/form_funcoes.html", item=funcao, view_mode=False)
 
 @auth_bp.get("/editar-mao-obra/<int:id>")
@@ -307,7 +321,7 @@ def editar_mao_obra(id):
 def excluir_funcao(id):
     funcao = AuxFuncoes.query.get(id)
     if funcao:
-        funcao.ativo = False
+        set_audit_on_inactivate(funcao)
         db.session.add(funcao)
         db.session.commit()
     return redirect(url_for("auth.lista_funcoes"))
@@ -322,7 +336,7 @@ def excluir_mao_obra(id):
 @auth_bp.get("/lista-tipos-obra")
 @login_required
 def lista_tipos_obra():
-    tipos = AuxTipoObra.query.filter_by(ativo=True).order_by(AuxTipoObra.nome.asc()).all()
+    tipos = AuxTipoObra.query.order_by(AuxTipoObra.ativo.desc(), AuxTipoObra.nome.asc()).all()
     return render_template("cadastros/obras/list_tipos_obra.html", opcoes=tipos, categoria="tipo_obra")
 
 
@@ -337,6 +351,7 @@ def criar_tipo_obra():
 @role_required(PERM_WRITE_BASIC)
 def gerar_tipo_obra():
     tipo_id = request.form.get('id')
+    user_id = get_current_user_id()
     nome = _normalize_option_input(request.form.get('nome', ''))
     ativo = request.form.get('ativo') == '1'
     if not nome:
@@ -356,11 +371,13 @@ def gerar_tipo_obra():
         if not tipo: return redirect(url_for('auth.lista_tipos_obra'))
         tipo.nome = nome
         tipo.ativo = ativo
+        set_audit_on_update(tipo, user_id=user_id)
         db.session.add(tipo)
         db.session.commit()
         return redirect(url_for('auth.lista_tipos_obra'))
 
     novo = AuxTipoObra(nome=nome, ativo=ativo)
+    set_audit_on_create(novo, user_id=user_id)
     db.session.add(novo)
     db.session.commit()
     return redirect(url_for('auth.lista_tipos_obra'))
@@ -369,7 +386,7 @@ def gerar_tipo_obra():
 @login_required
 @role_required(PERM_MANAGEMENT)
 def editar_tipo_obra(id):
-    tipo = AuxTipoObra.query.get_or_404(id)
+    tipo = hydrate_audit_metadata(AuxTipoObra.query.get_or_404(id))
     return render_template("cadastros/obras/form_tipo_obra.html", item=tipo, view_mode=False)
 
 @auth_bp.post('/excluir-tipo-obra/<int:id>')
@@ -378,7 +395,7 @@ def editar_tipo_obra(id):
 def excluir_tipo_obra(id):
     tipo = AuxTipoObra.query.get(id)
     if tipo:
-        tipo.ativo = False
+        set_audit_on_inactivate(tipo)
         db.session.add(tipo)
         db.session.commit()
     return redirect(url_for('auth.lista_tipos_obra'))
@@ -386,5 +403,5 @@ def excluir_tipo_obra(id):
 @auth_bp.get('/visualizar-tipo-obra/<int:id>')
 @login_required
 def visualizar_tipo_obra(id):
-    tipo = AuxTipoObra.query.get_or_404(id)
+    tipo = hydrate_audit_metadata(AuxTipoObra.query.get_or_404(id))
     return render_template('cadastros/obras/form_tipo_obra.html', item=tipo, view_mode=True)

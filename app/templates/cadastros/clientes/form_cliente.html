@@ -10,32 +10,34 @@
 {% set subtitle = 'Detalhes do registro selecionado.' if view_mode else ('Atualize as informações.' if item and item.id else 'Cadastre um novo cliente.') %}
 
 {% call ui_form.page_shell() %}
-  {{ ui_form.hero(page_title, subtitle=subtitle, back_url=url_for('auth.lista_clientes')) }}
+  {{ ui_form.hero(page_title, subtitle=subtitle, back_url=url_for('auth.lista_clientes'), view_mode=view_mode, item=item) }}
+
+  {{ ui_form.metadata(item) }}
 
   {% call ui_form.form_start(action=url_for('auth.gerar_cliente'), form_id='clienteForm', item=item) %}
     {% call ui_form.section('Dados do Cliente', icon='fa-handshake', icon_box_class='bg-emerald-50 text-emerald-700') %}
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label for="razao_social" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">
-            Razão Social <span class="text-rose-500">*</span>
+            Razão Social
           </label>
-          <input type="text" name="razao_social" id="razao_social" value="{{ item.razao_social if item }}"
+          <input type="text" name="razao_social" id="razao_social" value="{{ ui_form.blank(item.razao_social if item else none) }}"
             class="{{ ui_form.control_classes(view_mode=view_mode) }}"
             placeholder="Ex: Empresa XYZ S/A" {{ 'readonly disabled' if view_mode }} required>
         </div>
 
         <div>
           <label for="nome_fantasia" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Nome Fantasia</label>
-          <input type="text" name="nome_fantasia" id="nome_fantasia" value="{{ item.nome_fantasia if item }}"
+          <input type="text" name="nome_fantasia" id="nome_fantasia" value="{{ ui_form.blank(item.nome_fantasia if item else none) }}"
             class="{{ ui_form.control_classes(view_mode=view_mode) }}"
             placeholder="Ex: XYZ" {{ 'readonly disabled' if view_mode }}>
         </div>
 
         <div>
           <label for="cnpj" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">
-            CNPJ <span class="text-rose-500">*</span>
+            CNPJ
           </label>
-          <input type="text" name="cnpj" id="cnpj" value="{{ item.cnpj if item }}"
+          <input type="text" name="cnpj" id="cnpj" value="{{ ui_form.blank(item.cnpj if item else none) }}"
             class="{{ ui_form.control_classes(view_mode=view_mode, extra='font-mono') }}"
             placeholder="00.000.000/0000-00" {{ 'readonly disabled' if view_mode }} required>
         </div>
@@ -48,21 +50,25 @@
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
           <label for="contato_nome" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Contato (Nome)</label>
-          <input type="text" name="contato_nome" id="contato_nome" value="{{ item.contato_nome if item }}"
+          <input type="text" name="contato_nome" id="contato_nome" value="{{ ui_form.blank(item.contato_nome if item else none) }}"
             class="{{ ui_form.control_classes(view_mode=view_mode) }}"
             placeholder="Ex: João Silva" {{ 'readonly disabled' if view_mode }}>
         </div>
         <div>
           <label for="contato_email" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Contato (E-mail)</label>
-          <input type="email" name="contato_email" id="contato_email" value="{{ item.contato_email if item }}"
-            class="{{ ui_form.control_classes(view_mode=view_mode) }}"
-            placeholder="exemplo@cliente.com" {{ 'readonly disabled' if view_mode }}>
+          <div class="relative">
+            <input type="email" name="contato_email" id="contato_email" value="{{ ui_form.blank(item.contato_email if item else none) }}"
+              class="{{ ui_form.control_classes(view_mode=view_mode) }}"
+              placeholder="exemplo@cliente.com" autocomplete="email" autocapitalize="none" spellcheck="false"
+              {{ 'readonly disabled' if view_mode }}>
+            <div id="contato_email_suggestions" class="ds-autocomplete-panel" role="listbox" aria-label="Sugestões de e-mail"></div>
+          </div>
         </div>
         <div>
           <label for="contato_telefone" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Contato (Telefone)</label>
-          <input type="text" name="contato_telefone" id="contato_telefone" value="{{ item.contato_telefone if item }}"
+          <input type="text" name="contato_telefone" id="contato_telefone" value="{{ ui_form.blank(item.contato_telefone if item else none) }}"
             class="{{ ui_form.control_classes(view_mode=view_mode) }}"
-            placeholder="(00) 00000-0000" {{ 'readonly disabled' if view_mode }}>
+            placeholder="(00) 00000-0000" inputmode="numeric" maxlength="15" {{ 'readonly disabled' if view_mode }}>
         </div>
       </div>
     {% endcall %}
@@ -71,6 +77,8 @@
       list_url=url_for('auth.lista_clientes'),
       view_mode=view_mode,
       edit_url=(url_for('auth.editar_cliente', id=item.id) if item and item.id else None),
+      view_url=(url_for('auth.visualizar_cliente', id=item.id) if item and item.id else None),
+      item=item,
       submit_label='Salvar Cliente',
       cancel_label='Cancelar',
       back_label='Voltar',
@@ -79,6 +87,178 @@
   {% endcall %}
 
   {{ ui_form.submit_script(form_id='clienteForm', submit_btn_id='submitBtn', loading_label='Salvando...') }}
+  <script>
+    (function () {
+      const phoneInput = document.getElementById('contato_telefone');
+      const emailInput = document.getElementById('contato_email');
+      const emailSuggestions = document.getElementById('contato_email_suggestions');
+      const commonDomains = ['gmail.com', 'outlook.com', 'hotmail.com', 'yahoo.com.br', 'empresa.com', 'cliente.com'];
+      let activeSuggestionIndex = -1;
+      let currentSuggestions = [];
+      let suggestionCleanupBound = false;
+
+      function formatPhone(value) {
+        const digits = (value || '').replace(/\D/g, '').slice(0, 11);
+        if (!digits) return '';
+        if (digits.length <= 2) return `(${digits}`;
+        if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+        if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+        return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+      }
+
+      function positionEmailSuggestions() {
+        if (!emailInput || !emailSuggestions || !emailSuggestions.classList.contains('is-open')) return;
+
+        const rect = emailInput.getBoundingClientRect();
+        const viewportPadding = 12;
+        const gap = 6;
+        const availableBelow = window.innerHeight - rect.bottom - viewportPadding;
+        const availableAbove = rect.top - viewportPadding;
+        const desiredHeight = Math.min(emailSuggestions.scrollHeight || 0, 256);
+        const shouldOpenAbove = availableBelow < Math.min(desiredHeight, 140) && availableAbove > availableBelow;
+        const panelHeight = Math.max(48, Math.min(desiredHeight, shouldOpenAbove ? availableAbove : availableBelow, 256));
+        const panelWidth = Math.min(rect.width, window.innerWidth - (viewportPadding * 2));
+        const left = Math.min(Math.max(rect.left, viewportPadding), window.innerWidth - panelWidth - viewportPadding);
+        const top = shouldOpenAbove
+          ? Math.max(viewportPadding, rect.top - panelHeight - gap)
+          : rect.bottom + gap;
+
+        emailSuggestions.style.width = `${panelWidth}px`;
+        emailSuggestions.style.left = `${left}px`;
+        emailSuggestions.style.top = `${top}px`;
+        emailSuggestions.style.maxHeight = `${panelHeight}px`;
+      }
+
+      function bindSuggestionViewportEvents() {
+        if (suggestionCleanupBound) return;
+        suggestionCleanupBound = true;
+        window.addEventListener('resize', positionEmailSuggestions);
+        window.addEventListener('scroll', positionEmailSuggestions, true);
+      }
+
+      function closeEmailSuggestions() {
+        if (!emailSuggestions) return;
+        emailSuggestions.classList.remove('is-open');
+        emailSuggestions.innerHTML = '';
+        emailSuggestions.style.removeProperty('width');
+        emailSuggestions.style.removeProperty('left');
+        emailSuggestions.style.removeProperty('top');
+        emailSuggestions.style.removeProperty('max-height');
+        activeSuggestionIndex = -1;
+        currentSuggestions = [];
+      }
+
+      function selectEmailSuggestion(value) {
+        if (!emailInput) return;
+        emailInput.value = value;
+        closeEmailSuggestions();
+        emailInput.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+
+      function renderEmailSuggestions(items) {
+        if (!emailSuggestions) return;
+        emailSuggestions.innerHTML = '';
+        currentSuggestions = items.slice();
+
+        if (!items.length) {
+          closeEmailSuggestions();
+          return;
+        }
+
+        items.forEach((suggestion, index) => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'ds-autocomplete-option';
+          button.setAttribute('role', 'option');
+          button.dataset.index = String(index);
+          button.textContent = suggestion;
+          button.addEventListener('mousedown', function (event) {
+            event.preventDefault();
+            selectEmailSuggestion(suggestion);
+          });
+          emailSuggestions.appendChild(button);
+        });
+
+        emailSuggestions.classList.add('is-open');
+        activeSuggestionIndex = -1;
+        bindSuggestionViewportEvents();
+        positionEmailSuggestions();
+      }
+
+      function updateActiveEmailSuggestion() {
+        if (!emailSuggestions) return;
+        Array.from(emailSuggestions.querySelectorAll('.ds-autocomplete-option')).forEach((option, index) => {
+          option.classList.toggle('is-active', index === activeSuggestionIndex);
+        });
+      }
+
+      function updateEmailSuggestions(value) {
+        if (!emailInput || !emailSuggestions) return;
+
+        const typedValue = (value || '').trim().toLowerCase();
+        const [localPart, partialDomain = ''] = typedValue.split('@');
+        let suggestions = [];
+
+        if (!localPart) {
+          suggestions = ['contato@empresa.com', 'financeiro@empresa.com', 'comercial@empresa.com', 'administrativo@empresa.com'];
+          renderEmailSuggestions(suggestions);
+          return;
+        }
+
+        suggestions = commonDomains
+          .filter((domain) => !partialDomain || domain.startsWith(partialDomain))
+          .slice(0, 6)
+          .map((domain) => `${localPart}@${domain}`);
+
+        renderEmailSuggestions(suggestions);
+      }
+
+      if (phoneInput && !phoneInput.disabled && !phoneInput.readOnly) {
+        phoneInput.value = formatPhone(phoneInput.value);
+        phoneInput.addEventListener('input', function () {
+          phoneInput.value = formatPhone(phoneInput.value);
+        });
+      }
+
+      if (emailInput && !emailInput.disabled && !emailInput.readOnly) {
+        emailInput.addEventListener('input', function () {
+          updateEmailSuggestions(emailInput.value);
+        });
+        emailInput.addEventListener('focus', function () {
+          updateEmailSuggestions(emailInput.value);
+        });
+        emailInput.addEventListener('keydown', function (event) {
+          if (!currentSuggestions.length) return;
+
+          if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            activeSuggestionIndex = Math.min(activeSuggestionIndex + 1, currentSuggestions.length - 1);
+            updateActiveEmailSuggestion();
+            return;
+          }
+
+          if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            activeSuggestionIndex = Math.max(activeSuggestionIndex - 1, 0);
+            updateActiveEmailSuggestion();
+            return;
+          }
+
+          if (event.key === 'Enter' && activeSuggestionIndex >= 0) {
+            event.preventDefault();
+            selectEmailSuggestion(currentSuggestions[activeSuggestionIndex]);
+            return;
+          }
+
+          if (event.key === 'Escape') {
+            closeEmailSuggestions();
+          }
+        });
+        emailInput.addEventListener('blur', function () {
+          window.setTimeout(closeEmailSuggestions, 120);
+        });
+      }
+    })();
+  </script>
 {% endcall %}
 {% endblock %}
-

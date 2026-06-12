@@ -81,6 +81,7 @@ def gerar_usuario():
     user_id = request.form.get("id")
     empresa_id = session.get('empresa_id')
     current_user_obj = Usuario.query.get(session.get("user_id"))
+    audit_user_id = get_current_user_id()
     
     # SCOPING: Para reload do template em caso de erro
     if current_user_obj.is_admin:
@@ -125,15 +126,18 @@ def gerar_usuario():
             user.nome, user.email, user.papel, user.cpf, user.status = nome, email, papel, cpf, status
             try: user.id_supervisor = int(id_supervisor_raw) if id_supervisor_raw else None
             except Exception: user.id_supervisor = None
+            set_audit_on_update(user, user_id=audit_user_id)
         else:
             if Usuario.query.filter_by(cpf=cpf).first():
                 flash("CPF já cadastrado.", "danger")
                 return render_template("cadastros/usuarios/form_usuario.html", item=item_form, obras=obras_ativas)
 
             user = Usuario(nome=nome, email=email, papel=papel, cpf=cpf, status=status, primeiro_acesso=True)
+            user.empresa_id = empresa_id
             try: user.id_supervisor = int(id_supervisor_raw) if id_supervisor_raw else None
             except Exception: user.id_supervisor = None
             user.set_senha(senha if senha else "Usuario123")
+            set_audit_on_create(user, user_id=audit_user_id)
             db.session.add(user)
 
         if papel_norm == ROLE_ADMIN:
@@ -159,7 +163,7 @@ def gerar_usuario():
         try:
             db.session.commit()
             flash("Usuário salvo com sucesso!", "success")
-            return render_template("cadastros/usuarios/form_usuario.html", item=user, obras=obras_ativas, view_mode=True)
+            return redirect(url_for('auth.lista_usuarios'))
         except Exception as e:
             db.session.rollback()
             flash(f"Erro: {str(e)}", "danger")
@@ -178,6 +182,7 @@ def toggle_user_status(userId):
             return jsonify({"message": "Proibido alterar Admin"}), 403
     
     user_alvo.status = not user_alvo.status 
+    set_audit_on_update(user_alvo)
     try:
         db.session.commit()
         return jsonify({"message": "Status atualizado", "status": user_alvo.status}), 200
@@ -198,6 +203,7 @@ def reset_senha_usuario(id):
 
     user.set_senha("Usuario123")
     user.primeiro_acesso = True
+    set_audit_on_update(user)
     db.session.commit()
     return {"message": "Sucesso"}, 200
     
@@ -207,7 +213,7 @@ def reset_senha_usuario(id):
 @permission_required('usuario.manage')
 def editar_usuario(id):
     empresa_id = session.get('empresa_id')
-    user_edit = Usuario.query.filter_by(id=id, empresa_id=empresa_id).first_or_404()
+    user_edit = hydrate_audit_metadata(Usuario.query.filter_by(id=id, empresa_id=empresa_id).first_or_404())
     current_user_obj = Usuario.query.get(session.get("user_id"))
 
     # SECURITY Scope
@@ -226,7 +232,7 @@ def editar_usuario(id):
 @permission_required('usuario.manage')
 def visualizar_usuario(id):
     empresa_id = session.get('empresa_id')
-    user_view = Usuario.query.filter_by(id=id, empresa_id=empresa_id).first_or_404()
+    user_view = hydrate_audit_metadata(Usuario.query.filter_by(id=id, empresa_id=empresa_id).first_or_404())
     current_user_obj = Usuario.query.get(session.get("user_id"))
     
     # SECURITY Scope check
