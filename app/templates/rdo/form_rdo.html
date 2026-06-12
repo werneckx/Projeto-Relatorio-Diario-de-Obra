@@ -443,6 +443,8 @@
         </div>
     </div>
 
+    {{ ui_form.metadata(item) }}
+
     {% call ui_form.form_start(action=url_for('auth.gerar_rdo'), form_id='rdoForm', item=item, extra_class='space-y-6 md:space-y-8', enctype='multipart/form-data') %}
         <input type="hidden" name="rdo_id" value="{{ item.id if item }}">
         <!-- Inputs hidden para exclusão de fotos -->
@@ -975,7 +977,7 @@
                 </label>
                 <textarea name="comentarios_gerais" id="comentarios_gerais" class="form-control-std h-32"
                     placeholder="Insira informações adicionais relevantes..." {{ 'readonly' if view_mode
-                    }}>{{ item.comentarios_gerais if item else '' }}</textarea>
+                    }}>{{ item.comentarios_gerais if item and item.comentarios_gerais else '' }}</textarea>
             </div>
 
             <div class="border-t border-slate-100 pt-6">
