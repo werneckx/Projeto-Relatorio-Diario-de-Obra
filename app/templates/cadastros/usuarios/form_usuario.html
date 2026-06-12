@@ -10,7 +10,7 @@
 {% set subtitle = 'Gestão de credenciais, status e acessos operacionais.' %}
 
 {% call ui_form.page_shell() %}
-  {{ ui_form.hero(page_title, subtitle=subtitle, back_url=url_for('auth.lista_usuarios')) }}
+  {{ ui_form.hero(page_title, subtitle=subtitle, back_url=url_for('auth.lista_usuarios'), view_mode=view_mode, item=item) }}
 
   {{ ui_form.metadata(item) }}
 
@@ -130,6 +130,8 @@
       list_url=url_for('auth.lista_usuarios'),
       view_mode=view_mode,
       edit_url=(url_for('auth.editar_usuario', id=item.id) if item and item.id else None),
+      view_url=(url_for('auth.visualizar_usuario', id=item.id) if item and item.id else None),
+      item=item,
       submit_label='Salvar Usuário',
       cancel_label='Cancelar',
       back_label='Voltar',

@@ -23,10 +23,12 @@
                 campos necessários abaixo.{% else %}Preencha os campos para abrir um novo registro de função.{% endif %}
             </p>
         </div>
+        {% if view_mode or not (item and item.id) %}
         <a href="{{ url_for('auth.lista_funcoes') }}"
             class="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg">
             <i class="fas fa-arrow-left text-xs"></i> Voltar à lista
         </a>
+        {% endif %}
     </div>
 
     {{ ui_form.metadata(item) }}
@@ -86,6 +88,8 @@
                 list_url=url_for('auth.lista_funcoes'),
                 view_mode=view_mode,
                 edit_url=(url_for('auth.editar_funcao', id=item.id) if item and item.id else None),
+                view_url=(url_for('auth.visualizar_funcao', id=item.id) if item and item.id else None),
+                item=item,
                 submit_label='Salvar Função',
                 cancel_label='Cancelar',
                 back_label='Voltar',

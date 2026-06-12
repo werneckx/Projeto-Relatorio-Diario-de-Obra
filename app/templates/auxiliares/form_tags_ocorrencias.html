@@ -20,10 +20,12 @@
                 else %}Cadastre um novo tipo de tag.{% endif %}
             </p>
         </div>
+        {% if view_mode or not (item and item.id) %}
         <a href="{{ url_for('auth.lista_tags_ocorrencias') }}"
             class="hidden md:inline-flex items-center text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors">
             <i class="fas fa-arrow-left mr-2"></i> Voltar
         </a>
+        {% endif %}
     </div>
 
     {{ ui_form.metadata(item) }}
@@ -68,6 +70,8 @@
             list_url=url_for('auth.lista_tags_ocorrencias'),
             view_mode=view_mode,
             edit_url=(url_for('auth.editar_tags_ocorrencias', id=item.id) if item and item.id else None),
+            view_url=(url_for('auth.visualizar_tags_ocorrencias', id=item.id) if item and item.id else None),
+            item=item,
             submit_label='Salvar Registro',
             cancel_label='Cancelar',
             back_label='Voltar',

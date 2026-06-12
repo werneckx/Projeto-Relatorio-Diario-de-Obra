@@ -23,10 +23,12 @@
             </p>
         </div>
         <!-- Botão Voltar (Desktop) -->
+        {% if view_mode or not (item and item.id) %}
         <a href="{{ url_for('auth.lista_climas') }}"
             class="hidden md:inline-flex items-center text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors">
             <i class="fas fa-arrow-left mr-2"></i> Voltar
         </a>
+        {% endif %}
     </div>
 
     <!-- Formulário -->
@@ -79,6 +81,8 @@
             list_url=url_for('auth.lista_climas'),
             view_mode=view_mode,
             edit_url=(url_for('auth.editar_clima', id=item.id) if item and item.id else None),
+            view_url=(url_for('auth.visualizar_clima', id=item.id) if item and item.id else None),
+            item=item,
             submit_label='Salvar Registro',
             cancel_label='Cancelar',
             back_label='Voltar',

@@ -10,7 +10,7 @@
 {% set subtitle = 'Detalhes do registro selecionado.' if view_mode else ('Atualize as informações.' if item and item.id else 'Cadastre um novo fornecedor.') %}
 
 {% call ui_form.page_shell() %}
-  {{ ui_form.hero(page_title, subtitle=subtitle, back_url=url_for('auth.lista_fornecedores')) }}
+  {{ ui_form.hero(page_title, subtitle=subtitle, back_url=url_for('auth.lista_fornecedores'), view_mode=view_mode, item=item) }}
 
   {{ ui_form.metadata(item) }}
 
@@ -48,6 +48,8 @@
       list_url=url_for('auth.lista_fornecedores'),
       view_mode=view_mode,
       edit_url=(url_for('auth.editar_fornecedor', id=item.id) if item and item.id else None),
+      view_url=(url_for('auth.visualizar_fornecedor', id=item.id) if item and item.id else None),
+      item=item,
       submit_label='Salvar Fornecedor',
       cancel_label='Cancelar',
       back_label='Voltar',
