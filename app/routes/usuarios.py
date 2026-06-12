@@ -163,7 +163,7 @@ def gerar_usuario():
         try:
             db.session.commit()
             flash("Usuário salvo com sucesso!", "success")
-            return render_template("cadastros/usuarios/form_usuario.html", item=hydrate_audit_metadata(user), obras=obras_ativas, view_mode=True)
+            return redirect(url_for('auth.lista_usuarios'))
         except Exception as e:
             db.session.rollback()
             flash(f"Erro: {str(e)}", "danger")
