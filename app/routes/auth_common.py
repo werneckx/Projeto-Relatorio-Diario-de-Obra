@@ -68,6 +68,7 @@ from app.utils.qrcode_utils import gerar_qrcode_b64
 from app.utils.rdo_pdf import regenerar_pdf_rdo
 from app.utils.pdf_service import render_rdo_pdf, render_rdo_pdf_compact
 from app.utils.security_pdf import travar_edicao_pdf
+from app.utils.datetime_utils import utcnow_naive
 
 # Tenta importar PyMuPDF para highlighting, caso não tenha, segue sem
 try:
@@ -138,6 +139,123 @@ def get_current_empresa_id():
     """
     user = get_current_user()
     return getattr(user, "empresa_id", None) if user else None
+
+
+def get_current_user_id():
+    user_id = session.get("user_id")
+    if user_id in (None, ""):
+        return None
+    try:
+        return int(user_id)
+    except (TypeError, ValueError):
+        return None
+
+
+def set_audit_on_create(record, user_id=None):
+    if record is None:
+        return record
+
+    actor_id = user_id if user_id is not None else get_current_user_id()
+    now = utcnow_naive()
+
+    if hasattr(record, "criado_por") and getattr(record, "criado_por", None) in (None, ""):
+        setattr(record, "criado_por", actor_id)
+    if hasattr(record, "criado_em") and getattr(record, "criado_em", None) is None:
+        setattr(record, "criado_em", now)
+    if hasattr(record, "modificado_por") and getattr(record, "modificado_por", None) in (None, ""):
+        setattr(record, "modificado_por", actor_id)
+    if hasattr(record, "modificado_em") and getattr(record, "modificado_em", None) is None:
+        setattr(record, "modificado_em", now)
+
+    return record
+
+
+def set_audit_on_update(record, user_id=None):
+    if record is None:
+        return record
+
+    actor_id = user_id if user_id is not None else get_current_user_id()
+    now = utcnow_naive()
+
+    if hasattr(record, "modificado_por"):
+        setattr(record, "modificado_por", actor_id)
+    if hasattr(record, "modificado_em"):
+        setattr(record, "modificado_em", now)
+
+    return record
+
+
+def set_audit_on_inactivate(record, user_id=None):
+    if record is None:
+        return record
+
+    if hasattr(record, "ativo"):
+        setattr(record, "ativo", False)
+
+    return set_audit_on_update(record, user_id=user_id)
+
+
+def hydrate_audit_metadata(records):
+    if records is None:
+        return records
+
+    is_sequence = isinstance(records, (list, tuple, set))
+    items = list(records) if is_sequence else [records]
+
+    def _read_attr(item, key):
+        if isinstance(item, dict):
+            return item.get(key)
+        return getattr(item, key, None)
+
+    def _write_attr(item, key, value):
+        if isinstance(item, dict):
+            item[key] = value
+        else:
+            setattr(item, key, value)
+
+    user_ids = set()
+    for item in items:
+        for field in ("criado_por", "modificado_por"):
+            value = _read_attr(item, field)
+            if value is None or value == "":
+                continue
+            if hasattr(value, "id"):
+                user_ids.add(getattr(value, "id"))
+                continue
+            try:
+                user_ids.add(int(value))
+            except (TypeError, ValueError):
+                continue
+
+    users_by_id = {}
+    if user_ids:
+        users_by_id = {
+            usuario.id: usuario.nome
+            for usuario in Usuario.query.filter(Usuario.id.in_(list(user_ids))).all()
+        }
+
+    for item in items:
+        for field, target in (
+            ("criado_por", "criado_por_nome"),
+            ("modificado_por", "modificado_por_nome"),
+        ):
+            value = _read_attr(item, field)
+            resolved_name = None
+            if value is None or value == "":
+                _write_attr(item, target, None)
+                continue
+            if hasattr(value, "nome") and getattr(value, "nome", None):
+                resolved_name = getattr(value, "nome")
+            elif isinstance(value, str) and not value.isdigit():
+                resolved_name = value
+            else:
+                try:
+                    resolved_name = users_by_id.get(int(getattr(value, "id", value)))
+                except (TypeError, ValueError):
+                    resolved_name = None
+            _write_attr(item, target, resolved_name)
+
+    return records
 
 
 def role_required(allowed_roles):

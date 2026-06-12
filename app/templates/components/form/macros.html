@@ -124,8 +124,7 @@ inactive_label='Inativo', wrapper_class='min-w-[160px]') %}
     <div>
       <span class="block font-medium text-slate-400 uppercase tracking-wider mb-0.5">Criado Por</span>
       <span class="font-medium text-slate-700 flex items-center gap-1.5">
-        <i class="far fa-user text-slate-400"></i>{{ metadata_actor(item.criado_por if item.criado_por is defined else
-        none) }}
+        <i class="far fa-user text-slate-400"></i>{{ metadata_actor((item.criado_por_nome if item.criado_por_nome is defined and item.criado_por_nome else (item.criado_por if item.criado_por is defined else none))) }}
       </span>
     </div>
     <div>
@@ -138,8 +137,7 @@ inactive_label='Inativo', wrapper_class='min-w-[160px]') %}
     <div>
       <span class="block font-medium text-slate-400 uppercase tracking-wider mb-0.5">Modificado Por</span>
       <span class="font-medium text-slate-700 flex items-center gap-1.5">
-        <i class="far fa-user text-slate-400"></i>{{ metadata_actor(item.modificado_por if item.modificado_por is
-        defined else none) }}
+        <i class="far fa-user text-slate-400"></i>{{ metadata_actor((item.modificado_por_nome if item.modificado_por_nome is defined and item.modificado_por_nome else (item.modificado_por if item.modificado_por is defined else none))) }}
       </span>
     </div>
     <div>
