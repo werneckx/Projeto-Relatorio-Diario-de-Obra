@@ -8,8 +8,8 @@ def lista_fornecedores():
     empresa_id = get_current_empresa_id()
     fornecedores = (
         Fornecedor.query
-        .filter(Fornecedor.empresa_id == empresa_id, Fornecedor.ativo.is_(True))
-        .order_by(Fornecedor.id.asc())
+        .filter(Fornecedor.empresa_id == empresa_id)
+        .order_by(Fornecedor.ativo.desc(), Fornecedor.id.asc())
         .all()
     )
     return render_template("cadastros/fornecedores/list_fornecedores.html", opcoes=fornecedores, categoria="fornecedor")

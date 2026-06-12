@@ -8,8 +8,8 @@ def lista_clientes():
     empresa_id = get_current_empresa_id()
     clientes = (
         Cliente.query
-        .filter(Cliente.empresa_id == empresa_id, Cliente.ativo.is_(True))
-        .order_by(Cliente.id.asc())
+        .filter(Cliente.empresa_id == empresa_id)
+        .order_by(Cliente.ativo.desc(), Cliente.id.asc())
         .all()
     )
     return render_template("cadastros/clientes/list_clientes.html", opcoes=clientes, categoria="cliente")

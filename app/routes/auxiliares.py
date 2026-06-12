@@ -3,7 +3,7 @@
 @auth_bp.get("/lista-climas")
 @login_required
 def lista_climas():
-    climas = AuxClima.query.filter_by(ativo=True).order_by(AuxClima.nome.asc()).all()
+    climas = AuxClima.query.order_by(AuxClima.ativo.desc(), AuxClima.nome.asc()).all()
     return render_template("auxiliares/list_climas.html", opcoes=climas, categoria="clima")
 
 @auth_bp.get('/criar-clima')
@@ -75,7 +75,7 @@ def excluir_clima(id):
 @auth_bp.get("/lista-equipamentos")
 @login_required
 def lista_equipamentos():
-    equipamentos = AuxEquipamentos.query.filter_by(ativo=True).order_by(AuxEquipamentos.nome.asc()).all()
+    equipamentos = AuxEquipamentos.query.order_by(AuxEquipamentos.ativo.desc(), AuxEquipamentos.nome.asc()).all()
     return render_template("auxiliares/list_equipamentos.html", opcoes=equipamentos, categoria="equipamento")
 
 @auth_bp.get('/criar-equipamento')
@@ -143,7 +143,7 @@ def excluir_equipamento(id):
 @auth_bp.get("/lista-tags-ocorrencias")
 @login_required
 def lista_tags_ocorrencias():
-    tagsOcorrencias = AuxTagOcorrencia.query.filter_by(ativo=True).order_by(AuxTagOcorrencia.nome.asc()).all()
+    tagsOcorrencias = AuxTagOcorrencia.query.order_by(AuxTagOcorrencia.ativo.desc(), AuxTagOcorrencia.nome.asc()).all()
     return render_template("auxiliares/list_tags_ocorrencias.html", opcoes=tagsOcorrencias, categoria="tagsOcorrencias")
 
 @auth_bp.get('/criar-tags-ocorrencias')
@@ -212,7 +212,7 @@ def excluir_tags_ocorrencias(id):
 @auth_bp.get("/lista-funcoes")
 @login_required
 def lista_funcoes():
-    funcoes = AuxFuncoes.query.filter_by(ativo=True).order_by(AuxFuncoes.nome.asc()).all()
+    funcoes = AuxFuncoes.query.order_by(AuxFuncoes.ativo.desc(), AuxFuncoes.nome.asc()).all()
     return render_template("auxiliares/list_funcoes.html", opcoes=funcoes, categoria="funcoes")
 
 @auth_bp.get("/lista-mao-obra")
@@ -322,7 +322,7 @@ def excluir_mao_obra(id):
 @auth_bp.get("/lista-tipos-obra")
 @login_required
 def lista_tipos_obra():
-    tipos = AuxTipoObra.query.filter_by(ativo=True).order_by(AuxTipoObra.nome.asc()).all()
+    tipos = AuxTipoObra.query.order_by(AuxTipoObra.ativo.desc(), AuxTipoObra.nome.asc()).all()
     return render_template("cadastros/obras/list_tipos_obra.html", opcoes=tipos, categoria="tipo_obra")
 
 

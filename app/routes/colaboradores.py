@@ -10,8 +10,8 @@ def lista_colaboradores():
     empresa_id = get_current_empresa_id()
     colaboradores = (
         Colaborador.query
-        .filter(Colaborador.empresa_id == empresa_id, Colaborador.ativo.is_(True))
-        .order_by(Colaborador.nome.asc())
+        .filter(Colaborador.empresa_id == empresa_id)
+        .order_by(Colaborador.ativo.desc(), Colaborador.nome.asc())
         .all()
     )
     return render_template("cadastros/colaboradores/list_colaboradores.html", opcoes=colaboradores, categoria="colaborador")
