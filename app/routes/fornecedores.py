@@ -27,7 +27,7 @@ def criar_fornecedor():
 @role_required(PERM_WRITE_BASIC)
 def editar_fornecedor(id):
     empresa_id = get_current_empresa_id()
-    item = Fornecedor.query.filter_by(id=id, empresa_id=empresa_id).first_or_404()
+    item = hydrate_audit_metadata(Fornecedor.query.filter_by(id=id, empresa_id=empresa_id).first_or_404())
     return render_template('cadastros/fornecedores/form_fornecedor.html', item=item, view_mode=False)
 
 
@@ -35,7 +35,7 @@ def editar_fornecedor(id):
 @login_required
 def visualizar_fornecedor(id):
     empresa_id = get_current_empresa_id()
-    item = Fornecedor.query.filter_by(id=id, empresa_id=empresa_id).first_or_404()
+    item = hydrate_audit_metadata(Fornecedor.query.filter_by(id=id, empresa_id=empresa_id).first_or_404())
     return render_template('cadastros/fornecedores/form_fornecedor.html', item=item, view_mode=True)
 
 
@@ -44,6 +44,7 @@ def visualizar_fornecedor(id):
 @role_required(PERM_WRITE_BASIC)
 def gerar_fornecedor():
     empresa_id = get_current_empresa_id()
+    user_id = get_current_user_id()
 
     fornecedor_id = request.form.get('id')
     nome = _normalize_option_input(request.form.get('nome', ''))
@@ -61,6 +62,7 @@ def gerar_fornecedor():
         fornecedor.cnpj = cnpj or None
         fornecedor.endereco = endereco or None
         fornecedor.ativo = ativo
+        set_audit_on_update(fornecedor, user_id=user_id)
     else:
         novo = Fornecedor(
             empresa_id=empresa_id,
@@ -69,6 +71,7 @@ def gerar_fornecedor():
             endereco=endereco or None,
             ativo=ativo,
         )
+        set_audit_on_create(novo, user_id=user_id)
         db.session.add(novo)
 
     db.session.commit()
@@ -82,6 +85,6 @@ def excluir_fornecedor(id):
     empresa_id = get_current_empresa_id()
     fornecedor = Fornecedor.query.filter_by(id=id, empresa_id=empresa_id).first()
     if fornecedor:
-        fornecedor.ativo = False
+        set_audit_on_inactivate(fornecedor)
         db.session.commit()
     return redirect(url_for('auth.lista_fornecedores'))
