@@ -97,7 +97,7 @@
           {'label': 'Editar', 'icon': 'fa-pen', 'url': url_for('auth.editar_cliente', id=cliente.id), 'permission':
           'cliente.manage'},
           {'divider': true},
-          {'label': 'Excluir', 'icon': 'fa-trash-alt', 'onclick': 'confirmDeleteCliente(' ~ cliente.id ~ ')',
+          {'label': 'Inativar', 'icon': 'fa-trash-alt', 'onclick': 'confirmDeleteCliente(' ~ cliente.id ~ ')',
           'permission': 'cliente.manage', 'variant': 'danger'}
           ], button_title='Ações') }}
         </td>
