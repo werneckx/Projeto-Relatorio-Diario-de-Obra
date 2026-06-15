@@ -174,6 +174,7 @@
 
   {% set cnpj_nome_field = 'razao_social' %}
   {% set cnpj_fantasia_field = 'nome_fantasia' %}
+  {% set cnpj_normalize_api_data = true %}
   {% include "cadastros/_cidade_uf_selects.html" %}
   {% include "cadastros/_cnpj_cep_lookup.html" %}
   {{ ui_form.submit_script(form_id='clienteForm', submit_btn_id='submitBtn', loading_label='Salvando...') }}

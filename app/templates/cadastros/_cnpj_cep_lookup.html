@@ -5,6 +5,9 @@
     const el = (id) => document.getElementById(id);
     const nomeFieldId = '{{ cnpj_nome_field|default("") }}';
     const fantasiaFieldId = '{{ cnpj_fantasia_field|default("") }}';
+    const normalizeApiData = {{ cnpj_normalize_api_data|default(false)|tojson }};
+    const lowercaseWords = new Set(['a', 'as', 'ao', 'aos', 'da', 'das', 'de', 'do', 'dos', 'e', 'em', 'na', 'nas', 'no', 'nos', 'para', 'por']);
+    const uppercaseWords = new Set(['eireli', 'epp', 'ltda', 'me', 'mei', 'sa', 's/a', 's.a', 'spe']);
 
     function setMessage(id, text, type) {
       const message = el(id);
@@ -25,10 +28,40 @@
       select.appendChild(option);
     }
 
+    function normalizeWhitespace(value) {
+      return String(value || '').replace(/\s+/g, ' ').trim();
+    }
+
+    function titleCasePtBr(value) {
+      const text = normalizeWhitespace(value).toLocaleLowerCase('pt-BR');
+      if (!text) return '';
+      return text.split(' ').map((word, index) => {
+        if (!word) return '';
+        if (uppercaseWords.has(word)) return word.replace('.', '').toUpperCase();
+        if (index > 0 && lowercaseWords.has(word)) return word;
+        return word.split(/([-/])/).map((part) => {
+          if (part === '-' || part === '/') return part;
+          if (uppercaseWords.has(part)) return part.replace('.', '').toUpperCase();
+          if (part.length <= 2 && /^\d*[a-z]+$/i.test(part)) return part.toUpperCase();
+          return part.charAt(0).toLocaleUpperCase('pt-BR') + part.slice(1);
+        }).join('');
+      }).join(' ');
+    }
+
+    function normalizeApiFieldValue(id, value) {
+      const text = normalizeWhitespace(value);
+      if (!normalizeApiData || !text) return text;
+      if (id === 'estado') return text.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 2);
+      if (id === 'numero') return text.toUpperCase();
+      if (id === 'cep') return formatCep(text);
+      return titleCasePtBr(text);
+    }
+
     function fillIfEmpty(id, value) {
       const input = el(id);
       if (!input || !value || input.value.trim()) return;
-      const normalizedValue = String(value).trim();
+      const normalizedValue = normalizeApiFieldValue(id, value);
+      if (!normalizedValue) return;
       if (input.tagName === 'SELECT') {
         ensureSelectOption(input, normalizedValue);
         if (id === 'cidade') input.dataset.currentCity = normalizedValue;
@@ -97,7 +130,9 @@
         }
         fillIfEmpty('logradouro', data.logradouro);
         fillIfEmpty('bairro', data.bairro);
-        if (window.selectEstadoCidade && data.uf) await window.selectEstadoCidade(data.uf, data.localidade);
+        if (window.selectEstadoCidade && data.uf) {
+          await window.selectEstadoCidade(normalizeApiFieldValue('estado', data.uf), normalizeApiFieldValue('cidade', data.localidade));
+        }
         else {
           fillIfEmpty('cidade', data.localidade);
           fillIfEmpty('estado', data.uf);
@@ -137,7 +172,9 @@
         fillIfEmpty('numero', data.numero);
         fillIfEmpty('complemento', data.complemento);
         fillIfEmpty('bairro', data.bairro);
-        if (window.selectEstadoCidade && data.uf) await window.selectEstadoCidade(data.uf, data.municipio);
+        if (window.selectEstadoCidade && data.uf) {
+          await window.selectEstadoCidade(normalizeApiFieldValue('estado', data.uf), normalizeApiFieldValue('cidade', data.municipio));
+        }
         else {
           fillIfEmpty('cidade', data.municipio);
           fillIfEmpty('estado', data.uf);
