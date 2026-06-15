@@ -53,7 +53,7 @@
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
           <label for="cep" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">CEP</label>
-          <input type="text" name="cep" id="cep" value="{{ item.cep if item }}"
+          <input type="text" name="cep" id="cep" value="{{ ui_form.blank(item.cep if item else none) }}"
             class="{{ ui_form.control_classes(view_mode=view_mode, extra='font-mono') }}"
             placeholder="00000-000" maxlength="9" {{ 'readonly disabled' if view_mode }}>
           <p id="cep-message" class="text-[10px] mt-1 h-3"></p>
@@ -61,44 +61,68 @@
 
         <div class="md:col-span-2">
           <label for="logradouro" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Logradouro</label>
-          <input type="text" name="logradouro" id="logradouro" value="{{ item.logradouro if item }}"
+          <input type="text" name="logradouro" id="logradouro" value="{{ ui_form.blank(item.logradouro if item else none) }}"
             class="{{ ui_form.control_classes(view_mode=view_mode) }}"
             placeholder="Rua, avenida, rodovia..." {{ 'readonly disabled' if view_mode }}>
         </div>
 
         <div>
           <label for="numero" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Número</label>
-          <input type="text" name="numero" id="numero" value="{{ item.numero if item }}"
+          <input type="text" name="numero" id="numero" value="{{ ui_form.blank(item.numero if item else none) }}"
             class="{{ ui_form.control_classes(view_mode=view_mode) }}"
             placeholder="Ex: 100" {{ 'readonly disabled' if view_mode }}>
         </div>
 
         <div>
           <label for="complemento" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Complemento</label>
-          <input type="text" name="complemento" id="complemento" value="{{ item.complemento if item }}"
+          <input type="text" name="complemento" id="complemento" value="{{ ui_form.blank(item.complemento if item else none) }}"
             class="{{ ui_form.control_classes(view_mode=view_mode) }}"
             placeholder="Sala, bloco, km..." {{ 'readonly disabled' if view_mode }}>
         </div>
 
         <div>
           <label for="bairro" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Bairro</label>
-          <input type="text" name="bairro" id="bairro" value="{{ item.bairro if item }}"
+          <input type="text" name="bairro" id="bairro" value="{{ ui_form.blank(item.bairro if item else none) }}"
             class="{{ ui_form.control_classes(view_mode=view_mode) }}"
             placeholder="Bairro" {{ 'readonly disabled' if view_mode }}>
         </div>
 
         <div>
           <label for="cidade" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Cidade</label>
-          <input type="text" name="cidade" id="cidade" value="{{ item.cidade if item }}"
+          {% if view_mode %}
+          <input type="text" name="cidade" id="cidade" value="{{ ui_form.blank(item.cidade if item else none) }}"
             class="{{ ui_form.control_classes(view_mode=view_mode) }}"
-            placeholder="Cidade" {{ 'readonly disabled' if view_mode }}>
+            placeholder="Cidade" readonly disabled>
+          {% else %}
+          <div class="relative">
+            <select name="cidade" id="cidade" class="{{ ui_form.control_classes(view_mode=view_mode) }}"
+              data-current-city="{{ ui_form.blank(item.cidade if item else none) }}">
+              <option value="">Selecione o estado...</option>
+            </select>
+            <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
+              <i class="fas fa-chevron-down text-xs"></i>
+            </div>
+          </div>
+          {% endif %}
         </div>
 
         <div>
           <label for="estado" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">UF</label>
-          <input type="text" name="estado" id="estado" value="{{ item.estado if item }}"
+          {% if view_mode %}
+          <input type="text" name="estado" id="estado" value="{{ ui_form.blank(item.estado if item else none) }}"
             class="{{ ui_form.control_classes(view_mode=view_mode, extra='uppercase') }}"
-            placeholder="UF" maxlength="2" {{ 'readonly disabled' if view_mode }}>
+            placeholder="UF" maxlength="2" readonly disabled>
+          {% else %}
+          <div class="relative">
+            <select name="estado" id="estado" class="{{ ui_form.control_classes(view_mode=view_mode, extra='uppercase') }}"
+              data-current-state="{{ ui_form.blank(item.estado if item else none) }}">
+              <option value="">UF</option>
+            </select>
+            <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
+              <i class="fas fa-chevron-down text-xs"></i>
+            </div>
+          </div>
+          {% endif %}
         </div>
       </div>
     {% endcall %}
@@ -145,6 +169,7 @@
 
   {% set cnpj_nome_field = 'razao_social' %}
   {% set cnpj_fantasia_field = 'nome_fantasia' %}
+  {% include "cadastros/_cidade_uf_selects.html" %}
   {% include "cadastros/_cnpj_cep_lookup.html" %}
   {{ ui_form.submit_script(form_id='clienteForm', submit_btn_id='submitBtn', loading_label='Salvando...') }}
   <script>

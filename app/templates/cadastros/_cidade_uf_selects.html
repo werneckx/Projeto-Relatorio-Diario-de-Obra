@@ -1,0 +1,152 @@
+{% if not view_mode %}
+<script>
+  (function () {
+    const IBGE_ESTADOS_URL = 'https://servicodados.ibge.gov.br/api/v1/localidades/estados';
+    const el = (id) => document.getElementById(id);
+    let estadosIbge = [];
+    let cidadesIbge = [];
+
+    function normalizeText(value) {
+      return String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+        .toLowerCase();
+    }
+
+    function setInlineMessage(id, text, type) {
+      const message = el(id);
+      if (!message) return;
+      const colors = { error: 'text-rose-600', success: 'text-emerald-600', info: 'text-sky-600' };
+      message.className = `text-[10px] mt-1 h-3 ${colors[type] || 'text-slate-500'}`;
+      message.textContent = text || '';
+    }
+
+    function fillSelect(select, options, placeholder) {
+      if (!select) return;
+      if (window.destroySelectPicker) window.destroySelectPicker(select);
+      select.innerHTML = '';
+      const empty = document.createElement('option');
+      empty.value = '';
+      empty.textContent = placeholder;
+      select.appendChild(empty);
+      options.forEach((option) => {
+        const item = document.createElement('option');
+        item.value = option.value;
+        item.textContent = option.label;
+        Object.entries(option.dataset || {}).forEach(([key, value]) => {
+          item.dataset[key] = value;
+        });
+        select.appendChild(item);
+      });
+      if (window.initSelectPickers) window.initSelectPickers(select);
+    }
+
+    function selectCidadeOption(cityName) {
+      const cidadeSelect = el('cidade');
+      if (!cidadeSelect || !cityName) return false;
+      const normalizedCity = normalizeText(cityName);
+      const option = Array.from(cidadeSelect.options).find((opt) => normalizeText(opt.value) === normalizedCity)
+        || Array.from(cidadeSelect.options).find((opt) => normalizeText(opt.textContent) === normalizedCity);
+      if (!option) return false;
+      cidadeSelect.value = option.value;
+      cidadeSelect.dataset.currentCity = option.value;
+      if (cidadeSelect.tomselect) cidadeSelect.tomselect.setValue(option.value, true);
+      return true;
+    }
+
+    async function loadCidades(uf, selectedCity = '') {
+      const cidadeSelect = el('cidade');
+      if (!cidadeSelect) return;
+      cidadesIbge = [];
+      cidadeSelect.dataset.currentCity = selectedCity || cidadeSelect.dataset.currentCity || '';
+      if (window.destroySelectPicker) window.destroySelectPicker(cidadeSelect);
+      cidadeSelect.innerHTML = '<option value="">Carregando...</option>';
+      if (!uf) {
+        cidadeSelect.innerHTML = '<option value="">Selecione o estado...</option>';
+        if (window.initSelectPickers) window.initSelectPickers(cidadeSelect);
+        return;
+      }
+
+      try {
+        const response = await fetch(`${IBGE_ESTADOS_URL}/${uf}/municipios`);
+        if (!response.ok) throw new Error('Erro IBGE cidades');
+        cidadesIbge = await response.json();
+        cidadesIbge.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+        fillSelect(cidadeSelect, cidadesIbge.map((cidade) => ({
+          value: cidade.nome,
+          label: cidade.nome,
+          dataset: { ibge: String(cidade.id) }
+        })), 'Selecione a cidade...');
+        selectCidadeOption(cidadeSelect.dataset.currentCity);
+      } catch (error) {
+        if (window.destroySelectPicker) window.destroySelectPicker(cidadeSelect);
+        cidadeSelect.innerHTML = '<option value="">Erro ao carregar cidades</option>';
+        if (window.initSelectPickers) window.initSelectPickers(cidadeSelect);
+        setInlineMessage('cep-message', 'Não foi possível carregar cidades do IBGE.', 'error');
+      }
+    }
+
+    async function loadEstados() {
+      const estadoSelect = el('estado');
+      if (!estadoSelect) return;
+      try {
+        const response = await fetch(IBGE_ESTADOS_URL);
+        if (!response.ok) throw new Error('Erro IBGE estados');
+        estadosIbge = await response.json();
+        estadosIbge.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+        fillSelect(estadoSelect, estadosIbge.map((uf) => ({
+          value: uf.sigla,
+          label: uf.sigla,
+          dataset: { nome: uf.nome }
+        })), 'UF');
+
+        const currentUf = (estadoSelect.dataset.currentState || '').toUpperCase();
+        if (currentUf) {
+          estadoSelect.value = currentUf;
+          if (estadoSelect.tomselect) estadoSelect.tomselect.setValue(currentUf, true);
+        }
+        await loadCidades(estadoSelect.value, el('cidade') ? el('cidade').dataset.currentCity : '');
+      } catch (error) {
+        setInlineMessage('cep-message', 'Não foi possível carregar estados do IBGE.', 'error');
+      }
+    }
+
+    async function selectEstadoCidade(uf, cidade) {
+      const estadoSelect = el('estado');
+      const cidadeSelect = el('cidade');
+      if (!estadoSelect || !uf) return;
+      const normalizedUf = String(uf).trim().toUpperCase();
+      estadoSelect.dataset.currentState = normalizedUf;
+      if (cidadeSelect) cidadeSelect.dataset.currentCity = cidade || '';
+      if (!Array.from(estadoSelect.options).some((option) => option.value.toUpperCase() === normalizedUf)) {
+        const option = document.createElement('option');
+        option.value = normalizedUf;
+        option.textContent = normalizedUf;
+        estadoSelect.appendChild(option);
+      }
+      estadoSelect.value = normalizedUf;
+      if (estadoSelect.tomselect) estadoSelect.tomselect.setValue(normalizedUf, true);
+      await loadCidades(normalizedUf, cidade || '');
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      const estadoSelect = el('estado');
+      const cidadeSelect = el('cidade');
+      if (!estadoSelect || !cidadeSelect) return;
+
+      estadoSelect.addEventListener('change', function () {
+        estadoSelect.dataset.currentState = estadoSelect.value || '';
+        cidadeSelect.dataset.currentCity = '';
+        loadCidades(estadoSelect.value, '');
+      });
+      cidadeSelect.addEventListener('change', function () {
+        cidadeSelect.dataset.currentCity = cidadeSelect.value || '';
+      });
+
+      window.selectEstadoCidade = selectEstadoCidade;
+      loadEstados();
+    });
+  })();
+</script>
+{% endif %}

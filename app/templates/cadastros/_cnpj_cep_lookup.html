@@ -14,10 +14,28 @@
       message.textContent = text || '';
     }
 
+    function ensureSelectOption(select, value) {
+      if (!select || !value || select.tagName !== 'SELECT') return;
+      const normalizedValue = String(value).trim();
+      const exists = Array.from(select.options).some((option) => option.value === normalizedValue);
+      if (exists) return;
+      const option = document.createElement('option');
+      option.value = normalizedValue;
+      option.textContent = normalizedValue;
+      select.appendChild(option);
+    }
+
     function fillIfEmpty(id, value) {
       const input = el(id);
       if (!input || !value || input.value.trim()) return;
-      input.value = value;
+      const normalizedValue = String(value).trim();
+      if (input.tagName === 'SELECT') {
+        ensureSelectOption(input, normalizedValue);
+        if (id === 'cidade') input.dataset.currentCity = normalizedValue;
+        if (id === 'estado') input.dataset.currentState = normalizedValue.toUpperCase();
+      }
+      input.value = id === 'estado' ? normalizedValue.toUpperCase() : normalizedValue;
+      if (input.tomselect) input.tomselect.setValue(input.value, true);
       input.dispatchEvent(new Event('change', { bubbles: true }));
     }
 
@@ -79,8 +97,11 @@
         }
         fillIfEmpty('logradouro', data.logradouro);
         fillIfEmpty('bairro', data.bairro);
-        fillIfEmpty('cidade', data.localidade);
-        fillIfEmpty('estado', data.uf);
+        if (window.selectEstadoCidade && data.uf) await window.selectEstadoCidade(data.uf, data.localidade);
+        else {
+          fillIfEmpty('cidade', data.localidade);
+          fillIfEmpty('estado', data.uf);
+        }
         if (cepInput) cepInput.dataset.validatedCep = cep;
         setMessage('cep-message', 'Endereço preenchido pelo CEP.', 'success');
         if (el('numero') && !el('numero').value) el('numero').focus();
@@ -116,8 +137,11 @@
         fillIfEmpty('numero', data.numero);
         fillIfEmpty('complemento', data.complemento);
         fillIfEmpty('bairro', data.bairro);
-        fillIfEmpty('cidade', data.municipio);
-        fillIfEmpty('estado', data.uf);
+        if (window.selectEstadoCidade && data.uf) await window.selectEstadoCidade(data.uf, data.municipio);
+        else {
+          fillIfEmpty('cidade', data.municipio);
+          fillIfEmpty('estado', data.uf);
+        }
         if (data.cep && el('cep') && !onlyDigits(el('cep').value)) el('cep').value = formatCep(data.cep);
         setMessage('cnpj-message', 'Dados do CNPJ carregados.', 'success');
       } catch (error) {
