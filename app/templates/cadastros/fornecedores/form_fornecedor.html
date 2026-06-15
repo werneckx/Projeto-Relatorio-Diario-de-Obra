@@ -30,17 +30,67 @@
           <label for="cnpj" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">CNPJ</label>
           <input type="text" name="cnpj" id="cnpj" value="{{ ui_form.blank(item.cnpj if item else none) }}"
             class="{{ ui_form.control_classes(view_mode=view_mode, extra='font-mono') }}"
-            placeholder="00.000.000/0000-00" {{ 'readonly disabled' if view_mode }}>
+            placeholder="00.000.000/0000-00" maxlength="18" {{ 'readonly disabled' if view_mode }}>
+          <p id="cnpj-message" class="text-[10px] mt-1 h-3"></p>
         </div>
       </div>
+    {% endcall %}
 
-      <div>
-        <label for="endereco" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Endereço</label>
-        <textarea name="endereco" id="endereco" rows="3"
-          class="{{ ui_form.textarea_classes(view_mode=view_mode) }}"
-          placeholder="Rua, número, bairro, cidade – UF, CEP" {{ 'readonly disabled' if view_mode }}>{{ ui_form.blank(item.endereco if item else none) }}</textarea>
+    {% call ui_form.section('Endereço', icon='fa-map-marker-alt', icon_box_class='bg-sky-50 text-sky-700') %}
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label for="cep" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">CEP</label>
+          <input type="text" name="cep" id="cep" value="{{ item.cep if item }}"
+            class="{{ ui_form.control_classes(view_mode=view_mode, extra='font-mono') }}"
+            placeholder="00000-000" maxlength="9" {{ 'readonly disabled' if view_mode }}>
+          <p id="cep-message" class="text-[10px] mt-1 h-3"></p>
+        </div>
+
+        <div class="md:col-span-2">
+          <label for="logradouro" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Logradouro</label>
+          <input type="text" name="logradouro" id="logradouro" value="{{ item.logradouro if item }}"
+            class="{{ ui_form.control_classes(view_mode=view_mode) }}"
+            placeholder="Rua, avenida, rodovia..." {{ 'readonly disabled' if view_mode }}>
+        </div>
+
+        <div>
+          <label for="numero" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Número</label>
+          <input type="text" name="numero" id="numero" value="{{ item.numero if item }}"
+            class="{{ ui_form.control_classes(view_mode=view_mode) }}"
+            placeholder="Ex: 100" {{ 'readonly disabled' if view_mode }}>
+        </div>
+
+        <div>
+          <label for="complemento" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Complemento</label>
+          <input type="text" name="complemento" id="complemento" value="{{ item.complemento if item }}"
+            class="{{ ui_form.control_classes(view_mode=view_mode) }}"
+            placeholder="Sala, bloco, km..." {{ 'readonly disabled' if view_mode }}>
+        </div>
+
+        <div>
+          <label for="bairro" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Bairro</label>
+          <input type="text" name="bairro" id="bairro" value="{{ item.bairro if item }}"
+            class="{{ ui_form.control_classes(view_mode=view_mode) }}"
+            placeholder="Bairro" {{ 'readonly disabled' if view_mode }}>
+        </div>
+
+        <div>
+          <label for="cidade" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Cidade</label>
+          <input type="text" name="cidade" id="cidade" value="{{ item.cidade if item }}"
+            class="{{ ui_form.control_classes(view_mode=view_mode) }}"
+            placeholder="Cidade" {{ 'readonly disabled' if view_mode }}>
+        </div>
+
+        <div>
+          <label for="estado" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">UF</label>
+          <input type="text" name="estado" id="estado" value="{{ item.estado if item }}"
+            class="{{ ui_form.control_classes(view_mode=view_mode, extra='uppercase') }}"
+            placeholder="UF" maxlength="2" {{ 'readonly disabled' if view_mode }}>
+        </div>
       </div>
+    {% endcall %}
 
+    {% call ui_form.section('Status', icon='fa-toggle-on', icon_box_class='bg-slate-50 text-slate-700') %}
       {{ ui_form.status_field(name='ativo', selected=(item.ativo if item else True), view_mode=view_mode, id='ativo') }}
     {% endcall %}
 
@@ -57,6 +107,8 @@
     ) }}
   {% endcall %}
 
+  {% set cnpj_nome_field = 'nome' %}
+  {% include "cadastros/_cnpj_cep_lookup.html" %}
   {{ ui_form.submit_script(form_id='fornecedorForm', submit_btn_id='submitBtn', loading_label='Salvando...') }}
 {% endcall %}
 {% endblock %}

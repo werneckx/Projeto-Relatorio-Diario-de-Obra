@@ -43,24 +43,18 @@ def visualizar_fornecedor(id):
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def gerar_fornecedor():
-    empresa_id = get_current_empresa_id()
-    user_id = get_current_user_id()
-
-    fornecedor_id = request.form.get('id')
-    nome = _normalize_option_input(request.form.get('nome', ''))
-    cnpj = _normalize_option_input(request.form.get('cnpj', ''))
-    endereco = _normalize_option_input(request.form.get('endereco', ''))
-    ativo = request.form.get('ativo') == '1'
-
-    if not nome:
-        flash('Nome do fornecedor é obrigatório.', 'danger')
-        return redirect(url_for('auth.criar_fornecedor'))
-
+    empresa_id = get_current_empresa_id()c
     if fornecedor_id:
         fornecedor = Fornecedor.query.filter_by(id=fornecedor_id, empresa_id=empresa_id).first_or_404()
         fornecedor.nome = nome
         fornecedor.cnpj = cnpj or None
-        fornecedor.endereco = endereco or None
+        fornecedor.cep = cep or None
+        fornecedor.logradouro = logradouro or None
+        fornecedor.numero = numero or None
+        fornecedor.complemento = complemento or None
+        fornecedor.bairro = bairro or None
+        fornecedor.cidade = cidade or None
+        fornecedor.estado = estado or None
         fornecedor.ativo = ativo
         set_audit_on_update(fornecedor, user_id=user_id)
     else:
@@ -68,7 +62,13 @@ def gerar_fornecedor():
             empresa_id=empresa_id,
             nome=nome,
             cnpj=cnpj or None,
-            endereco=endereco or None,
+            cep=cep or None,
+            logradouro=logradouro or None,
+            numero=numero or None,
+            complemento=complemento or None,
+            bairro=bairro or None,
+            cidade=cidade or None,
+            estado=estado or None,
             ativo=ativo,
         )
         set_audit_on_create(novo, user_id=user_id)

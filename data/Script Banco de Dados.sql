@@ -20,6 +20,8 @@ DROP TABLE IF EXISTS arquivos;
 DROP TABLE IF EXISTS notificacoes;
 DROP TABLE IF EXISTS workflow_etapas;
 DROP TABLE IF EXISTS workflow_definicoes;
+DROP TABLE IF EXISTS usuario_documento_aceite;
+DROP TABLE IF EXISTS documentos_sistema;
 DROP TABLE IF EXISTS rdo_versoes;
 DROP TABLE IF EXISTS obra_config;
 DROP TABLE IF EXISTS empresa_config;
@@ -281,9 +283,19 @@ CREATE TABLE papel_permissao (
 CREATE TABLE fornecedores (
     id INT AUTO_INCREMENT PRIMARY KEY,
     empresa_id INT NOT NULL,
+
     nome VARCHAR(150) NOT NULL,
-    cnpj VARCHAR(20),
-    endereco TEXT,
+    cnpj VARCHAR(14),
+
+    -- Endereço Normalizado
+    logradouro VARCHAR(200),
+    numero VARCHAR(20),
+    complemento VARCHAR(100),
+    bairro VARCHAR(100),
+    cidade VARCHAR(100),
+    estado CHAR(2),
+    cep VARCHAR(10),
+
     ativo BOOLEAN DEFAULT TRUE,
 
     criado_por INT NULL,
@@ -292,9 +304,15 @@ CREATE TABLE fornecedores (
     modificado_em DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
     INDEX idx_forn_empresa (empresa_id),
+    INDEX idx_forn_cidade (cidade),
+    INDEX idx_forn_estado (estado),
+    INDEX idx_forn_cnpj (cnpj),
+
     UNIQUE KEY uk_forn_cnpj_empresa (empresa_id, cnpj),
 
-    FOREIGN KEY (empresa_id) REFERENCES empresa(id)
+    CONSTRAINT fk_forn_empresa
+        FOREIGN KEY (empresa_id) REFERENCES empresa(id)
+        ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 /* =========================
@@ -307,7 +325,16 @@ CREATE TABLE clientes (
 
     razao_social VARCHAR(200) NOT NULL,
     nome_fantasia VARCHAR(200),
-    cnpj VARCHAR(18) NOT NULL,
+    cnpj VARCHAR(14) NOT NULL,
+
+    -- Endereço Normalizado
+    logradouro VARCHAR(200),
+    numero VARCHAR(20),
+    complemento VARCHAR(100),
+    bairro VARCHAR(100),
+    cidade VARCHAR(100),
+    estado CHAR(2),
+    cep VARCHAR(10),
 
     contato_nome VARCHAR(150),
     contato_email VARCHAR(150),
@@ -321,8 +348,11 @@ CREATE TABLE clientes (
     modificado_em DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
     UNIQUE KEY uk_cliente_empresa_cnpj (empresa_id, cnpj),
+
     INDEX idx_cliente_empresa (empresa_id),
     INDEX idx_clientes_cnpj (cnpj),
+    INDEX idx_cliente_cidade (cidade),
+    INDEX idx_cliente_estado (estado),
 
     CONSTRAINT fk_cliente_empresa
         FOREIGN KEY (empresa_id) REFERENCES empresa(id)
@@ -419,7 +449,7 @@ CREATE TABLE obras (
 
     -- Vínculo com Cliente
     cliente_id INT NOT NULL,
-    cnpj_obra VARCHAR(20),
+    cnpj_obra VARCHAR(14),
 
     -- Endereço Normalizado
     logradouro VARCHAR(200),
@@ -948,7 +978,7 @@ CREATE TABLE rdo_versoes (
     CONSTRAINT fk_rdo_versao_usuario FOREIGN KEY (criado_por) REFERENCES usuarios(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE documentos_sistema {
+CREATE TABLE documentos_sistema (
     id INT AUTO_INCREMENT PRIMARY KEY,
     empresa_id INT NOT NULL,
     tipo ENUM(
@@ -976,30 +1006,30 @@ CREATE TABLE documentos_sistema {
 
     CONSTRAINT fk_documento_criado_por
         FOREIGN KEY (criado_por)
-        REFERENCES usuario(id),
+        REFERENCES usuarios(id),
 
     CONSTRAINT fk_documento_modificado_por
         FOREIGN KEY (modificado_por)
-        REFERENCES usuario(id)
-};
+        REFERENCES usuarios(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE usuario_documento_aceite (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id INT PRIMARY KEY AUTO_INCREMENT,
 
-    usuario_id BIGINT NOT NULL,
-    documento_id BIGINT NOT NULL,
+    usuario_id INT NOT NULL,
+    documento_id INT NOT NULL,
 
     ip VARCHAR(50),
     aceito_em DATETIME DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_aceite_usuario
         FOREIGN KEY (usuario_id)
-        REFERENCES usuario(id),
+        REFERENCES usuarios(id),
 
     CONSTRAINT fk_aceite_documento
         FOREIGN KEY (documento_id)
         REFERENCES documentos_sistema(id)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 /* =========================
    TRIGGERS
@@ -1213,14 +1243,14 @@ INSERT INTO empresa (id, nome, logo_empresa, icone_empresa) VALUES
 (1, 'Construções Horizonte S.A.', 'https://img.logo/horizonte.png', 'https://img.logo/icon_h.png');
 
 -- 2. Inserir Fornecedores
-INSERT INTO fornecedores (id, empresa_id, nome, cnpj, endereco) VALUES
-(1, 1, 'LocaMáquinas Brasil', '11.222.333/0001-44', 'Rua Industrial, 100 - SP'),
-(2, 1, 'Mão de Obra Especializada Ltda', '55.444.333/0001-22', 'Av. Central, 500 - RJ');
+INSERT INTO fornecedores (id, empresa_id, nome, cnpj, logradouro, numero, cidade, estado) VALUES
+(1, 1, 'LocaMáquinas Brasil', '11222333000144', 'Rua Industrial', '100', 'São Paulo', 'SP'),
+(2, 1, 'Mão de Obra Especializada Ltda', '55444333000122', 'Av. Central', '500', 'Rio de Janeiro', 'RJ');
 
 -- 3. Inserir Clientes
 INSERT INTO clientes (id, empresa_id, razao_social, nome_fantasia, cnpj, contato_nome, contato_email) VALUES
-(1, 1, 'Incorporadora Bella Vista Ltda', 'Bella Vista Inc', '12.345.678/0001-90', 'Marcos Oliveira', 'contato@bellavista.com.br'),
-(2, 1, 'Sky Tower Empreendimentos S.A.', 'Sky Corp', '98.765.432/0001-10', 'Julia Santos', 'vendas@skycorp.com');
+(1, 1, 'Incorporadora Bella Vista Ltda', 'Bella Vista Inc', '12345678000190', 'Marcos Oliveira', 'contato@bellavista.com.br'),
+(2, 1, 'Sky Tower Empreendimentos S.A.', 'Sky Corp', '98765432000110', 'Julia Santos', 'vendas@skycorp.com');
 
 -- 4. Inserir Colaboradores (Próprios e Terceiros)
 -- Próprios
@@ -1725,12 +1755,12 @@ WHERE p.empresa_id = 2
   );
 
 -- Fornecedores e clientes
-INSERT INTO fornecedores (id, empresa_id, nome, cnpj, endereco, ativo, criado_por) VALUES
-(20, 2, 'Terraplenagem Rio Claro Ltda', '42.778.991/0001-30', 'Rodovia SP-330, km 118 - Campinas/SP', TRUE, NULL),
-(21, 2, 'Locadora Atlas Equipamentos Pesados', '18.455.220/0001-88', 'Av. Industrial, 1250 - Jundiai/SP', TRUE, NULL);
+INSERT INTO fornecedores (id, empresa_id, nome, cnpj, logradouro, numero, cidade, estado, ativo, criado_por) VALUES
+(20, 2, 'Terraplenagem Rio Claro Ltda', '42778991000130', 'Rodovia SP-330', 'km 118', 'Campinas', 'SP', TRUE, NULL),
+(21, 2, 'Locadora Atlas Equipamentos Pesados', '18455220000188', 'Av. Industrial', '1250', 'Jundiaí', 'SP', TRUE, NULL);
 
 INSERT INTO clientes (id, empresa_id, razao_social, nome_fantasia, cnpj, contato_nome, contato_email, contato_telefone, ativo) VALUES
-(20, 2, 'Companhia Municipal de Saneamento de Campinas', 'SANECAMP', '07.123.456/0001-55', 'Marina Andrade', 'marina.andrade@sanecamp.example', '(19) 3333-4400', TRUE);
+(20, 2, 'Companhia Municipal de Saneamento de Campinas', 'SANECAMP', '07123456000155', 'Marina Andrade', 'marina.andrade@sanecamp.example', '(19) 3333-4400', TRUE);
 
 -- Colaboradores e usuarios
 INSERT INTO colaboradores (id, empresa_id, fornecedor_id, cliente_id, tipo, cadastro_pessoa_fisica, nome, ativo) VALUES
@@ -1765,7 +1795,7 @@ INSERT INTO obras (
     intervalo_saida_padrao, hora_saida_padrao, ativo, criado_por
 ) VALUES
 (20, 2, 'Ampliacao ETE Capivari II', '2026-01-08', '2027-04-30', 22, 20, 20,
- '07.123.456/0042-18', 'Estrada Municipal do Capivari', '4500', 'Area operacional 2',
+ '07123456004218', 'Estrada Municipal do Capivari', '4500', 'Area operacional 2',
  'Distrito Industrial', 'Campinas', 'SP', '13064-900', '07:00:00', '12:00:00',
  '13:00:00', '17:00:00', TRUE, 21);
 
