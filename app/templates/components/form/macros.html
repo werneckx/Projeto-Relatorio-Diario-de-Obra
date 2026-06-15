@@ -159,8 +159,9 @@ inactive_label='Inativo', wrapper_class='min-w-[160px]') %}
 
 {% macro actions(list_url, view_mode=false, edit_url=None, submit_label='Salvar Registro', cancel_label='Cancelar',
 back_label='Voltar', submit_btn_id='submitBtn', edit_label='Editar', keyboard_hint=true, cancel_url=None, item=None,
-view_url=None) %}
+view_url=None, clear_label='Limpar', clear_enabled=true) %}
 {% set is_edit_mode = (not view_mode) and item and item.id %}
+{% set show_clear = clear_enabled and not view_mode and not is_edit_mode %}
 {% set resolved_secondary_url = view_url if is_edit_mode and view_url else (cancel_url or list_url) %}
 {% set secondary_label = cancel_label if is_edit_mode else back_label %}
 <div class="sticky bottom-4 z-30 w-full flex justify-center pointer-events-none">
@@ -170,6 +171,11 @@ view_url=None) %}
       <a href="{{ resolved_secondary_url }}" class="{{ action_secondary_classes() }}">
         {{ secondary_label }}
       </a>
+      {% if show_clear %}
+      <button type="button" class="{{ action_secondary_classes() }}" data-form-clear>
+        {{ clear_label }}
+      </button>
+      {% endif %}
     </div>
     {% if view_mode and edit_url %}
     <a href="{{ edit_url }}" class="{{ action_primary_classes() }}">
@@ -188,6 +194,43 @@ view_url=None) %}
 <script>
   (function () {
     const form = document.getElementById('{{ form_id }}');
+    const clearButton = form?.querySelector('[data-form-clear]');
+
+    function clearField(field) {
+      if (!field || field.disabled || field.type === 'hidden') return;
+      if (['button', 'submit', 'reset', 'file'].includes(field.type)) return;
+
+      if (field.type === 'checkbox' || field.type === 'radio') {
+        field.checked = false;
+      } else if (field.tagName === 'SELECT') {
+        field.selectedIndex = 0;
+        field.dataset.currentCity = '';
+        field.dataset.currentState = '';
+        if (field.tomselect) field.tomselect.clear(true);
+      } else {
+        field.value = '';
+        Object.keys(field.dataset || {}).forEach((key) => {
+          if (key.toLowerCase().includes('validated')) field.dataset[key] = '';
+        });
+      }
+
+      field.dispatchEvent(new Event('input', { bubbles: true }));
+      field.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    function clearMessages() {
+      form?.querySelectorAll('[id$="-message"], .field-message').forEach((message) => {
+        message.textContent = '';
+      });
+    }
+
+    clearButton?.addEventListener('click', function () {
+      form.querySelectorAll('input, select, textarea').forEach(clearField);
+      clearMessages();
+      const firstField = form.querySelector('input:not([type="hidden"]):not(:disabled), select:not(:disabled), textarea:not(:disabled)');
+      firstField?.focus({ preventScroll: true });
+    });
+
     form?.addEventListener('submit', function (e) {
       if (form.dataset.submitting === 'true') {
         e.preventDefault();
