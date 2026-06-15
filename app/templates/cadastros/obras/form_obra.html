@@ -2918,7 +2918,7 @@
             tbody.appendChild(tr);
             enhanceObraDatePickers(tr);
             const nome = tr.querySelector('[name="frente_nome[]"]');
-            if (nome) nome.focus();
+            if (nome && !restoringDraft) nome.focus({ preventScroll: true });
             saveDraft();
         }
 
