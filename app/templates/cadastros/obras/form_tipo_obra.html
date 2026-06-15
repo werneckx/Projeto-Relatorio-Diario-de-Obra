@@ -10,7 +10,9 @@
 {% set subtitle = 'Detalhes do registro selecionado.' if view_mode else ('Atualize as informações.' if item and item.id else 'Cadastre um novo tipo de obra.') %}
 
 {% call ui_form.page_shell() %}
-  {{ ui_form.hero(page_title, subtitle=subtitle, back_url=url_for('auth.lista_tipos_obra')) }}
+  {{ ui_form.hero(page_title, subtitle=subtitle, back_url=url_for('auth.lista_tipos_obra'), view_mode=view_mode, item=item) }}
+
+  {{ ui_form.metadata(item) }}
 
   {% call ui_form.form_start(action=url_for('auth.gerar_tipo_obra'), form_id='tipoObraForm', item=item) %}
     {% call ui_form.section('Dados do Tipo de Obra', icon='fa-layer-group', icon_box_class='bg-violet-50 text-violet-700') %}
@@ -19,7 +21,7 @@
           <label for="nome" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">
             Nome <span class="text-rose-500">*</span>
           </label>
-          <input type="text" name="nome" id="nome" value="{{ item.nome if item }}"
+          <input type="text" name="nome" id="nome" value="{{ ui_form.blank(item.nome if item else none) }}"
             class="{{ ui_form.control_classes(view_mode=view_mode) }}"
             placeholder="Ex: Civil, Mecânica, Elétrica..." {{ 'readonly disabled' if view_mode }} required>
         </div>
@@ -33,7 +35,7 @@
         <label for="descricao" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Descrição</label>
         <textarea name="descricao" id="descricao" rows="3"
           class="{{ ui_form.textarea_classes(view_mode=view_mode) }}"
-          placeholder="Detalhes e critérios de uso" {{ 'readonly disabled' if view_mode }}>{{ item.descricao if item }}</textarea>
+          placeholder="Detalhes e critérios de uso" {{ 'readonly disabled' if view_mode }}>{{ ui_form.blank(item.descricao if item else none) }}</textarea>
       </div>
     {% endcall %}
 
@@ -41,6 +43,8 @@
       list_url=url_for('auth.lista_tipos_obra'),
       view_mode=view_mode,
       edit_url=(url_for('auth.editar_tipo_obra', id=item.id) if item and item.id else None),
+      view_url=(url_for('auth.visualizar_tipo_obra', id=item.id) if item and item.id else None),
+      item=item,
       submit_label='Salvar Tipo de Obra',
       cancel_label='Cancelar',
       back_label='Voltar',
@@ -51,4 +55,3 @@
   {{ ui_form.submit_script(form_id='tipoObraForm', submit_btn_id='submitBtn', loading_label='Salvando...') }}
 {% endcall %}
 {% endblock %}
-

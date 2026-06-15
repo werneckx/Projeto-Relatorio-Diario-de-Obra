@@ -8,8 +8,8 @@ def lista_fornecedores():
     empresa_id = get_current_empresa_id()
     fornecedores = (
         Fornecedor.query
-        .filter(Fornecedor.empresa_id == empresa_id, Fornecedor.ativo.is_(True))
-        .order_by(Fornecedor.id.asc())
+        .filter(Fornecedor.empresa_id == empresa_id)
+        .order_by(Fornecedor.ativo.desc(), Fornecedor.id.asc())
         .all()
     )
     return render_template("cadastros/fornecedores/list_fornecedores.html", opcoes=fornecedores, categoria="fornecedor")
@@ -27,7 +27,7 @@ def criar_fornecedor():
 @role_required(PERM_WRITE_BASIC)
 def editar_fornecedor(id):
     empresa_id = get_current_empresa_id()
-    item = Fornecedor.query.filter_by(id=id, empresa_id=empresa_id).first_or_404()
+    item = hydrate_audit_metadata(Fornecedor.query.filter_by(id=id, empresa_id=empresa_id).first_or_404())
     return render_template('cadastros/fornecedores/form_fornecedor.html', item=item, view_mode=False)
 
 
@@ -35,7 +35,7 @@ def editar_fornecedor(id):
 @login_required
 def visualizar_fornecedor(id):
     empresa_id = get_current_empresa_id()
-    item = Fornecedor.query.filter_by(id=id, empresa_id=empresa_id).first_or_404()
+    item = hydrate_audit_metadata(Fornecedor.query.filter_by(id=id, empresa_id=empresa_id).first_or_404())
     return render_template('cadastros/fornecedores/form_fornecedor.html', item=item, view_mode=True)
 
 
@@ -43,24 +43,7 @@ def visualizar_fornecedor(id):
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def gerar_fornecedor():
-    empresa_id = get_current_empresa_id()
-
-    fornecedor_id = request.form.get('id')
-    nome = _normalize_option_input(request.form.get('nome', ''))
-    cnpj = ''.join(ch for ch in request.form.get('cnpj', '') if ch.isdigit())
-    cep = ''.join(ch for ch in request.form.get('cep', '') if ch.isdigit())
-    logradouro = _normalize_option_input(request.form.get('logradouro', ''))
-    numero = _normalize_option_input(request.form.get('numero', ''))
-    complemento = _normalize_option_input(request.form.get('complemento', ''))
-    bairro = _normalize_option_input(request.form.get('bairro', ''))
-    cidade = _normalize_option_input(request.form.get('cidade', ''))
-    estado = _normalize_option_input(request.form.get('estado', '')).upper()
-    ativo = request.form.get('ativo') == '1'
-
-    if not nome:
-        flash('Nome do fornecedor é obrigatório.', 'danger')
-        return redirect(url_for('auth.criar_fornecedor'))
-
+    empresa_id = get_current_empresa_id()c
     if fornecedor_id:
         fornecedor = Fornecedor.query.filter_by(id=fornecedor_id, empresa_id=empresa_id).first_or_404()
         fornecedor.nome = nome
@@ -73,6 +56,7 @@ def gerar_fornecedor():
         fornecedor.cidade = cidade or None
         fornecedor.estado = estado or None
         fornecedor.ativo = ativo
+        set_audit_on_update(fornecedor, user_id=user_id)
     else:
         novo = Fornecedor(
             empresa_id=empresa_id,
@@ -87,6 +71,7 @@ def gerar_fornecedor():
             estado=estado or None,
             ativo=ativo,
         )
+        set_audit_on_create(novo, user_id=user_id)
         db.session.add(novo)
 
     db.session.commit()
@@ -100,6 +85,6 @@ def excluir_fornecedor(id):
     empresa_id = get_current_empresa_id()
     fornecedor = Fornecedor.query.filter_by(id=id, empresa_id=empresa_id).first()
     if fornecedor:
-        fornecedor.ativo = False
+        set_audit_on_inactivate(fornecedor)
         db.session.commit()
     return redirect(url_for('auth.lista_fornecedores'))

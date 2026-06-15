@@ -8,8 +8,8 @@ def lista_clientes():
     empresa_id = get_current_empresa_id()
     clientes = (
         Cliente.query
-        .filter(Cliente.empresa_id == empresa_id, Cliente.ativo.is_(True))
-        .order_by(Cliente.id.asc())
+        .filter(Cliente.empresa_id == empresa_id)
+        .order_by(Cliente.ativo.desc(), Cliente.id.asc())
         .all()
     )
     return render_template("cadastros/clientes/list_clientes.html", opcoes=clientes, categoria="cliente")
@@ -27,7 +27,7 @@ def criar_cliente():
 @role_required(PERM_WRITE_BASIC)
 def editar_cliente(id):
     empresa_id = get_current_empresa_id()
-    item = Cliente.query.filter_by(id=id, empresa_id=empresa_id).first_or_404()
+    item = hydrate_audit_metadata(Cliente.query.filter_by(id=id, empresa_id=empresa_id).first_or_404())
     return render_template('cadastros/clientes/form_cliente.html', item=item, view_mode=False)
 
 
@@ -35,7 +35,7 @@ def editar_cliente(id):
 @login_required
 def visualizar_cliente(id):
     empresa_id = get_current_empresa_id()
-    item = Cliente.query.filter_by(id=id, empresa_id=empresa_id).first_or_404()
+    item = hydrate_audit_metadata(Cliente.query.filter_by(id=id, empresa_id=empresa_id).first_or_404())
     return render_template('cadastros/clientes/form_cliente.html', item=item, view_mode=True)
 
 
@@ -44,6 +44,7 @@ def visualizar_cliente(id):
 @role_required(PERM_WRITE_BASIC)
 def gerar_cliente():
     empresa_id = get_current_empresa_id()
+    user_id = get_current_user_id()
 
     cliente_id = request.form.get('id')
     razao_social = _normalize_option_input(request.form.get('razao_social', ''))
@@ -85,6 +86,7 @@ def gerar_cliente():
         cliente.contato_email = contato_email or None
         cliente.contato_telefone = contato_telefone or None
         cliente.ativo = ativo
+        set_audit_on_update(cliente, user_id=user_id)
     else:
         novo = Cliente(
             empresa_id=empresa_id,
@@ -103,6 +105,7 @@ def gerar_cliente():
             contato_telefone=contato_telefone or None,
             ativo=ativo,
         )
+        set_audit_on_create(novo, user_id=user_id)
         db.session.add(novo)
 
     db.session.commit()
@@ -116,6 +119,6 @@ def excluir_cliente(id):
     empresa_id = get_current_empresa_id()
     cliente = Cliente.query.filter_by(id=id, empresa_id=empresa_id).first()
     if cliente:
-        cliente.ativo = False
+        set_audit_on_inactivate(cliente)
         db.session.commit()
     return redirect(url_for('auth.lista_clientes'))

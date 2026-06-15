@@ -543,7 +543,7 @@ def gerar_rdo():
         db.session.commit()
         msg_acao = "revisado" if rdo_id_original else "salvo"
         flash(f"RDO #{item_rdo.id} {msg_acao} com sucesso!", "success")
-        return redirect(url_for('auth.visualizar_rdo', rdo_id=item_rdo.id))
+        return redirect(url_for('auth.lista_rdo'))
 
     except Exception as e:
         db.session.rollback()

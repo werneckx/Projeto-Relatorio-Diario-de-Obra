@@ -382,6 +382,9 @@
         </div>
 
         <!-- Ações do Topo -->
+        {% set is_edit_mode = (not view_mode) and item and item.id %}
+        {% set rdo_secondary_url = url_for('auth.visualizar_rdo', rdo_id=item.id) if is_edit_mode else url_for('auth.lista_rdo') %}
+        {% set rdo_secondary_label = 'Cancelar' if is_edit_mode else 'Voltar' %}
         <div class="flex gap-3 w-full md:w-auto">
             {% if view_mode %}
             <a href="{{ url_for('auth.lista_rdo') }}"
@@ -431,9 +434,9 @@
             </div>
             {% endif %}
             {% else %}
-            <a href="{{ url_for('auth.lista_rdo') }}"
-                class="{{ ui_form.button_secondary_classes('md:hidden') }}">
-                Cancelar
+            <a href="{{ rdo_secondary_url }}"
+                class="{{ ui_form.button_secondary_classes('md:flex-none') }}">
+                {{ rdo_secondary_label }}
             </a>
             <button type="submit" form="rdoForm"
                 class="{{ ui_form.button_primary_classes('md:flex-none') }}">
@@ -442,6 +445,8 @@
             {% endif %}
         </div>
     </div>
+
+    {{ ui_form.metadata(item) }}
 
     {% call ui_form.form_start(action=url_for('auth.gerar_rdo'), form_id='rdoForm', item=item, extra_class='space-y-6 md:space-y-8', enctype='multipart/form-data') %}
         <input type="hidden" name="rdo_id" value="{{ item.id if item }}">
@@ -975,7 +980,7 @@
                 </label>
                 <textarea name="comentarios_gerais" id="comentarios_gerais" class="form-control-std h-32"
                     placeholder="Insira informações adicionais relevantes..." {{ 'readonly' if view_mode
-                    }}>{{ item.comentarios_gerais if item else '' }}</textarea>
+                    }}>{{ item.comentarios_gerais if item and item.comentarios_gerais else '' }}</textarea>
             </div>
 
             <div class="border-t border-slate-100 pt-6">
@@ -1179,9 +1184,9 @@
             <div
                 class="pointer-events-auto flex w-[calc(100%-1.5rem)] max-w-5xl flex-col-reverse gap-3 rounded-[24px] border border-slate-200 bg-white/96 p-3 shadow-2xl shadow-slate-900/10 backdrop-blur-md sm:flex-row sm:items-center sm:justify-between">
                 <div class="flex flex-1 flex-col-reverse gap-3 sm:flex-row sm:items-center">
-                    <a href="{{ url_for('auth.lista_rdo') }}"
+                    <a href="{{ rdo_secondary_url }}"
                         class="{{ ui_form.action_secondary_classes() }}">
-                        Cancelar e Voltar
+                        {{ rdo_secondary_label }}
                     </a>
                 </div>
                 <button type="submit"

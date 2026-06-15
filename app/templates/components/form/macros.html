@@ -5,7 +5,9 @@
 </div>
 {% endmacro %}
 
-{% macro hero(title, subtitle='', back_url=None, back_label='Voltar') %}
+{% macro hero(title, subtitle='', back_url=None, back_label='Voltar', view_mode=false, item=None, allow_edit_back=false)
+%}
+{% set show_back_link = back_url and (allow_edit_back or view_mode or not (item and item.id)) %}
 <div class="page-hero py-4 px-1 flex items-center justify-between border-b border-slate-100 mb-4">
   <div class="min-w-0">
     <h1 class="text-xl font-bold text-slate-900 tracking-tight truncate sm:text-2xl">{{ title }}</h1>
@@ -13,7 +15,7 @@
     <p class="text-xs sm:text-sm text-slate-500 mt-0.5 truncate">{{ subtitle }}</p>
     {% endif %}
   </div>
-  {% if back_url %}
+  {% if show_back_link %}
   <a href="{{ back_url }}"
     class="inline-flex items-center text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors shrink-0 gap-1.5 px-2 py-1 rounded-md hover:bg-slate-100">
     <i class="fas fa-arrow-left text-[10px]"></i> {{ back_label }}
@@ -46,6 +48,22 @@ placeholder:text-slate-400' }} {{ extra }}
 form-control-std text-sm block w-full rounded-2xl px-4 py-3 min-h-[96px] resize-y {{ 'bg-slate-100/60 border-slate-200
 text-slate-800 font-semibold cursor-default' if view_mode else 'bg-white border-slate-300 text-slate-600 shadow-sm
 placeholder:text-slate-400' }} {{ extra }}
+{%- endmacro %}
+
+{% macro blank(value='') -%}
+{%- if value is undefined or value is none -%}{%- else -%}{{ value }}{%- endif -%}
+{%- endmacro %}
+
+{% macro metadata_actor(value=None) -%}
+{%- if value is defined and value -%}
+{%- if value.nome is defined and value.nome -%}{{ value.nome }}{%- else -%}{{ value }}{%- endif -%}
+{%- endif -%}
+{%- endmacro %}
+
+{% macro metadata_datetime(value=None) -%}
+{%- if value is defined and value -%}
+{%- if value.strftime is defined -%}{{ value.strftime('%d/%m/%Y %H:%M') }}{%- else -%}{{ value }}{%- endif -%}
+{%- endif -%}
 {%- endmacro %}
 
 {% macro button_primary_classes(extra='') -%}
@@ -95,15 +113,62 @@ inactive_label='Inativo', wrapper_class='min-w-[160px]') %}
 </div>
 {% endmacro %}
 
+{% macro metadata(item=None) %}
+{% if item and item.id %}
+<div class="bg-slate-50/70 border border-slate-200/60 rounded-2xl px-6 py-4">
+  <div class="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-5 text-[11px] text-slate-500">
+    <div>
+      <span class="block font-medium text-slate-400 uppercase tracking-wider mb-0.5">ID</span>
+      <span class="font-medium text-slate-700 flex items-center gap-1.5">
+        <i class="fas fa-hashtag text-slate-400"></i>{{ blank(item.id) }}
+      </span>
+    </div>
+    <div>
+      <span class="block font-medium text-slate-400 uppercase tracking-wider mb-0.5">Criado Por</span>
+      <span class="font-medium text-slate-700 flex items-center gap-1.5">
+        <i class="far fa-user text-slate-400"></i>{{ metadata_actor((item.criado_por_nome if item.criado_por_nome is
+        defined and item.criado_por_nome else (item.criado_por if item.criado_por is defined else none))) }}
+      </span>
+    </div>
+    <div>
+      <span class="block font-medium text-slate-400 uppercase tracking-wider mb-0.5">Criado Em</span>
+      <span class="font-medium text-slate-700 flex items-center gap-1.5">
+        <i class="far fa-calendar-alt text-slate-400"></i>{{ metadata_datetime(item.criado_em if item.criado_em is
+        defined else none) }}
+      </span>
+    </div>
+    <div>
+      <span class="block font-medium text-slate-400 uppercase tracking-wider mb-0.5">Modificado Por</span>
+      <span class="font-medium text-slate-700 flex items-center gap-1.5">
+        <i class="far fa-user text-slate-400"></i>{{ metadata_actor((item.modificado_por_nome if
+        item.modificado_por_nome is defined and item.modificado_por_nome else (item.modificado_por if
+        item.modificado_por is defined else none))) }}
+      </span>
+    </div>
+    <div>
+      <span class="block font-medium text-slate-400 uppercase tracking-wider mb-0.5">Modificado Em</span>
+      <span class="font-medium text-slate-700 flex items-center gap-1.5">
+        <i class="far fa-calendar-check text-slate-400"></i>{{ metadata_datetime(item.modificado_em if
+        item.modificado_em is defined else none) }}
+      </span>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endmacro %}
+
 {% macro actions(list_url, view_mode=false, edit_url=None, submit_label='Salvar Registro', cancel_label='Cancelar',
-back_label='Voltar', submit_btn_id='submitBtn', edit_label='Editar', keyboard_hint=true, cancel_url=None) %}
-{% set resolved_cancel_url = cancel_url or list_url %}
+back_label='Voltar', submit_btn_id='submitBtn', edit_label='Editar', keyboard_hint=true, cancel_url=None, item=None,
+view_url=None) %}
+{% set is_edit_mode = (not view_mode) and item and item.id %}
+{% set resolved_secondary_url = view_url if is_edit_mode and view_url else (cancel_url or list_url) %}
+{% set secondary_label = cancel_label if is_edit_mode else back_label %}
 <div class="sticky bottom-4 z-30 w-full flex justify-center pointer-events-none">
   <div
     class="pointer-events-auto flex w-[calc(100%-1.5rem)] max-w-5xl flex-col-reverse gap-3 rounded-[24px] border border-slate-200 bg-white/96 p-3 shadow-2xl shadow-slate-900/10 backdrop-blur-md sm:flex-row sm:items-center sm:justify-between">
     <div class="flex flex-1 flex-col-reverse gap-3 sm:flex-row sm:items-center">
-      <a href="{{ resolved_cancel_url }}" class="{{ action_secondary_classes() }}">
-        {{ back_label if view_mode else cancel_label }}
+      <a href="{{ resolved_secondary_url }}" class="{{ action_secondary_classes() }}">
+        {{ secondary_label }}
       </a>
     </div>
     {% if view_mode and edit_url %}
