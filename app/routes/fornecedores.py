@@ -43,7 +43,7 @@ def visualizar_fornecedor(id):
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def gerar_fornecedor():
-    empresa_id = get_current_empresa_id()c
+    empresa_id = get_current_empresa_id()
     if fornecedor_id:
         fornecedor = Fornecedor.query.filter_by(id=fornecedor_id, empresa_id=empresa_id).first_or_404()
         fornecedor.nome = nome

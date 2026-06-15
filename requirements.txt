@@ -1,23 +1,36 @@
-Flask
-Flask-Cors
-Flask-Migrate
-Flask-SQLAlchemy
-Flask-WTF
-python-dotenv
-PyMySQL
-cryptography
-Werkzeug
-flask-login
-bcrypt
-Pillow
-qrcode[pil]
-pdfkit
-weasyprint
-reportlab
-pikepdf
-pypdf
-pymupdf
-gunicorn
-psutil
-pytest
-openpyxl
+# Core Flask & Extensões
+Flask>=3.1.0
+Flask-Cors>=5.0.0
+Flask-Migrate>=4.1.0
+Flask-SQLAlchemy>=3.1.0
+Flask-WTF>=1.2.0
+Werkzeug>=3.1.0
+flask-login>=0.6.3
+
+# Banco de Dados e Utilitários
+python-dotenv>=1.0.1
+PyMySQL>=1.1.0
+cryptography>=44.0.0
+bcrypt>=4.2.0
+
+# Manipulação de Imagens e QR Code
+Pillow>=10.4.0
+qrcode[pil]>=8.0
+
+# Geração e Manipulação de PDFs
+weasyprint>=63.0
+pdfkit>=1.0.0
+reportlab>=4.2.0
+pikepdf>=9.0.0
+pypdf>=5.0.0
+pymupdf>=1.24.0
+
+# Planilhas (Excel)
+openpyxl>=3.1.5
+
+# Servidor de Produção e Monitoramento
+gunicorn>=23.0.0
+psutil>=6.0.0
+
+# Testes
+pytest>=8.3.0
