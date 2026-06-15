@@ -43,8 +43,13 @@
           <p id="cnpj-message" class="text-[10px] mt-1 h-3"></p>
         </div>
 
-        <div class="flex items-end">
-          {{ ui_form.status_field(name='ativo', selected=(item.ativo if item else True), view_mode=view_mode, id='ativo') }}
+        <div>
+          <label for="ativo" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Status</label>
+          <select name="ativo" id="ativo" class="{{ ui_form.select_classes(view_mode=view_mode) }}" {{ 'disabled' if view_mode }}>
+            <option value="1" {% if item is none or item.ativo %}selected{% endif %}>Ativo</option>
+            <option value="0" {% if item and not item.ativo %}selected{% endif %}>Inativo</option>
+          </select>
+          <p class="text-[10px] mt-1 h-3"></p>
         </div>
       </div>
     {% endcall %}
