@@ -2,130 +2,51 @@
 {% import "components/form/macros.html" as ui_form %}
 
 {% block title %}
-{% if view_mode %}Visualizar{% elif item and item.id %}Editar{% else %}Cadastrar{% endif %} Clima
+  {% if view_mode %}Visualizar{% elif item and item.id %}Editar{% else %}Cadastrar{% endif %} Clima
 {% endblock %}
 
 {% block content %}
-<div class="mx-auto animate-fade-up">
+{% set locked = view_mode or (item and item.is_system) %}
+{% set page_title = ('Visualizar' if view_mode else ('Editar' if item and item.id else 'Novo')) ~ ' Clima' %}
+{% set subtitle = 'Detalhes do registro selecionado.' if view_mode else ('Atualize as informações.' if item and item.id else 'Adicione um novo tipo de clima.') %}
 
-    <!-- Flash Messages (padronizado) -->
-    {% include "partials/flash_messages.html" %}
+{% call ui_form.page_shell() %}
+  {{ ui_form.hero(page_title, subtitle=subtitle, back_url=url_for('auth.lista_climas'), view_mode=view_mode, item=item) }}
 
-    <!-- Cabeçalho -->
-    <div class="page-hero p-6 sm:p-7 flex items-center justify-between">
+  {{ ui_form.metadata(item) }}
+
+  {% call ui_form.form_start(action=url_for('auth.gerar_clima'), form_id='climaForm', item=item) %}
+    {% call ui_form.section('Dados do Clima', icon='fa-cloud-sun', icon_box_class='bg-sky-50 text-sky-700') %}
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">
-                {% if view_mode %}Visualizar{% elif item and item.id %}Editar{% else %}Novo{% endif %} Clima
-            </h1>
-            <p class="text-sm text-slate-500 mt-1">
-                {% if view_mode %}Detalhes do registro selecionado.{% elif item and item.id %}Atualize as informações do
-                clima.{% else %}Adicione um novo tipo de clima ao sistema.{% endif %}
-            </p>
-        </div>
-        <!-- Botão Voltar (Desktop) -->
-        {% if view_mode or not (item and item.id) %}
-        <a href="{{ url_for('auth.lista_climas') }}"
-            class="hidden md:inline-flex items-center text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors">
-            <i class="fas fa-arrow-left mr-2"></i> Voltar
-        </a>
-        {% endif %}
-    </div>
-
-    <!-- Formulário -->
-    {{ ui_form.metadata(item) }}
-
-    {% call ui_form.form_start(action=url_for('auth.gerar_clima'), form_id='climaForm', item=item, extra_class='space-y-6') %}
-
-        <!-- Card Principal -->
-        <div class="surface-card rounded-2xl overflow-hidden">
-            <!-- Título da Seção -->
-            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
-                <div
-                    class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 text-sm">
-                    <i class="fas fa-cloud-sun"></i>
-                </div>
-                <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">
-                    Dados do Registro
-                </h3>
-            </div>
-
-            <div class="p-6 space-y-6">
-                <!-- Campo Nome -->
-                <div>
-                    <label for="nome" class="block text-xs font-bold text-slate-500 uppercase mb-2">
-                        Nome do Clima <span class="text-red-500">*</span>
-                    </label>
-                    <div class="relative">
-                        <input type="text" name="nome" id="nome" value="{{ ui_form.blank(item.nome if item else none) }}"
-                            class="{{ ui_form.control_classes(view_mode=view_mode, extra='pr-10') }}"
-                            placeholder="Ex: Ensolarado, Chuva Leve..." {{ 'readonly disabled' if view_mode }} required>
-                        {% if not view_mode %}
-                        <div
-                            class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
-                            <i class="fas fa-pen text-xs"></i>
-                        </div>
-                        {% endif %}
-                    </div>
-                    {% if not view_mode %}
-                    <p class="mt-1.5 text-[11px] text-slate-400">Nome descritivo que aparecerá nos relatórios.</p>
-                    {% endif %}
-                </div>
-                <div class="flex items-center gap-4">
-                    {{ ui_form.status_field(name='ativo', selected=(item.ativo if item else True), view_mode=view_mode, id='ativo') }}
-                </div>
-            </div>
+          <label for="nome" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">
+            Descrição do Clima
+          </label>
+          <input type="text" name="nome" id="nome" value="{{ ui_form.blank(item.nome if item else none) }}"
+            class="{{ ui_form.control_classes(view_mode=locked) }}"
+            placeholder="Ex: Ensolarado, Chuva Leve..." {{ 'readonly disabled' if locked }} required>
         </div>
 
-        <!-- Barra de Ações -->
-        {{ ui_form.actions(
-            list_url=url_for('auth.lista_climas'),
-            view_mode=view_mode,
-            edit_url=(url_for('auth.editar_clima', id=item.id) if item and item.id else None),
-            view_url=(url_for('auth.visualizar_clima', id=item.id) if item and item.id else None),
-            item=item,
-            submit_label='Salvar Registro',
-            cancel_label='Cancelar',
-            back_label='Voltar',
-            submit_btn_id='submitBtn'
-        ) }}
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {{ ui_form.status_field(name='ativo', selected=(item.ativo if item else True), view_mode=locked, id='ativo') }}
+          {{ ui_form.origin_field(item=item) }}
+        </div>
+      </div>
     {% endcall %}
-</div>
 
-<!-- Estilos Específicos para Animação -->
-<style>
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(10px);
-        }
+    {{ ui_form.actions(
+      list_url=url_for('auth.lista_climas'),
+      view_mode=view_mode,
+      edit_url=(url_for('auth.editar_clima', id=item.id) if item and item.id and not item.is_system else None),
+      view_url=(url_for('auth.visualizar_clima', id=item.id) if item and item.id else None),
+      item=item,
+      submit_label='Salvar Clima',
+      cancel_label='Cancelar',
+      back_label='Voltar',
+      submit_btn_id='submitBtn'
+    ) }}
+  {% endcall %}
 
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .animate-fade-up {
-        animation: fadeInUp 0.4s ease-out forwards;
-    }
-
-    @keyframes fadeInDown {
-        from {
-            opacity: 0;
-            transform: translateY(-10px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .animate-fade-in-down {
-        animation: fadeInDown 0.3s ease-out forwards;
-    }
-</style>
-
-{{ ui_form.submit_script(form_id='climaForm', submit_btn_id='submitBtn', loading_label='Salvando...') }}
-
+  {{ ui_form.submit_script(form_id='climaForm', submit_btn_id='submitBtn', loading_label='Salvando...') }}
+{% endcall %}
 {% endblock %}

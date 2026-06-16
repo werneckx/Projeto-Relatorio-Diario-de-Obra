@@ -194,7 +194,7 @@
                 </td>
 
                 <td data-label="ID"
-                    class="px-6 py-4 whitespace-nowrap text-xs font-mono font-medium text-slate-400 sm:text-slate-500">
+                    class="px-6 py-4 whitespace-nowrap text-sm font-mono text-slate-400 sorting_1">
                     <span class="bg-slate-100 px-2 py-1 rounded-md sm:bg-transparent sm:p-0">
                         #{{ '%03d' % mao.id }}
                     </span>
@@ -207,8 +207,8 @@
                 <td data-label="Tipo" class="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
                     {% if mao.tipo %}
                     <span
-                        class="inline-flex items-center gap-1 rounded-md bg-blue-50 text-blue-700 px-2 py-0.5 text-xs font-medium ring-1 ring-inset ring-blue-700/10">
-                        <i class="far fa-folder text-[10px] opacity-70"></i> {{ mao.tipo }}
+                        class="truncate-safe">
+                        {{ mao.tipo }}
                     </span>
                     {% else %}
                     <span class="text-slate-400">-</span>

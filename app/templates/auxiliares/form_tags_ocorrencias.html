@@ -2,83 +2,51 @@
 {% import "components/form/macros.html" as ui_form %}
 
 {% block title %}
-{% if view_mode %}Visualizar{% elif item and item.id %}Editar{% else %}Cadastrar{% endif %} Tag de Ocorrência
+  {% if view_mode %}Visualizar{% elif item and item.id %}Editar{% else %}Cadastrar{% endif %} Tag de Ocorrência
 {% endblock %}
 
 {% block content %}
-<div class="page-shell">
+{% set locked = view_mode or (item and item.is_system) %}
+{% set page_title = ('Visualizar' if view_mode else ('Editar' if item and item.id else 'Nova')) ~ ' Tag de Ocorrência' %}
+{% set subtitle = 'Detalhes do registro selecionado.' if view_mode else ('Atualize as informações.' if item and item.id else 'Cadastre uma nova tag de ocorrência.') %}
 
-    {% include "partials/flash_messages.html" %}
+{% call ui_form.page_shell() %}
+  {{ ui_form.hero(page_title, subtitle=subtitle, back_url=url_for('auth.lista_tags_ocorrencias'), view_mode=view_mode, item=item) }}
 
-    <div class="page-hero p-6 sm:p-7 flex items-center justify-between">
+  {{ ui_form.metadata(item) }}
+
+  {% call ui_form.form_start(action=url_for('auth.gerar_tags_ocorrencias'), form_id='tagsOcorrenciasForm', item=item) %}
+    {% call ui_form.section('Dados da Tag', icon='fa-tag', icon_box_class='bg-amber-50 text-amber-700') %}
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">
-                {% if view_mode %}Visualizar{% elif item and item.id %}Editar{% else %}Nova{% endif %} Tag de Ocorrência
-            </h1>
-            <p class="text-sm text-slate-500 mt-1">
-                {% if view_mode %}Detalhes do registro selecionado.{% elif item and item.id %}Atualize as informações.{%
-                else %}Cadastre um novo tipo de tag.{% endif %}
-            </p>
-        </div>
-        {% if view_mode or not (item and item.id) %}
-        <a href="{{ url_for('auth.lista_tags_ocorrencias') }}"
-            class="hidden md:inline-flex items-center text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors">
-            <i class="fas fa-arrow-left mr-2"></i> Voltar
-        </a>
-        {% endif %}
-    </div>
-
-    {{ ui_form.metadata(item) }}
-
-    {% call ui_form.form_start(action=url_for('auth.gerar_tags_ocorrencias'), form_id='tagsOcorrenciasForm', item=item, extra_class='space-y-6') %}
-        <div class="surface-card rounded-2xl overflow-hidden">
-            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
-                <div
-                    class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 text-sm">
-                    <i class="fas fa-tag"></i>
-                </div>
-                <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">
-                    Dados da Tag
-                </h3>
-            </div>
-
-            <div class="p-6 space-y-6">
-                <div>
-                    <label for="nome" class="block text-xs font-bold text-slate-500 uppercase mb-2">
-                        Nome da Tag <span class="text-red-500">*</span>
-                    </label>
-                    <div class="relative">
-                        <input type="text" name="nome" id="nome" value="{{ ui_form.blank(item.nome if item else none) }}"
-                            class="{{ ui_form.control_classes(view_mode=view_mode, extra='pr-10') }}"
-                            placeholder="Ex: Material Danificado, Falta de Pessoal..." {{ 'readonly disabled' if
-                            view_mode }} required>
-                        {% if not view_mode %}
-                        <div
-                            class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
-                            <i class="fas fa-pen text-xs"></i>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="flex items-center gap-4">
-                    {{ ui_form.status_field(name='ativo', selected=(item.ativo if item else True), view_mode=view_mode, id='ativo') }}
-                </div>
-            </div>
+          <label for="nome" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">
+            Nome da Tag
+          </label>
+          <input type="text" name="nome" id="nome" value="{{ ui_form.blank(item.nome if item else none) }}"
+            class="{{ ui_form.control_classes(view_mode=locked) }}"
+            placeholder="Ex: Material Danificado, Falta de Pessoal..." {{ 'readonly disabled' if locked }} required>
         </div>
 
-        {{ ui_form.actions(
-            list_url=url_for('auth.lista_tags_ocorrencias'),
-            view_mode=view_mode,
-            edit_url=(url_for('auth.editar_tags_ocorrencias', id=item.id) if item and item.id else None),
-            view_url=(url_for('auth.visualizar_tags_ocorrencias', id=item.id) if item and item.id else None),
-            item=item,
-            submit_label='Salvar Registro',
-            cancel_label='Cancelar',
-            back_label='Voltar',
-            submit_btn_id='submitBtn'
-        ) }}
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {{ ui_form.status_field(name='ativo', selected=(item.ativo if item else True), view_mode=locked, id='ativo') }}
+          {{ ui_form.origin_field(item=item) }}
+        </div>
+      </div>
     {% endcall %}
-</div>
 
-{{ ui_form.submit_script(form_id='tagsOcorrenciasForm', submit_btn_id='submitBtn', loading_label='Salvando...') }}
+    {{ ui_form.actions(
+      list_url=url_for('auth.lista_tags_ocorrencias'),
+      view_mode=view_mode,
+      edit_url=(url_for('auth.editar_tags_ocorrencias', id=item.id) if item and item.id and not item.is_system else None),
+      view_url=(url_for('auth.visualizar_tags_ocorrencias', id=item.id) if item and item.id else None),
+      item=item,
+      submit_label='Salvar Tag',
+      cancel_label='Cancelar',
+      back_label='Voltar',
+      submit_btn_id='submitBtn'
+    ) }}
+  {% endcall %}
+
+  {{ ui_form.submit_script(form_id='tagsOcorrenciasForm', submit_btn_id='submitBtn', loading_label='Salvando...') }}
+{% endcall %}
 {% endblock %}
