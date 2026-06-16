@@ -57,6 +57,7 @@ DROP TABLE IF EXISTS fornecedores;
 DROP TABLE IF EXISTS aux_tag_ocorrencia;
 DROP TABLE IF EXISTS aux_tipo_obra;
 DROP TABLE IF EXISTS aux_equipamentos;
+DROP TABLE IF EXISTS aux_tipo_equipamento;
 DROP TABLE IF EXISTS aux_funcoes;
 DROP TABLE IF EXISTS aux_clima;
 
@@ -159,11 +160,29 @@ CREATE TABLE aux_funcoes (
     FOREIGN KEY (empresa_id) REFERENCES empresa(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE aux_tipo_equipamento (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(100) NOT NULL,
+    ativo BOOLEAN NOT NULL DEFAULT TRUE,
+
+    is_system BOOLEAN NOT NULL DEFAULT FALSE,
+
+
+    criado_por INT NULL,
+    modificado_por INT NULL,
+    criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+    modificado_em DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    UNIQUE KEY uk_aux_tipo_equipamento_nome (nome),
+    INDEX idx_aux_tipo_equipamento_nome (nome),
+    INDEX idx_aux_tipo_equipamento_ativo (ativo)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE aux_equipamentos (
     id INT AUTO_INCREMENT PRIMARY KEY,
     empresa_id INT NULL,              -- NULL = padrão global do sistema
     descricao VARCHAR(150) NOT NULL,
-    tipo VARCHAR(100),
+    tipo_id INT NOT NULL,
     is_system BOOLEAN NOT NULL DEFAULT FALSE,
     ativo BOOLEAN DEFAULT TRUE,
 
@@ -174,8 +193,10 @@ CREATE TABLE aux_equipamentos (
 
     UNIQUE KEY uk_equip_empresa (empresa_id, descricao),
     INDEX idx_equip_empresa (empresa_id),
+    INDEX idx_equip_tipo (tipo_id),
 
-    FOREIGN KEY (empresa_id) REFERENCES empresa(id)
+    FOREIGN KEY (empresa_id) REFERENCES empresa(id),
+    FOREIGN KEY (tipo_id) REFERENCES aux_tipo_equipamento(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE aux_tag_ocorrencia (
@@ -1088,6 +1109,11 @@ INSERT INTO permissoes (empresa_id, chave, descricao, is_system, ativo) VALUES
 (NULL, 'tipo_obra.update', 'Editar tipos de obra',                    TRUE, TRUE),
 (NULL, 'tipo_obra.delete', 'Excluir tipos de obra',                   TRUE, TRUE),
 
+(NULL, 'aux_tipo_equipamento.view',   'Visualizar tipos de equipamento',  TRUE, TRUE),
+(NULL, 'aux_tipo_equipamento.create', 'Criar tipos de equipamento',       TRUE, TRUE),
+(NULL, 'aux_tipo_equipamento.edit',   'Editar tipos de equipamento',      TRUE, TRUE),
+(NULL, 'aux_tipo_equipamento.manage', 'Gerenciar tipos de equipamento',   TRUE, TRUE),
+
 
 (NULL, 'obra_eap.view', 'Visualizar EAP da obra', TRUE, TRUE),
 (NULL, 'obra_eap.create', 'Criar EAP da obra', TRUE, TRUE),
@@ -1145,7 +1171,8 @@ WHERE p.nome = 'GESTOR' AND p.empresa_id IS NULL
     'workflow.manage',
     'obra_eap.view','obra_eap.create','obra_eap.update','obra_eap.delete',
     'rdo_programacao.view','rdo_programacao.create','rdo_programacao.update','rdo_programacao.delete','rdo_programacao.execute',
-    'tipo_obra.view','tipo_obra.create','tipo_obra.update','tipo_obra.delete'
+    'tipo_obra.view','tipo_obra.create','tipo_obra.update','tipo_obra.delete',
+    'aux_tipo_equipamento.view','aux_tipo_equipamento.create','aux_tipo_equipamento.edit','aux_tipo_equipamento.manage'
   );
 
 -- Mapeamento OPERADOR
@@ -1154,7 +1181,7 @@ SELECT NULL, p.id, perm.id, TRUE
 FROM papeis p, permissoes perm
 WHERE p.nome = 'OPERADOR' AND p.empresa_id IS NULL
   AND perm.empresa_id IS NULL
-  AND perm.chave IN ('rdo.create','rdo.update','rdo.view','empresa.view','cliente.view','fornecedor.view','colaborador.view','colaborador.manage','obra_eap.view','rdo_programacao.view','rdo_programacao.execute','tipo_obra.view');
+  AND perm.chave IN ('rdo.create','rdo.update','rdo.view','empresa.view','cliente.view','fornecedor.view','colaborador.view','colaborador.manage','obra_eap.view','rdo_programacao.view','rdo_programacao.execute','tipo_obra.view','aux_tipo_equipamento.view');
 
 -- Mapeamento LEITOR
 INSERT INTO papel_permissao (empresa_id, papel_id, permissao_id, ativo)
@@ -1162,7 +1189,7 @@ SELECT NULL, p.id, perm.id, TRUE
 FROM papeis p, permissoes perm
 WHERE p.nome = 'LEITOR' AND p.empresa_id IS NULL
   AND perm.empresa_id IS NULL
-  AND perm.chave IN ('rdo.view','empresa.view','cliente.view','fornecedor.view','colaborador.view','tipo_obra.view');
+  AND perm.chave IN ('rdo.view','empresa.view','cliente.view','fornecedor.view','colaborador.view','tipo_obra.view','aux_tipo_equipamento.view');
 
 -- Mapeamento CLIENTE_OBRA
 INSERT INTO papel_permissao (empresa_id, papel_id, permissao_id, ativo)
@@ -1194,19 +1221,42 @@ INSERT INTO aux_funcoes (empresa_id, descricao, tipo, is_system, ativo) VALUES
 (NULL, 'Técnico de Segurança', 'INDIRETO', TRUE, TRUE),
 (NULL, 'Administrativo', 'INDIRETO', TRUE, TRUE);
 
+-- Tipos de Equipamento
+INSERT INTO aux_tipo_equipamento (id, nome, ativo, is_system) VALUES
+(1, 'Acesso e Andaimes', TRUE, TRUE),
+(2, 'Bombeamento e Drenagem', TRUE, TRUE),
+(3, 'Compactação', TRUE, TRUE),
+(4, 'Concretagem', TRUE, TRUE),
+(5, 'Corte e Demolição', TRUE, TRUE),
+(6, 'Escavação e Terraplenagem', TRUE, TRUE),
+(7, 'Ferramentas Elétricas', TRUE, TRUE),
+(8, 'Ferramentas Manuais', TRUE, TRUE),
+(9, 'Fundação', TRUE, TRUE),
+(10, 'Geração de Energia', TRUE, TRUE),
+(11, 'Içamento e Elevação', TRUE, TRUE),
+(12, 'Limpeza e Acabamento', TRUE, TRUE),
+(13, 'Movimentação de Cargas', TRUE, TRUE),
+(14, 'Pavimentação', TRUE, TRUE),
+(15, 'Perfuração', TRUE, TRUE),
+(16, 'Solda e Corte Térmico', TRUE, TRUE),
+(17, 'Topografia e Medição', TRUE, TRUE),
+(18, 'Transporte', TRUE, TRUE),
+(19, 'Segurança e Sinalização', TRUE, TRUE),
+(20, 'Não informado', TRUE, TRUE);
+
 -- Aux Equipamentos
-INSERT INTO aux_equipamentos (empresa_id, descricao, tipo, is_system, ativo) VALUES
-(NULL, 'Escavadeira Hidráulica', 'Pesado', TRUE, TRUE),
-(NULL, 'Retroescavadeira', 'Pesado', TRUE, TRUE),
-(NULL, 'Motoniveladora', 'Pesado', TRUE, TRUE),
-(NULL, 'Rolo Compactador', 'Pesado', TRUE, TRUE),
-(NULL, 'Caminhão Basculante', 'Transporte', TRUE, TRUE),
-(NULL, 'Caminhão Pipa', 'Transporte', TRUE, TRUE),
-(NULL, 'Caminhão Munck', 'Transporte', TRUE, TRUE),
-(NULL, 'Betoneira', 'Leve', TRUE, TRUE),
-(NULL, 'Placa Compactadora', 'Leve', TRUE, TRUE),
-(NULL, 'Gerador', 'Leve', TRUE, TRUE),
-(NULL, 'Compressor de Ar', 'Leve', TRUE, TRUE);
+INSERT INTO aux_equipamentos (empresa_id, descricao, tipo_id, is_system, ativo) VALUES
+(NULL, 'Escavadeira Hidráulica', 6, TRUE, TRUE),
+(NULL, 'Retroescavadeira', 6, TRUE, TRUE),
+(NULL, 'Motoniveladora', 14, TRUE, TRUE),
+(NULL, 'Rolo Compactador', 3, TRUE, TRUE),
+(NULL, 'Caminhão Basculante', 18, TRUE, TRUE),
+(NULL, 'Caminhão Pipa', 18, TRUE, TRUE),
+(NULL, 'Caminhão Munck', 11, TRUE, TRUE),
+(NULL, 'Betoneira', 4, TRUE, TRUE),
+(NULL, 'Placa Compactadora', 3, TRUE, TRUE),
+(NULL, 'Gerador', 10, TRUE, TRUE),
+(NULL, 'Compressor de Ar', 7, TRUE, TRUE);
 
 -- Aux Tag Ocorrência
 INSERT INTO aux_tag_ocorrencia (empresa_id, descricao, tipo, is_system, ativo) VALUES
@@ -1719,10 +1769,10 @@ INSERT INTO aux_funcoes (id, empresa_id, descricao, tipo, is_system, ativo) VALU
 (21, 2, 'Soldador PEAD', 'DIRETO', FALSE, TRUE),
 (22, 2, 'Assistente Administrativo de Obra', 'INDIRETO', FALSE, TRUE);
 
-INSERT INTO aux_equipamentos (id, empresa_id, descricao, tipo, is_system, ativo) VALUES
-(20, 2, 'Escavadeira CAT 320', 'Pesado', FALSE, TRUE),
-(21, 2, 'Caminhao Poliguindaste', 'Transporte', FALSE, TRUE),
-(22, 2, 'Bomba Submersivel 3CV', 'Leve', FALSE, TRUE);
+INSERT INTO aux_equipamentos (id, empresa_id, descricao, tipo_id, is_system, ativo) VALUES
+(20, 2, 'Escavadeira CAT 320', 6, FALSE, TRUE),
+(21, 2, 'Caminhao Poliguindaste', 18, FALSE, TRUE),
+(22, 2, 'Bomba Submersivel 3CV', 2, FALSE, TRUE);
 
 INSERT INTO aux_tag_ocorrencia (id, empresa_id, descricao, tipo, is_system, ativo) VALUES
 (20, 2, 'Interferencia de rede existente', 'Engenharia', FALSE, TRUE),
