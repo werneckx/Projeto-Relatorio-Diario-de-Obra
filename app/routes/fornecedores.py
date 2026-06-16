@@ -44,6 +44,26 @@ def visualizar_fornecedor(id):
 @role_required(PERM_WRITE_BASIC)
 def gerar_fornecedor():
     empresa_id = get_current_empresa_id()
+    user_id = get_current_user_id()
+
+    fornecedor_id = request.form.get('id')
+    nome = _normalize_option_input(request.form.get('nome', ''))
+    cnpj = ''.join(ch for ch in request.form.get('cnpj', '') if ch.isdigit())
+    cep = ''.join(ch for ch in request.form.get('cep', '') if ch.isdigit())
+    logradouro = _normalize_option_input(request.form.get('logradouro', ''))
+    numero = _normalize_option_input(request.form.get('numero', ''))
+    complemento = _normalize_option_input(request.form.get('complemento', ''))
+    bairro = _normalize_option_input(request.form.get('bairro', ''))
+    cidade = _normalize_option_input(request.form.get('cidade', ''))
+    estado = _normalize_option_input(request.form.get('estado', '')).upper()
+    ativo = request.form.get('ativo') == '1'
+
+    if not nome:
+        flash('Nome do fornecedor é obrigatório.', 'danger')
+        if fornecedor_id:
+            return redirect(url_for('auth.editar_fornecedor', id=fornecedor_id))
+        return redirect(url_for('auth.criar_fornecedor'))
+
     if fornecedor_id:
         fornecedor = Fornecedor.query.filter_by(id=fornecedor_id, empresa_id=empresa_id).first_or_404()
         fornecedor.nome = nome

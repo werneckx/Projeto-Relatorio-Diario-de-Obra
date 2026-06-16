@@ -19,7 +19,7 @@
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label for="nome" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">
-            Nome <span class="text-rose-500">*</span>
+            Nome do Fornecedor
           </label>
           <input type="text" name="nome" id="nome" value="{{ ui_form.blank(item.nome if item else none) }}"
             class="{{ ui_form.control_classes(view_mode=view_mode) }}"
@@ -32,6 +32,15 @@
             class="{{ ui_form.control_classes(view_mode=view_mode, extra='font-mono') }}"
             placeholder="00.000.000/0000-00" maxlength="18" {{ 'readonly disabled' if view_mode }}>
           <p id="cnpj-message" class="text-[10px] mt-1 h-3"></p>
+        </div>
+        
+        <div>
+          <label for="ativo" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Status</label>
+          <select name="ativo" id="ativo" class="{{ ui_form.select_classes(view_mode=view_mode) }}" {{ 'disabled' if view_mode }}>
+            <option value="1" {% if item is none or item.ativo %}selected{% endif %}>Ativo</option>
+            <option value="0" {% if item and not item.ativo %}selected{% endif %}>Inativo</option>
+          </select>
+          <p class="text-[10px] mt-1 h-3"></p>
         </div>
       </div>
     {% endcall %}
@@ -114,10 +123,6 @@
       </div>
     {% endcall %}
 
-    {% call ui_form.section('Status', icon='fa-toggle-on', icon_box_class='bg-slate-50 text-slate-700') %}
-      {{ ui_form.status_field(name='ativo', selected=(item.ativo if item else True), view_mode=view_mode, id='ativo') }}
-    {% endcall %}
-
     {{ ui_form.actions(
       list_url=url_for('auth.lista_fornecedores'),
       view_mode=view_mode,
@@ -132,6 +137,7 @@
   {% endcall %}
 
   {% set cnpj_nome_field = 'nome' %}
+  {% set cnpj_normalize_api_data = true %}
   {% include "cadastros/_cidade_uf_selects.html" %}
   {% include "cadastros/_cnpj_cep_lookup.html" %}
   {{ ui_form.submit_script(form_id='fornecedorForm', submit_btn_id='submitBtn', loading_label='Salvando...') }}
