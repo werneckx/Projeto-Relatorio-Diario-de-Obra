@@ -112,12 +112,18 @@ def gerar_colaborador():
 
 
 @auth_bp.post('/excluir-colaborador/<int:id>')
+@auth_bp.post('/toggle-colaborador/<int:id>')
 @login_required
 @role_required(PERM_MANAGEMENT)
 def excluir_colaborador(id):
     empresa_id = get_current_empresa_id()
+    user_id = get_current_user_id()
     colaborador = Colaborador.query.filter_by(id=id, empresa_id=empresa_id).first()
     if colaborador:
-        set_audit_on_inactivate(colaborador)
+        if colaborador.ativo:
+            set_audit_on_inactivate(colaborador, user_id=user_id)
+        else:
+            colaborador.ativo = True
+            set_audit_on_update(colaborador, user_id=user_id)
         db.session.commit()
     return redirect(url_for('auth.lista_colaboradores'))

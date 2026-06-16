@@ -160,7 +160,7 @@
                     {'divider': true},
                     {'label': ('Inativar' if user.status else 'Ativar'), 'icon': ('fa-ban' if user.status else
                     'fa-check'), 'onclick': 'toggleStatus(' ~ user.id ~ ')', 'permission': 'usuario.manage', 'attrs':
-                    {'data-user-id': user.id}}
+                    {'data-user-id': user.id}, 'variant': ('danger' if user.status else 'success')}
                     ], button_title='Ações') }}
                 </td>
             </tr>
@@ -248,7 +248,7 @@
                 row.classList.remove('animate-pulse');
 
                 if (!ok || status !== 200) {
-                    alert("Erro ao alterar status.");
+                    showError('Erro ao alterar status', 'Erro ao alterar status.');
                     btn.innerHTML = originalIcon;
                     btn.disabled = false;
                     return;
@@ -283,7 +283,7 @@
             })
             .catch(err => {
                 console.error(err);
-                alert("Erro de conexão.");
+                showError('Erro de conexão', 'Erro de conexão.');
                 row.classList.remove('animate-pulse');
                 btn.innerHTML = originalIcon;
                 btn.disabled = false;

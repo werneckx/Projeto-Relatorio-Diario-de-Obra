@@ -7,6 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/system-dialog.css') }}">
     <style>
         :root {
             --primary: #6366f1;
@@ -543,7 +544,7 @@
         }
     </style>
 </head>
-<body>
+<body class="theme-dark">
     <!-- SIDEBAR -->
     <aside class="sidebar">
         <div class="sidebar-logo">
@@ -607,5 +608,6 @@
     <script src="{{ url_for('static', filename='js/date-time-picker.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
     <script src="{{ url_for('static', filename='js/select-picker.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/system-dialog.js') }}"></script>
 </body>
 </html>

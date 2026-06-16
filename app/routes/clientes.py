@@ -113,12 +113,18 @@ def gerar_cliente():
 
 
 @auth_bp.post('/excluir-cliente/<int:id>')
+@auth_bp.post('/toggle-cliente/<int:id>')
 @login_required
 @role_required(PERM_MANAGEMENT)
 def excluir_cliente(id):
     empresa_id = get_current_empresa_id()
+    user_id = get_current_user_id()
     cliente = Cliente.query.filter_by(id=id, empresa_id=empresa_id).first()
     if cliente:
-        set_audit_on_inactivate(cliente)
+        if cliente.ativo:
+            set_audit_on_inactivate(cliente, user_id=user_id)
+        else:
+            cliente.ativo = True
+            set_audit_on_update(cliente, user_id=user_id)
         db.session.commit()
     return redirect(url_for('auth.lista_clientes'))

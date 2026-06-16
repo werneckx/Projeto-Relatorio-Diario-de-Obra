@@ -337,12 +337,12 @@
     // ===== VALIDAÇÃO DE SENHA =====
     const passForm = document.querySelector('form[action*="alterar_minha_senha"]');
     if (passForm) {
-        passForm.addEventListener('submit', function (e) {
+        passForm.addEventListener('submit', async function (e) {
             const n = document.getElementById('nova_senha').value;
             const c = document.getElementById('confirmar_senha').value;
             if (n !== c) {
                 e.preventDefault();
-                alert('As novas senhas não conferem.');
+                await showWarning('Senhas diferentes', 'As novas senhas não conferem.');
             }
         });
     }

@@ -118,8 +118,9 @@
           {'label': 'Editar', 'icon': 'fa-pen', 'url': url_for('auth.editar_colaborador', id=colab.id), 'permission':
           'colaborador.manage'},
           {'divider': true},
-          {'label': 'Excluir', 'icon': 'fa-trash-alt', 'onclick': 'confirmDeleteColaborador(' ~ colab.id ~ ')',
-          'permission': 'colaborador.manage', 'variant': 'danger'}
+          {'label': ('Inativar' if colab.ativo else 'Ativar'), 'icon': ('fa-ban' if colab.ativo else 'fa-check'),
+          'onclick': 'confirmToggleColaborador(' ~ colab.id ~ ', ' ~ (colab.ativo|tojson) ~ ')',
+          'permission': 'colaborador.manage', 'variant': ('danger' if colab.ativo else 'success')}
           ], button_title='Ações') }}
         </td>
       </tr>
@@ -170,9 +171,10 @@
     }
   });
 
-  function confirmDeleteColaborador(id) {
-    if (!confirm('Tem certeza que deseja remover este colaborador?')) return;
-    fetch(`/auth/excluir-colaborador/${id}`, { method: 'POST' }).then(() => window.location.reload());
+  async function confirmToggleColaborador(id, ativo) {
+    const acao = ativo ? 'inativar' : 'ativar';
+    if (!await showConfirm('Confirmar alteração', `Tem certeza que deseja ${acao} este colaborador?`)) return;
+    fetch(`/auth/toggle-colaborador/${id}`, { method: 'POST' }).then(() => window.location.reload());
   }
 
   function clearColaboradorSearch() {

@@ -3181,7 +3181,7 @@
 
         async function clearNewObraForm() {
             if (hasBackendItem || isViewMode) return;
-            if (!confirm('Deseja limpar todos os campos deste novo cadastro?')) return;
+            if (!await showConfirm('Limpar cadastro', 'Deseja limpar todos os campos deste novo cadastro?')) return;
 
             restoringDraft = true;
             localStorage.removeItem(draftKey);

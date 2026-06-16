@@ -19,7 +19,7 @@
             </div>
             <div class="flex items-center gap-2">
                 <a href="{{ url_for('admin.editar_workflow', workflow_id=w.id) }}" class="btn btn-sm btn-primary">Editar</a>
-                <form action="{{ url_for('admin.excluir_workflow', workflow_id=w.id) }}" method="POST" onsubmit="return confirm('Confirma desativar este workflow?');">
+                <form action="{{ url_for('admin.excluir_workflow', workflow_id=w.id) }}" method="POST" data-confirm-title="Desativar workflow" data-confirm-message="Confirma desativar este workflow?">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-sm btn-danger">Desativar</button>
                 </form>

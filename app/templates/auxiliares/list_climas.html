@@ -95,9 +95,10 @@
                     'permission': 'clima.update', 'disabled': clima.is_system, 'disabled_reason': 'Registro de
                     sistema'},
                     {'divider': true},
-                    {'label': 'Excluir', 'icon': 'fa-trash-alt', 'onclick': 'confirmDeleteClima(' ~ clima.id ~ ')',
+                    {'label': ('Inativar' if clima.ativo else 'Ativar'), 'icon': ('fa-ban' if clima.ativo else
+                    'fa-check'), 'onclick': 'confirmToggleClima(' ~ clima.id ~ ', ' ~ (clima.ativo|tojson) ~ ')',
                     'permission': 'clima.delete', 'disabled': clima.is_system, 'disabled_reason': 'Registro de sistema',
-                    'variant': 'danger'}
+                    'variant': ('danger' if clima.ativo else 'success')}
                     ], button_title='Ações') }}
                 </td>
             </tr>
@@ -154,12 +155,13 @@
         }
     });
 
-    function confirmDeleteClima(id) {
-        if (!confirm('Deseja excluir este clima? Esta ação não pode ser desfeita.')) return;
+    async function confirmToggleClima(id, ativo) {
+        const acao = ativo ? 'inativar' : 'ativar';
+        if (!await showConfirm('Confirmar alteração', `Deseja ${acao} este clima?`)) return;
 
-        fetch(`/auth/excluir-clima/${id}`, { method: 'POST' })
+        fetch(`/auth/toggle-clima/${id}`, { method: 'POST' })
             .then(res => {
-                if (!res.ok) throw new Error('Erro ao excluir');
+                if (!res.ok) throw new Error('Erro ao alterar status');
                 if (dataTableClimas) {
                     const row = document.getElementById('clima-row-' + id);
                     if (row) {
@@ -173,7 +175,7 @@
             })
             .catch(err => {
                 console.error(err);
-                alert('Erro ao excluir clima.');
+                showError('Erro ao alterar status', 'Erro ao alterar status do clima.');
             });
     }
 
