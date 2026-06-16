@@ -744,10 +744,10 @@
                                     <i class="fas fa-pen"></i>
                                 </a>
                                 {% endif %}
-                                <button onclick="excluirItem('{{ rdo.id }}')"
+                                <button onclick="inativarItem('{{ rdo.id }}')"
                                     class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors action-btn"
-                                    title="Excluir">
-                                    <i class="fas fa-trash-alt"></i>
+                                    title="Inativar">
+                                    <i class="fas fa-ban"></i>
                                 </button>
                             </div>
                         </td>
@@ -1007,14 +1007,14 @@
         clearAdvancedFilters();
     }
 
-    function excluirItem(id) {
-        if (!confirm("Tem certeza que deseja excluir este RDO? A ação não pode ser desfeita.")) return;
-        fetch(`/auth/excluir-rdo/${id}`, { method: "POST" })
+    async function inativarItem(id) {
+        if (!await showConfirm('Inativar RDO', 'Tem certeza que deseja inativar este RDO?')) return;
+        fetch(`/auth/inativar-rdo/${id}`, { method: "POST" })
             .then(res => {
                 if (res.ok) window.location.reload();
-                else alert("Erro ao excluir.");
+                else showError('Erro ao inativar', 'Erro ao inativar.');
             })
-            .catch(err => alert("Erro de conexão."));
+            .catch(err => showError('Erro de conexão', 'Erro de conexão ao inativar.'));
     }
 </script>
 

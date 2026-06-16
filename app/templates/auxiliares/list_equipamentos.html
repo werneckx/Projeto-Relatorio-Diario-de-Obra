@@ -258,9 +258,11 @@
                     'permission': 'equipamento.update', 'disabled': equipamento.is_system, 'disabled_reason': 'Registro
                     de sistema'},
                     {'divider': true},
-                    {'label': 'Excluir', 'icon': 'fa-trash-alt', 'onclick': 'confirmDeleteEquipamento(' ~ equipamento.id
-                    ~ ')', 'permission': 'equipamento.delete', 'disabled': equipamento.is_system, 'disabled_reason':
-                    'Registro de sistema', 'variant': 'danger'}
+                    {'label': ('Inativar' if equipamento.ativo else 'Ativar'), 'icon': ('fa-ban' if equipamento.ativo
+                    else 'fa-check'), 'onclick': 'confirmToggleEquipamento(' ~ equipamento.id ~ ', ' ~
+                    (equipamento.ativo|tojson) ~ ')', 'permission': 'equipamento.delete', 'disabled':
+                    equipamento.is_system, 'disabled_reason': 'Registro de sistema', 'variant': ('danger' if
+                    equipamento.ativo else 'success')}
                     ], button_title='Ações') }}
                 </td>
             </tr>
@@ -326,12 +328,13 @@
         }
     });
 
-    function confirmDeleteEquipamento(id) {
-        if (!confirm('Deseja excluir este equipamento? Esta ação não pode ser desfeita.')) return;
+    async function confirmToggleEquipamento(id, ativo) {
+        const acao = ativo ? 'inativar' : 'ativar';
+        if (!await showConfirm('Confirmar alteração', `Deseja ${acao} este equipamento?`)) return;
 
-        fetch(`/auth/excluir-equipamento/${id}`, { method: 'POST' })
+        fetch(`/auth/toggle-equipamento/${id}`, { method: 'POST' })
             .then(res => {
-                if (!res.ok) throw new Error('Erro ao excluir');
+                if (!res.ok) throw new Error('Erro ao alterar status');
 
                 if (dataTableEquipamentos) {
                     const row = document.getElementById('equipamento-row-' + id);
@@ -346,7 +349,7 @@
             })
             .catch(err => {
                 console.error(err);
-                alert('Erro ao excluir equipamento.');
+                showError('Erro ao alterar status', 'Erro ao alterar status do equipamento.');
             });
     }
 

@@ -85,8 +85,9 @@
           {'label': 'Editar', 'icon': 'fa-pen', 'url': url_for('auth.editar_fornecedor', id=forn.id), 'permission':
           'fornecedor.manage'},
           {'divider': true},
-          {'label': 'Excluir', 'icon': 'fa-trash-alt', 'onclick': 'confirmDeleteFornecedor(' ~ forn.id ~ ')',
-          'permission': 'fornecedor.manage', 'variant': 'danger'}
+          {'label': ('Inativar' if forn.ativo == 1 else 'Ativar'), 'icon': ('fa-ban' if forn.ativo == 1 else
+                    'fa-check'), 'onclick': 'confirmToggleFornecedor(' ~ forn.id ~ ', ' ~ (forn.ativo|tojson) ~ ')',
+          'permission': 'fornecedor.manage', 'variant': ('danger' if forn.ativo == 1 else 'success')}
           ], button_title='Ações') }}
         </td>
       </tr>
@@ -137,9 +138,10 @@
     }
   });
 
-  function confirmDeleteFornecedor(id) {
-    if (!confirm('Tem certeza que deseja remover este fornecedor?')) return;
-    fetch(`/auth/excluir-fornecedor/${id}`, { method: 'POST' }).then(() => window.location.reload());
+  async function confirmToggleFornecedor(id, ativo) {
+    const acao = ativo ? 'inativar' : 'ativar';
+    if (!await showConfirm('Confirmar alteração', `Tem certeza que deseja ${acao} este fornecedor?`)) return;
+    fetch(`/auth/toggle-fornecedor/${id}`, { method: 'POST' }).then(() => window.location.reload());
   }
 
   function clearFornecedorSearch() {

@@ -92,8 +92,10 @@
           {'label': 'Editar', 'icon': 'fa-pen', 'url': url_for('auth.editar_tipo_obra', id=t.id), 'permission':
           'tipo_obra.update', 'disabled': t.is_system, 'disabled_reason': 'Registro de sistema'},
           {'divider': true},
-          {'label': 'Excluir', 'icon': 'fa-trash-alt', 'onclick': 'confirmDeleteTipoObra(' ~ t.id ~ ')', 'permission':
-          'tipo_obra.delete', 'disabled': t.is_system, 'disabled_reason': 'Registro de sistema', 'variant': 'danger'}
+          {'label': ('Inativar' if t.ativo else 'Ativar'), 'icon': ('fa-ban' if t.ativo else 'fa-check'), 'onclick':
+          'confirmToggleTipoObra(' ~ t.id ~ ', ' ~ (t.ativo|tojson) ~ ')', 'permission': 'tipo_obra.delete',
+          'disabled': t.is_system, 'disabled_reason': 'Registro de sistema', 'variant': ('danger' if t.ativo else
+          'success')}
           ], button_title='Ações') }}
         </td>
       </tr>
@@ -144,9 +146,10 @@
     }
   });
 
-  function confirmDeleteTipoObra(id) {
-    if (!confirm('Tem certeza que deseja remover este tipo de obra?')) return;
-    fetch(`/auth/excluir-tipo-obra/${id}`, { method: 'POST' }).then(() => window.location.reload());
+  async function confirmToggleTipoObra(id, ativo) {
+    const acao = ativo ? 'inativar' : 'ativar';
+    if (!await showConfirm('Confirmar alteração', `Tem certeza que deseja ${acao} este tipo de obra?`)) return;
+    fetch(`/auth/toggle-tipo-obra/${id}`, { method: 'POST' }).then(() => window.location.reload());
   }
 
   function clearTipoObraSearch() {

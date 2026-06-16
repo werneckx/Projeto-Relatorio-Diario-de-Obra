@@ -94,9 +94,10 @@
                     'permission': 'tag_ocorrencia.update', 'disabled': tag.is_system, 'disabled_reason': 'Registro de
                     sistema'},
                     {'divider': true},
-                    {'label': 'Excluir', 'icon': 'fa-trash-alt', 'onclick': 'confirmDeleteTagsOcorrencias(' ~ tag.id ~
-                    ')', 'permission': 'tag_ocorrencia.delete', 'disabled': tag.is_system, 'disabled_reason': 'Registro
-                    de sistema', 'variant': 'danger'}
+                    {'label': ('Inativar' if tag.ativo else 'Ativar'), 'icon': ('fa-ban' if tag.ativo else 'fa-check'),
+                    'onclick': 'confirmToggleTagsOcorrencias(' ~ tag.id ~ ', ' ~ (tag.ativo|tojson) ~ ')',
+                    'permission': 'tag_ocorrencia.delete', 'disabled': tag.is_system, 'disabled_reason': 'Registro de
+                    sistema', 'variant': ('danger' if tag.ativo else 'success')}
                     ], button_title='Ações') }}
                 </td>
             </tr>
@@ -153,10 +154,11 @@
         }
     });
 
-    function confirmDeleteTagsOcorrencias(id) {
-        if (!confirm('Tem certeza que deseja remover esta tag?')) return;
+    async function confirmToggleTagsOcorrencias(id, ativo) {
+        const acao = ativo ? 'inativar' : 'ativar';
+        if (!await showConfirm('Confirmar alteração', `Deseja ${acao} esta tag?`)) return;
 
-        fetch(`/auth/excluir-tags-ocorrencias/${id}`, { method: 'POST' })
+        fetch(`/auth/toggle-tags-ocorrencias/${id}`, { method: 'POST' })
             .then(res => {
                 if (!res.ok) throw new Error('Falha na exclusão');
                 const row = document.getElementById(`tagsOcorrencias-row-${id}`);
@@ -174,7 +176,7 @@
             })
             .catch(err => {
                 console.error(err);
-                alert('Erro ao processar a solicitação.');
+                showError('Erro na solicitação', 'Erro ao processar a solicitação.');
             });
     }
 

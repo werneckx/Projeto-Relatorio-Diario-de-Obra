@@ -157,7 +157,8 @@
                     'obra.manage'},
                     {'divider': true},
                     {'label': ('Inativar' if obra.status == 1 else 'Ativar'), 'icon': ('fa-ban' if obra.status == 1 else
-                    'fa-check'), 'onclick': 'toggleObraStatus(' ~ obra.id ~ ')', 'permission': 'obra.manage'}
+                    'fa-check'), 'onclick': 'toggleObraStatus(' ~ obra.id ~ ')', 'permission': 'obra.manage',
+                    'variant': ('danger' if obra.status == 1 else 'success')}
                     ], button_title='Ações') }}
                 </td>
             </tr>
@@ -215,7 +216,7 @@
         const columns = _getVisibleExportColumns(table);
         const ids = _getExportIds(table, 'current');
         if (!ids.length) {
-            alert('Não há linhas visíveis para exportar. Ajuste os filtros ou a página e tente novamente.');
+            showWarning('Nada para exportar', 'Não há linhas visíveis para exportar. Ajuste os filtros ou a página e tente novamente.');
             return;
         }
         window.location.href = _buildExportUrl(`${exportBase}${format}`, ids, columns);
@@ -246,14 +247,14 @@
             .then(({ status, ok }) => {
                 row.classList.remove('animate-pulse');
                 if (!ok || status !== 200) {
-                    alert('Erro ao alterar status.');
+                    showError('Erro ao alterar status', 'Erro ao alterar status.');
                     return;
                 }
                 window.location.reload();
             })
             .catch(() => {
                 row.classList.remove('animate-pulse');
-                alert('Erro de conexão ao alterar status.');
+                showError('Erro de conexão', 'Erro de conexão ao alterar status.');
             });
     }
 

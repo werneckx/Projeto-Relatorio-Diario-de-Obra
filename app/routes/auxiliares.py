@@ -63,12 +63,18 @@ def editar_clima(id):
     return render_template('auxiliares/form_clima.html', item=clima, view_mode=False)
 
 @auth_bp.post('/excluir-clima/<int:id>')
+@auth_bp.post('/toggle-clima/<int:id>')
 @login_required
 @role_required(PERM_MANAGEMENT)
 def excluir_clima(id):
+    user_id = get_current_user_id()
     clima = AuxClima.query.get(id)
     if clima:
-        set_audit_on_inactivate(clima)
+        if clima.ativo:
+            set_audit_on_inactivate(clima, user_id=user_id)
+        else:
+            clima.ativo = True
+            set_audit_on_update(clima, user_id=user_id)
         db.session.add(clima)
         db.session.commit()
     return redirect(url_for('auth.lista_climas'))
@@ -134,12 +140,18 @@ def editar_equipamento(id):
     return render_template('auxiliares/form_equipamento.html', item=equipamento, view_mode=False)
 
 @auth_bp.post('/excluir-equipamento/<int:id>')
+@auth_bp.post('/toggle-equipamento/<int:id>')
 @login_required
 @role_required(PERM_MANAGEMENT)
 def excluir_equipamento(id):
+    user_id = get_current_user_id()
     equipamento = AuxEquipamentos.query.get(id)
     if equipamento:
-        set_audit_on_inactivate(equipamento)
+        if equipamento.ativo:
+            set_audit_on_inactivate(equipamento, user_id=user_id)
+        else:
+            equipamento.ativo = True
+            set_audit_on_update(equipamento, user_id=user_id)
         db.session.add(equipamento)
         db.session.commit()
     return redirect(url_for('auth.lista_equipamentos'))
@@ -204,12 +216,18 @@ def editar_tags_ocorrencias(id):
     return render_template('auxiliares/form_tags_ocorrencias.html', item=tag, view_mode=False)
 
 @auth_bp.post('/excluir-tags-ocorrencias/<int:id>')
+@auth_bp.post('/toggle-tags-ocorrencias/<int:id>')
 @login_required
 @role_required(PERM_MANAGEMENT)
 def excluir_tags_ocorrencias(id):
+    user_id = get_current_user_id()
     tag = AuxTagOcorrencia.query.get(id)
     if tag:
-        set_audit_on_inactivate(tag)
+        if tag.ativo:
+            set_audit_on_inactivate(tag, user_id=user_id)
+        else:
+            tag.ativo = True
+            set_audit_on_update(tag, user_id=user_id)
         db.session.add(tag)
         db.session.commit()
     return redirect(url_for('auth.lista_tags_ocorrencias'))
@@ -316,12 +334,18 @@ def editar_mao_obra(id):
 
 
 @auth_bp.post("/excluir-funcao/<int:id>")
+@auth_bp.post("/toggle-funcao/<int:id>")
 @login_required
 @role_required(PERM_MANAGEMENT)
 def excluir_funcao(id):
+    user_id = get_current_user_id()
     funcao = AuxFuncoes.query.get(id)
     if funcao:
-        set_audit_on_inactivate(funcao)
+        if funcao.ativo:
+            set_audit_on_inactivate(funcao, user_id=user_id)
+        else:
+            funcao.ativo = True
+            set_audit_on_update(funcao, user_id=user_id)
         db.session.add(funcao)
         db.session.commit()
     return redirect(url_for("auth.lista_funcoes"))
@@ -390,12 +414,18 @@ def editar_tipo_obra(id):
     return render_template("cadastros/obras/form_tipo_obra.html", item=tipo, view_mode=False)
 
 @auth_bp.post('/excluir-tipo-obra/<int:id>')
+@auth_bp.post('/toggle-tipo-obra/<int:id>')
 @login_required
 @role_required(PERM_MANAGEMENT)
 def excluir_tipo_obra(id):
+    user_id = get_current_user_id()
     tipo = AuxTipoObra.query.get(id)
     if tipo:
-        set_audit_on_inactivate(tipo)
+        if tipo.ativo:
+            set_audit_on_inactivate(tipo, user_id=user_id)
+        else:
+            tipo.ativo = True
+            set_audit_on_update(tipo, user_id=user_id)
         db.session.add(tipo)
         db.session.commit()
     return redirect(url_for('auth.lista_tipos_obra'))

@@ -226,9 +226,10 @@
                     {'label': 'Editar', 'icon': 'fa-pen', 'url': url_for('auth.editar_funcao', id=mao.id), 'permission':
                     'mao_obra.update', 'disabled': mao.is_system, 'disabled_reason': 'Registro de sistema'},
                     {'divider': true},
-                    {'label': 'Excluir', 'icon': 'fa-trash-alt', 'onclick': 'confirmDeleteMaoObra(' ~ mao.id ~ ')',
+                    {'label': ('Inativar' if mao.ativo else 'Ativar'), 'icon': ('fa-ban' if mao.ativo else
+                    'fa-check'), 'onclick': 'confirmToggleMaoObra(' ~ mao.id ~ ', ' ~ (mao.ativo|tojson) ~ ')',
                     'permission': 'mao_obra.delete', 'disabled': mao.is_system, 'disabled_reason': 'Registro de
-                    sistema', 'variant': 'danger'}
+                    sistema', 'variant': ('danger' if mao.ativo else 'success')}
                     ], button_title='Ações') }}
                 </td>
             </tr>
@@ -287,10 +288,11 @@
         }
     });
 
-    function confirmDeleteMaoObra(id) {
-        if (!confirm('Deseja realmente excluir esta Função? Esta operação removerá o registro de forma permanente.')) return;
+    async function confirmToggleMaoObra(id, ativo) {
+        const acao = ativo ? 'inativar' : 'ativar';
+        if (!await showConfirm('Confirmar alteração', `Deseja ${acao} esta função?`)) return;
 
-        fetch(`/auth/excluir-funcao/${id}`, { method: 'POST' })
+        fetch(`/auth/toggle-funcao/${id}`, { method: 'POST' })
             .then(res => {
                 if (!res.ok) throw new Error('Erro ao processar requisição');
 
@@ -308,7 +310,7 @@
             })
             .catch(err => {
                 console.error(err);
-                alert('Ocorreu um erro interno ao tentar remover a função.');
+                showError('Erro ao alterar status', 'Ocorreu um erro interno ao tentar alterar o status da função.');
             });
     }
 

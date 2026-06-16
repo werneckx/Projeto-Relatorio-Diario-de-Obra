@@ -99,12 +99,18 @@ def gerar_fornecedor():
 
 
 @auth_bp.post('/excluir-fornecedor/<int:id>')
+@auth_bp.post('/toggle-fornecedor/<int:id>')
 @login_required
-@role_required(PERM_MANAGEMENT)
+@permission_required('fornecedor.manage')
 def excluir_fornecedor(id):
     empresa_id = get_current_empresa_id()
+    user_id = get_current_user_id()
     fornecedor = Fornecedor.query.filter_by(id=id, empresa_id=empresa_id).first()
     if fornecedor:
-        set_audit_on_inactivate(fornecedor)
+        if fornecedor.ativo:
+            set_audit_on_inactivate(fornecedor, user_id=user_id)
+        else:
+            fornecedor.ativo = True
+            set_audit_on_update(fornecedor, user_id=user_id)
         db.session.commit()
     return redirect(url_for('auth.lista_fornecedores'))

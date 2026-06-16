@@ -97,8 +97,9 @@
           {'label': 'Editar', 'icon': 'fa-pen', 'url': url_for('auth.editar_cliente', id=cliente.id), 'permission':
           'cliente.manage'},
           {'divider': true},
-          {'label': 'Inativar', 'icon': 'fa-trash-alt', 'onclick': 'confirmDeleteCliente(' ~ cliente.id ~ ')',
-          'permission': 'cliente.manage', 'variant': 'danger'}
+          {'label': ('Inativar' if cliente.ativo else 'Ativar'), 'icon': ('fa-ban' if cliente.ativo else 'fa-check'),
+          'onclick': 'confirmToggleCliente(' ~ cliente.id ~ ', ' ~ (cliente.ativo|tojson) ~ ')',
+          'permission': 'cliente.manage', 'variant': ('danger' if cliente.ativo else 'success')}
           ], button_title='Ações') }}
         </td>
       </tr>
@@ -149,9 +150,10 @@
     }
   });
 
-  function confirmDeleteCliente(id) {
-    if (!confirm('Tem certeza que deseja remover este cliente?')) return;
-    fetch(`/auth/excluir-cliente/${id}`, { method: 'POST' }).then(() => window.location.reload());
+  async function confirmToggleCliente(id, ativo) {
+    const acao = ativo ? 'inativar' : 'ativar';
+    if (!await showConfirm('Confirmar alteração', `Tem certeza que deseja ${acao} este cliente?`)) return;
+    fetch(`/auth/toggle-cliente/${id}`, { method: 'POST' }).then(() => window.location.reload());
   }
 
   function clearClienteSearch() {

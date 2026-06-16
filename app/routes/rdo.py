@@ -673,6 +673,7 @@ def editar_rdo(rdo_id):
     )
 
 @auth_bp.post("/excluir-rdo/<int:rdo_id>")
+@auth_bp.post("/inativar-rdo/<int:rdo_id>")
 @login_required
 @permission_required('rdo.approve')
 def excluir_rdo(rdo_id):
