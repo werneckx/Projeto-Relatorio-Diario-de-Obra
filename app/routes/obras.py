@@ -237,6 +237,7 @@ def _build_obra_export_cell(obra, key):
 
 
 @auth_bp.get("/lista-obras")
+@auth_bp.get("/obras")
 @login_required
 def lista_obras():
     user = Usuario.query.get(session.get("user_id"))
@@ -295,6 +296,7 @@ def lista_obras():
 
 
 @auth_bp.get('/lista-obras/export/<string:export_format>')
+@auth_bp.get('/obras/export/<string:export_format>')
 @login_required
 def export_lista_obras(export_format):
     user = Usuario.query.get(session.get("user_id"))
@@ -334,6 +336,8 @@ def export_lista_obras(export_format):
 
 
 @auth_bp.get("/criar-obra")
+@auth_bp.get("/obras/nova")
+@auth_bp.get("/obras/novo")
 @login_required
 @permission_required('obra.manage')
 def criar_obra():
@@ -354,6 +358,7 @@ def criar_obra():
     )
 
 @auth_bp.post("/mudar-status-obras/<int:obraid>")
+@auth_bp.post("/obras/<int:obraid>/toggle-status")
 @login_required
 @permission_required('obra.manage')
 def toggle_user_obras(obraid):
@@ -374,6 +379,7 @@ def toggle_user_obras(obraid):
         return {"message": f"Erro ao atualizar: {str(e)}"}, 500
     
 @auth_bp.route('/gerar-obra', methods=['POST'])
+@auth_bp.post('/obras/salvar')
 @login_required
 @permission_required('obra.manage')
 def gerar_obra():
@@ -627,6 +633,7 @@ def gerar_obra():
         return redirect(url_for('auth.lista_obras'))
     
 @auth_bp.get("/editar-obra/<int:id>")
+@auth_bp.get("/obras/<int:id>/editar")
 @login_required
 @permission_required('obra.manage')
 def editar_obra(id):
@@ -663,6 +670,7 @@ def editar_obra(id):
     )
 
 @auth_bp.get("/visualizar-obra/<int:id>")
+@auth_bp.get("/obras/<int:id>")
 @login_required
 def visualizar_obra(id):
     # Security scope
@@ -933,6 +941,7 @@ def api_frente_colaborador_toggle(vinculo_id):
     })
 
 @auth_bp.post("/obra/toggle-status/<int:id>")
+@auth_bp.post("/obras/<int:id>/toggle-ativo")
 @login_required
 @permission_required('obra.manage')
 def toggle_obra_status(id):

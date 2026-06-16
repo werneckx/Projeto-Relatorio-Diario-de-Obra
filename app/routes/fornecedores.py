@@ -3,6 +3,7 @@ from app.routes.auth_common import *
 
 # --- FORNECEDORES ---
 @auth_bp.get("/lista-fornecedores")
+@auth_bp.get("/fornecedores")
 @login_required
 def lista_fornecedores():
     empresa_id = get_current_empresa_id()
@@ -16,6 +17,7 @@ def lista_fornecedores():
 
 
 @auth_bp.get('/criar-fornecedor')
+@auth_bp.get('/fornecedores/novo')
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def criar_fornecedor():
@@ -23,6 +25,7 @@ def criar_fornecedor():
 
 
 @auth_bp.get('/editar-fornecedor/<int:id>')
+@auth_bp.get('/fornecedores/<int:id>/editar')
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def editar_fornecedor(id):
@@ -32,6 +35,7 @@ def editar_fornecedor(id):
 
 
 @auth_bp.get('/visualizar-fornecedor/<int:id>')
+@auth_bp.get('/fornecedores/<int:id>')
 @login_required
 def visualizar_fornecedor(id):
     empresa_id = get_current_empresa_id()
@@ -40,6 +44,7 @@ def visualizar_fornecedor(id):
 
 
 @auth_bp.post('/gerar-fornecedor')
+@auth_bp.post('/fornecedores/salvar')
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def gerar_fornecedor():
@@ -100,6 +105,7 @@ def gerar_fornecedor():
 
 @auth_bp.post('/excluir-fornecedor/<int:id>')
 @auth_bp.post('/toggle-fornecedor/<int:id>')
+@auth_bp.post('/fornecedores/<int:id>/toggle-status')
 @login_required
 @permission_required('fornecedor.manage')
 def excluir_fornecedor(id):

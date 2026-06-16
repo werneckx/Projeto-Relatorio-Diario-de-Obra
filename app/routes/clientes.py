@@ -3,6 +3,7 @@ from app.routes.auth_common import *
 
 # --- CLIENTES ---
 @auth_bp.get("/lista-clientes")
+@auth_bp.get("/clientes")
 @login_required
 def lista_clientes():
     empresa_id = get_current_empresa_id()
@@ -16,6 +17,7 @@ def lista_clientes():
 
 
 @auth_bp.get('/criar-cliente')
+@auth_bp.get('/clientes/novo')
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def criar_cliente():
@@ -23,6 +25,7 @@ def criar_cliente():
 
 
 @auth_bp.get('/editar-cliente/<int:id>')
+@auth_bp.get('/clientes/<int:id>/editar')
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def editar_cliente(id):
@@ -32,6 +35,7 @@ def editar_cliente(id):
 
 
 @auth_bp.get('/visualizar-cliente/<int:id>')
+@auth_bp.get('/clientes/<int:id>')
 @login_required
 def visualizar_cliente(id):
     empresa_id = get_current_empresa_id()
@@ -40,6 +44,7 @@ def visualizar_cliente(id):
 
 
 @auth_bp.post('/gerar-cliente')
+@auth_bp.post('/clientes/salvar')
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def gerar_cliente():
@@ -114,6 +119,7 @@ def gerar_cliente():
 
 @auth_bp.post('/excluir-cliente/<int:id>')
 @auth_bp.post('/toggle-cliente/<int:id>')
+@auth_bp.post('/clientes/<int:id>/toggle-status')
 @login_required
 @role_required(PERM_MANAGEMENT)
 def excluir_cliente(id):

@@ -60,6 +60,7 @@ def _build_rdo_export_cell(rdo, key):
     return ""
 
 @auth_bp.get("/criar-rdo")
+@auth_bp.get("/rdos/novo")
 @login_required
 @permission_required('rdo.create')
 def criar_rdo():
@@ -180,6 +181,7 @@ def get_frente_api(id):
     })
 
 @auth_bp.post("/gerar-rdo")
+@auth_bp.post("/rdos/salvar")
 @login_required
 @permission_required('rdo.update')
 def gerar_rdo():
@@ -554,6 +556,7 @@ def gerar_rdo():
         return redirect(request.referrer)
     
 @auth_bp.get("/visualizar-rdo/<int:rdo_id>")
+@auth_bp.get("/rdos/<int:rdo_id>")
 @login_required
 @permission_required('rdo.view')
 def visualizar_rdo(rdo_id):
@@ -612,6 +615,7 @@ def visualizar_rdo(rdo_id):
     )
 
 @auth_bp.get("/editar-rdo/<int:rdo_id>")
+@auth_bp.get("/rdos/<int:rdo_id>/editar")
 @login_required
 @permission_required('rdo.update')
 def editar_rdo(rdo_id):
@@ -674,6 +678,7 @@ def editar_rdo(rdo_id):
 
 @auth_bp.post("/excluir-rdo/<int:rdo_id>")
 @auth_bp.post("/inativar-rdo/<int:rdo_id>")
+@auth_bp.post("/rdos/<int:rdo_id>/toggle-status")
 @login_required
 @permission_required('rdo.approve')
 def excluir_rdo(rdo_id):
@@ -715,6 +720,7 @@ def excluir_rdo(rdo_id):
         return redirect(url_for('auth.inicio'))
 
 @auth_bp.get("/lista-rdo")
+@auth_bp.get("/rdos")
 @login_required
 @permission_required('rdo.view')
 def lista_rdo():
@@ -752,6 +758,7 @@ def lista_rdo():
 
 
 @auth_bp.get('/lista-rdo/export/<string:export_format>')
+@auth_bp.get('/rdos/export/<string:export_format>')
 @login_required
 @permission_required('rdo.view')
 def export_lista_rdo(export_format):
