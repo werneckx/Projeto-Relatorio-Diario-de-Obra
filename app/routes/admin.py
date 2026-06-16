@@ -72,6 +72,10 @@ SYSTEM_PERMISSIONS = [
     {'chave': 'tipo_obra.create',  'descricao': 'Criar tipos de obra'},
     {'chave': 'tipo_obra.update',  'descricao': 'Editar tipos de obra'},
     {'chave': 'tipo_obra.delete',  'descricao': 'Excluir tipos de obra'},
+    {'chave': 'aux_tipo_equipamento.view',   'descricao': 'Visualizar tipos de equipamento'},
+    {'chave': 'aux_tipo_equipamento.create', 'descricao': 'Criar tipos de equipamento'},
+    {'chave': 'aux_tipo_equipamento.edit',   'descricao': 'Editar tipos de equipamento'},
+    {'chave': 'aux_tipo_equipamento.manage', 'descricao': 'Gerenciar tipos de equipamento'},
 ]
 
 ROLE_PERMISSION_MAP = {
@@ -79,11 +83,12 @@ ROLE_PERMISSION_MAP = {
     'GESTOR':       ['empresa.view','usuario.manage','cliente.view','cliente.manage','rdo.create','rdo.update',
                      'rdo.approve','rdo.view','fornecedor.view','fornecedor.manage','obra.manage',
                      'colaborador.view','colaborador.manage','workflow.manage',
-                     'tipo_obra.view','tipo_obra.create','tipo_obra.update','tipo_obra.delete'],
+                     'tipo_obra.view','tipo_obra.create','tipo_obra.update','tipo_obra.delete',
+                     'aux_tipo_equipamento.view','aux_tipo_equipamento.create','aux_tipo_equipamento.edit','aux_tipo_equipamento.manage'],
     'OPERADOR':     ['rdo.create','rdo.update','rdo.view','empresa.view',
                      'cliente.view','fornecedor.view','colaborador.view','colaborador.manage',
-                     'tipo_obra.view'],
-    'LEITOR':       ['rdo.view','empresa.view','cliente.view','fornecedor.view','colaborador.view','tipo_obra.view'],
+                     'tipo_obra.view','aux_tipo_equipamento.view'],
+    'LEITOR':       ['rdo.view','empresa.view','cliente.view','fornecedor.view','colaborador.view','tipo_obra.view','aux_tipo_equipamento.view'],
     'CLIENTE_OBRA': ['rdo.view','rdo.approve'],
 }
 

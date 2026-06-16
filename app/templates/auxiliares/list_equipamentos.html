@@ -240,7 +240,7 @@
                 <!-- Tipo -->
                 <td class="px-6 py-4 font-medium text-slate-800">
                     <span class="truncate-safe">
-                        {{ equipamento.tipo }}
+                        {{ equipamento.tipo.nome if equipamento.tipo else '-' }}
                     </span>
                 </td>
 

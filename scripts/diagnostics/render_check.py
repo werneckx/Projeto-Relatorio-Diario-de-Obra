@@ -6,7 +6,7 @@ ROOT_DIR = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT_DIR))
 
 from app import create_app, db
-from app.models.auxiliares import AuxClima, AuxEquipamentos, AuxFuncoes, AuxTagOcorrencia
+from app.models.auxiliares import AuxClima, AuxEquipamentos, AuxFuncoes, AuxTagOcorrencia, TipoEquipamento
 from app.models.empresa import Empresa
 from app.models.obra import FrenteTrabalho, Obra, ObraUsuario
 from app.models.rdo import RDO
@@ -65,8 +65,12 @@ def ensure_sample_data():
         db.session.add(AuxClima(empresa_id=empresa.id, descricao="Ensolarado", ativo=True))
     if not AuxFuncoes.query.first():
         db.session.add(AuxFuncoes(empresa_id=empresa.id, descricao="Encarregado", tipo="DIRETO", ativo=True))
+    if not TipoEquipamento.query.first():
+        db.session.add(TipoEquipamento(nome="Escavacao e Terraplenagem", ativo=True))
+        db.session.flush()
     if not AuxEquipamentos.query.first():
-        db.session.add(AuxEquipamentos(empresa_id=empresa.id, descricao="Retroescavadeira", ativo=True))
+        aux_tipo_equipamento = TipoEquipamento.query.order_by(TipoEquipamento.nome.asc()).first()
+        db.session.add(AuxEquipamentos(empresa_id=empresa.id, descricao="Retroescavadeira", tipo_id=aux_tipo_equipamento.id, ativo=True))
     if not AuxTagOcorrencia.query.first():
         db.session.add(AuxTagOcorrencia(empresa_id=empresa.id, descricao="Seguranca", ativo=True))
 

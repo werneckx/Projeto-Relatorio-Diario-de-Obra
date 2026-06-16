@@ -30,7 +30,7 @@ from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 from itsdangerous import SignatureExpired, URLSafeTimedSerializer
 from sqlalchemy import extract, func, or_
-from sqlalchemy.orm import aliased
+from sqlalchemy.orm import aliased, joinedload
 from PIL import Image
 
 # ==============================================================================
@@ -54,7 +54,7 @@ from app.models.usuario import (
     PapelPermissao,
 )
 from app.models.empresa import Empresa
-from app.models.auxiliares import AuxClima, AuxFuncoes, AuxEquipamentos, AuxTagOcorrencia, AuxTipoObra
+from app.models.auxiliares import AuxClima, AuxFuncoes, AuxEquipamentos, AuxTagOcorrencia, AuxTipoObra, TipoEquipamento
 from app.models.obra import FrenteTrabalho, Obra, FrenteColaborador
 from app.models.rdo import RDO, RDOAprovacao, RDOEquipamento, RDOMaoObra, RDOAtividade, RDOFoto, RDOOcorrencia
 from app.models.fornecedor import Fornecedor
@@ -414,6 +414,8 @@ def get_user_scope_ids():
 
 
 def _normalize_option_text(value):
+    if hasattr(value, "nome"):
+        value = getattr(value, "nome", "")
     value = " ".join((value or "").strip().split())
     ascii_value = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode("ascii")
     return ascii_value.casefold()
@@ -425,7 +427,7 @@ def _normalize_option_input(value):
 
 def _find_duplicate_option(model, nome, tipo_lista, exclude_id=None, tipo=None):
     nome_norm = _normalize_option_text(nome)
-    tipo_norm = _normalize_option_text(tipo) if tipo else ""
+    tipo_norm = _normalize_option_text(tipo) if tipo is not None else None
 
     query = model.query
     if exclude_id:
@@ -433,8 +435,10 @@ def _find_duplicate_option(model, nome, tipo_lista, exclude_id=None, tipo=None):
 
     for existing in query.all():
         existing_nome_norm = _normalize_option_text(existing.nome)
+        if tipo_norm is None and existing_nome_norm == nome_norm:
+            return existing
         existing_tipo_norm = _normalize_option_text(getattr(existing, "tipo", None))
-        if existing_nome_norm == nome_norm and existing_tipo_norm == tipo_norm:
+        if tipo_norm is not None and existing_nome_norm == nome_norm and existing_tipo_norm == tipo_norm:
             return existing
 
     return None

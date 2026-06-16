@@ -192,6 +192,7 @@
     'usuario.manage' in perms or
     'mao_obra.view' in perms or
     'equipamento.view' in perms or
+    'aux_tipo_equipamento.view' in perms or
     'clima.view' in perms or
     'tag_ocorrencia.view' in perms
     %}
@@ -349,6 +350,7 @@
                         'fornecedor.view' in perms or
                         'mao_obra.view' in perms or
                         'equipamento.view' in perms or
+                        'aux_tipo_equipamento.view' in perms or
                         'clima.view' in perms or
                         'tag_ocorrencia.view' in perms or
                         'tipo_obra.view' in perms
@@ -611,6 +613,25 @@
                                                 </a>
 
                                                 {# TAG OCORRÊNCIA #}
+                                                {% if 'aux_tipo_equipamento.view' in perms %}
+                                                <a href="{{ url_for('auth.lista_tipos_equipamento') }}"
+                                                    class="flex items-center gap-3 p-3 rounded-2xl hover:bg-slate-50 transition-all">
+
+                                                    <div
+                                                        class="w-10 h-10 rounded-xl bg-cyan-100 text-cyan-700 flex items-center justify-center">
+                                                        <i class="fas fa-screwdriver-wrench"></i>
+                                                    </div>
+
+                                                    <div>
+                                                        <p class="text-sm font-semibold text-slate-700">
+                                                            Tipo de Equipamento
+                                                        </p>
+                                                    </div>
+
+                                                </a>
+                                                {% endif %}
+
+                                                {# TAG OCORRÃŠNCIA #}
                                                 <a href="{{ url_for('auth.lista_tags_ocorrencias') }}"
                                                     class="flex items-center gap-3 p-3 rounded-2xl hover:bg-slate-50 transition-all">
 
@@ -990,6 +1011,13 @@
                             <a href="{{ url_for('auth.lista_equipamentos') }}"
                                 class="block px-4 py-2 rounded-xl text-sm text-slate-600 hover:bg-white">
                                 Equipamentos
+                            </a>
+                            {% endif %}
+
+                            {% if 'aux_tipo_equipamento.view' in perms %}
+                            <a href="{{ url_for('auth.lista_tipos_equipamento') }}"
+                                class="block px-4 py-2 rounded-xl text-sm text-slate-600 hover:bg-white">
+                                Tipos de Equipamento
                             </a>
                             {% endif %}
 

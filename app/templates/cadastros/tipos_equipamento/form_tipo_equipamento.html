@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% import "components/form/macros.html" as ui_form %}
+
+{% block title %}
+  {% if view_mode %}Visualizar{% elif item and item.id %}Editar{% else %}Cadastrar{% endif %} Tipo de Equipamento
+{% endblock %}
+
+{% block content %}
+{% set locked = view_mode or (item and item.is_system) %}
+{% set page_title = ('Visualizar' if view_mode else ('Editar' if item and item.id else 'Novo')) ~ ' Tipo de Equipamento' %}
+{% set subtitle = 'Detalhes do registro selecionado.' if view_mode else ('Atualize as informações.' if item and item.id else 'Cadastre um novo tipo de equipamento.') %}
+
+{% call ui_form.page_shell() %}
+  {{ ui_form.hero(page_title, subtitle=subtitle, back_url=url_for('auth.lista_tipos_equipamento'), view_mode=view_mode, item=item) }}
+
+  {{ ui_form.metadata(item) }}
+
+  {% call ui_form.form_start(action=url_for('auth.gerar_tipo_equipamento'), form_id='tipoEquipamentoForm', item=item) %}
+    {% call ui_form.section('Dados do Tipo de Equipamento', icon='fa-screwdriver-wrench', icon_box_class='bg-cyan-50 text-cyan-700') %}
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label for="nome" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">
+            Nome
+          </label>
+          <input type="text" name="nome" id="nome" value="{{ ui_form.blank(item.nome if item else none) }}"
+            class="{{ ui_form.control_classes(view_mode=locked) }}"
+            placeholder="Ex: Concretagem, Içamento, Terraplenagem..." {{ 'readonly disabled' if locked }} required>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {{ ui_form.status_field(name='ativo', selected=(item.ativo if item else True), view_mode=locked, id='ativo') }}
+          {{ ui_form.origin_field(item=item) }}
+        </div>
+      </div>
+    {% endcall %}
+
+    {{ ui_form.actions(
+      list_url=url_for('auth.lista_tipos_equipamento'),
+      view_mode=view_mode,
+      edit_url=(url_for('auth.editar_tipo_equipamento', id=item.id) if item and item.id and not item.is_system else None),
+      view_url=(url_for('auth.visualizar_tipo_equipamento', id=item.id) if item and item.id else None),
+      item=item,
+      submit_label='Salvar Tipo',
+      cancel_label='Cancelar',
+      back_label='Voltar',
+      submit_btn_id='submitBtn'
+    ) }}
+  {% endcall %}
+
+  {{ ui_form.submit_script(form_id='tipoEquipamentoForm', submit_btn_id='submitBtn', loading_label='Salvando...') }}
+{% endcall %}
+{% endblock %}
