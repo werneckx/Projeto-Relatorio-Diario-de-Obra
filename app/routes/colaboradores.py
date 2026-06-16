@@ -5,6 +5,7 @@ from app.models.cliente import Cliente
 
 # --- COLABORADORES ---
 @auth_bp.get("/lista-colaboradores")
+@auth_bp.get("/colaboradores")
 @login_required
 def lista_colaboradores():
     empresa_id = get_current_empresa_id()
@@ -18,6 +19,7 @@ def lista_colaboradores():
 
 
 @auth_bp.get('/criar-colaborador')
+@auth_bp.get('/colaboradores/novo')
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def criar_colaborador():
@@ -28,6 +30,7 @@ def criar_colaborador():
 
 
 @auth_bp.get('/editar-colaborador/<int:id>')
+@auth_bp.get('/colaboradores/<int:id>/editar')
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def editar_colaborador(id):
@@ -39,6 +42,7 @@ def editar_colaborador(id):
 
 
 @auth_bp.get('/visualizar-colaborador/<int:id>')
+@auth_bp.get('/colaboradores/<int:id>')
 @login_required
 def visualizar_colaborador(id):
     empresa_id = get_current_empresa_id()
@@ -49,6 +53,7 @@ def visualizar_colaborador(id):
 
 
 @auth_bp.post('/gerar-colaborador')
+@auth_bp.post('/colaboradores/salvar')
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def gerar_colaborador():
@@ -113,6 +118,7 @@ def gerar_colaborador():
 
 @auth_bp.post('/excluir-colaborador/<int:id>')
 @auth_bp.post('/toggle-colaborador/<int:id>')
+@auth_bp.post('/colaboradores/<int:id>/toggle-status')
 @login_required
 @role_required(PERM_MANAGEMENT)
 def excluir_colaborador(id):

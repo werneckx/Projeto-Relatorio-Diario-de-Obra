@@ -32,18 +32,21 @@ def _current_user_has_permission(chave):
     return chave in (session.get("permissions", []) or [])
 
 @auth_bp.get("/lista-climas")
+@auth_bp.get("/climas")
 @login_required
 def lista_climas():
     climas = AuxClima.query.order_by(AuxClima.ativo.desc(), AuxClima.nome.asc()).all()
     return render_template("auxiliares/list_climas.html", opcoes=climas, categoria="clima")
 
 @auth_bp.get('/criar-clima')
+@auth_bp.get('/climas/novo')
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def criar_clima():
     return render_template('auxiliares/form_clima.html', item=None, view_mode=False)
 
 @auth_bp.post('/gerar-clima')
+@auth_bp.post('/climas/salvar')
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def gerar_clima():
@@ -83,12 +86,14 @@ def gerar_clima():
     return redirect(url_for('auth.lista_climas'))
 
 @auth_bp.get('/visualizar-clima/<int:id>')
+@auth_bp.get('/climas/<int:id>')
 @login_required
 def visualizar_clima(id):
     clima = hydrate_audit_metadata(AuxClima.query.get_or_404(id))
     return render_template('auxiliares/form_clima.html', item=clima, view_mode=True)
 
 @auth_bp.get('/editar-clima/<int:id>')
+@auth_bp.get('/climas/<int:id>/editar')
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def editar_clima(id):
@@ -99,6 +104,7 @@ def editar_clima(id):
 
 @auth_bp.post('/excluir-clima/<int:id>')
 @auth_bp.post('/toggle-clima/<int:id>')
+@auth_bp.post('/climas/<int:id>/toggle-status')
 @login_required
 @role_required(PERM_MANAGEMENT)
 def excluir_clima(id):
@@ -120,6 +126,7 @@ def excluir_clima(id):
 
 # --- EQUIPAMENTOS ---
 @auth_bp.get("/lista-equipamentos")
+@auth_bp.get("/equipamentos")
 @login_required
 def lista_equipamentos():
     equipamentos = (
@@ -131,6 +138,7 @@ def lista_equipamentos():
     return render_template("auxiliares/list_equipamentos.html", opcoes=equipamentos, categoria="equipamento")
 
 @auth_bp.get('/criar-equipamento')
+@auth_bp.get('/equipamentos/novo')
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def criar_equipamento():
@@ -138,6 +146,7 @@ def criar_equipamento():
     return render_template('auxiliares/form_equipamento.html', item=None, view_mode=False, tipos_equipamento=tipos_equipamento)
 
 @auth_bp.post('/gerar-equipamento')
+@auth_bp.post('/equipamentos/salvar')
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def gerar_equipamento():
@@ -198,6 +207,7 @@ def gerar_equipamento():
     return redirect(url_for('auth.lista_equipamentos'))
 
 @auth_bp.get('/visualizar-equipamento/<int:id>')
+@auth_bp.get('/equipamentos/<int:id>')
 @login_required
 def visualizar_equipamento(id):
     equipamento = hydrate_audit_metadata(
@@ -207,6 +217,7 @@ def visualizar_equipamento(id):
     return render_template('auxiliares/form_equipamento.html', item=equipamento, view_mode=True, tipos_equipamento=tipos_equipamento)
 
 @auth_bp.get('/editar-equipamento/<int:id>')
+@auth_bp.get('/equipamentos/<int:id>/editar')
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def editar_equipamento(id):
@@ -225,6 +236,7 @@ def editar_equipamento(id):
 
 @auth_bp.post('/excluir-equipamento/<int:id>')
 @auth_bp.post('/toggle-equipamento/<int:id>')
+@auth_bp.post('/equipamentos/<int:id>/toggle-status')
 @login_required
 @role_required(PERM_MANAGEMENT)
 def excluir_equipamento(id):
@@ -350,18 +362,21 @@ def toggle_tipo_equipamento_status(id):
 
 # --- TAGS ---
 @auth_bp.get("/lista-tags-ocorrencias")
+@auth_bp.get("/tags-ocorrencias")
 @login_required
 def lista_tags_ocorrencias():
     tagsOcorrencias = AuxTagOcorrencia.query.order_by(AuxTagOcorrencia.ativo.desc(), AuxTagOcorrencia.nome.asc()).all()
     return render_template("auxiliares/list_tags_ocorrencias.html", opcoes=tagsOcorrencias, categoria="tagsOcorrencias")
 
 @auth_bp.get('/criar-tags-ocorrencias')
+@auth_bp.get('/tags-ocorrencias/novo')
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def criar_tags_ocorrencias():
     return render_template('auxiliares/form_tags_ocorrencias.html', item=None, view_mode=False)
 
 @auth_bp.post('/gerar-tags-ocorrencias')
+@auth_bp.post('/tags-ocorrencias/salvar')
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def gerar_tags_ocorrencias():
@@ -398,12 +413,14 @@ def gerar_tags_ocorrencias():
     return redirect(url_for('auth.lista_tags_ocorrencias'))
 
 @auth_bp.get('/visualizar-tags-ocorrencias/<int:id>')
+@auth_bp.get('/tags-ocorrencias/<int:id>')
 @login_required
 def visualizar_tags_ocorrencias(id):
     tag = hydrate_audit_metadata(AuxTagOcorrencia.query.get_or_404(id))
     return render_template('auxiliares/form_tags_ocorrencias.html', item=tag, view_mode=True)
 
 @auth_bp.get('/editar-tags-ocorrencias/<int:id>')
+@auth_bp.get('/tags-ocorrencias/<int:id>/editar')
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def editar_tags_ocorrencias(id):
@@ -414,6 +431,7 @@ def editar_tags_ocorrencias(id):
 
 @auth_bp.post('/excluir-tags-ocorrencias/<int:id>')
 @auth_bp.post('/toggle-tags-ocorrencias/<int:id>')
+@auth_bp.post('/tags-ocorrencias/<int:id>/toggle-status')
 @login_required
 @role_required(PERM_MANAGEMENT)
 def excluir_tags_ocorrencias(id):
@@ -438,6 +456,7 @@ def excluir_tags_ocorrencias(id):
 # Mantemos rotas antigas como aliases para preservar compatibilidade.
 
 @auth_bp.get("/lista-funcoes")
+@auth_bp.get("/funcoes")
 @login_required
 def lista_funcoes():
     funcoes = AuxFuncoes.query.order_by(AuxFuncoes.ativo.desc(), AuxFuncoes.nome.asc()).all()
@@ -450,6 +469,7 @@ def lista_mao_obra():
 
 
 @auth_bp.get("/criar-funcao")
+@auth_bp.get("/funcoes/novo")
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def criar_funcao():
@@ -463,6 +483,7 @@ def criar_mao_obra():
 
 
 @auth_bp.post("/gerar-funcao")
+@auth_bp.post("/funcoes/salvar")
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def gerar_funcao():
@@ -513,6 +534,7 @@ def gerar_mao_obra():
 
 
 @auth_bp.get("/visualizar-funcao/<int:id>")
+@auth_bp.get("/funcoes/<int:id>")
 @login_required
 def visualizar_funcao(id):
     funcao = hydrate_audit_metadata(AuxFuncoes.query.get_or_404(id))
@@ -525,6 +547,7 @@ def visualizar_mao_obra(id):
 
 
 @auth_bp.get("/editar-funcao/<int:id>")
+@auth_bp.get("/funcoes/<int:id>/editar")
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def editar_funcao(id):
@@ -542,6 +565,7 @@ def editar_mao_obra(id):
 
 @auth_bp.post("/excluir-funcao/<int:id>")
 @auth_bp.post("/toggle-funcao/<int:id>")
+@auth_bp.post("/funcoes/<int:id>/toggle-status")
 @login_required
 @role_required(PERM_MANAGEMENT)
 def excluir_funcao(id):
@@ -568,6 +592,7 @@ def excluir_mao_obra(id):
 
 # --- TIPOS DE OBRA ---
 @auth_bp.get("/lista-tipos-obra")
+@auth_bp.get("/tipos-obra")
 @login_required
 def lista_tipos_obra():
     tipos = AuxTipoObra.query.order_by(AuxTipoObra.ativo.desc(), AuxTipoObra.nome.asc()).all()
@@ -575,12 +600,14 @@ def lista_tipos_obra():
 
 
 @auth_bp.get("/criar-tipo-obra")
+@auth_bp.get("/tipos-obra/novo")
 @login_required
 @role_required(PERM_MANAGEMENT)
 def criar_tipo_obra():
     return render_template("cadastros/obras/form_tipo_obra.html", item=None, view_mode=False)
 
 @auth_bp.post('/gerar-tipo-obra')
+@auth_bp.post('/tipos-obra/salvar')
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def gerar_tipo_obra():
@@ -620,6 +647,7 @@ def gerar_tipo_obra():
     return redirect(url_for('auth.lista_tipos_obra'))
 
 @auth_bp.get("/editar-tipo-obra/<int:id>")
+@auth_bp.get("/tipos-obra/<int:id>/editar")
 @login_required
 @role_required(PERM_MANAGEMENT)
 def editar_tipo_obra(id):
@@ -630,6 +658,7 @@ def editar_tipo_obra(id):
 
 @auth_bp.post('/excluir-tipo-obra/<int:id>')
 @auth_bp.post('/toggle-tipo-obra/<int:id>')
+@auth_bp.post('/tipos-obra/<int:id>/toggle-status')
 @login_required
 @role_required(PERM_MANAGEMENT)
 def excluir_tipo_obra(id):
@@ -649,6 +678,7 @@ def excluir_tipo_obra(id):
     return redirect(url_for('auth.lista_tipos_obra'))
 
 @auth_bp.get('/visualizar-tipo-obra/<int:id>')
+@auth_bp.get('/tipos-obra/<int:id>')
 @login_required
 def visualizar_tipo_obra(id):
     tipo = hydrate_audit_metadata(AuxTipoObra.query.get_or_404(id))

@@ -1,6 +1,7 @@
 ﻿from app.routes.auth_common import *
 
 @auth_bp.get("/lista-usuarios")
+@auth_bp.get("/usuarios")
 @login_required
 @permission_required('usuario.manage')
 def lista_usuarios():
@@ -40,6 +41,7 @@ def lista_usuarios():
     return render_template("cadastros/usuarios/list_usuarios.html", opcoes=usuarios, categoria="usuario")
 
 @auth_bp.get("/criar-usuario")
+@auth_bp.get("/usuarios/novo")
 @login_required
 @permission_required('usuario.manage')
 def criar_usuario():
@@ -74,6 +76,7 @@ def criar_usuario():
     )
 
 @auth_bp.post("/gerar-usuario")
+@auth_bp.post("/usuarios/salvar")
 @login_required
 @permission_required('usuario.manage')
 def gerar_usuario():
@@ -170,6 +173,7 @@ def gerar_usuario():
             return render_template("cadastros/usuarios/form_usuario.html", item=item_form, obras=obras_ativas)
 
 @auth_bp.post("/mudar-status-usuario/<int:userId>")
+@auth_bp.post("/usuarios/<int:userId>/toggle-status")
 @login_required
 @permission_required('usuario.manage')
 def toggle_user_status(userId):
@@ -191,6 +195,7 @@ def toggle_user_status(userId):
         return jsonify({"message": str(e)}), 500
      
 @auth_bp.post("/usuario-resetar-senha/<int:id>")
+@auth_bp.post("/usuarios/<int:id>/resetar-senha")
 @login_required
 @permission_required('usuario.manage')
 def reset_senha_usuario(id):
@@ -209,6 +214,7 @@ def reset_senha_usuario(id):
     
 
 @auth_bp.route("/editar-usuario/<int:id>", methods=['GET', 'POST'])
+@auth_bp.route("/usuarios/<int:id>/editar", methods=['GET', 'POST'])
 @login_required
 @permission_required('usuario.manage')
 def editar_usuario(id):
@@ -228,6 +234,7 @@ def editar_usuario(id):
     return render_template("cadastros/usuarios/form_usuario.html", item=user_edit, categoria="usuario", obras=obras)
     
 @auth_bp.get("/visualizar-usuario/<int:id>")
+@auth_bp.get("/usuarios/<int:id>")
 @login_required
 @permission_required('usuario.manage')
 def visualizar_usuario(id):
