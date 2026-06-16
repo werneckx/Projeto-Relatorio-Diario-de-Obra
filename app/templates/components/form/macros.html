@@ -90,12 +90,27 @@ transition-colors text-center text-sm inline-flex items-center justify-center ga
 {% macro status_field(name='ativo', selected=true, view_mode=false, label='Status', id='status', active_label='Ativo',
 inactive_label='Inativo', wrapper_class='min-w-[160px]') %}
 <div class="{{ wrapper_class }}">
-  <label for="{{ id }}" class="block text-[10px] font-bold text-slate-500 uppercase mb-1">{{ label }}</label>
+  <label for="{{ id }}" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">{{ label }}</label>
+  {% if view_mode %}
+  <input type="text" id="{{ id }}" value="{{ active_label if selected else inactive_label }}"
+    class="{{ control_classes(view_mode=true) }}" readonly disabled>
+  {% else %}
   <select name="{{ name }}" id="{{ id }}" class="{{ select_classes(view_mode=view_mode) }}" {{ 'disabled' if view_mode
     }}>
     <option value="1" {% if selected %}selected{% endif %}>{{ active_label }}</option>
     <option value="0" {% if not selected %}selected{% endif %}>{{ inactive_label }}</option>
   </select>
+  {% endif %}
+</div>
+{% endmacro %}
+
+{% macro origin_field(item=None, label='Origem', wrapper_class='min-w-[180px]') %}
+{% set is_system = item and item.is_system %}
+{% set origin_id = 'origem_' ~ (item.id if item and item.id else 'novo') %}
+<div class="{{ wrapper_class }}">
+  <label for="{{ origin_id }}" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">{{ label }}</label>
+  <input type="text" id="{{ origin_id }}" value="{{ 'Sistema' if is_system else 'Empresa' }}"
+    class="{{ control_classes(view_mode=true) }}" readonly disabled>
 </div>
 {% endmacro %}
 
@@ -181,7 +196,7 @@ view_url=None, clear_label='Limpar', clear_enabled=true) %}
     <a href="{{ edit_url }}" class="{{ action_primary_classes() }}">
       <i class="fas fa-edit"></i> {{ edit_label }}
     </a>
-    {% else %}
+    {% elif not view_mode %}
     <button type="submit" id="{{ submit_btn_id }}" class="{{ action_primary_classes() }}">
       {{ submit_label }}
     </button>
