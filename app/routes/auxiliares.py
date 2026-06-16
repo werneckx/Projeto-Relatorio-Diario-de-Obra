@@ -1,5 +1,18 @@
 ﻿from app.routes.auth_common import *
 
+
+def _is_system_option(record):
+    return bool(record and getattr(record, "is_system", False))
+
+
+def _redirect_system_option(view_endpoint, record_id):
+    flash("Registros do sistema são protegidos e não podem ser alterados.", "warning")
+    return redirect(url_for(view_endpoint, id=record_id))
+
+
+def _current_option_empresa_id():
+    return session.get("empresa_id") or get_current_empresa_id()
+
 @auth_bp.get("/lista-climas")
 @login_required
 def lista_climas():
@@ -36,6 +49,8 @@ def gerar_clima():
     if clima_id:
         clima = AuxClima.query.get(clima_id)
         if not clima: return redirect(url_for('auth.lista_climas'))
+        if _is_system_option(clima):
+            return _redirect_system_option('auth.visualizar_clima', clima.id)
         clima.nome = nome
         clima.ativo = ativo
         set_audit_on_update(clima, user_id=user_id)
@@ -43,7 +58,7 @@ def gerar_clima():
         db.session.commit()
         return redirect(url_for('auth.lista_climas'))
 
-    novo = AuxClima(nome=nome, tipo_lista=tipo_lista, ativo=ativo)
+    novo = AuxClima(nome=nome, tipo_lista=tipo_lista, ativo=ativo, empresa_id=_current_option_empresa_id())
     set_audit_on_create(novo, user_id=user_id)
     db.session.add(novo)
     db.session.commit()
@@ -60,6 +75,8 @@ def visualizar_clima(id):
 @role_required(PERM_WRITE_BASIC)
 def editar_clima(id):
     clima = hydrate_audit_metadata(AuxClima.query.get_or_404(id))
+    if _is_system_option(clima):
+        return _redirect_system_option('auth.visualizar_clima', clima.id)
     return render_template('auxiliares/form_clima.html', item=clima, view_mode=False)
 
 @auth_bp.post('/excluir-clima/<int:id>')
@@ -70,6 +87,9 @@ def excluir_clima(id):
     user_id = get_current_user_id()
     clima = AuxClima.query.get(id)
     if clima:
+        if _is_system_option(clima):
+            flash("Registros do sistema não podem ser ativados ou inativados.", "warning")
+            return redirect(url_for('auth.lista_climas'))
         if clima.ativo:
             set_audit_on_inactivate(clima, user_id=user_id)
         else:
@@ -115,12 +135,16 @@ def gerar_equipamento():
 
     if equipamento_id:
         equipamento = AuxEquipamentos.query.get(equipamento_id)
+        if not equipamento:
+            return redirect(url_for('auth.lista_equipamentos'))
+        if _is_system_option(equipamento):
+            return _redirect_system_option('auth.visualizar_equipamento', equipamento.id)
         equipamento.nome = nome
         equipamento.ativo = ativo
         set_audit_on_update(equipamento, user_id=user_id)
         db.session.add(equipamento)
     else:
-        novo = AuxEquipamentos(nome=nome, tipo_lista=tipo_lista, ativo=ativo)
+        novo = AuxEquipamentos(nome=nome, tipo_lista=tipo_lista, ativo=ativo, empresa_id=_current_option_empresa_id())
         set_audit_on_create(novo, user_id=user_id)
         db.session.add(novo)
     db.session.commit()
@@ -137,6 +161,8 @@ def visualizar_equipamento(id):
 @role_required(PERM_WRITE_BASIC)
 def editar_equipamento(id):
     equipamento = hydrate_audit_metadata(AuxEquipamentos.query.get_or_404(id))
+    if _is_system_option(equipamento):
+        return _redirect_system_option('auth.visualizar_equipamento', equipamento.id)
     return render_template('auxiliares/form_equipamento.html', item=equipamento, view_mode=False)
 
 @auth_bp.post('/excluir-equipamento/<int:id>')
@@ -147,6 +173,9 @@ def excluir_equipamento(id):
     user_id = get_current_user_id()
     equipamento = AuxEquipamentos.query.get(id)
     if equipamento:
+        if _is_system_option(equipamento):
+            flash("Registros do sistema não podem ser ativados ou inativados.", "warning")
+            return redirect(url_for('auth.lista_equipamentos'))
         if equipamento.ativo:
             set_audit_on_inactivate(equipamento, user_id=user_id)
         else:
@@ -191,12 +220,16 @@ def gerar_tags_ocorrencias():
 
     if tag_id:
         tag = AuxTagOcorrencia.query.get(tag_id)
+        if not tag:
+            return redirect(url_for('auth.lista_tags_ocorrencias'))
+        if _is_system_option(tag):
+            return _redirect_system_option('auth.visualizar_tags_ocorrencias', tag.id)
         tag.nome = nome
         tag.ativo = ativo
         set_audit_on_update(tag, user_id=user_id)
         db.session.add(tag)
     else:
-        nova_tag = AuxTagOcorrencia(nome=nome, tipo_lista="Tags Ocorrencias", ativo=ativo)
+        nova_tag = AuxTagOcorrencia(nome=nome, tipo_lista="Tags Ocorrencias", ativo=ativo, empresa_id=_current_option_empresa_id())
         set_audit_on_create(nova_tag, user_id=user_id)
         db.session.add(nova_tag)
     db.session.commit()
@@ -213,6 +246,8 @@ def visualizar_tags_ocorrencias(id):
 @role_required(PERM_WRITE_BASIC)
 def editar_tags_ocorrencias(id):
     tag = hydrate_audit_metadata(AuxTagOcorrencia.query.get_or_404(id))
+    if _is_system_option(tag):
+        return _redirect_system_option('auth.visualizar_tags_ocorrencias', tag.id)
     return render_template('auxiliares/form_tags_ocorrencias.html', item=tag, view_mode=False)
 
 @auth_bp.post('/excluir-tags-ocorrencias/<int:id>')
@@ -223,6 +258,9 @@ def excluir_tags_ocorrencias(id):
     user_id = get_current_user_id()
     tag = AuxTagOcorrencia.query.get(id)
     if tag:
+        if _is_system_option(tag):
+            flash("Registros do sistema não podem ser ativados ou inativados.", "warning")
+            return redirect(url_for('auth.lista_tags_ocorrencias'))
         if tag.ativo:
             set_audit_on_inactivate(tag, user_id=user_id)
         else:
@@ -270,6 +308,9 @@ def gerar_funcao():
     user_id = get_current_user_id()
     nome = _normalize_option_input(request.form.get("nome", ""))
     tipo = _normalize_option_input(request.form.get("tipo", "")) or None
+    if tipo:
+        tipo = tipo.upper()
+    tipo = {"DIRETA": "DIRETO", "INDIRETA": "INDIRETO"}.get(tipo, tipo)
     ativo = request.form.get("ativo") == "1"
 
     if not nome:
@@ -287,13 +328,15 @@ def gerar_funcao():
         funcao = AuxFuncoes.query.get(funcao_id)
         if not funcao:
             return redirect(url_for("auth.lista_funcoes"))
+        if _is_system_option(funcao):
+            return _redirect_system_option('auth.visualizar_funcao', funcao.id)
         funcao.nome = nome
         funcao.tipo = tipo
         funcao.ativo = ativo
         set_audit_on_update(funcao, user_id=user_id)
         db.session.add(funcao)
     else:
-        nova_funcao = AuxFuncoes(nome=nome, tipo_lista="Mao de Obra", tipo=tipo, ativo=ativo)
+        nova_funcao = AuxFuncoes(nome=nome, tipo_lista="Mao de Obra", tipo=tipo, ativo=ativo, empresa_id=_current_option_empresa_id())
         set_audit_on_create(nova_funcao, user_id=user_id)
         db.session.add(nova_funcao)
 
@@ -324,6 +367,8 @@ def visualizar_mao_obra(id):
 @role_required(PERM_WRITE_BASIC)
 def editar_funcao(id):
     funcao = hydrate_audit_metadata(AuxFuncoes.query.get_or_404(id))
+    if _is_system_option(funcao):
+        return _redirect_system_option('auth.visualizar_funcao', funcao.id)
     return render_template("auxiliares/form_funcoes.html", item=funcao, view_mode=False)
 
 @auth_bp.get("/editar-mao-obra/<int:id>")
@@ -341,6 +386,9 @@ def excluir_funcao(id):
     user_id = get_current_user_id()
     funcao = AuxFuncoes.query.get(id)
     if funcao:
+        if _is_system_option(funcao):
+            flash("Registros do sistema não podem ser ativados ou inativados.", "warning")
+            return redirect(url_for("auth.lista_funcoes"))
         if funcao.ativo:
             set_audit_on_inactivate(funcao, user_id=user_id)
         else:
@@ -393,14 +441,17 @@ def gerar_tipo_obra():
     if tipo_id:
         tipo = AuxTipoObra.query.get(tipo_id)
         if not tipo: return redirect(url_for('auth.lista_tipos_obra'))
+        if _is_system_option(tipo):
+            return _redirect_system_option('auth.visualizar_tipo_obra', tipo.id)
         tipo.nome = nome
+        tipo.descricao = request.form.get('descricao')
         tipo.ativo = ativo
         set_audit_on_update(tipo, user_id=user_id)
         db.session.add(tipo)
         db.session.commit()
         return redirect(url_for('auth.lista_tipos_obra'))
 
-    novo = AuxTipoObra(nome=nome, ativo=ativo)
+    novo = AuxTipoObra(nome=nome, descricao=request.form.get('descricao'), ativo=ativo, empresa_id=_current_option_empresa_id())
     set_audit_on_create(novo, user_id=user_id)
     db.session.add(novo)
     db.session.commit()
@@ -411,6 +462,8 @@ def gerar_tipo_obra():
 @role_required(PERM_MANAGEMENT)
 def editar_tipo_obra(id):
     tipo = hydrate_audit_metadata(AuxTipoObra.query.get_or_404(id))
+    if _is_system_option(tipo):
+        return _redirect_system_option('auth.visualizar_tipo_obra', tipo.id)
     return render_template("cadastros/obras/form_tipo_obra.html", item=tipo, view_mode=False)
 
 @auth_bp.post('/excluir-tipo-obra/<int:id>')
@@ -421,6 +474,9 @@ def excluir_tipo_obra(id):
     user_id = get_current_user_id()
     tipo = AuxTipoObra.query.get(id)
     if tipo:
+        if _is_system_option(tipo):
+            flash("Registros do sistema não podem ser ativados ou inativados.", "warning")
+            return redirect(url_for('auth.lista_tipos_obra'))
         if tipo.ativo:
             set_audit_on_inactivate(tipo, user_id=user_id)
         else:
