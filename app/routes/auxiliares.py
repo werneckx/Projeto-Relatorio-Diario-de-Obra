@@ -13,6 +13,24 @@ def _redirect_system_option(view_endpoint, record_id):
 def _current_option_empresa_id():
     return session.get("empresa_id") or get_current_empresa_id()
 
+
+def _find_duplicate_tipo_equipamento(nome, exclude_id=None):
+    nome_norm = _normalize_option_text(nome)
+    query = TipoEquipamento.query
+    if exclude_id:
+        query = query.filter(TipoEquipamento.id != exclude_id)
+    for tipo in query.all():
+        if _normalize_option_text(tipo.nome) == nome_norm:
+            return tipo
+    return None
+
+
+def _current_user_has_permission(chave):
+    user = get_current_user()
+    if user and getattr(user, "is_admin", False):
+        return True
+    return chave in (session.get("permissions", []) or [])
+
 @auth_bp.get("/lista-climas")
 @login_required
 def lista_climas():
@@ -104,14 +122,20 @@ def excluir_clima(id):
 @auth_bp.get("/lista-equipamentos")
 @login_required
 def lista_equipamentos():
-    equipamentos = AuxEquipamentos.query.order_by(AuxEquipamentos.ativo.desc(), AuxEquipamentos.nome.asc()).all()
+    equipamentos = (
+        AuxEquipamentos.query
+        .options(joinedload(AuxEquipamentos.tipo))
+        .order_by(AuxEquipamentos.ativo.desc(), AuxEquipamentos.nome.asc())
+        .all()
+    )
     return render_template("auxiliares/list_equipamentos.html", opcoes=equipamentos, categoria="equipamento")
 
 @auth_bp.get('/criar-equipamento')
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def criar_equipamento():
-    return render_template('auxiliares/form_equipamento.html', item=None, view_mode=False)
+    tipos_equipamento = TipoEquipamento.query.filter_by(ativo=True).order_by(TipoEquipamento.nome.asc()).all()
+    return render_template('auxiliares/form_equipamento.html', item=None, view_mode=False, tipos_equipamento=tipos_equipamento)
 
 @auth_bp.post('/gerar-equipamento')
 @login_required
@@ -121,10 +145,37 @@ def gerar_equipamento():
     user_id = get_current_user_id()
     tipo_lista = "Equipamentos"
     nome = _normalize_option_input(request.form.get('nome', ''))
+    tipo_id = request.form.get('tipo_id')
     ativo = request.form.get('ativo') == '1'
     if not nome:
         flash('Nome do equipamento é obrigatório.', 'danger')
         return redirect(url_for('auth.lista_equipamentos'))
+    if not tipo_id:
+        flash('Tipo de equipamento é obrigatório.', 'danger')
+        if equipamento_id: return redirect(url_for('auth.editar_equipamento', id=equipamento_id))
+        return redirect(url_for('auth.criar_equipamento'))
+
+    equipamento = None
+    if equipamento_id:
+        equipamento = AuxEquipamentos.query.get(equipamento_id)
+        if not equipamento:
+            return redirect(url_for('auth.lista_equipamentos'))
+        if _is_system_option(equipamento):
+            return _redirect_system_option('auth.visualizar_equipamento', equipamento.id)
+
+    tipo_query = TipoEquipamento.query.filter(TipoEquipamento.id == tipo_id)
+    if equipamento:
+        tipo_query = tipo_query.filter(
+            db.or_(TipoEquipamento.ativo.is_(True), TipoEquipamento.id == equipamento.tipo_id)
+        )
+    else:
+        tipo_query = tipo_query.filter(TipoEquipamento.ativo.is_(True))
+
+    aux_tipo_equipamento = tipo_query.first()
+    if not aux_tipo_equipamento:
+        flash('Tipo de equipamento inválido ou inativo.', 'danger')
+        if equipamento_id: return redirect(url_for('auth.editar_equipamento', id=equipamento_id))
+        return redirect(url_for('auth.criar_equipamento'))
 
     equipamento_existente = _find_duplicate_option(AuxEquipamentos, nome, tipo_lista, exclude_id=equipamento_id)
 
@@ -134,17 +185,13 @@ def gerar_equipamento():
         return redirect(url_for('auth.criar_equipamento'))
 
     if equipamento_id:
-        equipamento = AuxEquipamentos.query.get(equipamento_id)
-        if not equipamento:
-            return redirect(url_for('auth.lista_equipamentos'))
-        if _is_system_option(equipamento):
-            return _redirect_system_option('auth.visualizar_equipamento', equipamento.id)
         equipamento.nome = nome
+        equipamento.tipo_id = aux_tipo_equipamento.id
         equipamento.ativo = ativo
         set_audit_on_update(equipamento, user_id=user_id)
         db.session.add(equipamento)
     else:
-        novo = AuxEquipamentos(nome=nome, tipo_lista=tipo_lista, ativo=ativo, empresa_id=_current_option_empresa_id())
+        novo = AuxEquipamentos(nome=nome, tipo_lista=tipo_lista, tipo_id=aux_tipo_equipamento.id, ativo=ativo, empresa_id=_current_option_empresa_id())
         set_audit_on_create(novo, user_id=user_id)
         db.session.add(novo)
     db.session.commit()
@@ -153,17 +200,28 @@ def gerar_equipamento():
 @auth_bp.get('/visualizar-equipamento/<int:id>')
 @login_required
 def visualizar_equipamento(id):
-    equipamento = hydrate_audit_metadata(AuxEquipamentos.query.get_or_404(id))
-    return render_template('auxiliares/form_equipamento.html', item=equipamento, view_mode=True)
+    equipamento = hydrate_audit_metadata(
+        AuxEquipamentos.query.options(joinedload(AuxEquipamentos.tipo)).filter_by(id=id).first_or_404()
+    )
+    tipos_equipamento = TipoEquipamento.query.filter_by(ativo=True).order_by(TipoEquipamento.nome.asc()).all()
+    return render_template('auxiliares/form_equipamento.html', item=equipamento, view_mode=True, tipos_equipamento=tipos_equipamento)
 
 @auth_bp.get('/editar-equipamento/<int:id>')
 @login_required
 @role_required(PERM_WRITE_BASIC)
 def editar_equipamento(id):
-    equipamento = hydrate_audit_metadata(AuxEquipamentos.query.get_or_404(id))
+    equipamento = hydrate_audit_metadata(
+        AuxEquipamentos.query.options(joinedload(AuxEquipamentos.tipo)).filter_by(id=id).first_or_404()
+    )
     if _is_system_option(equipamento):
         return _redirect_system_option('auth.visualizar_equipamento', equipamento.id)
-    return render_template('auxiliares/form_equipamento.html', item=equipamento, view_mode=False)
+    tipos_equipamento = (
+        TipoEquipamento.query
+        .filter(db.or_(TipoEquipamento.ativo.is_(True), TipoEquipamento.id == equipamento.tipo_id))
+        .order_by(TipoEquipamento.nome.asc())
+        .all()
+    )
+    return render_template('auxiliares/form_equipamento.html', item=equipamento, view_mode=False, tipos_equipamento=tipos_equipamento)
 
 @auth_bp.post('/excluir-equipamento/<int:id>')
 @auth_bp.post('/toggle-equipamento/<int:id>')
@@ -184,6 +242,110 @@ def excluir_equipamento(id):
         db.session.add(equipamento)
         db.session.commit()
     return redirect(url_for('auth.lista_equipamentos'))
+
+
+# --- TIPOS DE EQUIPAMENTO ---
+@auth_bp.get("/tipos-equipamento")
+@login_required
+@permission_required('aux_tipo_equipamento.view')
+def lista_tipos_equipamento():
+    tipos = TipoEquipamento.query.order_by(TipoEquipamento.ativo.desc(), TipoEquipamento.nome.asc()).all()
+    return render_template("cadastros/tipos_equipamento/list_tipos_equipamento.html", opcoes=tipos)
+
+
+@auth_bp.get("/tipos-equipamento/novo")
+@login_required
+@permission_required('aux_tipo_equipamento.create')
+def criar_tipo_equipamento():
+    return render_template("cadastros/tipos_equipamento/form_tipo_equipamento.html", item=None, view_mode=False)
+
+
+@auth_bp.post("/tipos-equipamento/salvar")
+@login_required
+def gerar_tipo_equipamento():
+    tipo_id = request.form.get("id")
+    user_id = get_current_user_id()
+    nome = _normalize_option_input(request.form.get("nome", ""))
+    ativo = request.form.get("ativo") == "1"
+
+    if tipo_id:
+        tipo = TipoEquipamento.query.get_or_404(tipo_id)
+        if _is_system_option(tipo):
+            return _redirect_system_option('auth.visualizar_tipo_equipamento', tipo.id)
+        required_permission = 'aux_tipo_equipamento.edit'
+    else:
+        tipo = None
+        required_permission = 'aux_tipo_equipamento.create'
+
+    # Revalida a permissão específica para criação/edição sem duplicar a rota.
+    if not _current_user_has_permission(required_permission):
+        flash("Você não tem permissão para executar esta ação.", "danger")
+        return redirect(url_for("auth.lista_tipos_equipamento"))
+
+    if not nome:
+        flash("Nome do tipo de equipamento é obrigatório.", "danger")
+        if tipo_id:
+            return redirect(url_for("auth.editar_tipo_equipamento", id=tipo_id))
+        return redirect(url_for("auth.criar_tipo_equipamento"))
+
+    if _find_duplicate_tipo_equipamento(nome, exclude_id=tipo_id):
+        flash("Já existe um tipo de equipamento cadastrado com esse nome.", "danger")
+        if tipo_id:
+            return redirect(url_for("auth.editar_tipo_equipamento", id=tipo_id))
+        return redirect(url_for("auth.criar_tipo_equipamento"))
+
+    if tipo:
+        tipo.nome = nome
+        tipo.ativo = ativo
+        set_audit_on_update(tipo, user_id=user_id)
+        db.session.add(tipo)
+        flash("Tipo de equipamento atualizado com sucesso.", "success")
+    else:
+        tipo = TipoEquipamento(nome=nome, ativo=ativo)
+        set_audit_on_create(tipo, user_id=user_id)
+        db.session.add(tipo)
+        flash("Tipo de equipamento cadastrado com sucesso.", "success")
+
+    db.session.commit()
+    return redirect(url_for("auth.lista_tipos_equipamento"))
+
+
+@auth_bp.get("/tipos-equipamento/<int:id>")
+@login_required
+@permission_required('aux_tipo_equipamento.view')
+def visualizar_tipo_equipamento(id):
+    tipo = hydrate_audit_metadata(TipoEquipamento.query.get_or_404(id))
+    return render_template("cadastros/tipos_equipamento/view_tipo_equipamento.html", item=tipo, view_mode=True)
+
+
+@auth_bp.get("/tipos-equipamento/<int:id>/editar")
+@login_required
+@permission_required('aux_tipo_equipamento.edit')
+def editar_tipo_equipamento(id):
+    tipo = hydrate_audit_metadata(TipoEquipamento.query.get_or_404(id))
+    if _is_system_option(tipo):
+        return _redirect_system_option('auth.visualizar_tipo_equipamento', tipo.id)
+    return render_template("cadastros/tipos_equipamento/form_tipo_equipamento.html", item=tipo, view_mode=False)
+
+
+@auth_bp.post("/tipos-equipamento/<int:id>/toggle-status")
+@login_required
+@permission_required('aux_tipo_equipamento.manage')
+def toggle_tipo_equipamento_status(id):
+    tipo = TipoEquipamento.query.get_or_404(id)
+    if _is_system_option(tipo):
+        flash("Registros de sistema não podem ser alterados.", "warning")
+        return redirect(url_for("auth.lista_tipos_equipamento"))
+    if tipo.ativo:
+        equipamentos_ativos = AuxEquipamentos.query.filter_by(tipo_id=tipo.id, ativo=True).count()
+        if equipamentos_ativos:
+            flash("Não é possível inativar um tipo vinculado a equipamentos ativos.", "warning")
+            return redirect(url_for("auth.lista_tipos_equipamento"))
+    tipo.ativo = not bool(tipo.ativo)
+    set_audit_on_update(tipo)
+    db.session.add(tipo)
+    db.session.commit()
+    return redirect(url_for("auth.lista_tipos_equipamento"))
 
 
 # --- TAGS ---

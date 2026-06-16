@@ -67,7 +67,7 @@ class AuxEquipamentos(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     empresa_id = db.Column(db.Integer, db.ForeignKey('empresa.id'), nullable=True, index=True)
     descricao = db.Column(db.String(150), nullable=False)
-    tipo = db.Column(db.String(100), nullable=True)
+    tipo_id = db.Column(db.Integer, db.ForeignKey('aux_tipo_equipamento.id'), nullable=False, index=True)
     is_system = db.Column(db.Boolean, nullable=False, default=False)
     ativo = db.Column(db.Boolean, nullable=False, default=True)
 
@@ -77,6 +77,7 @@ class AuxEquipamentos(db.Model):
     modificado_em = db.Column(db.DateTime, default=utcnow_naive, onupdate=utcnow_naive)
 
     empresa = db.relationship('Empresa', backref='aux_equipamentos')
+    tipo = db.relationship('TipoEquipamento', back_populates='equipamentos')
     nome = db.synonym("descricao")
 
     @property
@@ -89,6 +90,25 @@ class AuxEquipamentos(db.Model):
 
     def __repr__(self):
         return f"<AuxEquipamentos {self.descricao}>"
+
+
+class TipoEquipamento(db.Model):
+    __tablename__ = "aux_tipo_equipamento"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    nome = db.Column(db.String(100), nullable=False, unique=True, index=True)
+    ativo = db.Column(db.Boolean, nullable=False, default=True)
+    is_system = db.Column(db.Boolean, nullable=False, default=False)
+
+    criado_por = db.Column(db.Integer, nullable=True)
+    modificado_por = db.Column(db.Integer, nullable=True)
+    criado_em = db.Column(db.DateTime, default=utcnow_naive)
+    modificado_em = db.Column(db.DateTime, default=utcnow_naive, onupdate=utcnow_naive)
+
+    equipamentos = db.relationship('AuxEquipamentos', back_populates='tipo')
+
+    def __repr__(self):
+        return f"<TipoEquipamento {self.nome}>"
 
 
 class AuxTagOcorrencia(db.Model):

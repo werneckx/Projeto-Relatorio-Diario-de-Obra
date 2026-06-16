@@ -27,10 +27,28 @@
             placeholder="Ex: Betoneira, Furadeira, Andaime..." {{ 'readonly disabled' if locked }} required>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {{ ui_form.status_field(name='ativo', selected=(item.ativo if item else True), view_mode=locked, id='ativo') }}
-          {{ ui_form.origin_field(item=item) }}
+        <div>
+          <label for="tipo" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">
+            Tipo de Equipamento
+          </label>
+          {% if locked %}
+          <input type="text" id="tipo" value="{{ ui_form.blank(item.tipo.nome if item and item.tipo else none) }}"
+            class="{{ ui_form.control_classes(view_mode=true) }}" readonly disabled>
+          {% else %}
+          {% set tipo_atual_id = item.tipo_id if item else none %}
+          <select name="tipo_id" id="tipo" class="{{ ui_form.select_classes() }}" required>
+            <option value="">Selecione o tipo...</option>
+            {% for tipo in tipos_equipamento %}
+            <option value="{{ tipo.id }}" {% if tipo_atual_id == tipo.id %}selected{% endif %}>{{ tipo.nome }}</option>
+            {% endfor %}
+          </select>
+          {% endif %}
         </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {{ ui_form.status_field(name='ativo', selected=(item.ativo if item else True), view_mode=locked, id='ativo') }}
+        {{ ui_form.origin_field(item=item) }}
       </div>
     {% endcall %}
 

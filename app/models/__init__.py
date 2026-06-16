@@ -1,6 +1,6 @@
 from app.models.empresa import Empresa
 from app.models.cad_lista import CadLista
-from app.models.auxiliares import AuxClima, AuxFuncoes, AuxEquipamentos, AuxTagOcorrencia, AuxTipoObra
+from app.models.auxiliares import AuxClima, AuxFuncoes, AuxEquipamentos, AuxTagOcorrencia, AuxTipoObra, TipoEquipamento
 from app.models.fornecedor import Fornecedor
 from app.models.cliente import Cliente
 from app.models.usuario import Colaborador, Usuario, Papel, Permissao, PapelPermissao, UsuarioPapel
