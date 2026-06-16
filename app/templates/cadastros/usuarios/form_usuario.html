@@ -146,7 +146,7 @@
       const s1 = document.getElementById('senha');
       const s2 = document.getElementById('senha_confirm');
 
-      form?.addEventListener('submit', function (e) {
+      form?.addEventListener('submit', async function (e) {
         if (form.dataset.submitting === 'true') {
           e.preventDefault();
           return;
@@ -154,7 +154,7 @@
 
         if (s1 && s2 && s1.value && s1.value !== s2.value) {
           e.preventDefault();
-          alert('As senhas digitadas não conferem.');
+          await showWarning('Senhas diferentes', 'As senhas digitadas não conferem.');
           s2.focus();
           return;
         }

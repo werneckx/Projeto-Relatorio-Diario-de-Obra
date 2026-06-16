@@ -1717,7 +1717,7 @@
             };
         } catch (err) {
             console.error("Erro webcam:", err);
-            alert("Não foi possível acessar a câmera. Verifique as permissões.");
+            showError('Erro ao acessar a câmera', 'Não foi possível acessar a câmera. Verifique as permissões.');
             closeWebcam();
         }
     }
@@ -1826,8 +1826,8 @@
         updateTotalPhotoCount();
     }
 
-    function marcarExclusao(id) {
-        if (!confirm('Remover esta foto?')) return;
+    async function marcarExclusao(id) {
+        if (!await showConfirm('Remover foto', 'Remover esta foto?')) return;
         // CORREÇÃO: Removemos o elemento do DOM em vez de apenas esconder
         // Isso impede que os inputs ocultos (ID e comentário) sejam enviados, resolvendo o conflito
         $(`#card_existente_${id}`).remove();
@@ -1876,7 +1876,7 @@
     function limparAssinatura() { if (signaturePad) signaturePad.clear(); }
 
     async function salvarAssinatura() {
-        if (!signaturePad || signaturePad.isEmpty()) return alert("Por favor, assine antes de confirmar.");
+        if (!signaturePad || signaturePad.isEmpty()) return await showWarning('Assinatura obrigatória', 'Por favor, assine antes de confirmar.');
         const btn = document.getElementById('btnConfirmarAss');
         const originalText = btn.innerHTML;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
@@ -1890,8 +1890,8 @@
             });
             const json = await res.json();
             if (json.success) window.location.reload();
-            else alert(json.message);
-        } catch (e) { alert("Erro de conexão."); }
+            else await showError('Erro ao assinar', json.message);
+        } catch (e) { await showError('Erro de conexão', 'Erro de conexão.'); }
         finally { btn.innerHTML = originalText; btn.disabled = false; }
     }
 
@@ -1959,14 +1959,14 @@
     }
 
     async function salvarWorkflow() {
-        if (selectedOrder.length < 1) return alert("Selecione aprovadores.");
+        if (selectedOrder.length < 1) return await showWarning('Aprovadores obrigatórios', 'Selecione aprovadores.');
         try {
             const res = await fetch(endpointPaths.salvarWorkflow.replace(/\/0(?:$|\/)/, `/${currentRdoId}`), {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ usuarios_ids: selectedOrder })
             });
             if ((await res.json()).success) window.location.reload();
-        } catch (e) { alert("Erro ao salvar."); }
+        } catch (e) { await showError('Erro ao salvar', 'Erro ao salvar.'); }
     }
 
     function expandUserList(show) {
@@ -1979,7 +1979,7 @@
     async function confirmarRejeicao() {
         const id = document.getElementById('id_assinatura_rejeitar').value;
         const motivo = document.getElementById('texto_motivo').value;
-        if (!motivo.trim()) return alert("Informe o motivo.");
+        if (!motivo.trim()) return await showWarning('Motivo obrigatório', 'Informe o motivo.');
         try {
             const res = await fetch(endpointPaths.rejeitarRdo.replace(/\/0(?:$|\/)/, `/${id}`), {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },

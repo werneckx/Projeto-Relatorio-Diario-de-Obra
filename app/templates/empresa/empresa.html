@@ -668,11 +668,11 @@
                                 this.novoDefinicao = { chave: '', descricao: '', valor: '', tipo: 'STRING' };
                                 location.reload();
                             } else {
-                                alert(j.error || 'Erro ao criar definição.');
+                                await showError('Erro ao criar definição', j.error || 'Erro ao criar definição.');
                             }
                         } catch (err) {
                             console.error(err);
-                            alert('Erro de rede ao criar definição.');
+                            await showError('Erro de rede', 'Erro de rede ao criar definição.');
                         }
                     },
                     resetFormPapel() {
@@ -693,11 +693,11 @@
                                 this.resetFormPapel();
                                 location.reload();
                             } else {
-                                alert(j.error || 'Erro ao criar papel.');
+                                await showError('Erro ao criar papel', j.error || 'Erro ao criar papel.');
                             }
                         } catch (err) {
                             console.error(err);
-                            alert('Erro de rede ao criar papel.');
+                            await showError('Erro de rede', 'Erro de rede ao criar papel.');
                         }
                     },
                     resetFormWorkflow() {
@@ -721,8 +721,8 @@
                             obra_id: this.formWorkflow.obra_id || null,
                             etapas: this.formWorkflow.etapas.filter(e => e.nome.trim()).map(e => ({ nome: e.nome.trim() }))
                         };
-                        if (!payload.nome) return alert('Nome do workflow é obrigatório.');
-                        if (!payload.etapas.length) return alert('Adicione ao menos uma etapa.');
+                        if (!payload.nome) return await showWarning('Workflow incompleto', 'Nome do workflow é obrigatório.');
+                        if (!payload.etapas.length) return await showWarning('Workflow incompleto', 'Adicione ao menos uma etapa.');
                         try {
                             const res = await fetch('{{ url_for('auth.api_create_workflow') }}', {
                                 method: 'POST',
@@ -734,11 +734,11 @@
                                 this.resetFormWorkflow();
                                 location.reload();
                             } else {
-                                alert(j.error || 'Erro ao criar workflow.');
+                                await showError('Erro ao criar workflow', j.error || 'Erro ao criar workflow.');
                             }
                         } catch (err) {
                             console.error(err);
-                            alert('Erro de rede ao criar workflow.');
+                            await showError('Erro de rede', 'Erro de rede ao criar workflow.');
                         }
                     },
                     abrirEditarPapel(id) {
