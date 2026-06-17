@@ -57,7 +57,7 @@
                 <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-16 text-center">ID</th>
                 <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Usuário</th>
                 <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Contato</th>
-                <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Cargo</th>
+                <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Papel</th>
                 <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center w-28">Status
                 </th>
                 <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right w-36">Ações
@@ -70,7 +70,7 @@
                 class="hover:bg-slate-50/80 transition-colors group {{ 'opacity-60 grayscale bg-slate-50' if user.status == 0 else '' }}">
 
                 <td data-label="Sistema" class="px-6 py-4 whitespace-nowrap text-xs">
-                    {% if user.is_system %}
+                    {% if user.is_system_record %}
                     <span
                         class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[11px] font-bold border bg-slate-100 text-slate-700 border-slate-200">
                         <i class="fas fa-lock text-[10px] text-slate-500"></i> Sistema
@@ -88,24 +88,19 @@
                 </td>
 
                 <td data-label="Usuário" class="px-6 py-4">
-                    <div class="flex items-center gap-3">
-                        <div
-                            class="w-9 h-9 rounded-full bg-slate-100 text-slate-500 border border-slate-200 flex items-center justify-center font-bold text-xs shrink-0 md:flex hidden">
-                            {{ user.nome[:2].upper() }}
-                        </div>
-                        <div class="min-w-0">
-                            <div class="font-bold text-slate-800 text-sm leading-tight truncate-safe"
+                    <div class="min-w-0">
+                            <div class="text-sm font-medium text-slate-900 truncate-safe"
                                 title="{{ user.nome }}">{{ user.nome }}</div>
-                            <div class="text-[11px] text-slate-400 font-mono mt-0.5 truncate-safe">
-                                CPF: {{ user.cpf if user.cpf else 'Sem CPF' }}
+                            <div class="mt-0.5 text-xs text-slate-500 flex items-center gap-1 min-w-0">
+                                {% if user.cpf %}
+                                <span class="font-mono shrink-0">{{ user.cpf }}</span>
+                                {% endif %}
                             </div>
-                        </div>
                     </div>
                 </td>
 
                 <td data-label="Contato" class="px-6 py-4 whitespace-nowrap">
                     <div class="flex items-center gap-2 text-sm text-slate-600">
-                        <i class="far fa-envelope text-slate-300 text-xs shrink-0"></i>
                         <span class="truncate max-w-[220px]" title="{{ user.email }}">{{ user.email }}</span>
                     </div>
                 </td>

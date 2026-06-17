@@ -148,6 +148,7 @@ class Usuario(db.Model, UserMixin):
     colaborador_id = db.Column(db.Integer, db.ForeignKey('colaboradores.id'), nullable=True, index=True)
     email = db.Column(db.String(150), nullable=False)
     senha_hash = db.Column(db.String(255), nullable=False)
+    _is_system = db.Column("is_system", db.Boolean, nullable=False, default=False)
     ativo = db.Column(db.Boolean, nullable=False, default=True)
     ultimo_login = db.Column(db.DateTime, nullable=True)
     ultimo_login_ip = db.Column(db.String(45), nullable=True)
@@ -345,6 +346,14 @@ class Usuario(db.Model, UserMixin):
             papel is not None and papel.ativo and papel.empresa_id is None
             for papel in (self.papeis or [])
         )
+
+    @property
+    def is_system_record(self):
+        return bool(getattr(self, "_is_system", False))
+
+    @is_system_record.setter
+    def is_system_record(self, value):
+        self._is_system = bool(value)
 
     def tem_permissao(self, chave: str) -> bool:
         """
