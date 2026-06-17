@@ -13,7 +13,7 @@
 {% set table_config = {
 'title': 'Gestão de Usuários',
 'icon': 'fa-users',
-'create_url': url_for('auth.criar_usuario'),
+'create_url': url_for('auth.criar_colaborador'),
 'create_label': 'Novo Usuário',
 'create_permission': 'usuario.manage',
 'export_actions': [
@@ -58,7 +58,6 @@
                 <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Usuário</th>
                 <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Contato</th>
                 <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Cargo</th>
-                <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Supervisor</th>
                 <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center w-28">Status
                 </th>
                 <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right w-36">Ações
@@ -127,21 +126,6 @@
                     </span>
                 </td>
 
-                <td data-label="Supervisor" class="px-6 py-4 whitespace-nowrap">
-                    {% if user.nome_supervisor %}
-                    <div class="flex items-center gap-2 text-sm text-slate-600">
-                        <i class="fas fa-user-tie text-slate-300 text-xs"></i>
-                        <span class="truncate max-w-[160px]" title="{{ user.nome_supervisor }}">{{ user.nome_supervisor
-                            }}</span>
-                    </div>
-                    {% else %}
-                    <span
-                        class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-medium bg-slate-50 text-slate-400 border border-slate-100">
-                        <i class="fas fa-shield-alt text-[9px]"></i> Padrão
-                    </span>
-                    {% endif %}
-                </td>
-
                 <td data-label="Status" class="px-6 py-4 whitespace-nowrap text-center">
                     <span id="status-badge-{{ user.id }}"
                         class="status-badge inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border transition-all {{ 'bg-emerald-50 text-emerald-700 border-emerald-200' if user.status else 'bg-red-50 text-red-700 border-red-200' }}">
@@ -153,9 +137,8 @@
 
                 <td data-label="Ações" class="px-6 py-4 whitespace-nowrap text-right ds-mobile-actions">
                     {{ ui_table.actions_dropdown(actions=[
-                    {'label': 'Visualizar', 'icon': 'fa-eye', 'url': url_for('auth.visualizar_usuario', id=user.id,
-                    view_mode=True), 'permission': 'usuario.manage'},
-                    {'label': 'Editar', 'icon': 'fa-pen', 'url': url_for('auth.editar_usuario', id=user.id),
+                    {'label': 'Visualizar', 'icon': 'fa-eye', 'url': (url_for('auth.visualizar_colaborador', id=user.colaborador_id) if user.colaborador_id else url_for('auth.visualizar_usuario', id=user.id, view_mode=True)), 'permission': 'usuario.manage'},
+                    {'label': 'Editar', 'icon': 'fa-pen', 'url': (url_for('auth.editar_colaborador', id=user.colaborador_id) if user.colaborador_id else url_for('auth.editar_usuario', id=user.id)),
                     'permission': 'usuario.manage'},
                     {'divider': true},
                     {'label': ('Inativar' if user.status else 'Ativar'), 'icon': ('fa-ban' if user.status else

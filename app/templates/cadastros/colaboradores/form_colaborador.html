@@ -2,25 +2,28 @@
 {% import "components/form/macros.html" as ui_form %}
 
 {% block title %}
-  {% if view_mode %}Visualizar{% elif item and item.id %}Editar{% else %}Cadastrar{% endif %} Colaborador
+  {% if view_mode %}Visualizar{% elif item and item.id %}Editar{% else %}Cadastrar{% endif %} Colaborador e Acesso
 {% endblock %}
 
 {% block content %}
-{% set page_title = ('Visualizar' if view_mode else ('Editar' if item and item.id else 'Novo')) ~ ' Colaborador' %}
-{% set subtitle = 'Detalhes do registro selecionado.' if view_mode else ('Atualize as informações.' if item and item.id else 'Cadastre um novo colaborador.') %}
+{% set usuario = usuario_acesso if usuario_acesso is defined else (item.usuario_acesso if item and item.usuario_acesso is defined else none) %}
+{% set can_edit_access = can_manage_access if can_manage_access is defined else true %}
+{% set obra_rows = obra_usuario_rows if obra_usuario_rows is defined else [] %}
+{% set page_title = ('Visualizar' if view_mode else ('Editar' if item and item.id else 'Novo')) ~ ' Colaborador e Acesso' %}
+{% set subtitle = 'Cadastro da pessoa e acesso vinculado ao sistema.' %}
 
 {% call ui_form.page_shell() %}
   {{ ui_form.hero(page_title, subtitle=subtitle, back_url=url_for('auth.lista_colaboradores'), view_mode=view_mode, item=item) }}
 
   {{ ui_form.metadata(item) }}
 
-  {% call ui_form.form_start(action=url_for('auth.gerar_colaborador'), form_id='colaboradorForm', item=item) %}
+  {% call ui_form.form_start(action=url_for('auth.gerar_colaborador'), form_id='colaboradorAcessoForm', item=item) %}
+    <input type="hidden" name="usuario_id" value="{{ usuario.id if usuario and usuario.id }}">
+
     {% call ui_form.section('Dados do Colaborador', icon='fa-users', icon_box_class='bg-orange-50 text-orange-700') %}
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label for="nome" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">
-            Nome <span class="text-rose-500">*</span>
-          </label>
+          <label for="nome" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Nome</label>
           <input type="text" name="nome" id="nome" value="{{ ui_form.blank(item.nome if item else none) }}"
             class="{{ ui_form.control_classes(view_mode=view_mode) }}"
             placeholder="Ex: Maria Souza" {{ 'readonly disabled' if view_mode }} required>
@@ -36,9 +39,7 @@
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label for="tipo" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">
-            Tipo <span class="text-rose-500">*</span>
-          </label>
+          <label for="tipo" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Tipo</label>
           <select name="tipo" id="tipo"
             class="{{ ui_form.select_classes(view_mode=view_mode) }}"
             {{ 'disabled' if view_mode }} required>
@@ -55,28 +56,171 @@
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
+        <div id="fornecedorField">
           <label for="fornecedor_id" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Fornecedor (se for Terceiro)</label>
           <select name="fornecedor_id" id="fornecedor_id"
             class="{{ ui_form.select_classes(view_mode=view_mode) }}"
             {{ 'disabled' if view_mode }}>
-            <option value="">—</option>
+            <option value="">-</option>
             {% for forn in (fornecedores or []) %}
               <option value="{{ forn.id }}" {% if item and item.fornecedor_id == forn.id %}selected{% endif %}>{{ forn.nome }}</option>
             {% endfor %}
           </select>
         </div>
 
-        <div>
+        <div id="clienteField">
           <label for="cliente_id" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Cliente (se for Cliente)</label>
           <select name="cliente_id" id="cliente_id"
             class="{{ ui_form.select_classes(view_mode=view_mode) }}"
             {{ 'disabled' if view_mode }}>
-            <option value="">—</option>
+            <option value="">-</option>
             {% for c in (clientes or []) %}
               <option value="{{ c.id }}" {% if item and item.cliente_id == c.id %}selected{% endif %}>{{ c.razao_social }}</option>
             {% endfor %}
           </select>
+        </div>
+      </div>
+    {% endcall %}
+
+    {% call ui_form.section('Acesso ao Sistema', icon='fa-key', icon_box_class='bg-blue-50 text-blue-700') %}
+      <div class="flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+        <div>
+          <label for="possui_acesso" class="text-sm font-bold text-slate-700">Possui acesso ao sistema?</label>
+          <p class="text-xs text-slate-500 mt-0.5">Ao desativar, o usuário vinculado fica inativo e permanece preservado.</p>
+        </div>
+        <input type="checkbox" name="possui_acesso" id="possui_acesso" value="1"
+          class="h-5 w-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+          {{ 'checked' if usuario and usuario.ativo }} {{ 'disabled' if view_mode or not can_edit_access }}>
+      </div>
+
+      <div id="acessoFields" class="space-y-5">
+        <div class="border-b border-slate-200">
+          <div class="flex flex-wrap gap-2" role="tablist" aria-label="Seções de acesso ao sistema">
+            <button type="button" id="accessTabDados" data-access-tab="dados" role="tab" aria-controls="accessPanelDados" aria-selected="true"
+              class="access-tab border-b-2 border-blue-600 px-3 py-2 text-sm font-semibold text-blue-700">
+              Acesso
+            </button>
+            <button type="button" id="accessTabPermissoes" data-access-tab="permissoes" role="tab" aria-controls="accessPanelPermissoes" aria-selected="false" tabindex="-1"
+              class="access-tab border-b-2 border-transparent px-3 py-2 text-sm font-semibold text-slate-500 hover:text-slate-700">
+              Permissões
+            </button>
+            <button type="button" id="accessTabAuditoria" data-access-tab="auditoria" role="tab" aria-controls="accessPanelAuditoria" aria-selected="false" tabindex="-1"
+              class="access-tab border-b-2 border-transparent px-3 py-2 text-sm font-semibold text-slate-500 hover:text-slate-700">
+              Auditoria
+            </button>
+          </div>
+        </div>
+
+        <div id="accessPanelDados" data-access-panel="dados" role="tabpanel" aria-labelledby="accessTabDados" class="access-panel space-y-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label for="acesso_email" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">E-mail</label>
+              <div class="relative">
+                <input type="email" name="acesso_email" id="acesso_email" value="{{ ui_form.blank(usuario.email if usuario else none) }}"
+                  class="{{ ui_form.control_classes(view_mode=(view_mode or not can_edit_access)) }}"
+                  placeholder="exemplo@empresa.com" autocomplete="email" autocapitalize="none" spellcheck="false"
+                  {{ 'readonly disabled' if view_mode or not can_edit_access }}>
+                <div id="acesso_email_suggestions" class="ds-autocomplete-panel" role="listbox" aria-label="Sugestões de e-mail"></div>
+              </div>
+            </div>
+
+            <div class="flex items-end">
+              {{ ui_form.status_field(name='acesso_status', selected=((usuario and usuario.status) or not usuario), view_mode=(view_mode or not can_edit_access), id='acesso_status') }}
+            </div>
+          </div>
+
+          <div>
+    <label for="senha"
+        class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">
+        Senha
+    </label>
+
+    <input
+        type="password"
+        name="senha"
+        id="senha"
+        class="{{ ui_form.control_classes(extra='placeholder:text-slate-400') }}"
+        placeholder="Defina a senha inicial">
+
+    <label
+        for="gerar_senha_aleatoria"
+        class="mt-3 flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 cursor-pointer hover:bg-slate-100 transition">
+
+        <input
+            type="checkbox"
+            name="gerar_senha_aleatoria"
+            id="gerar_senha_aleatoria"
+            value="1"
+            class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+
+        <div>
+            <div class="font-semibold text-slate-700">
+                Gerar senha automaticamente
+            </div>
+        </div>
+    </label>
+</div>
+        </div>
+
+        <div id="accessPanelPermissoes" data-access-panel="permissoes" role="tabpanel" aria-labelledby="accessTabPermissoes" class="access-panel hidden space-y-5">
+          <div>
+            <label for="acesso_papel" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Papel do usuário</label>
+            {% set current_role = ((usuario.papel if usuario and usuario.papel else 'Leitor')|upper) %}
+            <select name="acesso_papel" id="acesso_papel"
+              class="{{ ui_form.select_classes(view_mode=(view_mode or not can_edit_access)) }}"
+              {{ 'disabled' if view_mode or not can_edit_access }}>
+              {% for papel in (papeis or []) %}
+                <option value="{{ papel.nome }}" data-papel-id="{{ papel.id }}" {% if current_role == (papel.nome or '')|upper %}selected{% endif %}>{{ papel.nome }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          {% include "cadastros/colaboradores/_obra_usuario_rows.html" %}
+        </div>
+
+        <div id="accessPanelAuditoria" data-access-panel="auditoria" role="tabpanel" aria-labelledby="accessTabAuditoria" class="access-panel hidden space-y-5">
+          {% if is_admin_current and usuario %}
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div>
+                <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Último Login</label>
+                <input type="text" value="{{ ui_form.metadata_datetime(usuario.ultimo_login) }}" class="{{ ui_form.control_classes(view_mode=true) }}" readonly disabled>
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Último IP</label>
+                <input type="text" value="{{ ui_form.blank(usuario.ultimo_login_ip) }}" class="{{ ui_form.control_classes(view_mode=true) }}" readonly disabled>
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Primeiro Acesso em</label>
+                <input type="text" value="{{ ui_form.metadata_datetime(usuario.primeiro_acesso_em) }}" class="{{ ui_form.control_classes(view_mode=true) }}" readonly disabled>
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Troca Obrigatória</label>
+                <input type="text" value="{{ 'Sim' if usuario.troca_senha_obrigatoria else 'Não' }}" class="{{ ui_form.control_classes(view_mode=true) }}" readonly disabled>
+              </div>
+            </div>
+          {% endif %}
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <h4 class="text-xs font-bold uppercase text-slate-500 mb-3">Colaborador</h4>
+              <dl class="grid grid-cols-1 gap-2 text-sm">
+                <div><dt class="text-xs text-slate-400">Criado em</dt><dd class="font-medium text-slate-700">{{ ui_form.metadata_datetime(item.criado_em if item and item.criado_em is defined else none) }}</dd></div>
+                <div><dt class="text-xs text-slate-400">Criado por</dt><dd class="font-medium text-slate-700">{{ item.criado_por_nome if item and item.criado_por_nome is defined and item.criado_por_nome else '-' }}</dd></div>
+                <div><dt class="text-xs text-slate-400">Modificado em</dt><dd class="font-medium text-slate-700">{{ ui_form.metadata_datetime(item.modificado_em if item and item.modificado_em is defined else none) }}</dd></div>
+                <div><dt class="text-xs text-slate-400">Modificado por</dt><dd class="font-medium text-slate-700">{{ item.modificado_por_nome if item and item.modificado_por_nome is defined and item.modificado_por_nome else '-' }}</dd></div>
+              </dl>
+            </div>
+
+            <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <h4 class="text-xs font-bold uppercase text-slate-500 mb-3">Usuário</h4>
+              <dl class="grid grid-cols-1 gap-2 text-sm">
+                <div><dt class="text-xs text-slate-400">Criado em</dt><dd class="font-medium text-slate-700">{{ ui_form.metadata_datetime(usuario.criado_em if usuario and usuario.criado_em is defined else none) }}</dd></div>
+                <div><dt class="text-xs text-slate-400">Criado por</dt><dd class="font-medium text-slate-700">{{ usuario.criado_por_nome if usuario and usuario.criado_por_nome is defined and usuario.criado_por_nome else '-' }}</dd></div>
+                <div><dt class="text-xs text-slate-400">Modificado em</dt><dd class="font-medium text-slate-700">{{ ui_form.metadata_datetime(usuario.modificado_em if usuario and usuario.modificado_em is defined else none) }}</dd></div>
+                <div><dt class="text-xs text-slate-400">Modificado por</dt><dd class="font-medium text-slate-700">{{ usuario.modificado_por_nome if usuario and usuario.modificado_por_nome is defined and usuario.modificado_por_nome else '-' }}</dd></div>
+              </dl>
+            </div>
+          </div>
         </div>
       </div>
     {% endcall %}
@@ -87,13 +231,23 @@
       edit_url=(url_for('auth.editar_colaborador', id=item.id) if item and item.id else None),
       view_url=(url_for('auth.visualizar_colaborador', id=item.id) if item and item.id else None),
       item=item,
-      submit_label='Salvar Colaborador',
+      submit_label='Salvar',
       cancel_label='Cancelar',
       back_label='Voltar',
       submit_btn_id='submitBtn'
     ) }}
   {% endcall %}
 
-  {{ ui_form.submit_script(form_id='colaboradorForm', submit_btn_id='submitBtn', loading_label='Salvando...') }}
+  <script>
+    window.ColaboradorAcessoForm = {
+      obras: [
+        {% for obra in (obras or []) %}
+          { id: '{{ obra.id }}', nome: {{ obra.nome|tojson }} }{{ ',' if not loop.last }}
+        {% endfor %}
+      ],
+      emailDomains: {{ ((config.email_domains if config is defined and config.email_domains is defined else []) or [])|tojson }}
+    };
+  </script>
+  <script src="{{ url_for('static', filename='js/colaborador_acesso_form.js') }}"></script>
 {% endcall %}
 {% endblock %}

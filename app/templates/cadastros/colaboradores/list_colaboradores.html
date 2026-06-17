@@ -55,6 +55,7 @@
         <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Nome</th>
         <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-40">Tipo</th>
         <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-80">Vínculo</th>
+        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-40">Acesso</th>
         <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-40">Status</th>
         <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right w-32">Ações</th>
       </tr>
@@ -108,6 +109,25 @@
           <span class="text-slate-400">-</span>
           {% endif %}
         </td>
+        <td data-label="Acesso" class="px-6 py-4 whitespace-nowrap text-sm">
+          {% set usuario_acesso = colab.usuario_acesso if colab.usuario_acesso is defined else none %}
+          {% if usuario_acesso and usuario_acesso.ativo %}
+          <span
+            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border bg-blue-50 text-blue-700 border-blue-200">
+            <i class="fas fa-key text-[10px]"></i> Usuário ativo
+          </span>
+          {% elif usuario_acesso %}
+          <span
+            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border bg-red-50 text-red-700 border-red-200">
+            <i class="fas fa-lock text-[10px]"></i> Usuário inativo
+          </span>
+          {% else %}
+          <span
+            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border bg-slate-50 text-slate-500 border-slate-200">
+            <i class="fas fa-user-slash text-[10px]"></i> Sem acesso
+          </span>
+          {% endif %}
+        </td>
         <td data-label="Status" class="px-6 py-4 whitespace-nowrap text-sm">
           {{ ui_table.status_badge(colab.ativo, active_label='Ativo', inactive_label='Inativo') }}
         </td>
@@ -117,6 +137,10 @@
           'permission': 'colaborador.view'},
           {'label': 'Editar', 'icon': 'fa-pen', 'url': url_for('auth.editar_colaborador', id=colab.id), 'permission':
           'colaborador.manage'},
+          {'label': ('Gerenciar acesso' if colab.usuario_acesso is defined and colab.usuario_acesso else 'Criar acesso'),
+          'icon': ('fa-key' if colab.usuario_acesso is defined and colab.usuario_acesso else 'fa-user-plus'),
+          'url': url_for('auth.editar_colaborador', id=colab.id),
+          'permission': 'usuario.manage'},
           {'divider': true},
           {'label': ('Inativar' if colab.ativo else 'Ativar'), 'icon': ('fa-ban' if colab.ativo else 'fa-check'),
           'onclick': 'confirmToggleColaborador(' ~ colab.id ~ ', ' ~ (colab.ativo|tojson) ~ ')',
