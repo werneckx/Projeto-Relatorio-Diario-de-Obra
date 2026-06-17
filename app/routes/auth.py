@@ -64,6 +64,7 @@ def setup():
                 empresa_id=nova_empresa.id,
                 colaborador_id=novo_colab.id,
                 ativo=True,
+                troca_senha_obrigatoria=False,
             )
             novo_user.set_senha(admin_senha)
             db.session.add(novo_user)
@@ -152,7 +153,10 @@ def login_post():
         flash("E-mail, senha ou status de usuário inválido.", "error")
         return redirect(url_for("auth.login"))
 
-    
+    if user.colaborador and not user.colaborador.ativo:
+        flash("E-mail, senha ou status de usuÃ¡rio invÃ¡lido.", "error")
+        return redirect(url_for("auth.login"))
+
     # --- Captura de contexto (sem commit fragmentado) ---
     user_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
     if user_ip and ',' in user_ip:

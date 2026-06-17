@@ -105,6 +105,16 @@ class Colaborador(db.Model):
     def is_terceiro(self):  
         return self.tipo == 'TERCEIRO' or self.fornecedor_id is not None
 
+    @property
+    def usuario_acesso(self):
+        if hasattr(self, "_usuario_acesso_override"):
+            return self._usuario_acesso_override
+        return next((usuario for usuario in self.usuarios if usuario is not None), None)
+
+    @usuario_acesso.setter
+    def usuario_acesso(self, value):
+        self._usuario_acesso_override = value
+
     @validates('tipo')
     def validate_tipo(self, key, value):
         if value == 'PROPRIO':
@@ -128,22 +138,29 @@ class Colaborador(db.Model):
 
 class Usuario(db.Model, UserMixin):
     __tablename__ = "usuarios"
+    __table_args__ = (
+        db.UniqueConstraint('empresa_id', 'email', name='uq_usuarios_empresa_email'),
+        db.UniqueConstraint('empresa_id', 'colaborador_id', name='uq_usuarios_empresa_colaborador'),
+    )
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     empresa_id = db.Column(db.Integer, db.ForeignKey('empresa.id'), nullable=False, index=True)
     colaborador_id = db.Column(db.Integer, db.ForeignKey('colaboradores.id'), nullable=True, index=True)
     email = db.Column(db.String(150), nullable=False)
     senha_hash = db.Column(db.String(255), nullable=False)
+    _is_system = db.Column("is_system", db.Boolean, nullable=False, default=False)
     ativo = db.Column(db.Boolean, nullable=False, default=True)
     ultimo_login = db.Column(db.DateTime, nullable=True)
     ultimo_login_ip = db.Column(db.String(45), nullable=True)
+    primeiro_acesso_em = db.Column(db.DateTime, nullable=True)
+    troca_senha_obrigatoria = db.Column(db.Boolean, nullable=False, default=True)
 
     criado_por = db.Column(db.Integer, nullable=True)
     modificado_por = db.Column(db.Integer, nullable=True)
     criado_em = db.Column(db.DateTime, default=utcnow_naive)
     modificado_em = db.Column(db.DateTime, default=utcnow_naive, onupdate=utcnow_naive)
 
-    colaborador = db.relationship('Colaborador', backref='usuarios')
+    colaborador = db.relationship('Colaborador', backref=db.backref('usuarios', uselist=True))
     empresa = db.relationship('Empresa', backref='usuarios')
     papeis = db.relationship('Papel', secondary='usuario_papel', backref=db.backref('usuarios', lazy='dynamic'))
     sessoes = db.relationship(
@@ -226,11 +243,11 @@ class Usuario(db.Model, UserMixin):
 
     @property
     def primeiro_acesso(self):
-        return getattr(self, "_primeiro_acesso", False)
+        return bool(getattr(self, "troca_senha_obrigatoria", False))
 
     @primeiro_acesso.setter
     def primeiro_acesso(self, value):
-        self._primeiro_acesso = bool(value)
+        self.troca_senha_obrigatoria = bool(value)
 
     @property
     def telefone(self):
@@ -247,14 +264,6 @@ class Usuario(db.Model, UserMixin):
     @departamento.setter
     def departamento(self, value):
         self._departamento = value
-
-    @property
-    def id_supervisor(self):
-        return getattr(self, "_id_supervisor", None)
-
-    @id_supervisor.setter
-    def id_supervisor(self, value):
-        self._id_supervisor = value
 
     @property
     def obras_permitidas(self):
@@ -337,6 +346,14 @@ class Usuario(db.Model, UserMixin):
             papel is not None and papel.ativo and papel.empresa_id is None
             for papel in (self.papeis or [])
         )
+
+    @property
+    def is_system_record(self):
+        return bool(getattr(self, "_is_system", False))
+
+    @is_system_record.setter
+    def is_system_record(self, value):
+        self._is_system = bool(value)
 
     def tem_permissao(self, chave: str) -> bool:
         """

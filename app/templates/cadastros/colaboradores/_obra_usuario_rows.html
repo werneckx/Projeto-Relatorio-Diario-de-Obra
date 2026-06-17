@@ -1,0 +1,154 @@
+<div class="space-y-3">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <label class="block text-[11px] font-bold text-slate-500 uppercase">Obras vinculadas</label>
+      <p id="adminObrasHint" class="hidden mt-1 text-xs font-medium text-blue-700">
+        Admin possui acesso automático a todas as obras.
+      </p>
+    </div>
+    {% if not view_mode and can_edit_access %}
+      <button type="button" id="addObraUsuarioRow"
+        class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:border-blue-300 hover:text-blue-700">
+        <i class="fas fa-plus"></i> Adicionar obra
+      </button>
+    {% endif %}
+  </div>
+
+  <div class="overflow-x-auto rounded-lg border border-slate-200">
+    <table class="min-w-full divide-y divide-slate-200 text-sm">
+      <thead class="bg-slate-50">
+        <tr class="text-left text-[11px] font-bold uppercase text-slate-500">
+          <th class="px-3 py-2 min-w-64">Obra</th>
+          <th class="px-3 py-2 min-w-48">Papel</th>
+          <th class="px-3 py-2 w-32">Ativo</th>
+          <th class="px-3 py-2 min-w-36">Criado por</th>
+          <th class="px-3 py-2 min-w-36">Modificado por</th>
+          <th class="px-3 py-2 min-w-40">Criado em</th>
+          <th class="px-3 py-2 min-w-40">Modificado em</th>
+          {% if not view_mode and can_edit_access %}
+            <th class="px-3 py-2 w-56 text-right">Ações</th>
+          {% endif %}
+        </tr>
+      </thead>
+      <tbody id="obraUsuarioRows" class="divide-y divide-slate-100 bg-white">
+        {% for rel in obra_rows %}
+          <tr data-obra-user-row data-existing-row="1">
+            <td class="px-3 py-2">
+              <input type="hidden" name="obra_usuario_id[]" value="{{ rel.id }}">
+              <select name="obra_usuario_obra_id[]"
+                class="{{ ui_form.select_classes(view_mode=(view_mode or not can_edit_access), extra='min-w-56 obra-row-control') }}"
+                {{ 'disabled' if view_mode or not can_edit_access or can_edit_access }}>
+                <option value="">-</option>
+                {% for obra in (obras or []) %}
+                  <option value="{{ obra.id }}" {% if rel.obra_id == obra.id %}selected{% endif %}>{{ obra.nome }}</option>
+                {% endfor %}
+              </select>
+            </td>
+            <td class="px-3 py-2">
+              <select name="obra_usuario_papel_id[]"
+                class="{{ ui_form.select_classes(view_mode=(view_mode or not can_edit_access), extra='min-w-40 obra-row-control') }}"
+                {{ 'disabled' if view_mode or not can_edit_access or can_edit_access }}>
+                <option value="">-</option>
+                {% for papel in (papeis or []) %}
+                  <option value="{{ papel.id }}" {% if rel.papel_id == papel.id %}selected{% endif %}>{{ papel.nome }}</option>
+                {% endfor %}
+              </select>
+            </td>
+            <td class="px-3 py-2">
+              <select name="obra_usuario_ativo[]"
+                class="{{ ui_form.select_classes(view_mode=(view_mode or not can_edit_access), extra='min-w-28 obra-row-control') }}"
+                {{ 'disabled' if view_mode or not can_edit_access or can_edit_access }}>
+                <option value="1" {% if rel.ativo %}selected{% endif %}>Ativo</option>
+                <option value="0" {% if not rel.ativo %}selected{% endif %}>Inativo</option>
+              </select>
+              <span data-obra-row-state class="hidden mt-1 text-[11px] font-semibold text-rose-600">Será removido ao salvar</span>
+            </td>
+            <td class="px-3 py-2 text-slate-600">{{ rel.criado_por_nome if rel.criado_por_nome is defined and rel.criado_por_nome else '-' }}</td>
+            <td class="px-3 py-2 text-slate-600">{{ rel.modificado_por_nome if rel.modificado_por_nome is defined and rel.modificado_por_nome else '-' }}</td>
+            <td class="px-3 py-2 text-slate-600">{{ ui_form.metadata_datetime(rel.criado_em if rel.criado_em is defined else none) }}</td>
+            <td class="px-3 py-2 text-slate-600">{{ ui_form.metadata_datetime(rel.modificado_em if rel.modificado_em is defined else none) }}</td>
+            {% if not view_mode and can_edit_access %}
+              <td class="px-3 py-2 text-right">
+                <div class="inline-flex items-center justify-end gap-2" data-obra-row-actions>
+                  <button type="button" data-edit-obra-row
+                    class="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-600 hover:border-blue-300 hover:text-blue-700"
+                    title="Editar vínculo">
+                    <i class="fas fa-pen text-[11px]"></i> Editar
+                  </button>
+                  <button type="button" data-cancel-obra-row
+                    class="hidden inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-600 hover:border-slate-300 hover:text-slate-800"
+                    title="Cancelar edição">
+                    <i class="fas fa-times text-[11px]"></i> Cancelar
+                  </button>
+                  <button type="button" data-remove-obra-row
+                    class="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-600 hover:border-rose-300 hover:text-rose-700"
+                    title="Excluir">
+                    <i class="fas fa-trash-alt text-[11px]"></i> Excluir
+                  </button>
+                  <button type="button" data-undo-remove-obra-row
+                    class="hidden inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-600 hover:border-emerald-300 hover:text-emerald-700"
+                    title="Desfazer remoção">
+                    <i class="fas fa-rotate-left text-[11px]"></i> Desfazer
+                  </button>
+                </div>
+              </td>
+            {% endif %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if not obra_rows %}
+    <p id="obraUsuarioEmptyState" class="text-sm text-slate-500">Nenhuma obra vinculada.</p>
+  {% endif %}
+</div>
+
+<template id="obraUsuarioRowTemplate">
+  <tr data-obra-user-row>
+    <td class="px-3 py-2">
+      <input type="hidden" name="obra_usuario_id[]" value="">
+      <select name="obra_usuario_obra_id[]" class="{{ ui_form.select_classes(extra='min-w-56 obra-row-control') }}">
+        <option value="">-</option>
+        {% for obra in (obras or []) %}
+          <option value="{{ obra.id }}">{{ obra.nome }}</option>
+        {% endfor %}
+      </select>
+    </td>
+    <td class="px-3 py-2">
+      <select name="obra_usuario_papel_id[]" class="{{ ui_form.select_classes(extra='min-w-40 obra-row-control') }}">
+        <option value="">-</option>
+        {% for papel in (papeis or []) %}
+          <option value="{{ papel.id }}">{{ papel.nome }}</option>
+        {% endfor %}
+      </select>
+    </td>
+    <td class="px-3 py-2">
+      <select name="obra_usuario_ativo[]" class="{{ ui_form.select_classes(extra='min-w-28 obra-row-control') }}">
+        <option value="1" selected>Ativo</option>
+        <option value="0">Inativo</option>
+      </select>
+      <span data-obra-row-state class="hidden mt-1 text-[11px] font-semibold text-rose-600">Será removido ao salvar</span>
+    </td>
+    <td class="px-3 py-2 text-slate-400">-</td>
+    <td class="px-3 py-2 text-slate-400">-</td>
+    <td class="px-3 py-2 text-slate-400">-</td>
+    <td class="px-3 py-2 text-slate-400">-</td>
+    {% if not view_mode and can_edit_access %}
+      <td class="px-3 py-2 text-right">
+        <div class="inline-flex items-center justify-end gap-2" data-obra-row-actions>
+          <button type="button" data-cancel-obra-row
+            class="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-600 hover:border-slate-300 hover:text-slate-800"
+            title="Cancelar linha">
+            <i class="fas fa-times text-[11px]"></i> Cancelar
+          </button>
+          <button type="button" data-remove-obra-row
+            class="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-600 hover:border-rose-300 hover:text-rose-700"
+            title="Excluir linha">
+            <i class="fas fa-trash-alt text-[11px]"></i> Excluir
+          </button>
+        </div>
+      </td>
+    {% endif %}
+  </tr>
+</template>
