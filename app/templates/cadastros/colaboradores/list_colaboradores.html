@@ -54,7 +54,6 @@
         <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-24">ID</th>
         <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Nome</th>
         <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-40">Tipo</th>
-        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-80">Vínculo</th>
         <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-40">Acesso</th>
         <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-40">Status</th>
         <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right w-32">Ações</th>
@@ -71,12 +70,39 @@
         </td>
         <td data-label="ID" class="px-6 py-4 whitespace-nowrap text-sm font-mono text-slate-400">#{{ '%03d' % colab.id
           }}</td>
-        <td data-label="Nome" class="px-6 py-4 text-sm text-slate-800 font-medium">
-          <div class="truncate-safe" title="{{ colab.nome }}">{{ colab.nome }}</div>
-          {% if colab.cadastro_pessoa_fisica %}
-          <div class="text-xs text-slate-500 mt-0.5 font-mono truncate-safe" title="{{ colab.cadastro_pessoa_fisica }}">
-            {{ colab.cadastro_pessoa_fisica }}</div>
-          {% endif %}
+        <td data-label="Nome" class="px-6 py-4">
+          <div class="min-w-0">
+
+            <div
+              class="text-sm font-medium text-slate-900 truncate-safe"
+              title="{{ colab.nome }}">
+              {{ colab.nome }}
+            </div>
+
+            <div class="mt-0.5 text-xs text-slate-500 flex items-center gap-1 min-w-0">
+              {% if colab.cadastro_pessoa_fisica %}
+                <span class="font-mono shrink-0">{{ colab.cadastro_pessoa_fisica }}</span>
+              {% endif %}
+
+              {% if colab.fornecedor %}
+                <span class="shrink-0">•</span>
+                <span
+                  class="truncate max-w-[160px]"
+                  title="{{ colab.fornecedor.nome }}">
+                  {{ colab.fornecedor.nome }}
+                </span>
+
+              {% elif colab.cliente %}
+                <span class="shrink-0">•</span>
+                <span
+                  class="truncate max-w-[160px]"
+                  title="{{ colab.cliente.razao_social }}">
+                  {{ colab.cliente.razao_social }}
+                </span>
+              {% endif %}
+            </div>
+
+          </div>
         </td>
         <td data-label="Tipo" class="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
           {% set tipo = (colab.tipo or '') %}
@@ -97,16 +123,6 @@
           </span>
           {% else %}
           <span class="text-slate-400 text-sm">-</span>
-          {% endif %}
-        </td>
-        <td data-label="Vínculo" class="px-6 py-4 text-sm text-slate-700">
-          {% if colab.fornecedor %}
-          <div class="truncate-safe" title="{{ colab.fornecedor.nome }}">Fornecedor: {{ colab.fornecedor.nome }}</div>
-          {% elif colab.cliente %}
-          <div class="truncate-safe" title="{{ colab.cliente.razao_social }}">Cliente: {{ colab.cliente.razao_social }}
-          </div>
-          {% else %}
-          <span class="text-slate-400">-</span>
           {% endif %}
         </td>
         <td data-label="Acesso" class="px-6 py-4 whitespace-nowrap text-sm">
@@ -137,11 +153,6 @@
           'permission': 'colaborador.view'},
           {'label': 'Editar', 'icon': 'fa-pen', 'url': url_for('auth.editar_colaborador', id=colab.id), 'permission':
           'colaborador.manage'},
-          {'label': ('Gerenciar acesso' if colab.usuario_acesso is defined and colab.usuario_acesso else 'Criar acesso'),
-          'icon': ('fa-key' if colab.usuario_acesso is defined and colab.usuario_acesso else 'fa-user-plus'),
-          'url': url_for('auth.editar_colaborador', id=colab.id),
-          'permission': 'usuario.manage'},
-          {'divider': true},
           {'label': ('Inativar' if colab.ativo else 'Ativar'), 'icon': ('fa-ban' if colab.ativo else 'fa-check'),
           'onclick': 'confirmToggleColaborador(' ~ colab.id ~ ', ' ~ (colab.ativo|tojson) ~ ')',
           'permission': 'colaborador.manage', 'variant': ('danger' if colab.ativo else 'success')}
