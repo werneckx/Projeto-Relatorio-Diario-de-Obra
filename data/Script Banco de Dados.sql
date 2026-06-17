@@ -419,6 +419,11 @@ CREATE TABLE usuarios (
     ativo BOOLEAN DEFAULT TRUE,
     ultimo_login DATETIME,
     ultimo_login_ip VARCHAR(45),
+    primeiro_acesso_em DATETIME NULL,
+    troca_senha_obrigatoria BOOLEAN DEFAULT TRUE,
+    senha_redefinida_em DATETIME NULL,
+    senha_redefinida_por INT NULL,
+    senha_expira_em DATETIME NULL,
 
     criado_por INT NULL,
     modificado_por INT NULL,
