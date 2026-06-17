@@ -112,7 +112,7 @@
         </div>
 
         <div id="accessPanelDados" data-access-panel="dados" role="tabpanel" aria-labelledby="accessTabDados" class="access-panel space-y-4">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 gap-4">
             <div>
               <label for="acesso_email" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">E-mail</label>
               <div class="relative">
@@ -124,42 +124,33 @@
               </div>
             </div>
 
-            <div class="flex items-end">
-              {{ ui_form.status_field(name='acesso_status', selected=((usuario and usuario.status) or not usuario), view_mode=(view_mode or not can_edit_access), id='acesso_status') }}
-            </div>
           </div>
 
-          <div>
-    <label for="senha"
-        class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">
-        Senha
-    </label>
-
-    <input
-        type="password"
-        name="senha"
-        id="senha"
-        class="{{ ui_form.control_classes(extra='placeholder:text-slate-400') }}"
-        placeholder="Defina a senha inicial">
-
-    <label
-        for="gerar_senha_aleatoria"
-        class="mt-3 flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 cursor-pointer hover:bg-slate-100 transition">
-
-        <input
-            type="checkbox"
-            name="gerar_senha_aleatoria"
-            id="gerar_senha_aleatoria"
-            value="1"
-            class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
-
-        <div>
-            <div class="font-semibold text-slate-700">
-                Gerar senha automaticamente
-            </div>
-        </div>
-    </label>
-</div>
+          {% if not view_mode and can_edit_access %}
+            {% if usuario and usuario.id %}
+              <div>
+                <button type="submit" data-reset-password-button formaction="{{ url_for('auth.resetar_senha_colaborador', id=item.id) }}" formmethod="post"
+                  class="{{ ui_form.action_secondary_classes(extra='max-w-xs') }}">
+                  <i class="fas fa-rotate"></i> Resetar Senha
+                </button>
+              </div>
+            {% else %}
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label for="senha" class="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Senha</label>
+                  <input type="password" name="senha" id="senha"
+                    class="{{ ui_form.control_classes(extra='placeholder:text-slate-400') }}"
+                    placeholder="Defina a senha inicial">
+                </div>
+                <label for="gerar_senha_aleatoria"
+                  class="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 cursor-pointer hover:bg-slate-50 transition">
+                  <input type="checkbox" name="gerar_senha_aleatoria" id="gerar_senha_aleatoria" value="1"
+                    class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                  Gerar senha automaticamente
+                </label>
+              </div>
+            {% endif %}
+          {% endif %}
         </div>
 
         <div id="accessPanelPermissoes" data-access-panel="permissoes" role="tabpanel" aria-labelledby="accessTabPermissoes" class="access-panel hidden space-y-5">

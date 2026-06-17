@@ -405,32 +405,31 @@ def gerar_colaborador():
 
     possui_acesso = request.form.get('possui_acesso') == '1'
     acesso_email = _normalize_option_input(request.form.get('acesso_email', ''))
-    if _can_manage_access() and usuario_acesso and not possui_acesso:
-        usuario_acesso.ativo = False
-        set_audit_on_update(usuario_acesso, user_id=user_id)
+    acesso_ativo = possui_acesso
 
-    if _can_manage_access() and possui_acesso:
-        if not acesso_email:
-            flash('E-mail do acesso Ã© obrigatÃ³rio para usuÃ¡rio vinculado.', 'danger')
+    credencial_temporaria = None
+
+    if _can_manage_access() and (possui_acesso or usuario_acesso):
+        if possui_acesso and not acesso_email:
+            flash('E-mail do acesso e obrigatorio para usuario vinculado.', 'danger')
             return redirect(url_for('auth.editar_colaborador', id=colaborador.id))
 
-        usuario_id = usuario_acesso.id if usuario_acesso else 0
-        email_duplicado = Usuario.query.filter(
-            Usuario.empresa_id == empresa_id,
-            Usuario.email == acesso_email,
-            Usuario.id != usuario_id,
-        ).first()
-        if email_duplicado:
-            flash('Este e-mail jÃ¡ estÃ¡ cadastrado.', 'danger')
-            return redirect(url_for('auth.editar_colaborador', id=colaborador.id))
+        if acesso_email:
+            usuario_id = usuario_acesso.id if usuario_acesso else 0
+            email_duplicado = Usuario.query.filter(
+                Usuario.empresa_id == empresa_id,
+                Usuario.email == acesso_email,
+                Usuario.id != usuario_id,
+            ).first()
+            if email_duplicado:
+                flash('Este e-mail ja esta cadastrado.', 'danger')
+                return redirect(url_for('auth.editar_colaborador', id=colaborador.id))
 
-        acesso_status_raw = (request.form.get('acesso_status') or '').strip().lower()
-        acesso_status = acesso_status_raw in {'1', 'true', 'on', 'ativo'}
-        if not colaborador.ativo and acesso_status:
+        if not colaborador.ativo and acesso_ativo:
             flash('Nao e permitido manter usuario ativo para colaborador inativo.', 'danger')
             return redirect(url_for('auth.editar_colaborador', id=colaborador.id))
 
-        if not usuario_acesso:
+        if not usuario_acesso and possui_acesso:
             senha_plana = _gerar_senha_forte() if request.form.get('gerar_senha_aleatoria') == '1' else (request.form.get('senha') or '')
             if not senha_plana:
                 flash('Informe uma senha ou use a opcao de gerar senha aleatoria.', 'danger')
@@ -439,28 +438,37 @@ def gerar_colaborador():
                 empresa_id=empresa_id,
                 colaborador_id=colaborador.id,
                 email=acesso_email,
-                ativo=acesso_status,
+                ativo=acesso_ativo,
                 troca_senha_obrigatoria=True,
             )
             usuario_acesso.set_senha(senha_plana)
             set_audit_on_create(usuario_acesso, user_id=user_id)
             db.session.add(usuario_acesso)
             db.session.flush()
-            if request.form.get('gerar_senha_aleatoria') == '1':
-                flash(f'Senha temporaria gerada: {senha_plana}', 'warning')
-        else:
-            usuario_acesso.email = acesso_email
-            usuario_acesso.ativo = acesso_status
+            credencial_temporaria = (acesso_email, senha_plana)
+        elif usuario_acesso:
+            if acesso_email:
+                usuario_acesso.email = acesso_email
+            usuario_acesso.ativo = acesso_ativo
             set_audit_on_update(usuario_acesso, user_id=user_id)
 
-        papel = request.form.get('acesso_papel') or ROLE_LEITOR
-        papel_acesso = _sincronizar_papel_acesso(usuario_acesso, papel, empresa_id)
-        if (papel or '').strip().upper() == ROLE_ADMIN:
-            _associar_todas_obras_usuario(usuario_acesso, empresa_id, papel_acesso.id, user_id)
-        else:
-            _salvar_obras_usuario(usuario_acesso, empresa_id, user_id)
+        if usuario_acesso and usuario_acesso.ativo:
+            papel = request.form.get('acesso_papel') or ROLE_LEITOR
+            papel_acesso = _sincronizar_papel_acesso(usuario_acesso, papel, empresa_id)
+            if (papel or '').strip().upper() == ROLE_ADMIN:
+                _associar_todas_obras_usuario(usuario_acesso, empresa_id, papel_acesso.id, user_id)
+            else:
+                _salvar_obras_usuario(usuario_acesso, empresa_id, user_id)
 
     db.session.commit()
+    if credencial_temporaria:
+        login, senha = credencial_temporaria
+        flash(
+            f'Credenciais de acesso criadas. Login: {login} | Senha temporária: {senha}. '
+            'Esta credencial será exibida somente uma vez.',
+            'warning',
+        )
+        return redirect(url_for('auth.editar_colaborador', id=colaborador.id))
     return redirect(url_for('auth.lista_colaboradores'))
 
 
@@ -503,5 +511,9 @@ def resetar_senha_colaborador(id):
     usuario_acesso.troca_senha_obrigatoria = True
     set_audit_on_update(usuario_acesso, user_id=get_current_user_id())
     db.session.commit()
-    flash(f'Senha temporaria gerada: {nova_senha}', 'warning')
+    flash(
+        f'Senha redefinida. Login: {usuario_acesso.email} | Senha temporária: {nova_senha}. '
+        'Esta credencial será exibida somente uma vez.',
+        'warning',
+    )
     return redirect(url_for('auth.editar_colaborador', id=id))

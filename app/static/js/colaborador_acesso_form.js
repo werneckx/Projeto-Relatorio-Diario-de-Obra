@@ -376,16 +376,19 @@
   function initSenhaAleatoria() {
     const senhaInput = document.getElementById('senha');
     const gerarSenhaInput = document.getElementById('gerar_senha_aleatoria');
+    const acessoToggle = document.getElementById('possui_acesso');
     function updateSenhaAleatoria() {
       if (!senhaInput || !gerarSenhaInput) return;
       const gerar = gerarSenhaInput.checked;
-      senhaInput.disabled = gerar;
-      senhaInput.required = !gerar;
-      senhaInput.classList.toggle('opacity-60', gerar);
-      senhaInput.classList.toggle('cursor-not-allowed', gerar);
+      const possuiAcesso = acessoToggle?.checked ?? true;
+      senhaInput.disabled = gerar || !possuiAcesso;
+      senhaInput.required = possuiAcesso && !gerar;
+      senhaInput.classList.toggle('opacity-60', gerar || !possuiAcesso);
+      senhaInput.classList.toggle('cursor-not-allowed', gerar || !possuiAcesso);
       if (gerar) senhaInput.value = '';
     }
     gerarSenhaInput?.addEventListener('change', updateSenhaAleatoria);
+    acessoToggle?.addEventListener('change', updateSenhaAleatoria);
     updateSenhaAleatoria();
   }
 
@@ -549,7 +552,8 @@
       return;
     }
 
-    const incompleteRow = findIncompleteObraRow();
+    const acessoAtivo = document.getElementById('possui_acesso')?.checked ?? true;
+    const incompleteRow = acessoAtivo ? findIncompleteObraRow() : null;
     if (incompleteRow) {
       event.preventDefault();
       warn('Campo vazio', 'Preencha a obra e o papel da linha aberta antes de salvar.');
