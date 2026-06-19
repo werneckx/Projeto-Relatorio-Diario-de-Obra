@@ -1,9 +1,12 @@
 ﻿from app.routes.auth_common import *
+from datetime import datetime
+
 from app.services.config_service import ConfigService
 from app.models.configuracao import ConfigDefinicao, EmpresaConfig
 from app.models.usuario import Papel, Permissao, PapelPermissao
-from app.models.workflow import WorkflowDefinicao, WorkflowEtapa
+from app.models.workflow import WorkflowDefinicao, WorkflowEtapa, WorkflowResponsavel
 from app.models.obra import Obra
+from app.models.usuario import Usuario
 
 #######################################################################################################
 ####################################################################################################### Empresa
@@ -72,7 +75,27 @@ def empresa():
     definicoes = ConfigDefinicao.query.order_by(ConfigDefinicao.chave).all()
     papeis_globais = Papel.query.filter_by(empresa_id=None).order_by(Papel.nome).all()
     papeis_empresa = Papel.query.filter_by(empresa_id=empresa_id).order_by(Papel.nome).all()
+    papeis_workflow = Papel.query.filter(
+        or_(Papel.empresa_id == empresa_id, Papel.empresa_id.is_(None)),
+        Papel.ativo.is_(True),
+    ).order_by(Papel.nome).all()
+    usuarios_empresa = Usuario.query.filter_by(empresa_id=empresa_id, ativo=True).order_by(Usuario.email.asc()).all()
     workflows = WorkflowDefinicao.query.filter_by(empresa_id=empresa_id).order_by(WorkflowDefinicao.nome).all()
+    workflow_responsaveis = (
+        WorkflowResponsavel.query
+        .filter_by(empresa_id=empresa_id, ativo=True)
+        .outerjoin(Obra, Obra.id == WorkflowResponsavel.obra_id)
+        .outerjoin(Papel, Papel.id == WorkflowResponsavel.papel_id)
+        .outerjoin(Usuario, Usuario.id == WorkflowResponsavel.usuario_id)
+        .order_by(
+            WorkflowResponsavel.obra_id.isnot(None).asc(),
+            Obra.nome.asc(),
+            Papel.nome.asc(),
+            WorkflowResponsavel.prioridade.asc(),
+            WorkflowResponsavel.id.asc(),
+        )
+        .all()
+    )
     obras = Obra.query.filter_by(empresa_id=empresa_id).order_by(Obra.nome).all()
     permissoes_disponiveis = Permissao.query.filter((Permissao.empresa_id == empresa_id) | (Permissao.empresa_id.is_(None))).order_by(Permissao.chave).all()
 
@@ -93,7 +116,10 @@ def empresa():
         definicoes=definicoes,
         papeis_globais=papeis_globais,
         papeis_empresa=papeis_empresa,
+        papeis_workflow=papeis_workflow,
+        usuarios_empresa=usuarios_empresa,
         workflows=workflows,
+        workflow_responsaveis=workflow_responsaveis,
         obras=obras,
         permissoes_disponiveis=permissoes_disponiveis,
         can_edit=can_edit
@@ -344,6 +370,113 @@ def api_create_workflow():
             'nome': workflow.nome,
             'descricao': workflow.descricao
         }})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+@auth_bp.post('/empresa/api_workflow_responsaveis')
+@login_required
+@permission_required('workflow.manage')
+def api_create_workflow_responsavel():
+    empresa_id = session.get('empresa_id')
+    data = request.get_json() or {}
+
+    papel_id = data.get('papel_id')
+    usuario_id = data.get('usuario_id')
+    obra_id = data.get('obra_id')
+    prioridade = data.get('prioridade', 1)
+
+    if not papel_id or not usuario_id:
+        return jsonify({'ok': False, 'error': 'Papel e usuário são obrigatórios.'}), 400
+
+    try:
+        papel_id = int(papel_id)
+        usuario_id = int(usuario_id)
+        obra_id = int(obra_id) if obra_id not in (None, '', 0, '0') else None
+        prioridade = int(prioridade or 1)
+    except Exception:
+        return jsonify({'ok': False, 'error': 'Parâmetros inválidos.'}), 400
+
+    papel = Papel.query.filter(
+        Papel.id == papel_id,
+        Papel.ativo.is_(True),
+        or_(Papel.empresa_id == empresa_id, Papel.empresa_id.is_(None)),
+    ).first()
+    if not papel:
+        return jsonify({'ok': False, 'error': 'Papel inválido para esta empresa.'}), 404
+
+    usuario = Usuario.query.filter_by(id=usuario_id, empresa_id=empresa_id, ativo=True).first()
+    if not usuario:
+        return jsonify({'ok': False, 'error': 'Usuário inválido para esta empresa.'}), 404
+
+    obra = None
+    if obra_id is not None:
+        obra = Obra.query.filter_by(id=obra_id, empresa_id=empresa_id).first()
+        if not obra:
+            return jsonify({'ok': False, 'error': 'Obra inválida para esta empresa.'}), 404
+
+    try:
+        (
+            WorkflowResponsavel.query
+            .filter_by(empresa_id=empresa_id, obra_id=obra_id, papel_id=papel_id, ativo=True)
+            .update(
+                {
+                    WorkflowResponsavel.ativo: False,
+                    WorkflowResponsavel.modificado_por: session.get('user_id'),
+                    WorkflowResponsavel.modificado_em: datetime.utcnow(),
+                },
+                synchronize_session=False,
+            )
+        )
+
+        responsavel = WorkflowResponsavel(
+            empresa_id=empresa_id,
+            obra_id=obra_id,
+            papel_id=papel_id,
+            usuario_id=usuario_id,
+            prioridade=max(prioridade, 1),
+            ativo=True,
+            criado_por=(session.get('user_id') if not current_app.config.get('TESTING') else None),
+        )
+        db.session.add(responsavel)
+        db.session.commit()
+        return jsonify({
+            'ok': True,
+            'responsavel': {
+                'id': responsavel.id,
+                'obra_id': responsavel.obra_id,
+                'obra_nome': obra.nome if obra else None,
+                'papel_id': responsavel.papel_id,
+                'papel_nome': papel.nome,
+                'usuario_id': responsavel.usuario_id,
+                'usuario_nome': usuario.nome,
+                'prioridade': responsavel.prioridade,
+            }
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+@auth_bp.post('/empresa/api_workflow_responsaveis/<int:responsavel_id>/inativar')
+@login_required
+@permission_required('workflow.manage')
+def api_inativar_workflow_responsavel(responsavel_id):
+    empresa_id = session.get('empresa_id')
+    responsavel = WorkflowResponsavel.query.filter_by(
+        id=responsavel_id,
+        empresa_id=empresa_id,
+        ativo=True,
+    ).first()
+    if not responsavel:
+        return jsonify({'ok': False, 'error': 'Responsável não encontrado.'}), 404
+
+    try:
+        responsavel.ativo = False
+        responsavel.modificado_por = session.get('user_id')
+        db.session.commit()
+        return jsonify({'ok': True})
     except Exception as e:
         db.session.rollback()
         return jsonify({'ok': False, 'error': str(e)}), 500

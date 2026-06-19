@@ -300,6 +300,136 @@ class TestGeracaoAprovacoes:
             assert len(aprovacoes) == 1
             assert aprovacoes[0].aprovador_id == usuario2.id
 
+    def test_gerar_aprovacoes_por_matriz_empresa_com_fallback(
+        self, app, db_session, empresa, obra, frente_trabalho, usuario, usuario2
+    ):
+        """Sem override na obra, a configuração da empresa deve ser usada."""
+        with app.app_context():
+            papel_fluxo = Papel(
+                empresa_id=empresa.id,
+                nome="Coordenador Empresa",
+                ativo=True,
+            )
+            db.session.add(papel_fluxo)
+            db.session.flush()
+
+            workflow = WorkflowDefinicao(
+                empresa_id=empresa.id,
+                obra_id=None,
+                nome="Matriz Empresa",
+                tipo_fluxo='MATRIZ',
+                ativo=True,
+            )
+            db.session.add(workflow)
+            db.session.flush()
+
+            db.session.add(
+                WorkflowEtapa(
+                    empresa_id=empresa.id,
+                    workflow_id=workflow.id,
+                    nivel=1,
+                    nome="Aprovacao corporativa",
+                    tipo_aprovador='PAPEL',
+                    papel_id=papel_fluxo.id,
+                    obrigatorio=True,
+                )
+            )
+            db.session.add(
+                WorkflowResponsavel(
+                    empresa_id=empresa.id,
+                    obra_id=None,
+                    papel_id=papel_fluxo.id,
+                    usuario_id=usuario.id,
+                    prioridade=1,
+                    ativo=True,
+                )
+            )
+            db.session.flush()
+
+            rdo = RDO(
+                empresa_id=empresa.id,
+                obra_id=obra.id,
+                frente_trabalho_id=frente_trabalho.id,
+                status='PENDENTE',
+            )
+            db.session.add(rdo)
+            db.session.flush()
+
+            aprovacoes = WorkflowService.gerar_aprovacoes_por_etapas(rdo.id, workflow.id)
+
+            assert len(aprovacoes) == 1
+            assert aprovacoes[0].aprovador_id == usuario.id
+
+    def test_gerar_aprovacoes_por_matriz_obra_sobrescreve_empresa(
+        self, app, db_session, empresa, obra, frente_trabalho, usuario, usuario2
+    ):
+        """A configuração por obra deve sobrescrever a matriz padrão da empresa."""
+        with app.app_context():
+            papel_fluxo = Papel(
+                empresa_id=empresa.id,
+                nome="Coordenador Obra",
+                ativo=True,
+            )
+            db.session.add(papel_fluxo)
+            db.session.flush()
+
+            workflow = WorkflowDefinicao(
+                empresa_id=empresa.id,
+                obra_id=None,
+                nome="Matriz Override",
+                tipo_fluxo='MATRIZ',
+                ativo=True,
+            )
+            db.session.add(workflow)
+            db.session.flush()
+
+            db.session.add(
+                WorkflowEtapa(
+                    empresa_id=empresa.id,
+                    workflow_id=workflow.id,
+                    nivel=1,
+                    nome="Aprovacao por papel",
+                    tipo_aprovador='PAPEL',
+                    papel_id=papel_fluxo.id,
+                    obrigatorio=True,
+                )
+            )
+            db.session.add(
+                WorkflowResponsavel(
+                    empresa_id=empresa.id,
+                    obra_id=None,
+                    papel_id=papel_fluxo.id,
+                    usuario_id=usuario.id,
+                    prioridade=1,
+                    ativo=True,
+                )
+            )
+            db.session.add(
+                WorkflowResponsavel(
+                    empresa_id=empresa.id,
+                    obra_id=obra.id,
+                    papel_id=papel_fluxo.id,
+                    usuario_id=usuario2.id,
+                    prioridade=1,
+                    ativo=True,
+                )
+            )
+            db.session.flush()
+
+            rdo = RDO(
+                empresa_id=empresa.id,
+                obra_id=obra.id,
+                frente_trabalho_id=frente_trabalho.id,
+                status='PENDENTE',
+            )
+            db.session.add(rdo)
+            db.session.flush()
+
+            aprovacoes = WorkflowService.gerar_aprovacoes_por_etapas(rdo.id, workflow.id)
+
+            assert len(aprovacoes) == 1
+            assert aprovacoes[0].aprovador_id == usuario2.id
+
     def test_iniciar_execucao_cria_snapshot_por_rdo(
         self, app, db_session, empresa, obra, frente_trabalho, usuario, usuario2
     ):
@@ -361,6 +491,93 @@ class TestGeracaoAprovacoes:
 
             execucao_db = WorkflowExecucao.query.filter_by(rdo_id=rdo.id, ativo=True).first()
             assert execucao_db is not None
+
+    def test_nova_execucao_usa_responsavel_atualizado_sem_afetar_snapshot_anterior(
+        self, app, db_session, empresa, obra, frente_trabalho, usuario, usuario2
+    ):
+        """Mudanças na matriz devem valer para novos RDOs, preservando a execução já iniciada."""
+        with app.app_context():
+            papel_fluxo = Papel(
+                empresa_id=empresa.id,
+                nome="Gestor Atualizavel",
+                ativo=True,
+            )
+            db.session.add(papel_fluxo)
+            db.session.flush()
+
+            workflow = WorkflowDefinicao(
+                empresa_id=empresa.id,
+                obra_id=None,
+                nome="Workflow Atualizado",
+                tipo_fluxo='MATRIZ',
+                ativo=True,
+            )
+            db.session.add(workflow)
+            db.session.flush()
+
+            db.session.add(
+                WorkflowEtapa(
+                    empresa_id=empresa.id,
+                    workflow_id=workflow.id,
+                    nivel=1,
+                    nome="Etapa dinamica",
+                    tipo_aprovador='PAPEL',
+                    papel_id=papel_fluxo.id,
+                    obrigatorio=True,
+                )
+            )
+            responsavel_empresa = WorkflowResponsavel(
+                empresa_id=empresa.id,
+                obra_id=None,
+                papel_id=papel_fluxo.id,
+                usuario_id=usuario.id,
+                prioridade=1,
+                ativo=True,
+            )
+            db.session.add(responsavel_empresa)
+            db.session.flush()
+
+            rdo_1 = RDO(
+                empresa_id=empresa.id,
+                obra_id=obra.id,
+                frente_trabalho_id=frente_trabalho.id,
+                status='PENDENTE',
+            )
+            db.session.add(rdo_1)
+            db.session.flush()
+
+            execucao_1 = WorkflowService.iniciar_execucao(rdo_1.id, workflow.id, sobrescrever=True)
+            etapa_execucao_1 = WorkflowExecucaoEtapa.query.filter_by(execucao_id=execucao_1.id, nivel=1).first()
+            assert etapa_execucao_1.usuario_resolvido_id == usuario.id
+
+            responsavel_empresa.ativo = False
+            db.session.add(
+                WorkflowResponsavel(
+                    empresa_id=empresa.id,
+                    obra_id=obra.id,
+                    papel_id=papel_fluxo.id,
+                    usuario_id=usuario2.id,
+                    prioridade=1,
+                    ativo=True,
+                )
+            )
+            db.session.flush()
+
+            rdo_2 = RDO(
+                empresa_id=empresa.id,
+                obra_id=obra.id,
+                frente_trabalho_id=frente_trabalho.id,
+                status='PENDENTE',
+            )
+            db.session.add(rdo_2)
+            db.session.flush()
+
+            execucao_2 = WorkflowService.iniciar_execucao(rdo_2.id, workflow.id, sobrescrever=True)
+            etapa_execucao_2 = WorkflowExecucaoEtapa.query.filter_by(execucao_id=execucao_2.id, nivel=1).first()
+
+            db.session.refresh(etapa_execucao_1)
+            assert etapa_execucao_1.usuario_resolvido_id == usuario.id
+            assert etapa_execucao_2.usuario_resolvido_id == usuario2.id
 
 
 class TestAprovacao:

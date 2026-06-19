@@ -497,6 +497,103 @@
                         </form>
                     </div>
 
+                    <div class="mt-6 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr),1.15fr] gap-6">
+                        <div class="p-5 bg-slate-50 rounded-2xl border border-slate-200/60">
+                            <div class="space-y-1 mb-4">
+                                <h4 class="text-sm font-bold text-slate-800">Matriz de Responsáveis</h4>
+                                <p class="text-xs text-slate-400 leading-relaxed">Defina responsáveis corporativos por papel e, quando necessário, sobrescreva por obra.</p>
+                            </div>
+                            <form @submit.prevent="salvarResponsavelWorkflow" class="space-y-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Escopo</label>
+                                    <select x-model="formResponsavel.obra_id"
+                                        class="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all">
+                                        <option value="">Empresa (padrão)</option>
+                                        {% for obra in obras %}
+                                        <option value="{{ obra.id }}">{{ obra.nome }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Papel</label>
+                                        <select x-model="formResponsavel.papel_id"
+                                            class="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all"
+                                            required>
+                                            <option value="">Selecione</option>
+                                            {% for papel in papeis_workflow %}
+                                            <option value="{{ papel.id }}">{{ papel.nome }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Usuário responsável</label>
+                                        <select x-model="formResponsavel.usuario_id"
+                                            class="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all"
+                                            required>
+                                            <option value="">Selecione</option>
+                                            {% for usuario in usuarios_empresa %}
+                                            <option value="{{ usuario.id }}">{{ usuario.nome }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Prioridade</label>
+                                    <input x-model="formResponsavel.prioridade" type="number" min="1"
+                                        class="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all">
+                                </div>
+                                <div class="rounded-xl bg-blue-50 border border-blue-100 px-3 py-2.5 text-xs text-blue-700 leading-relaxed">
+                                    Quando existir uma configuração por obra, ela terá prioridade sobre a configuração da empresa nas novas execuções.
+                                </div>
+                                <div class="flex justify-end gap-2 pt-2 border-t border-slate-200/40">
+                                    <button type="button" @click="resetFormResponsavel()"
+                                        class="px-4 py-2 text-sm font-semibold bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition-colors">Limpar</button>
+                                    <button type="submit"
+                                        class="px-5 py-2 text-sm font-semibold bg-blue-600 text-white rounded-xl hover:bg-blue-700 shadow-sm transition-colors">Salvar Responsável</button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <div class="p-5 bg-white rounded-2xl border border-slate-100">
+                            <div class="flex items-center justify-between gap-3 mb-4">
+                                <div>
+                                    <h4 class="text-sm font-bold text-slate-800">Responsáveis ativos</h4>
+                                    <p class="text-xs text-slate-400 mt-1">A obra sobrescreve a empresa. Novos RDOs passam a resolver com essa matriz.</p>
+                                </div>
+                                <span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 text-[11px] font-bold">{{ workflow_responsaveis|length }} registros</span>
+                            </div>
+                            <div class="space-y-3">
+                                {% for rel in workflow_responsaveis %}
+                                <div class="p-4 rounded-2xl border border-slate-100 bg-slate-50/60">
+                                    <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+                                        <div class="space-y-1">
+                                            <div class="flex items-center gap-2 flex-wrap">
+                                                <span class="text-sm font-bold text-slate-800">{{ rel.papel.nome if rel.papel else 'Papel' }}</span>
+                                                {% if rel.obra %}
+                                                <span class="px-2 py-0.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-100 text-[10px] font-bold uppercase tracking-wider">Obra</span>
+                                                {% else %}
+                                                <span class="px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-100 text-[10px] font-bold uppercase tracking-wider">Empresa</span>
+                                                {% endif %}
+                                            </div>
+                                            <div class="text-sm text-slate-600">{{ rel.usuario.nome if rel.usuario else 'Usuário não encontrado' }}</div>
+                                            <div class="text-xs text-slate-400">
+                                                {{ rel.obra.nome if rel.obra else 'Padrão corporativo' }} · prioridade {{ rel.prioridade }}
+                                            </div>
+                                        </div>
+                                        <button type="button" @click="inativarResponsavelWorkflow({{ rel.id }})"
+                                            class="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-rose-600 hover:bg-rose-50 hover:border-rose-100 transition-all shadow-3xs">Remover</button>
+                                    </div>
+                                </div>
+                                {% else %}
+                                <div class="p-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50 text-sm text-slate-400">
+                                    Nenhum responsável explícito configurado ainda. Nesse caso, o sistema continua tentando resolver pelo responsável da obra, alocação em `obra_usuario` e papéis da empresa.
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
                     <div
                         class="mt-6 p-4 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                         <div class="flex items-center gap-3.5">
@@ -644,6 +741,7 @@
                     formPapel: { nome: '', descricao: '', permissoes: [] },
                     novoWorkflowVisible: false,
                     formWorkflow: { nome: '', descricao: '', obra_id: '', etapas: [{ nome: '' }] },
+                    formResponsavel: { obra_id: '', papel_id: '', usuario_id: '', prioridade: 1 },
                     editarPapelVisible: false,
                     editarWorkflowVisible: false,
                     selectedPapelId: null,
@@ -704,6 +802,9 @@
                         this.novoWorkflowVisible = false;
                         this.formWorkflow = { nome: '', descricao: '', obra_id: '', etapas: [{ nome: '' }] };
                     },
+                    resetFormResponsavel() {
+                        this.formResponsavel = { obra_id: '', papel_id: '', usuario_id: '', prioridade: 1 };
+                    },
                     adicionarEtapa() {
                         this.formWorkflow.etapas.push({ nome: '' });
                     },
@@ -739,6 +840,56 @@
                         } catch (err) {
                             console.error(err);
                             await showError('Erro de rede', 'Erro de rede ao criar workflow.');
+                        }
+                    },
+                    async salvarResponsavelWorkflow() {
+                        const meta = document.querySelector('meta[name="csrf-token"]');
+                        const csrf = meta ? meta.getAttribute('content') : null;
+                        const payload = {
+                            obra_id: this.formResponsavel.obra_id || null,
+                            papel_id: this.formResponsavel.papel_id || null,
+                            usuario_id: this.formResponsavel.usuario_id || null,
+                            prioridade: this.formResponsavel.prioridade || 1
+                        };
+                        if (!payload.papel_id || !payload.usuario_id) {
+                            return await showWarning('Responsável incompleto', 'Selecione o papel e o usuário responsável.');
+                        }
+                        try {
+                            const res = await fetch('{{ url_for('auth.api_create_workflow_responsavel') }}', {
+                                method: 'POST',
+                                headers: Object.assign({ 'Content-Type': 'application/json' }, csrf ? { 'X-CSRFToken': csrf } : {}),
+                                body: JSON.stringify(payload)
+                            });
+                            const j = await res.json();
+                            if (res.ok && j.ok) {
+                                this.resetFormResponsavel();
+                                location.reload();
+                            } else {
+                                await showError('Erro ao salvar responsável', j.error || 'Erro ao salvar responsável.');
+                            }
+                        } catch (err) {
+                            console.error(err);
+                            await showError('Erro de rede', 'Erro de rede ao salvar responsável.');
+                        }
+                    },
+                    async inativarResponsavelWorkflow(id) {
+                        const meta = document.querySelector('meta[name="csrf-token"]');
+                        const csrf = meta ? meta.getAttribute('content') : null;
+                        const urlBase = '{{ url_for('auth.api_inativar_workflow_responsavel', responsavel_id=0) }}';
+                        try {
+                            const res = await fetch(urlBase.replace('/0/inativar', `/${id}/inativar`), {
+                                method: 'POST',
+                                headers: Object.assign({}, csrf ? { 'X-CSRFToken': csrf } : {})
+                            });
+                            const j = await res.json();
+                            if (res.ok && j.ok) {
+                                location.reload();
+                            } else {
+                                await showError('Erro ao remover responsável', j.error || 'Erro ao remover responsável.');
+                            }
+                        } catch (err) {
+                            console.error(err);
+                            await showError('Erro de rede', 'Erro de rede ao remover responsável.');
                         }
                     },
                     abrirEditarPapel(id) {

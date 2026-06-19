@@ -37,9 +37,9 @@
 ### Responsáveis
 - [x] Definir modelo de responsáveis por papel.
 - [x] Definir modelo de responsáveis por etapa.
-- [ ] Permitir configuração de responsáveis na Empresa.
-- [ ] Permitir sobrescrita de responsáveis na Obra.
-- [ ] Garantir que novos workflows utilizem as configurações atualizadas.
+- [x] Permitir configuração de responsáveis na Empresa.
+- [x] Permitir sobrescrita de responsáveis na Obra.
+- [x] Garantir que novos workflows utilizem as configurações atualizadas.
 
 ### Execução
 - [x] Validar disparo automático do workflow na criação do RDO.
