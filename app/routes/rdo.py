@@ -4,6 +4,7 @@ from app.models.arquivo import Arquivo
 from app.services.arquivo_service import ArquivoService
 from app.services.auditoria_service import AuditoriaService
 from app.services.notificacao_service import NotificacaoService
+from app.services.workflow_service import WorkflowService, WorkflowResolucaoError
 from app.models.notificacao import TipoNotificacao
 from app.utils.serializers import safe_model_to_dict
 from app.utils.export_service import make_csv_response, make_xlsx_response, make_pdf_response
@@ -251,15 +252,7 @@ def gerar_rdo():
             # UPDATE (EDIÇÃO / NOVA REVISÃO)
             item_rdo.status = 'PENDENTE'
 
-            # Reset workflow
-            assinaturas_existentes = RDOAprovacao.query.filter_by(rdo_id=item_rdo.id).all()
-            for ass in assinaturas_existentes:
-                ass.imagem_assinatura = None
-                ass.comentario = None
-                ass.status = 'PENDENTE'
-                ass.data_aprovacao = None
-                ass.endereco_ip = None
-                ass.hash = None
+            # A execução do workflow será recriada ao final do fluxo de persistência.
 
         else:
             # INSERT (NOVO RDO)
@@ -314,26 +307,22 @@ def gerar_rdo():
                 payload={"rdo_id": item_rdo.id},
             )
 
-        # [Criação] Assinatura do criador
-        if not rdo_id_original:
-            empresa_id = session.get('empresa_id')
-            obra_rdo = Obra.query.filter_by(id=obra_id, empresa_id=empresa_id).first() if obra_id else None
-            aprovador_padrao_id = obra_rdo.criado_por if obra_rdo and obra_rdo.criado_por else current_user_id
-            existe_ass = RDOAprovacao.query.filter_by(rdo_id=item_rdo.id, aprovador_id=aprovador_padrao_id).first()
-            if not existe_ass:
-                assinatura_criador = RDOAprovacao(
-                    empresa_id=session.get('empresa_id'),
-                    rdo_id=item_rdo.id,
-                    aprovador_id=aprovador_padrao_id,
-                    nivel=1,
-                    status='PENDENTE',
-                    ativo=True
-                )
-                db.session.add(assinatura_criador)
-
+        try:
+            WorkflowService.iniciar_execucao(
+                rdo_id=item_rdo.id,
+                sobrescrever=True,
+                origem=('REVISAO' if rdo_id_original else 'AUTO'),
+            )
+            primeira_aprovacao = RDOAprovacao.query.filter_by(
+                rdo_id=item_rdo.id,
+                status='PENDENTE',
+                ativo=True,
+            ).order_by(RDOAprovacao.nivel.asc(), RDOAprovacao.id.asc()).first()
+            if primeira_aprovacao:
+                obra_rdo = Obra.query.filter_by(id=obra_id, empresa_id=session.get('empresa_id')).first() if obra_id else None
                 NotificacaoService.criar_notificacao(
                     empresa_id=session.get('empresa_id'),
-                    usuario_id=aprovador_padrao_id,
+                    usuario_id=primeira_aprovacao.aprovador_id,
                     tipo=TipoNotificacao.APROVACAO_PENDENTE,
                     titulo=f"Aprovação Pendente: RDO #{item_rdo.numero_sequencial or item_rdo.id}",
                     mensagem=f"O RDO #{item_rdo.numero_sequencial or item_rdo.id} da obra '{obra_rdo.nome if obra_rdo else ''}' aguarda sua aprovação.",
@@ -342,6 +331,34 @@ def gerar_rdo():
                     rdo_id=item_rdo.id,
                     criado_por=current_user_id
                 )
+        except WorkflowResolucaoError:
+            if not rdo_id_original:
+                empresa_id = session.get('empresa_id')
+                obra_rdo = Obra.query.filter_by(id=obra_id, empresa_id=empresa_id).first() if obra_id else None
+                aprovador_padrao_id = obra_rdo.criado_por if obra_rdo and obra_rdo.criado_por else current_user_id
+                existe_ass = RDOAprovacao.query.filter_by(rdo_id=item_rdo.id, aprovador_id=aprovador_padrao_id, ativo=True).first()
+                if not existe_ass:
+                    assinatura_criador = RDOAprovacao(
+                        empresa_id=session.get('empresa_id'),
+                        rdo_id=item_rdo.id,
+                        aprovador_id=aprovador_padrao_id,
+                        nivel=1,
+                        status='PENDENTE',
+                        ativo=True
+                    )
+                    db.session.add(assinatura_criador)
+
+                    NotificacaoService.criar_notificacao(
+                        empresa_id=session.get('empresa_id'),
+                        usuario_id=aprovador_padrao_id,
+                        tipo=TipoNotificacao.APROVACAO_PENDENTE,
+                        titulo=f"Aprovação Pendente: RDO #{item_rdo.numero_sequencial or item_rdo.id}",
+                        mensagem=f"O RDO #{item_rdo.numero_sequencial or item_rdo.id} da obra '{obra_rdo.nome if obra_rdo else ''}' aguarda sua aprovação.",
+                        link=url_for('auth.visualizar_rdo', rdo_id=item_rdo.id),
+                        obra_id=item_rdo.obra_id,
+                        rdo_id=item_rdo.id,
+                        criado_por=current_user_id
+                    )
 
         # Limpeza de filhos para recriação
         if rdo_id_original:

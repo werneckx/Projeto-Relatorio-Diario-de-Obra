@@ -5,7 +5,13 @@ Testes para WorkflowService - Branch 7
 import pytest
 from datetime import datetime, timezone
 from app import db
-from app.models.workflow import WorkflowDefinicao, WorkflowEtapa
+from app.models.workflow import (
+    WorkflowDefinicao,
+    WorkflowEtapa,
+    WorkflowExecucao,
+    WorkflowExecucaoEtapa,
+    WorkflowResponsavel,
+)
 from app.models.rdo import RDO, RDOAprovacao, RDOVersao
 from app.models.usuario import Usuario, Papel
 from app.models.obra import Obra, FrenteTrabalho
@@ -162,6 +168,199 @@ class TestGeracaoAprovacoes:
             assert len(aprovacoes) == 3
             # Todas em nível 1 (paralelo)
             assert all(a.nivel == 1 for a in aprovacoes)
+
+    def test_gerar_aprovacoes_por_papel_prioriza_alocacao_na_obra(
+        self, app, db_session, empresa, obra, frente_trabalho, usuario, usuario2
+    ):
+        """Quando a etapa é por papel, prioriza o usuário alocado na obra."""
+        with app.app_context():
+            from app.models.obra import ObraUsuario
+            from app.models.usuario import Papel, UsuarioPapel
+
+            papel_fluxo = Papel(
+                empresa_id=empresa.id,
+                nome="Aprovador da Obra",
+                ativo=True,
+            )
+            db.session.add(papel_fluxo)
+            db.session.flush()
+
+            workflow = WorkflowDefinicao(
+                empresa_id=empresa.id,
+                obra_id=obra.id,
+                nome="Por Papel",
+                aprovacao_paralela=False,
+                ativo=True,
+            )
+            db.session.add(workflow)
+            db.session.flush()
+
+            etapa = WorkflowEtapa(
+                empresa_id=empresa.id,
+                workflow_id=workflow.id,
+                nivel=1,
+                nome="Etapa por papel",
+                papel_id=papel_fluxo.id,
+                obrigatorio=True,
+            )
+            db.session.add(etapa)
+
+            db.session.add(
+                UsuarioPapel(
+                    empresa_id=empresa.id,
+                    usuario_id=usuario2.id,
+                    papel_id=papel_fluxo.id,
+                    ativo=True,
+                )
+            )
+            db.session.add(
+                ObraUsuario(
+                    empresa_id=empresa.id,
+                    obra_id=obra.id,
+                    usuario_id=usuario2.id,
+                    papel_id=papel_fluxo.id,
+                    ativo=True,
+                )
+            )
+            db.session.flush()
+
+            rdo = RDO(
+                empresa_id=empresa.id,
+                obra_id=obra.id,
+                frente_trabalho_id=frente_trabalho.id,
+                status='PENDENTE',
+            )
+            db.session.add(rdo)
+            db.session.flush()
+
+            aprovacoes = WorkflowService.gerar_aprovacoes_por_etapas(rdo.id, workflow.id)
+
+            assert len(aprovacoes) == 1
+            assert aprovacoes[0].aprovador_id == usuario2.id
+
+    def test_gerar_aprovacoes_por_matriz_explicita(
+        self, app, db_session, empresa, obra, frente_trabalho, usuario, usuario2
+    ):
+        """A matriz explícita deve prevalecer na definição do aprovador por papel."""
+        with app.app_context():
+            papel_fluxo = Papel(
+                empresa_id=empresa.id,
+                nome="Responsavel Workflow",
+                ativo=True,
+            )
+            db.session.add(papel_fluxo)
+            db.session.flush()
+
+            workflow = WorkflowDefinicao(
+                empresa_id=empresa.id,
+                obra_id=obra.id,
+                nome="Matriz Explicita",
+                tipo_fluxo='MATRIZ',
+                aprovacao_paralela=False,
+                ativo=True,
+            )
+            db.session.add(workflow)
+            db.session.flush()
+
+            etapa = WorkflowEtapa(
+                empresa_id=empresa.id,
+                workflow_id=workflow.id,
+                nivel=1,
+                nome="Etapa por matriz",
+                tipo_aprovador='PAPEL',
+                papel_id=papel_fluxo.id,
+                obrigatorio=True,
+            )
+            db.session.add(etapa)
+            db.session.flush()
+
+            db.session.add(
+                WorkflowResponsavel(
+                    empresa_id=empresa.id,
+                    obra_id=obra.id,
+                    papel_id=papel_fluxo.id,
+                    usuario_id=usuario2.id,
+                    prioridade=1,
+                    ativo=True,
+                )
+            )
+            db.session.flush()
+
+            rdo = RDO(
+                empresa_id=empresa.id,
+                obra_id=obra.id,
+                frente_trabalho_id=frente_trabalho.id,
+                status='PENDENTE',
+            )
+            db.session.add(rdo)
+            db.session.flush()
+
+            aprovacoes = WorkflowService.gerar_aprovacoes_por_etapas(rdo.id, workflow.id)
+
+            assert len(aprovacoes) == 1
+            assert aprovacoes[0].aprovador_id == usuario2.id
+
+    def test_iniciar_execucao_cria_snapshot_por_rdo(
+        self, app, db_session, empresa, obra, frente_trabalho, usuario, usuario2
+    ):
+        """Cada RDO deve persistir uma execução com snapshot das etapas."""
+        with app.app_context():
+            workflow = WorkflowDefinicao(
+                empresa_id=empresa.id,
+                obra_id=obra.id,
+                nome="Workflow Snapshot",
+                tipo_fluxo='SEQUENCIAL',
+                aprovacao_paralela=False,
+                ativo=True,
+            )
+            db.session.add(workflow)
+            db.session.flush()
+
+            db.session.add(
+                WorkflowEtapa(
+                    empresa_id=empresa.id,
+                    workflow_id=workflow.id,
+                    nivel=1,
+                    nome="Etapa 1",
+                    usuario_aprovador_id=usuario.id,
+                    obrigatorio=True,
+                    sla_horas=8,
+                )
+            )
+            db.session.add(
+                WorkflowEtapa(
+                    empresa_id=empresa.id,
+                    workflow_id=workflow.id,
+                    nivel=2,
+                    nome="Etapa 2",
+                    usuario_aprovador_id=usuario2.id,
+                    obrigatorio=True,
+                    sla_horas=16,
+                )
+            )
+            db.session.flush()
+
+            rdo = RDO(
+                empresa_id=empresa.id,
+                obra_id=obra.id,
+                frente_trabalho_id=frente_trabalho.id,
+                status='PENDENTE',
+            )
+            db.session.add(rdo)
+            db.session.flush()
+
+            execucao = WorkflowService.iniciar_execucao(rdo.id, workflow.id, sobrescrever=True)
+
+            assert execucao.rdo_id == rdo.id
+            assert execucao.workflow_snapshot['workflow_id'] == workflow.id
+            assert len(execucao.workflow_snapshot['etapas']) == 2
+
+            etapas_execucao = WorkflowExecucaoEtapa.query.filter_by(execucao_id=execucao.id).all()
+            assert len(etapas_execucao) == 2
+            assert etapas_execucao[0].etapa_snapshot['nome'] == 'Etapa 1'
+
+            execucao_db = WorkflowExecucao.query.filter_by(rdo_id=rdo.id, ativo=True).first()
+            assert execucao_db is not None
 
 
 class TestAprovacao:
