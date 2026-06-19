@@ -77,7 +77,7 @@
 
 ### Template Empresa
 - [ ] Refatorar tela de Empresa.
-- [ ] Permitir seleção de workflow padrão.
+- [x] Permitir seleção de workflow padrão.
 - [ ] Permitir configuração de definições.
 - [ ] Permitir configuração de papéis.
 - [ ] Permitir configuração de permissões.
