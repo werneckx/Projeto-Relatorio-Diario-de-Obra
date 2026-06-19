@@ -41,6 +41,13 @@ class AuditoriaService:
         - Não executa commit/rollback.
         """
         ctx = AuditoriaService.capturar_contexto()
+        empresa_id = ctx.get("empresa_id")
+        usuario_id = ctx.get("usuario_id")
+
+        if empresa_id is None:
+            empresa_id = AuditoriaService._extrair_empresa_id(depois) or AuditoriaService._extrair_empresa_id(antes)
+        if usuario_id is None:
+            usuario_id = AuditoriaService._extrair_usuario_id(depois) or AuditoriaService._extrair_usuario_id(antes)
 
         AuditoriaService.registrar_operacao(
             acao=acao,
@@ -52,10 +59,41 @@ class AuditoriaService:
             user_agent=ctx.get("user_agent"),
             endpoint=ctx.get("endpoint"),
             metodo_http=ctx.get("method"),
-            usuario_id=ctx.get("usuario_id"),
-            empresa_id=ctx.get("empresa_id"),
+            usuario_id=usuario_id,
+            empresa_id=empresa_id,
             payload=payload,
         )
+
+    @staticmethod
+    def _extrair_valor(origem: Optional[Any], *chaves: str) -> Optional[Any]:
+        if origem is None:
+            return None
+        if isinstance(origem, dict):
+            for chave in chaves:
+                if origem.get(chave) is not None:
+                    return origem.get(chave)
+            return None
+        for chave in chaves:
+            valor = getattr(origem, chave, None)
+            if valor is not None:
+                return valor
+        return None
+
+    @staticmethod
+    def _extrair_empresa_id(origem: Optional[Any]) -> Optional[int]:
+        valor = AuditoriaService._extrair_valor(origem, "empresa_id")
+        return int(valor) if valor is not None else None
+
+    @staticmethod
+    def _extrair_usuario_id(origem: Optional[Any]) -> Optional[int]:
+        valor = AuditoriaService._extrair_valor(
+            origem,
+            "usuario_id",
+            "modificado_por",
+            "criado_por",
+            "aprovador_id",
+        )
+        return int(valor) if valor is not None else None
 
     @staticmethod
     def sanitizar_payload(payload: Any) -> Any:
@@ -136,8 +174,11 @@ class AuditoriaService:
         depois = AuditoriaService.sanitizar_payload(dados_depois) if dados_depois is not None else None
 
         # O model atual usa colunas: dados_antes/dados_depois, acao/entidade/entidade_id
+        if empresa_id is None:
+            return
+
         log = AuditoriaLog(
-            empresa_id=empresa_id if empresa_id is not None else 0,
+            empresa_id=empresa_id,
             usuario_id=usuario_id,
             colaborador_id=colaborador_id,
             acao=acao,
