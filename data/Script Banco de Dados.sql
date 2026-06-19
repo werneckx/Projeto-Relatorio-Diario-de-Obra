@@ -246,6 +246,7 @@ CREATE TABLE aux_tipo_obra (
 CREATE TABLE papeis (
     id INT AUTO_INCREMENT PRIMARY KEY,
     empresa_id INT NULL,                           -- NULL = global do sistema
+    escopo_empresa_id INT GENERATED ALWAYS AS (COALESCE(empresa_id, 0)) STORED,
     nome VARCHAR(100) NOT NULL,
     descricao TEXT,
     is_system BOOLEAN NOT NULL DEFAULT FALSE,       -- TRUE = imutável
@@ -256,7 +257,7 @@ CREATE TABLE papeis (
     criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
     modificado_em DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
-    UNIQUE KEY uk_papel_empresa (empresa_id, nome),
+    UNIQUE KEY uk_papel_empresa (escopo_empresa_id, nome),
     INDEX idx_papel_empresa (empresa_id),
 
     FOREIGN KEY (empresa_id) REFERENCES empresa(id)
@@ -265,6 +266,7 @@ CREATE TABLE papeis (
 CREATE TABLE permissoes (
     id INT AUTO_INCREMENT PRIMARY KEY,
     empresa_id INT NULL,                           -- NULL = global do sistema
+    escopo_empresa_id INT GENERATED ALWAYS AS (COALESCE(empresa_id, 0)) STORED,
     chave VARCHAR(100) NOT NULL,
     descricao TEXT,
     is_system BOOLEAN NOT NULL DEFAULT FALSE,
@@ -275,7 +277,7 @@ CREATE TABLE permissoes (
     criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
     modificado_em DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
-    UNIQUE KEY uk_perm_empresa (empresa_id, chave),
+    UNIQUE KEY uk_perm_empresa (escopo_empresa_id, chave),
     INDEX idx_perm_empresa (empresa_id),
 
     FOREIGN KEY (empresa_id) REFERENCES empresa(id)
@@ -288,6 +290,7 @@ CREATE TABLE papel_permissao (
     permissao_id INT NOT NULL,
     ativo BOOLEAN DEFAULT TRUE,
 
+    UNIQUE KEY uk_papel_permissao (papel_id, permissao_id),
     INDEX idx_pp_empresa (empresa_id),
     INDEX idx_pp_papel (papel_id),
     INDEX idx_pp_perm (permissao_id),
@@ -1088,7 +1091,8 @@ INSERT INTO papeis (empresa_id, nome, descricao, is_system, ativo) VALUES
 (NULL, 'GESTOR',       'Gestão operacional: RDO, equipes, aprovações',       TRUE, TRUE),
 (NULL, 'OPERADOR',     'Input operacional: lançamentos de RDO',              TRUE, TRUE),
 (NULL, 'LEITOR',       'Somente leitura de dados da empresa',                TRUE, TRUE),
-(NULL, 'CLIENTE_OBRA', 'Acesso externo restrito: visualização e assinatura', TRUE, TRUE);
+(NULL, 'CLIENTE_OBRA', 'Acesso externo restrito: visualização e assinatura', TRUE, TRUE)
+ON DUPLICATE KEY UPDATE descricao = VALUES(descricao), is_system = VALUES(is_system), ativo = VALUES(ativo);
 
 -- Permissões do Sistema
 INSERT INTO permissoes (empresa_id, chave, descricao, is_system, ativo) VALUES
@@ -1152,16 +1156,17 @@ INSERT INTO permissoes (empresa_id, chave, descricao, is_system, ativo) VALUES
 (NULL, 'tag_ocorrencia.view',   'Visualizar tags de ocorrências',     TRUE, TRUE),
 (NULL, 'tag_ocorrencia.create', 'Criar tags de ocorrências',          TRUE, TRUE),
 (NULL, 'tag_ocorrencia.update', 'Editar tags de ocorrências',         TRUE, TRUE),
-(NULL, 'tag_ocorrencia.delete', 'Excluir tags de ocorrências',        TRUE, TRUE);
+(NULL, 'tag_ocorrencia.delete', 'Excluir tags de ocorrências',        TRUE, TRUE)
+ON DUPLICATE KEY UPDATE descricao = VALUES(descricao), is_system = VALUES(is_system), ativo = VALUES(ativo);
 
 -- Mapeamento ADMIN → todas as permissões
-INSERT INTO papel_permissao (empresa_id, papel_id, permissao_id, ativo)
+INSERT IGNORE INTO papel_permissao (empresa_id, papel_id, permissao_id, ativo)
 SELECT NULL, p.id, perm.id, TRUE
 FROM papeis p, permissoes perm
 WHERE p.nome = 'ADMIN' AND p.empresa_id IS NULL AND perm.empresa_id IS NULL;
 
 -- Mapeamento GESTOR
-INSERT INTO papel_permissao (empresa_id, papel_id, permissao_id, ativo)
+INSERT IGNORE INTO papel_permissao (empresa_id, papel_id, permissao_id, ativo)
 SELECT NULL, p.id, perm.id, TRUE
 FROM papeis p, permissoes perm
 WHERE p.nome = 'GESTOR' AND p.empresa_id IS NULL
@@ -1181,7 +1186,7 @@ WHERE p.nome = 'GESTOR' AND p.empresa_id IS NULL
   );
 
 -- Mapeamento OPERADOR
-INSERT INTO papel_permissao (empresa_id, papel_id, permissao_id, ativo)
+INSERT IGNORE INTO papel_permissao (empresa_id, papel_id, permissao_id, ativo)
 SELECT NULL, p.id, perm.id, TRUE
 FROM papeis p, permissoes perm
 WHERE p.nome = 'OPERADOR' AND p.empresa_id IS NULL
@@ -1189,7 +1194,7 @@ WHERE p.nome = 'OPERADOR' AND p.empresa_id IS NULL
   AND perm.chave IN ('rdo.create','rdo.update','rdo.view','empresa.view','cliente.view','fornecedor.view','colaborador.view','colaborador.manage','obra_eap.view','rdo_programacao.view','rdo_programacao.execute','tipo_obra.view','aux_tipo_equipamento.view');
 
 -- Mapeamento LEITOR
-INSERT INTO papel_permissao (empresa_id, papel_id, permissao_id, ativo)
+INSERT IGNORE INTO papel_permissao (empresa_id, papel_id, permissao_id, ativo)
 SELECT NULL, p.id, perm.id, TRUE
 FROM papeis p, permissoes perm
 WHERE p.nome = 'LEITOR' AND p.empresa_id IS NULL
@@ -1197,7 +1202,7 @@ WHERE p.nome = 'LEITOR' AND p.empresa_id IS NULL
   AND perm.chave IN ('rdo.view','empresa.view','cliente.view','fornecedor.view','colaborador.view','tipo_obra.view','aux_tipo_equipamento.view');
 
 -- Mapeamento CLIENTE_OBRA
-INSERT INTO papel_permissao (empresa_id, papel_id, permissao_id, ativo)
+INSERT IGNORE INTO papel_permissao (empresa_id, papel_id, permissao_id, ativo)
 SELECT NULL, p.id, perm.id, TRUE
 FROM papeis p, permissoes perm
 WHERE p.nome = 'CLIENTE_OBRA' AND p.empresa_id IS NULL
@@ -1453,11 +1458,21 @@ CREATE TABLE workflow_definicoes (
     id INT AUTO_INCREMENT PRIMARY KEY,
     empresa_id INT NOT NULL,
     obra_id INT NULL,
+    escopo_obra_id INT GENERATED ALWAYS AS (COALESCE(obra_id, 0)) STORED,
+    codigo VARCHAR(50) NULL,
     nome VARCHAR(150) NOT NULL,
     descricao TEXT,
+    tipo_fluxo ENUM('SIMPLES','SEQUENCIAL','PARALELO','MATRIZ','CLIENTE_INTERNA','CONFIGURAVEL') NOT NULL DEFAULT 'CONFIGURAVEL',
     aprovacao_paralela BOOLEAN NOT NULL DEFAULT FALSE,
     rejeicao_cancela_fluxo BOOLEAN NOT NULL DEFAULT TRUE,
+    cliente_obrigatorio BOOLEAN NOT NULL DEFAULT FALSE,
+    assinatura_obrigatoria BOOLEAN NOT NULL DEFAULT FALSE,
+    permite_reprovar BOOLEAN NOT NULL DEFAULT TRUE,
+    comentario_reprovacao_obrigatorio BOOLEAN NOT NULL DEFAULT TRUE,
     sla_horas INT NULL,
+    sla_global_horas INT NULL,
+    permite_reabertura BOOLEAN NOT NULL DEFAULT TRUE,
+    permite_cancelamento BOOLEAN NOT NULL DEFAULT TRUE,
     ativo BOOLEAN DEFAULT TRUE,
 
     criado_por INT NULL,
@@ -1467,7 +1482,9 @@ CREATE TABLE workflow_definicoes (
 
     INDEX idx_workflow_empresa (empresa_id),
     INDEX idx_workflow_obra (obra_id),
-    UNIQUE KEY uk_workflow_empresa_obra_nome (empresa_id, obra_id, nome),
+    INDEX idx_workflow_codigo (codigo),
+    UNIQUE KEY uk_workflow_empresa_obra_nome (empresa_id, escopo_obra_id, nome),
+    UNIQUE KEY uk_workflow_empresa_obra_codigo (empresa_id, escopo_obra_id, codigo),
 
     CONSTRAINT fk_workflow_empresa FOREIGN KEY (empresa_id) REFERENCES empresa(id),
     CONSTRAINT fk_workflow_obra FOREIGN KEY (obra_id) REFERENCES obras(id),
@@ -1480,11 +1497,20 @@ CREATE TABLE workflow_etapas (
     empresa_id INT NOT NULL,
     workflow_id INT NOT NULL,
     nivel INT NOT NULL,
+    ordem INT NULL,
+    codigo VARCHAR(50) NULL,
     nome VARCHAR(150) NOT NULL,
+    tipo_aprovador ENUM('USUARIO','PAPEL','CLIENTE','RESPONSAVEL_OBRA') NULL,
     papel_id INT NULL,
+    papel_codigo VARCHAR(100) NULL,
     usuario_aprovador_id INT NULL,
+    grupo_paralelo INT NULL,
     obrigatorio BOOLEAN NOT NULL DEFAULT TRUE,
+    obrigatoria BOOLEAN NOT NULL DEFAULT TRUE,
+    assinatura_obrigatoria BOOLEAN NOT NULL DEFAULT FALSE,
     sla_horas INT NULL,
+    permite_reprovar BOOLEAN NOT NULL DEFAULT TRUE,
+    comentario_reprovacao_obrigatorio BOOLEAN NOT NULL DEFAULT TRUE,
     ativo BOOLEAN DEFAULT TRUE,
 
     criado_por INT NULL,
@@ -1493,6 +1519,7 @@ CREATE TABLE workflow_etapas (
     modificado_em DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
     UNIQUE KEY uk_workflow_etapa_nivel (workflow_id, nivel),
+    UNIQUE KEY uk_workflow_etapa_codigo (workflow_id, codigo),
     INDEX idx_workflow_etapa_empresa (empresa_id),
     INDEX idx_workflow_etapa_papel (papel_id),
     INDEX idx_workflow_etapa_usuario (usuario_aprovador_id),
@@ -1503,6 +1530,108 @@ CREATE TABLE workflow_etapas (
     CONSTRAINT fk_workflow_etapa_usuario FOREIGN KEY (usuario_aprovador_id) REFERENCES usuarios(id),
     CONSTRAINT fk_workflow_etapa_criado_por FOREIGN KEY (criado_por) REFERENCES usuarios(id),
     CONSTRAINT fk_workflow_etapa_modificado_por FOREIGN KEY (modificado_por) REFERENCES usuarios(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE workflow_responsaveis (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    empresa_id INT NOT NULL,
+    obra_id INT NULL,
+    papel_id INT NOT NULL,
+    usuario_id INT NOT NULL,
+    prioridade INT NOT NULL DEFAULT 1,
+    ativo BOOLEAN NOT NULL DEFAULT TRUE,
+
+    criado_por INT NULL,
+    modificado_por INT NULL,
+    criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+    modificado_em DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    UNIQUE KEY uk_workflow_responsavel_obra (obra_id, papel_id, usuario_id),
+    INDEX idx_workflow_resp_empresa (empresa_id),
+    INDEX idx_workflow_resp_obra (obra_id),
+    INDEX idx_workflow_resp_papel (papel_id),
+    INDEX idx_workflow_resp_usuario (usuario_id),
+
+    CONSTRAINT fk_workflow_resp_empresa FOREIGN KEY (empresa_id) REFERENCES empresa(id),
+    CONSTRAINT fk_workflow_resp_obra FOREIGN KEY (obra_id) REFERENCES obras(id),
+    CONSTRAINT fk_workflow_resp_papel FOREIGN KEY (papel_id) REFERENCES papeis(id),
+    CONSTRAINT fk_workflow_resp_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
+    CONSTRAINT fk_workflow_resp_criado_por FOREIGN KEY (criado_por) REFERENCES usuarios(id),
+    CONSTRAINT fk_workflow_resp_modificado_por FOREIGN KEY (modificado_por) REFERENCES usuarios(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE workflow_execucoes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    empresa_id INT NOT NULL,
+    obra_id INT NOT NULL,
+    rdo_id INT NOT NULL,
+    workflow_id INT NOT NULL,
+    status ENUM('PENDENTE','EM_ANDAMENTO','APROVADO','REJEITADO','CANCELADO','REABERTO') NOT NULL DEFAULT 'PENDENTE',
+    etapa_atual_nivel INT NULL,
+    workflow_snapshot JSON NOT NULL,
+    origem VARCHAR(50) DEFAULT 'AUTO',
+    iniciado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+    finalizado_em DATETIME NULL,
+    ativo BOOLEAN NOT NULL DEFAULT TRUE,
+
+    criado_por INT NULL,
+    modificado_por INT NULL,
+    criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+    modificado_em DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    INDEX idx_workflow_exec_empresa (empresa_id),
+    INDEX idx_workflow_exec_obra (obra_id),
+    INDEX idx_workflow_exec_rdo (rdo_id),
+    INDEX idx_workflow_exec_workflow (workflow_id),
+    INDEX idx_workflow_exec_status (status),
+
+    CONSTRAINT fk_workflow_exec_empresa FOREIGN KEY (empresa_id) REFERENCES empresa(id),
+    CONSTRAINT fk_workflow_exec_obra FOREIGN KEY (obra_id) REFERENCES obras(id),
+    CONSTRAINT fk_workflow_exec_rdo FOREIGN KEY (rdo_id) REFERENCES rdo(id),
+    CONSTRAINT fk_workflow_exec_workflow FOREIGN KEY (workflow_id) REFERENCES workflow_definicoes(id),
+    CONSTRAINT fk_workflow_exec_criado_por FOREIGN KEY (criado_por) REFERENCES usuarios(id),
+    CONSTRAINT fk_workflow_exec_modificado_por FOREIGN KEY (modificado_por) REFERENCES usuarios(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE workflow_execucao_etapas (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    empresa_id INT NOT NULL,
+    execucao_id INT NOT NULL,
+    etapa_definicao_id INT NULL,
+    nivel INT NOT NULL,
+    ordem INT NULL,
+    nome VARCHAR(150) NOT NULL,
+    tipo_aprovador ENUM('USUARIO','PAPEL','CLIENTE','RESPONSAVEL_OBRA') NULL,
+    papel_id INT NULL,
+    usuario_resolvido_id INT NULL,
+    grupo_paralelo INT NULL,
+    obrigatorio BOOLEAN NOT NULL DEFAULT TRUE,
+    assinatura_obrigatoria BOOLEAN NOT NULL DEFAULT FALSE,
+    sla_horas INT NULL,
+    status ENUM('PENDENTE','APROVADO','REJEITADO','CANCELADO','PULADO') NOT NULL DEFAULT 'PENDENTE',
+    etapa_snapshot JSON NOT NULL,
+    aprovado_em DATETIME NULL,
+    comentario TEXT NULL,
+    ativo BOOLEAN NOT NULL DEFAULT TRUE,
+
+    criado_por INT NULL,
+    modificado_por INT NULL,
+    criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+    modificado_em DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    UNIQUE KEY uk_workflow_execucao_etapa_ordem (execucao_id, nivel, ordem),
+    INDEX idx_workflow_exec_etapa_empresa (empresa_id),
+    INDEX idx_workflow_exec_etapa_execucao (execucao_id),
+    INDEX idx_workflow_exec_etapa_def (etapa_definicao_id),
+    INDEX idx_workflow_exec_etapa_usuario (usuario_resolvido_id),
+
+    CONSTRAINT fk_workflow_exec_etapa_empresa FOREIGN KEY (empresa_id) REFERENCES empresa(id),
+    CONSTRAINT fk_workflow_exec_etapa_execucao FOREIGN KEY (execucao_id) REFERENCES workflow_execucoes(id),
+    CONSTRAINT fk_workflow_exec_etapa_def FOREIGN KEY (etapa_definicao_id) REFERENCES workflow_etapas(id),
+    CONSTRAINT fk_workflow_exec_etapa_papel FOREIGN KEY (papel_id) REFERENCES papeis(id),
+    CONSTRAINT fk_workflow_exec_etapa_usuario FOREIGN KEY (usuario_resolvido_id) REFERENCES usuarios(id),
+    CONSTRAINT fk_workflow_exec_etapa_criado_por FOREIGN KEY (criado_por) REFERENCES usuarios(id),
+    CONSTRAINT fk_workflow_exec_etapa_modificado_por FOREIGN KEY (modificado_por) REFERENCES usuarios(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 /* =========================
@@ -1677,7 +1806,8 @@ INSERT INTO config_definicoes (chave, descricao, tipo, valor_padrao) VALUES
 ('rdo.secoes.fotos', 'Habilitar seção de fotos no RDO', 'BOOLEAN', 'true'),
 ('assinatura.modo', 'Modo de assinatura (HASH_ONLY ou COM_IMAGEM)', 'STRING', 'HASH_ONLY'),
 ('assinatura.capturar_ip', 'Registrar IP na assinatura', 'BOOLEAN', 'true'),
-('assinatura.capturar_user_agent', 'Registrar User Agent na assinatura', 'BOOLEAN', 'true');
+('assinatura.capturar_user_agent', 'Registrar User Agent na assinatura', 'BOOLEAN', 'true')
+ON DUPLICATE KEY UPDATE descricao = VALUES(descricao), tipo = VALUES(tipo), valor_padrao = VALUES(valor_padrao), is_system = TRUE;
 
 -- Seed Inicial de Listas (Governança)
 INSERT INTO config_definicoes (chave, descricao, tipo, valor_padrao) VALUES
@@ -1688,7 +1818,8 @@ INSERT INTO config_definicoes (chave, descricao, tipo, valor_padrao) VALUES
 ('timezone', 'Timezone IANA da empresa/obra (ex.: America/Sao_Paulo)', 'STRING', 'UTC'),
 ('empresa.tema_cor_primaria', 'Cor primaria padrao do tema da empresa', 'STRING', '#0F766E'),
 ('empresa.tema_cor_secundaria', 'Cor secundaria padrao do tema da empresa', 'STRING', '#1F2937'),
-('empresa.dark_mode', 'Habilitar modo escuro por padrao', 'BOOLEAN', 'false');
+('empresa.dark_mode', 'Habilitar modo escuro por padrao', 'BOOLEAN', 'false')
+ON DUPLICATE KEY UPDATE descricao = VALUES(descricao), tipo = VALUES(tipo), valor_padrao = VALUES(valor_padrao), is_system = TRUE;
 
 INSERT INTO cad_listas (titulo, nome_interno, slug, modulo, tipo_lista, origem_dados, is_system, ativo) VALUES
 -- SISTEMA E CONFIGURAÇÃO
@@ -1737,6 +1868,9 @@ INSERT INTO cad_listas (titulo, nome_interno, slug, modulo, tipo_lista, origem_d
 ('RDO - Versoes', 'rdo_versoes', 'rdo-versoes', 'RDO', 'Auditoria', 'MySQL', TRUE, TRUE),
 ('Workflows de Aprovacao', 'workflow_definicoes', 'workflow-definicoes', 'Sistema', 'Sistema', 'MySQL', TRUE, TRUE),
 ('Etapas do Workflow', 'workflow_etapas', 'workflow-etapas', 'Sistema', 'Sistema', 'MySQL', TRUE, TRUE),
+('Responsaveis do Workflow', 'workflow_responsaveis', 'workflow-responsaveis', 'Sistema', 'Configuracao', 'MySQL', TRUE, TRUE),
+('Execucoes de Workflow', 'workflow_execucoes', 'workflow-execucoes', 'Sistema', 'Transacional', 'MySQL', TRUE, TRUE),
+('Etapas da Execucao Workflow', 'workflow_execucao_etapas', 'workflow-execucao-etapas', 'Sistema', 'Transacional', 'MySQL', TRUE, TRUE),
 ('Notificacoes', 'notificacoes', 'notificacoes', 'Sistema', 'Transacional', 'MySQL', TRUE, TRUE),
 ('Arquivos e Documentos', 'arquivos', 'arquivos', 'Sistema', 'Cadastro', 'MySQL', TRUE, TRUE),
 ('Sessoes de Usuario', 'sessoes_usuario', 'sessoes-usuario', 'Sistema', 'Log', 'MySQL', TRUE, TRUE),
@@ -1788,12 +1922,14 @@ INSERT INTO aux_tipo_obra (id, empresa_id, nome, descricao, is_system, ativo) VA
 
 -- RBAC especifico da empresa
 INSERT INTO papeis (id, empresa_id, nome, descricao, is_system, ativo) VALUES
-(20, 2, 'GESTOR_CONTRATO', 'Gestor responsavel por contratos e medicoes da empresa.', FALSE, TRUE);
+(20, 2, 'GESTOR_CONTRATO', 'Gestor responsavel por contratos e medicoes da empresa.', FALSE, TRUE)
+ON DUPLICATE KEY UPDATE descricao = VALUES(descricao), is_system = VALUES(is_system), ativo = VALUES(ativo);
 
 INSERT INTO permissoes (empresa_id, chave, descricao, is_system, ativo) VALUES
-(2, 'medicao.view', 'Visualizar dados de medicao e produtividade da obra.', FALSE, TRUE);
+(2, 'medicao.view', 'Visualizar dados de medicao e produtividade da obra.', FALSE, TRUE)
+ON DUPLICATE KEY UPDATE descricao = VALUES(descricao), is_system = VALUES(is_system), ativo = VALUES(ativo);
 
-INSERT INTO papel_permissao (empresa_id, papel_id, permissao_id, ativo)
+INSERT IGNORE INTO papel_permissao (empresa_id, papel_id, permissao_id, ativo)
 SELECT
   2,
   p.id,
@@ -1868,6 +2004,21 @@ INSERT INTO obra_usuario (id, empresa_id, obra_id, usuario_id, papel_id, ativo, 
 (20, 2, 20, 21, 20, TRUE, 20),
 (21, 2, 20, 22, 3, TRUE, 21),
 (22, 2, 20, 23, 5, TRUE, 21);
+
+INSERT INTO workflow_responsaveis (empresa_id, obra_id, papel_id, usuario_id, prioridade, ativo, criado_por)
+SELECT 2, 20, p.id, u.usuario_id, 1, TRUE, 21
+FROM (
+    SELECT 'RESPONSAVEL_OBRA' AS papel_nome, 22 AS usuario_id
+    UNION ALL SELECT 'GESTOR_CONTRATO', 21
+    UNION ALL SELECT 'CLIENTE_OBRA', 23
+) u
+JOIN papeis p
+  ON p.nome = u.papel_nome
+ AND (p.empresa_id = 2 OR p.empresa_id IS NULL)
+ON DUPLICATE KEY UPDATE
+    prioridade = VALUES(prioridade),
+    ativo = VALUES(ativo),
+    modificado_por = VALUES(criado_por);
 
 INSERT INTO frente_colaborador (id, empresa_id, frente_id, colaborador_id, funcao_id, data_inicio, ativo, criado_por) VALUES
 (20, 2, 20, 22, 1, '2026-01-08', TRUE, 21),
@@ -1991,5 +2142,259 @@ INSERT INTO auditoria_log (id, empresa_id, usuario_id, colaborador_id, acao, ent
 (20, 2, 22, 22, 'CREATE', 'rdo', 20, NULL, JSON_OBJECT('status', 'PENDENTE', 'obra_id', 20, 'data_rdo', '2026-05-08'), '10.10.2.22', 'Mozilla/5.0 RDO Seed', '2026-05-08 17:10:00'),
 (21, 2, 21, 21, 'APPROVE', 'rdo', 20, JSON_OBJECT('status', 'PENDENTE'), JSON_OBJECT('status', 'APROVADO'), '10.10.1.21', 'Mozilla/5.0 RDO Seed', '2026-05-08 18:20:00'),
 (22, 2, 23, 26, 'SIGN', 'rdo_assinaturas', 21, JSON_OBJECT('status', 'PENDENTE'), JSON_OBJECT('status', 'ASSINADO'), '177.10.20.30', 'Mozilla/5.0 RDO Seed', '2026-05-08 18:40:00');
+
+
+
+/* =========================
+   HARDENING PRODUÇÃO – WORKFLOW, PERMISSÕES E CONFIGURAÇÕES
+   Bloco idempotente. Pode ser reexecutado após a carga base.
+========================= */
+
+-- Permissões complementares e padronizadas do workflow/RDO.
+INSERT INTO permissoes (empresa_id, chave, descricao, is_system, ativo) VALUES
+(NULL,'workflow.view','Visualizar workflows',TRUE,TRUE),
+(NULL,'workflow.create','Criar workflows',TRUE,TRUE),
+(NULL,'workflow.update','Editar workflows',TRUE,TRUE),
+(NULL,'workflow.delete','Excluir workflows',TRUE,TRUE),
+(NULL,'workflow.approve','Aprovar documentos em workflow',TRUE,TRUE),
+(NULL,'workflow.reject','Reprovar documentos em workflow',TRUE,TRUE),
+(NULL,'workflow.reopen','Reabrir workflow',TRUE,TRUE),
+(NULL,'workflow.cancel','Cancelar workflow',TRUE,TRUE),
+(NULL,'workflow.history','Visualizar histórico do workflow',TRUE,TRUE),
+(NULL,'workflow.dashboard','Acessar dashboard de workflow',TRUE,TRUE),
+(NULL,'workflow.sign','Assinar documentos vinculados ao workflow',TRUE,TRUE),
+(NULL,'workflow.assign','Vincular workflow à obra',TRUE,TRUE),
+(NULL,'workflow.admin','Administrar workflow',TRUE,TRUE),
+(NULL,'config.view','Visualizar configurações do sistema, empresa e obra',TRUE,TRUE),
+(NULL,'config.manage','Gerenciar configurações do sistema, empresa e obra',TRUE,TRUE),
+(NULL,'arquivo.view','Visualizar arquivos anexados',TRUE,TRUE),
+(NULL,'arquivo.manage','Gerenciar arquivos anexados',TRUE,TRUE),
+(NULL,'notificacao.view','Visualizar notificações',TRUE,TRUE),
+(NULL,'notificacao.manage','Gerenciar notificações',TRUE,TRUE),
+(NULL,'auditoria.view','Visualizar logs de auditoria',TRUE,TRUE),
+(NULL,'rdo.reopen','Reabrir RDO',TRUE,TRUE),
+(NULL,'rdo.cancel','Cancelar RDO',TRUE,TRUE),
+(NULL,'rdo.sign','Assinar RDO',TRUE,TRUE),
+(NULL,'rdo.export','Exportar RDO',TRUE,TRUE),
+(NULL,'relatorio.view','Visualizar relatórios',TRUE,TRUE),
+(NULL,'relatorio.export','Exportar relatórios',TRUE,TRUE)
+ON DUPLICATE KEY UPDATE
+    descricao = VALUES(descricao),
+    is_system = VALUES(is_system),
+    ativo = VALUES(ativo);
+
+-- Papéis adicionais para suportar os templates configuráveis por papel.
+INSERT INTO papeis (empresa_id, nome, descricao, is_system, ativo) VALUES
+(NULL,'RESPONSAVEL_OBRA','Responsável principal pela obra no fluxo de aprovação',TRUE,TRUE),
+(NULL,'ENGENHEIRO','Aprovador técnico de engenharia',TRUE,TRUE),
+(NULL,'COORDENADOR','Coordenador responsável por validações intermediárias',TRUE,TRUE),
+(NULL,'GERENTE','Gerente responsável por aprovação gerencial',TRUE,TRUE),
+(NULL,'FISCAL','Fiscal responsável por validação de campo',TRUE,TRUE)
+ON DUPLICATE KEY UPDATE
+    descricao = VALUES(descricao),
+    is_system = VALUES(is_system),
+    ativo = VALUES(ativo);
+
+-- Configurações complementares em padrão único: chave, descrição, tipo, valor_padrao.
+INSERT INTO config_definicoes (chave, descricao, tipo, valor_padrao, is_system) VALUES
+('workflow.habilitado','Habilita o módulo de workflow','BOOLEAN','true',TRUE),
+('workflow.sla_padrao_horas','SLA padrão do workflow em horas','INT','24',TRUE),
+('workflow.reprovacao.comentario_obrigatorio','Exige comentário ao reprovar','BOOLEAN','true',TRUE),
+('workflow.notificacao.email','Envia notificações de workflow por e-mail','BOOLEAN','true',TRUE),
+('workflow.permite_cancelamento','Permite cancelamento de fluxos','BOOLEAN','true',TRUE),
+('workflow.permite_reabertura','Permite reabertura de fluxos','BOOLEAN','true',TRUE),
+('workflow.auditoria_completa','Registra todas as ações do workflow em auditoria','BOOLEAN','true',TRUE),
+('workflow.aprovacao.rejeicao_cancela_fluxo','Reprovação encerra o fluxo','BOOLEAN','true',TRUE),
+('workflow.aprovacao.comentario_obrigatorio','Comentário obrigatório ao reprovar','BOOLEAN','true',TRUE),
+('workflow.aprovacao.notificar_sistema','Enviar notificações internas','BOOLEAN','true',TRUE),
+('workflow.aprovacao.historico_completo','Registrar histórico completo','BOOLEAN','true',TRUE),
+('workflow.aprovacao.prazo_alerta_horas','Horas antes do vencimento do SLA para alerta','INT','4',TRUE),
+('workflow.aprovacao.escalonamento_automatico','Escalonar aprovações vencidas','BOOLEAN','true',TRUE),
+('workflow.aprovacao.permitir_aprovacao_retroativa','Permitir aprovação retroativa','BOOLEAN','false',TRUE),
+('workflow.aprovacao.permitir_multiplas_rejeicoes','Permitir múltiplas rejeições','BOOLEAN','true',TRUE),
+('workflow.aprovacao.cliente_link_externo','Permitir aprovação do cliente por link externo','BOOLEAN','true',TRUE),
+('assinatura.obrigatoria','Assinatura eletrônica obrigatória','BOOLEAN','false',TRUE),
+('assinatura.cliente_obrigatoria','Exige assinatura do cliente','BOOLEAN','false',TRUE),
+('assinatura.interna_obrigatoria','Exige assinatura interna','BOOLEAN','false',TRUE)
+ON DUPLICATE KEY UPDATE
+    descricao = VALUES(descricao),
+    tipo = VALUES(tipo),
+    valor_padrao = VALUES(valor_padrao),
+    is_system = VALUES(is_system);
+
+-- Concede permissões complementares ao ADMIN.
+INSERT IGNORE INTO papel_permissao (empresa_id, papel_id, permissao_id, ativo)
+SELECT NULL, p.id, perm.id, TRUE
+FROM papeis p
+JOIN permissoes perm ON perm.empresa_id IS NULL
+WHERE p.empresa_id IS NULL
+  AND p.nome = 'ADMIN'
+  AND perm.chave IN (
+    'workflow.view','workflow.create','workflow.update','workflow.delete','workflow.approve','workflow.reject',
+    'workflow.reopen','workflow.cancel','workflow.history','workflow.dashboard','workflow.sign','workflow.assign','workflow.admin',
+    'config.view','config.manage','arquivo.view','arquivo.manage','notificacao.view','notificacao.manage','auditoria.view',
+    'rdo.reopen','rdo.cancel','rdo.sign','rdo.export','relatorio.view','relatorio.export'
+  );
+
+-- Concede permissões operacionais ao GESTOR.
+INSERT IGNORE INTO papel_permissao (empresa_id, papel_id, permissao_id, ativo)
+SELECT NULL, p.id, perm.id, TRUE
+FROM papeis p
+JOIN permissoes perm ON perm.empresa_id IS NULL
+WHERE p.empresa_id IS NULL
+  AND p.nome = 'GESTOR'
+  AND perm.chave IN (
+    'workflow.view','workflow.approve','workflow.reject','workflow.history','workflow.dashboard','workflow.sign','workflow.assign',
+    'config.view','arquivo.view','arquivo.manage','notificacao.view','auditoria.view',
+    'rdo.reopen','rdo.cancel','rdo.sign','rdo.export','relatorio.view','relatorio.export'
+  );
+
+-- Concede permissões de aprovação e assinatura aos papéis operacionais dos templates.
+INSERT IGNORE INTO papel_permissao (empresa_id, papel_id, permissao_id, ativo)
+SELECT NULL, p.id, perm.id, TRUE
+FROM papeis p
+JOIN permissoes perm ON perm.empresa_id IS NULL
+WHERE p.empresa_id IS NULL
+  AND p.nome IN ('RESPONSAVEL_OBRA', 'ENGENHEIRO', 'COORDENADOR', 'GERENTE', 'FISCAL')
+  AND perm.chave IN (
+    'rdo.view', 'rdo.approve', 'rdo.sign',
+    'workflow.view', 'workflow.approve', 'workflow.sign',
+    'relatorio.view'
+  );
+
+-- Concede permissões de assinatura e visualização ao cliente da obra.
+INSERT IGNORE INTO papel_permissao (empresa_id, papel_id, permissao_id, ativo)
+SELECT NULL, p.id, perm.id, TRUE
+FROM papeis p
+JOIN permissoes perm ON perm.empresa_id IS NULL
+WHERE p.empresa_id IS NULL
+  AND p.nome = 'CLIENTE_OBRA'
+  AND perm.chave IN ('workflow.view','workflow.approve','workflow.reject','workflow.sign','rdo.view','rdo.sign');
+
+-- Templates de workflow por empresa já cadastrada. Mantém empresa_id obrigatório e evita template global órfão.
+INSERT INTO workflow_definicoes
+(empresa_id, obra_id, codigo, nome, descricao, tipo_fluxo, aprovacao_paralela, rejeicao_cancela_fluxo, cliente_obrigatorio, assinatura_obrigatoria, sla_horas, sla_global_horas, ativo)
+SELECT e.id, NULL, 'SIMPLES', 'Aprovação Simples', 'Fluxo padrão com emissão do RDO e uma única aprovação obrigatória até a finalização.', 'SIMPLES', FALSE, TRUE, FALSE, FALSE, 24, 24, TRUE
+FROM empresa e
+ON DUPLICATE KEY UPDATE
+    descricao = VALUES(descricao), tipo_fluxo = VALUES(tipo_fluxo), aprovacao_paralela = VALUES(aprovacao_paralela),
+    rejeicao_cancela_fluxo = VALUES(rejeicao_cancela_fluxo), sla_horas = VALUES(sla_horas), sla_global_horas = VALUES(sla_global_horas), ativo = VALUES(ativo);
+
+INSERT INTO workflow_definicoes
+(empresa_id, obra_id, codigo, nome, descricao, tipo_fluxo, aprovacao_paralela, rejeicao_cancela_fluxo, cliente_obrigatorio, assinatura_obrigatoria, sla_horas, sla_global_horas, ativo)
+SELECT e.id, NULL, 'SEQUENCIAL', 'Aprovação Hierárquica', 'Fluxo sequencial Engenheiro -> Coordenador -> Gerente, com SLA independente por etapa.', 'SEQUENCIAL', FALSE, TRUE, FALSE, FALSE, 72, 72, TRUE
+FROM empresa e
+ON DUPLICATE KEY UPDATE descricao = VALUES(descricao), tipo_fluxo = VALUES(tipo_fluxo), sla_horas = VALUES(sla_horas), sla_global_horas = VALUES(sla_global_horas), ativo = VALUES(ativo);
+
+INSERT INTO workflow_definicoes
+(empresa_id, obra_id, codigo, nome, descricao, tipo_fluxo, aprovacao_paralela, rejeicao_cancela_fluxo, cliente_obrigatorio, assinatura_obrigatoria, sla_horas, sla_global_horas, ativo)
+SELECT e.id, NULL, 'PARALELO', 'Aprovação Paralela', 'Fluxo simultâneo com Fiscal, Cliente e Coordenador; o fluxo só finaliza quando todos aprovarem.', 'PARALELO', TRUE, TRUE, TRUE, FALSE, 48, 48, TRUE
+FROM empresa e
+ON DUPLICATE KEY UPDATE descricao = VALUES(descricao), tipo_fluxo = VALUES(tipo_fluxo), aprovacao_paralela = VALUES(aprovacao_paralela), sla_horas = VALUES(sla_horas), sla_global_horas = VALUES(sla_global_horas), ativo = VALUES(ativo);
+
+INSERT INTO workflow_definicoes
+(empresa_id, obra_id, codigo, nome, descricao, tipo_fluxo, aprovacao_paralela, rejeicao_cancela_fluxo, cliente_obrigatorio, assinatura_obrigatoria, sla_horas, sla_global_horas, ativo)
+SELECT e.id, NULL, 'MATRIZ', 'Aprovação por Matriz de Responsabilidade', 'Fluxo que resolve automaticamente o aprovador a partir do vínculo obra_usuario e do papel configurado para a obra.', 'MATRIZ', FALSE, TRUE, FALSE, FALSE, 24, 24, TRUE
+FROM empresa e
+ON DUPLICATE KEY UPDATE descricao = VALUES(descricao), tipo_fluxo = VALUES(tipo_fluxo), sla_horas = VALUES(sla_horas), sla_global_horas = VALUES(sla_global_horas), ativo = VALUES(ativo);
+
+INSERT INTO workflow_definicoes
+(empresa_id, obra_id, codigo, nome, descricao, tipo_fluxo, aprovacao_paralela, rejeicao_cancela_fluxo, cliente_obrigatorio, assinatura_obrigatoria, sla_horas, sla_global_horas, ativo)
+SELECT e.id, NULL, 'CLIENTE_INTERNA', 'Aprovação Cliente + Interna', 'Fluxo Responsável da Obra -> Engenheiro -> Coordenador -> Cliente, com etapa do cliente opcional e histórico de aceite.', 'CLIENTE_INTERNA', FALSE, TRUE, FALSE, FALSE, 96, 96, TRUE
+FROM empresa e
+ON DUPLICATE KEY UPDATE descricao = VALUES(descricao), tipo_fluxo = VALUES(tipo_fluxo), cliente_obrigatorio = VALUES(cliente_obrigatorio), assinatura_obrigatoria = VALUES(assinatura_obrigatoria), sla_horas = VALUES(sla_horas), sla_global_horas = VALUES(sla_global_horas), ativo = VALUES(ativo);
+
+INSERT INTO workflow_definicoes
+(empresa_id, obra_id, codigo, nome, descricao, tipo_fluxo, aprovacao_paralela, rejeicao_cancela_fluxo, cliente_obrigatorio, assinatura_obrigatoria, sla_horas, sla_global_horas, ativo)
+SELECT e.id, NULL, 'CONFIGURAVEL', 'Workflow Configurável', 'Modelo livre para definir quantidade de etapas, sequência, paralelismo, SLAs, cliente, obrigatoriedade e aprovadores por usuário ou papel.', 'CONFIGURAVEL', FALSE, TRUE, FALSE, FALSE, 24, 120, TRUE
+FROM empresa e
+ON DUPLICATE KEY UPDATE descricao = VALUES(descricao), tipo_fluxo = VALUES(tipo_fluxo), sla_horas = VALUES(sla_horas), sla_global_horas = VALUES(sla_global_horas), ativo = VALUES(ativo);
+
+-- Etapas dos templates. Usa nivel/ordem, codigo, tipo_aprovador e papel_codigo de forma consistente.
+INSERT INTO workflow_etapas
+(empresa_id, workflow_id, nivel, ordem, codigo, nome, tipo_aprovador, papel_id, papel_codigo, obrigatorio, obrigatoria, assinatura_obrigatoria, sla_horas, ativo)
+SELECT wd.empresa_id, wd.id, 1, 1, 'APR_UNICO', 'Aprovador', 'PAPEL', p.id, 'GESTOR', TRUE, TRUE, FALSE, 24, TRUE
+FROM workflow_definicoes wd
+LEFT JOIN papeis p
+  ON p.empresa_id IS NULL
+ AND p.nome = 'GESTOR'
+WHERE wd.codigo = 'SIMPLES' AND wd.obra_id IS NULL
+ON DUPLICATE KEY UPDATE nome = VALUES(nome), tipo_aprovador = VALUES(tipo_aprovador), papel_id = VALUES(papel_id), papel_codigo = VALUES(papel_codigo), sla_horas = VALUES(sla_horas), ativo = VALUES(ativo);
+
+INSERT INTO workflow_etapas
+(empresa_id, workflow_id, nivel, ordem, codigo, nome, tipo_aprovador, papel_id, papel_codigo, obrigatorio, obrigatoria, assinatura_obrigatoria, sla_horas, ativo)
+SELECT wd.empresa_id, wd.id, v.nivel, v.nivel, v.codigo, v.nome, 'PAPEL', p.id, v.papel_codigo, TRUE, TRUE, FALSE, v.sla_horas, TRUE
+FROM workflow_definicoes wd
+JOIN (
+    SELECT 1 nivel, 'ENG' codigo, 'Engenheiro' nome, 'ENGENHEIRO' papel_codigo, 8 sla_horas
+    UNION ALL SELECT 2, 'COORD', 'Coordenador', 'COORDENADOR', 12
+    UNION ALL SELECT 3, 'GER', 'Gerente', 'GERENTE', 24
+) v
+LEFT JOIN papeis p
+  ON p.empresa_id IS NULL
+ AND p.nome = v.papel_codigo
+WHERE wd.codigo = 'SEQUENCIAL' AND wd.obra_id IS NULL
+ON DUPLICATE KEY UPDATE nome = VALUES(nome), papel_id = VALUES(papel_id), papel_codigo = VALUES(papel_codigo), sla_horas = VALUES(sla_horas), ativo = VALUES(ativo);
+
+INSERT INTO workflow_etapas
+(empresa_id, workflow_id, nivel, ordem, codigo, nome, tipo_aprovador, papel_id, papel_codigo, grupo_paralelo, obrigatorio, obrigatoria, assinatura_obrigatoria, sla_horas, ativo)
+SELECT wd.empresa_id, wd.id, v.nivel, 1, v.codigo, v.nome, 'PAPEL', p.id, v.papel_codigo, 1, TRUE, TRUE, v.assinatura_obrigatoria, v.sla_horas, TRUE
+FROM workflow_definicoes wd
+JOIN (
+    SELECT 1 nivel, 'FISCAL' codigo, 'Fiscal' nome, 'FISCAL' papel_codigo, FALSE assinatura_obrigatoria, 24 sla_horas
+    UNION ALL SELECT 2, 'CLIENTE', 'Cliente', 'CLIENTE_OBRA', TRUE, 48
+    UNION ALL SELECT 3, 'COORD', 'Coordenador', 'COORDENADOR', FALSE, 24
+) v
+LEFT JOIN papeis p
+  ON p.empresa_id IS NULL
+ AND p.nome = v.papel_codigo
+WHERE wd.codigo = 'PARALELO' AND wd.obra_id IS NULL
+ON DUPLICATE KEY UPDATE nome = VALUES(nome), tipo_aprovador = VALUES(tipo_aprovador), papel_id = VALUES(papel_id), papel_codigo = VALUES(papel_codigo), grupo_paralelo = VALUES(grupo_paralelo), sla_horas = VALUES(sla_horas), ativo = VALUES(ativo);
+
+INSERT INTO workflow_etapas
+(empresa_id, workflow_id, nivel, ordem, codigo, nome, tipo_aprovador, papel_id, papel_codigo, obrigatorio, obrigatoria, assinatura_obrigatoria, sla_horas, ativo)
+SELECT wd.empresa_id, wd.id, 1, 1, 'RESP_MATRIZ', 'Aprovador conforme papel da obra', 'PAPEL', p.id, 'RESPONSAVEL_OBRA', TRUE, TRUE, FALSE, 24, TRUE
+FROM workflow_definicoes wd
+LEFT JOIN papeis p
+  ON p.empresa_id IS NULL
+ AND p.nome = 'RESPONSAVEL_OBRA'
+WHERE wd.codigo = 'MATRIZ' AND wd.obra_id IS NULL
+ON DUPLICATE KEY UPDATE nome = VALUES(nome), tipo_aprovador = VALUES(tipo_aprovador), papel_id = VALUES(papel_id), papel_codigo = VALUES(papel_codigo), sla_horas = VALUES(sla_horas), ativo = VALUES(ativo);
+
+INSERT INTO workflow_etapas
+(empresa_id, workflow_id, nivel, ordem, codigo, nome, tipo_aprovador, papel_id, papel_codigo, obrigatorio, obrigatoria, assinatura_obrigatoria, sla_horas, ativo)
+SELECT wd.empresa_id, wd.id, v.nivel, v.nivel, v.codigo, v.nome, v.tipo_aprovador, p.id, v.papel_codigo, TRUE, TRUE, v.assinatura_obrigatoria, v.sla_horas, TRUE
+FROM workflow_definicoes wd
+JOIN (
+    SELECT 1 nivel, 'RESP_OBRA' codigo, 'Responsável da Obra' nome, 'PAPEL' tipo_aprovador, 'RESPONSAVEL_OBRA' papel_codigo, FALSE assinatura_obrigatoria, 12 sla_horas
+    UNION ALL SELECT 2, 'ENG' , 'Engenheiro', 'PAPEL', 'ENGENHEIRO', FALSE, 24
+    UNION ALL SELECT 3, 'COORD', 'Coordenador', 'PAPEL', 'COORDENADOR', FALSE, 24
+    UNION ALL SELECT 4, 'CLIENTE', 'Cliente', 'PAPEL', 'CLIENTE_OBRA', TRUE, 48
+) v
+LEFT JOIN papeis p
+  ON p.empresa_id IS NULL
+ AND p.nome = v.papel_codigo
+WHERE wd.codigo = 'CLIENTE_INTERNA' AND wd.obra_id IS NULL
+ON DUPLICATE KEY UPDATE nome = VALUES(nome), tipo_aprovador = VALUES(tipo_aprovador), papel_id = VALUES(papel_id), papel_codigo = VALUES(papel_codigo), assinatura_obrigatoria = VALUES(assinatura_obrigatoria), sla_horas = VALUES(sla_horas), ativo = VALUES(ativo);
+
+-- Ajusta a etapa do cliente como opcional no template Cliente + Interna.
+UPDATE workflow_etapas we
+JOIN workflow_definicoes wd ON wd.id = we.workflow_id
+SET
+    we.obrigatorio = FALSE,
+    we.obrigatoria = FALSE,
+    we.assinatura_obrigatoria = TRUE
+WHERE wd.codigo = 'CLIENTE_INTERNA'
+  AND wd.obra_id IS NULL
+  AND we.codigo = 'CLIENTE';
+
+-- Configuração padrão por empresa: não sobrescreve se já existir.
+INSERT INTO empresa_config (empresa_id, chave, valor)
+SELECT e.id, 'workflow.habilitado', 'true' FROM empresa e
+ON DUPLICATE KEY UPDATE valor = valor;
+
+INSERT INTO empresa_config (empresa_id, chave, valor)
+SELECT e.id, 'workflow.sla_padrao_horas', '24' FROM empresa e
+ON DUPLICATE KEY UPDATE valor = valor;
 
 SET FOREIGN_KEY_CHECKS = 1;
