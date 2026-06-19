@@ -29,6 +29,7 @@ from app.models.workflow import (
     WorkflowResponsavel,
 )
 from app.services.auditoria_service import AuditoriaService
+from app.services.config_service import ConfigService
 from app.utils.datetime_utils import utcnow_naive
 from app.utils.serializers import safe_model_to_dict
 
@@ -40,21 +41,58 @@ class WorkflowResolucaoError(Exception):
 class WorkflowService:
     """Serviço centralizado de workflow."""
 
+    DEFAULT_WORKFLOW_CODIGO = 'SIMPLES'
+
     # =========================================================================
     # RESOLUÇÃO DE WORKFLOW
     # =========================================================================
 
     @staticmethod
-    def resolver_workflow(
+    def _resolver_workflow_obra(
         empresa_id: int,
         obra_id: Optional[int],
     ) -> Optional[WorkflowDefinicao]:
-        """Resolve o workflow aplicável por empresa/obra com prioridade da obra."""
-        workflow = WorkflowDefinicao.query.filter_by(
+        if obra_id is None:
+            return None
+        return WorkflowDefinicao.query.filter_by(
             empresa_id=empresa_id,
             obra_id=obra_id,
             ativo=True,
         ).order_by(WorkflowDefinicao.id.asc()).first()
+
+    @staticmethod
+    def _resolver_workflow_empresa_por_codigo(
+        empresa_id: int,
+        codigo: Optional[str],
+    ) -> Optional[WorkflowDefinicao]:
+        codigo_normalizado = (codigo or '').strip()
+        if not codigo_normalizado:
+            return None
+        return WorkflowDefinicao.query.filter(
+            WorkflowDefinicao.empresa_id == empresa_id,
+            WorkflowDefinicao.obra_id.is_(None),
+            WorkflowDefinicao.ativo.is_(True),
+            db.or_(
+                db.func.upper(db.func.trim(WorkflowDefinicao.codigo)) == codigo_normalizado.upper(),
+                db.func.upper(db.func.trim(WorkflowDefinicao.nome)) == codigo_normalizado.upper(),
+            ),
+        ).order_by(WorkflowDefinicao.id.asc()).first()
+
+    @staticmethod
+    def _resolver_workflow_empresa_padrao(empresa_id: int) -> Optional[WorkflowDefinicao]:
+        try:
+            codigo_padrao = ConfigService.obter_valor(
+                empresa_id=empresa_id,
+                obra_id=None,
+                chave='workflow.default',
+            )
+        except Exception:
+            codigo_padrao = None
+
+        workflow = WorkflowService._resolver_workflow_empresa_por_codigo(
+            empresa_id,
+            codigo_padrao or WorkflowService.DEFAULT_WORKFLOW_CODIGO,
+        )
         if workflow:
             return workflow
 
@@ -63,6 +101,18 @@ class WorkflowService:
             obra_id=None,
             ativo=True,
         ).order_by(WorkflowDefinicao.id.asc()).first()
+
+    @staticmethod
+    def resolver_workflow(
+        empresa_id: int,
+        obra_id: Optional[int],
+    ) -> Optional[WorkflowDefinicao]:
+        """Resolve o workflow aplicável pela cadeia obra -> empresa -> sistema."""
+        workflow = WorkflowService._resolver_workflow_obra(empresa_id, obra_id)
+        if workflow:
+            return workflow
+
+        return WorkflowService._resolver_workflow_empresa_padrao(empresa_id)
 
     @staticmethod
     def obter_etapas_ordenadas(workflow_id: int) -> List[WorkflowEtapa]:

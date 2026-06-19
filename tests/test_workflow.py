@@ -12,6 +12,7 @@ from app.models.workflow import (
     WorkflowExecucaoEtapa,
     WorkflowResponsavel,
 )
+from app.models.configuracao import ConfigDefinicao, EmpresaConfig
 from app.models.rdo import RDO, RDOAprovacao, RDOVersao
 from app.models.usuario import Usuario, Papel
 from app.models.obra import Obra, FrenteTrabalho
@@ -66,6 +67,83 @@ class TestWorkflowResolucao:
             resultado = WorkflowService.resolver_workflow(empresa.id, obra.id)
             assert resultado is not None
             assert resultado.id == workflow_empresa.id
+
+    def test_resolver_workflow_empresa_default_por_configuracao(self, app, db_session, empresa, obra):
+        """O workflow padrão da empresa deve respeitar a configuração explícita."""
+        with app.app_context():
+            db.session.add(
+                ConfigDefinicao(
+                    chave='workflow.default',
+                    descricao='Workflow padrão da empresa',
+                    tipo='STRING',
+                    valor_padrao='SIMPLES',
+                    is_system=True,
+                )
+            )
+            workflow_primeiro = WorkflowDefinicao(
+                empresa_id=empresa.id,
+                obra_id=None,
+                codigo='HIERARQUICO',
+                nome='Workflow Hierárquico',
+                ativo=True,
+            )
+            workflow_padrao = WorkflowDefinicao(
+                empresa_id=empresa.id,
+                obra_id=None,
+                codigo='SIMPLES',
+                nome='Workflow Simples',
+                ativo=True,
+            )
+            db.session.add(workflow_primeiro)
+            db.session.add(workflow_padrao)
+            db.session.flush()
+
+            db.session.add(
+                EmpresaConfig(
+                    empresa_id=empresa.id,
+                    chave='workflow.default',
+                    valor='SIMPLES',
+                )
+            )
+            db.session.commit()
+
+            resultado = WorkflowService.resolver_workflow(empresa.id, obra.id)
+            assert resultado is not None
+            assert resultado.id == workflow_padrao.id
+
+    def test_resolver_workflow_empresa_fallback_usa_padrao_sistema(self, app, db_session, empresa, obra):
+        """Sem override da empresa, deve usar o valor padrão do sistema."""
+        with app.app_context():
+            db.session.add(
+                ConfigDefinicao(
+                    chave='workflow.default',
+                    descricao='Workflow padrão da empresa',
+                    tipo='STRING',
+                    valor_padrao='SIMPLES',
+                    is_system=True,
+                )
+            )
+            workflow_nao_padrao = WorkflowDefinicao(
+                empresa_id=empresa.id,
+                obra_id=None,
+                codigo='HIERARQUICO',
+                nome='Workflow Hierárquico',
+                ativo=True,
+            )
+            workflow_sistema = WorkflowDefinicao(
+                empresa_id=empresa.id,
+                obra_id=None,
+                codigo='SIMPLES',
+                nome='Workflow Simples',
+                ativo=True,
+            )
+            db.session.add(workflow_nao_padrao)
+            db.session.add(workflow_sistema)
+            db.session.commit()
+
+            resultado = WorkflowService.resolver_workflow(empresa.id, obra.id)
+            assert resultado is not None
+            assert resultado.id == workflow_sistema.id
 
     def test_resolver_workflow_nenhum(self, app, empresa, obra):
         """Sem workflow, retorna None."""

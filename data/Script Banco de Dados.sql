@@ -2198,6 +2198,7 @@ ON DUPLICATE KEY UPDATE
 -- Configurações complementares em padrão único: chave, descrição, tipo, valor_padrao.
 INSERT INTO config_definicoes (chave, descricao, tipo, valor_padrao, is_system) VALUES
 ('workflow.habilitado','Habilita o módulo de workflow','BOOLEAN','true',TRUE),
+('workflow.default','Workflow padrão da empresa','STRING','SIMPLES',TRUE),
 ('workflow.sla_padrao_horas','SLA padrão do workflow em horas','INT','24',TRUE),
 ('workflow.reprovacao.comentario_obrigatorio','Exige comentário ao reprovar','BOOLEAN','true',TRUE),
 ('workflow.notificacao.email','Envia notificações de workflow por e-mail','BOOLEAN','true',TRUE),
@@ -2391,6 +2392,10 @@ WHERE wd.codigo = 'CLIENTE_INTERNA'
 -- Configuração padrão por empresa: não sobrescreve se já existir.
 INSERT INTO empresa_config (empresa_id, chave, valor)
 SELECT e.id, 'workflow.habilitado', 'true' FROM empresa e
+ON DUPLICATE KEY UPDATE valor = valor;
+
+INSERT INTO empresa_config (empresa_id, chave, valor)
+SELECT e.id, 'workflow.default', 'SIMPLES' FROM empresa e
 ON DUPLICATE KEY UPDATE valor = valor;
 
 INSERT INTO empresa_config (empresa_id, chave, valor)

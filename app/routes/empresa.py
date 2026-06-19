@@ -8,6 +8,23 @@ from app.models.workflow import WorkflowDefinicao, WorkflowEtapa, WorkflowRespon
 from app.models.obra import Obra
 from app.models.usuario import Usuario
 
+
+def _ensure_workflow_default_definition():
+    definicao = ConfigDefinicao.query.filter_by(chave='workflow.default').first()
+    if definicao:
+        return definicao
+
+    definicao = ConfigDefinicao(
+        chave='workflow.default',
+        descricao='Workflow padrão da empresa',
+        tipo='STRING',
+        valor_padrao='SIMPLES',
+        is_system=True,
+    )
+    db.session.add(definicao)
+    db.session.flush()
+    return definicao
+
 #######################################################################################################
 ####################################################################################################### Empresa
 #######################################################################################################
@@ -81,6 +98,16 @@ def empresa():
     ).order_by(Papel.nome).all()
     usuarios_empresa = Usuario.query.filter_by(empresa_id=empresa_id, ativo=True).order_by(Usuario.email.asc()).all()
     workflows = WorkflowDefinicao.query.filter_by(empresa_id=empresa_id).order_by(WorkflowDefinicao.nome).all()
+    workflows_empresa_padrao = [
+        workflow
+        for workflow in workflows
+        if workflow.obra_id is None and workflow.ativo
+    ]
+    workflow_default_codigo = (
+        mapa.get('workflow.default')
+        if mapa.get('workflow.default')
+        else 'SIMPLES'
+    )
     workflow_responsaveis = (
         WorkflowResponsavel.query
         .filter_by(empresa_id=empresa_id, ativo=True)
@@ -119,6 +146,8 @@ def empresa():
         papeis_workflow=papeis_workflow,
         usuarios_empresa=usuarios_empresa,
         workflows=workflows,
+        workflows_empresa_padrao=workflows_empresa_padrao,
+        workflow_default_codigo=workflow_default_codigo,
         workflow_responsaveis=workflow_responsaveis,
         obras=obras,
         permissoes_disponiveis=permissoes_disponiveis,
@@ -370,6 +399,56 @@ def api_create_workflow():
             'nome': workflow.nome,
             'descricao': workflow.descricao
         }})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+@auth_bp.post('/empresa/api_workflow_default')
+@login_required
+@permission_required('workflow.manage')
+def api_update_workflow_default():
+    empresa_id = session.get('empresa_id')
+    data = request.get_json() or {}
+    codigo = (data.get('codigo') or '').strip()
+
+    if not codigo:
+        return jsonify({'ok': False, 'error': 'Código do workflow é obrigatório.'}), 400
+
+    workflow = WorkflowDefinicao.query.filter(
+        WorkflowDefinicao.empresa_id == empresa_id,
+        WorkflowDefinicao.obra_id.is_(None),
+        WorkflowDefinicao.ativo.is_(True),
+        or_(
+            WorkflowDefinicao.codigo == codigo,
+            WorkflowDefinicao.nome == codigo,
+        ),
+    ).order_by(WorkflowDefinicao.id.asc()).first()
+    if not workflow:
+        return jsonify({'ok': False, 'error': 'Workflow padrão inválido para esta empresa.'}), 404
+
+    try:
+        _ensure_workflow_default_definition()
+        config = EmpresaConfig.query.filter_by(empresa_id=empresa_id, chave='workflow.default').first()
+        if not config:
+            config = EmpresaConfig(
+                empresa_id=empresa_id,
+                chave='workflow.default',
+                valor=workflow.codigo or workflow.nome,
+            )
+            db.session.add(config)
+        else:
+            config.valor = workflow.codigo or workflow.nome
+        db.session.commit()
+        try:
+            ConfigService.clear_cache(empresa_id)
+        except Exception:
+            pass
+        return jsonify({
+            'ok': True,
+            'codigo': workflow.codigo or workflow.nome,
+            'nome': workflow.nome,
+        })
     except Exception as e:
         db.session.rollback()
         return jsonify({'ok': False, 'error': str(e)}), 500

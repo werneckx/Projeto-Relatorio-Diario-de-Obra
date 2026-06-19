@@ -497,6 +497,35 @@
                         </form>
                     </div>
 
+                    <div class="mt-6 p-5 bg-white rounded-2xl border border-slate-100 shadow-3xs">
+                        <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+                            <div class="space-y-1">
+                                <h4 class="text-sm font-bold text-slate-800">Workflow Padrão da Empresa</h4>
+                                <p class="text-xs text-slate-400 leading-relaxed">Usado quando a obra não possui um workflow próprio. A resolução segue a ordem Obra → Empresa → fallback do sistema.</p>
+                            </div>
+                            <div class="px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-700 text-xs font-semibold">
+                                Atual: {{ workflow_default_codigo or 'SIMPLES' }}
+                            </div>
+                        </div>
+                        <form @submit.prevent="salvarWorkflowDefault" class="mt-4 grid grid-cols-1 md:grid-cols-[minmax(0,1fr),auto] gap-3">
+                            <select x-model="workflowDefaultCodigo"
+                                class="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all">
+                                {% for wf in workflows_empresa_padrao %}
+                                <option value="{{ wf.codigo or wf.nome }}">{{ wf.nome }}{% if wf.codigo %} ({{ wf.codigo }}){% endif %}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit"
+                                class="px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 text-sm font-semibold shadow-md shadow-blue-600/10 transition-all">
+                                Definir como padrão
+                            </button>
+                        </form>
+                        {% if not workflows_empresa_padrao %}
+                        <div class="mt-3 p-3 rounded-xl bg-amber-50 border border-amber-100 text-amber-700 text-xs leading-relaxed">
+                            Nenhum workflow corporativo ativo está disponível para seleção. Crie ao menos um workflow sem escopo de obra para habilitar o padrão da empresa.
+                        </div>
+                        {% endif %}
+                    </div>
+
                     <div class="mt-6 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr),1.15fr] gap-6">
                         <div class="p-5 bg-slate-50 rounded-2xl border border-slate-200/60">
                             <div class="space-y-1 mb-4">
@@ -744,6 +773,7 @@
                     formResponsavel: { obra_id: '', papel_id: '', usuario_id: '', prioridade: 1 },
                     editarPapelVisible: false,
                     editarWorkflowVisible: false,
+                    workflowDefaultCodigo: '{{ workflow_default_codigo or "SIMPLES" }}',
                     selectedPapelId: null,
                     selectedWorkflowId: null,
 
@@ -840,6 +870,29 @@
                         } catch (err) {
                             console.error(err);
                             await showError('Erro de rede', 'Erro de rede ao criar workflow.');
+                        }
+                    },
+                    async salvarWorkflowDefault() {
+                        const meta = document.querySelector('meta[name="csrf-token"]');
+                        const csrf = meta ? meta.getAttribute('content') : null;
+                        if (!this.workflowDefaultCodigo) {
+                            return await showWarning('Workflow padrão ausente', 'Selecione um workflow corporativo para a empresa.');
+                        }
+                        try {
+                            const res = await fetch('{{ url_for('auth.api_update_workflow_default') }}', {
+                                method: 'POST',
+                                headers: Object.assign({ 'Content-Type': 'application/json' }, csrf ? { 'X-CSRFToken': csrf } : {}),
+                                body: JSON.stringify({ codigo: this.workflowDefaultCodigo })
+                            });
+                            const j = await res.json();
+                            if (res.ok && j.ok) {
+                                location.reload();
+                            } else {
+                                await showError('Erro ao definir workflow padrão', j.error || 'Erro ao definir workflow padrão.');
+                            }
+                        } catch (err) {
+                            console.error(err);
+                            await showError('Erro de rede', 'Erro de rede ao definir workflow padrão.');
                         }
                     },
                     async salvarResponsavelWorkflow() {
