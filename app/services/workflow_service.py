@@ -20,13 +20,12 @@ from flask_login import current_user
 from app import db
 from app.models.obra import ObraUsuario
 from app.models.rdo import RDO, RDOAprovacao, RDOAssinatura, RDOVersao
-from app.models.usuario import Papel, Usuario, UsuarioPapel
+from app.models.usuario import Papel, Usuario
 from app.models.workflow import (
     WorkflowDefinicao,
     WorkflowEtapa,
     WorkflowExecucao,
     WorkflowExecucaoEtapa,
-    WorkflowResponsavel,
 )
 from app.services.auditoria_service import AuditoriaService
 from app.services.config_service import ConfigService
@@ -147,34 +146,6 @@ class WorkflowService:
             db.or_(Papel.empresa_id == empresa_id, Papel.empresa_id.is_(None)),
         ).order_by(Papel.empresa_id.desc().nullsfirst(), Papel.id.asc()).first()
 
-    @staticmethod
-    def _resolver_usuario_por_matriz(
-        empresa_id: int,
-        obra_id: Optional[int],
-        papel_id: int,
-    ) -> Optional[int]:
-        if obra_id:
-            match_obra = WorkflowResponsavel.query.filter_by(
-                empresa_id=empresa_id,
-                obra_id=obra_id,
-                papel_id=papel_id,
-                ativo=True,
-            ).order_by(WorkflowResponsavel.prioridade.asc(), WorkflowResponsavel.id.asc()).first()
-            if match_obra:
-                return match_obra.usuario_id
-
-        match_empresa = WorkflowResponsavel.query.filter_by(
-            empresa_id=empresa_id,
-            obra_id=None,
-            papel_id=papel_id,
-            ativo=True,
-        ).order_by(WorkflowResponsavel.prioridade.asc(), WorkflowResponsavel.id.asc()).first()
-        if match_empresa:
-            return match_empresa.usuario_id
-
-        return None
-
-    @staticmethod
     def _resolver_aprovador(
         etapa: WorkflowEtapa,
         rdo: Optional[RDO] = None,
@@ -207,14 +178,6 @@ class WorkflowService:
             return None
 
         if rdo:
-            usuario_matriz = WorkflowService._resolver_usuario_por_matriz(
-                empresa_id=etapa.empresa_id,
-                obra_id=rdo.obra_id,
-                papel_id=papel_id,
-            )
-            if usuario_matriz:
-                return usuario_matriz
-
             usuario_obra = (
                 db.session.query(ObraUsuario)
                 .join(Usuario, Usuario.id == ObraUsuario.usuario_id)
@@ -230,33 +193,6 @@ class WorkflowService:
             )
             if usuario_obra:
                 return usuario_obra.usuario_id
-
-        usuario_papel = (
-            db.session.query(UsuarioPapel)
-            .join(Usuario, Usuario.id == UsuarioPapel.usuario_id)
-            .join(Papel, Papel.id == UsuarioPapel.papel_id)
-            .filter(
-                UsuarioPapel.papel_id == papel_id,
-                UsuarioPapel.ativo.is_(True),
-                Usuario.empresa_id == etapa.empresa_id,
-                Usuario.ativo.is_(True),
-                Papel.ativo.is_(True),
-                db.or_(UsuarioPapel.empresa_id == etapa.empresa_id, UsuarioPapel.empresa_id.is_(None)),
-            )
-            .order_by(UsuarioPapel.usuario_id.asc())
-            .first()
-        )
-        if usuario_papel:
-            return usuario_papel.usuario_id
-
-        usuario = Usuario.query.join(Usuario.papeis).filter(
-            Usuario.empresa_id == etapa.empresa_id,
-            Usuario.ativo.is_(True),
-            Papel.id == papel_id,
-            Papel.ativo.is_(True),
-        ).order_by(Usuario.id.asc()).first()
-        if usuario:
-            return usuario.id
 
         return None
 

@@ -202,3 +202,8 @@
 
 ### Rastreabilidade
 - [x] Garantir que alterações futuras de workflow não impactem execuções já iniciadas.
+
+## Branch: feature/workflow-resolucao-obra-usuario
+- [x] Resolver aprovadores do tipo PAPEL via `obra_usuario`.
+- [x] Tratar `workflow_responsaveis` como estrutura legada/opcional.
+- [x] Ajustar seeds para depender de `obra_usuario` na matriz principal.

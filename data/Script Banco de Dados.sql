@@ -20,6 +20,9 @@ DROP TABLE IF EXISTS arquivos;
 DROP TABLE IF EXISTS notificacoes;
 DROP TABLE IF EXISTS workflow_etapas;
 DROP TABLE IF EXISTS workflow_definicoes;
+DROP TABLE IF EXISTS workflow_execucao_etapas;
+DROP TABLE IF EXISTS workflow_execucoes;
+DROP TABLE IF EXISTS workflow_responsaveis;
 DROP TABLE IF EXISTS usuario_documento_aceite;
 DROP TABLE IF EXISTS documentos_sistema;
 DROP TABLE IF EXISTS rdo_versoes;
@@ -1532,7 +1535,10 @@ CREATE TABLE workflow_etapas (
     CONSTRAINT fk_workflow_etapa_modificado_por FOREIGN KEY (modificado_por) REFERENCES usuarios(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE workflow_responsaveis (
+-- LEGADO / OPCIONAL:
+-- Mantida por compatibilidade histórica. A resolução principal de aprovadores
+-- por papel deve ocorrer via obra_usuario.
+CREATE TABLE IF NOT EXISTS workflow_responsaveis (
     id INT AUTO_INCREMENT PRIMARY KEY,
     empresa_id INT NOT NULL,
     obra_id INT NULL,
@@ -2005,20 +2011,9 @@ INSERT INTO obra_usuario (id, empresa_id, obra_id, usuario_id, papel_id, ativo, 
 (21, 2, 20, 22, 3, TRUE, 21),
 (22, 2, 20, 23, 5, TRUE, 21);
 
-INSERT INTO workflow_responsaveis (empresa_id, obra_id, papel_id, usuario_id, prioridade, ativo, criado_por)
-SELECT 2, 20, p.id, u.usuario_id, 1, TRUE, 21
-FROM (
-    SELECT 'RESPONSAVEL_OBRA' AS papel_nome, 22 AS usuario_id
-    UNION ALL SELECT 'GESTOR_CONTRATO', 21
-    UNION ALL SELECT 'CLIENTE_OBRA', 23
-) u
-JOIN papeis p
-  ON p.nome = u.papel_nome
- AND (p.empresa_id = 2 OR p.empresa_id IS NULL)
-ON DUPLICATE KEY UPDATE
-    prioridade = VALUES(prioridade),
-    ativo = VALUES(ativo),
-    modificado_por = VALUES(criado_por);
+-- A resolucao oficial por papel ocorre em runtime via obra_usuario.
+-- workflow_responsaveis permanece apenas para compatibilidade legada
+-- e não recebe mais seed operacional por padrão.
 
 INSERT INTO frente_colaborador (id, empresa_id, frente_id, colaborador_id, funcao_id, data_inicio, ativo, criado_por) VALUES
 (20, 2, 20, 22, 1, '2026-01-08', TRUE, 21),

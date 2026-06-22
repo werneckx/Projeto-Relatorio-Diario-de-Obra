@@ -15,7 +15,7 @@ from app.models.workflow import (
 from app.models.configuracao import ConfigDefinicao, EmpresaConfig
 from app.models.rdo import RDO, RDOAprovacao, RDOVersao
 from app.models.usuario import Usuario, Papel
-from app.models.obra import Obra, FrenteTrabalho
+from app.models.obra import Obra, FrenteTrabalho, ObraUsuario
 from app.models.empresa import Empresa
 from app.services.workflow_service import WorkflowService, WorkflowResolucaoError
 
@@ -286,7 +286,7 @@ class TestGeracaoAprovacoes:
             db.session.add(
                 UsuarioPapel(
                     empresa_id=empresa.id,
-                    usuario_id=usuario2.id,
+                    usuario_id=usuario.id,
                     papel_id=papel_fluxo.id,
                     ativo=True,
                 )
@@ -316,11 +316,13 @@ class TestGeracaoAprovacoes:
             assert len(aprovacoes) == 1
             assert aprovacoes[0].aprovador_id == usuario2.id
 
-    def test_gerar_aprovacoes_por_matriz_explicita(
+    def test_gerar_aprovacoes_por_matriz_resolve_via_obra_usuario(
         self, app, db_session, empresa, obra, frente_trabalho, usuario, usuario2
     ):
         """A matriz explícita deve prevalecer na definição do aprovador por papel."""
         with app.app_context():
+            from app.models.obra import ObraUsuario
+
             papel_fluxo = Papel(
                 empresa_id=empresa.id,
                 nome="Responsavel Workflow",
@@ -353,12 +355,11 @@ class TestGeracaoAprovacoes:
             db.session.flush()
 
             db.session.add(
-                WorkflowResponsavel(
+                ObraUsuario(
                     empresa_id=empresa.id,
                     obra_id=obra.id,
                     papel_id=papel_fluxo.id,
                     usuario_id=usuario2.id,
-                    prioridade=1,
                     ativo=True,
                 )
             )
@@ -378,7 +379,7 @@ class TestGeracaoAprovacoes:
             assert len(aprovacoes) == 1
             assert aprovacoes[0].aprovador_id == usuario2.id
 
-    def test_gerar_aprovacoes_por_matriz_empresa_com_fallback(
+    def test_gerar_aprovacoes_por_matriz_empresa_resolve_pelo_vinculo_da_obra(
         self, app, db_session, empresa, obra, frente_trabalho, usuario, usuario2
     ):
         """Sem override na obra, a configuração da empresa deve ser usada."""
@@ -413,12 +414,11 @@ class TestGeracaoAprovacoes:
                 )
             )
             db.session.add(
-                WorkflowResponsavel(
+                ObraUsuario(
                     empresa_id=empresa.id,
-                    obra_id=None,
+                    obra_id=obra.id,
                     papel_id=papel_fluxo.id,
                     usuario_id=usuario.id,
-                    prioridade=1,
                     ativo=True,
                 )
             )
@@ -438,7 +438,7 @@ class TestGeracaoAprovacoes:
             assert len(aprovacoes) == 1
             assert aprovacoes[0].aprovador_id == usuario.id
 
-    def test_gerar_aprovacoes_por_matriz_obra_sobrescreve_empresa(
+    def test_gerar_aprovacoes_ignora_workflow_responsaveis_legado(
         self, app, db_session, empresa, obra, frente_trabalho, usuario, usuario2
     ):
         """A configuração por obra deve sobrescrever a matriz padrão da empresa."""
@@ -473,12 +473,11 @@ class TestGeracaoAprovacoes:
                 )
             )
             db.session.add(
-                WorkflowResponsavel(
+                ObraUsuario(
                     empresa_id=empresa.id,
-                    obra_id=None,
-                    papel_id=papel_fluxo.id,
+                    obra_id=obra.id,
                     usuario_id=usuario.id,
-                    prioridade=1,
+                    papel_id=papel_fluxo.id,
                     ativo=True,
                 )
             )
@@ -506,7 +505,7 @@ class TestGeracaoAprovacoes:
             aprovacoes = WorkflowService.gerar_aprovacoes_por_etapas(rdo.id, workflow.id)
 
             assert len(aprovacoes) == 1
-            assert aprovacoes[0].aprovador_id == usuario2.id
+            assert aprovacoes[0].aprovador_id == usuario.id
 
     def test_iniciar_execucao_cria_snapshot_por_rdo(
         self, app, db_session, empresa, obra, frente_trabalho, usuario, usuario2
@@ -604,12 +603,11 @@ class TestGeracaoAprovacoes:
                     obrigatorio=True,
                 )
             )
-            responsavel_empresa = WorkflowResponsavel(
+            responsavel_empresa = ObraUsuario(
                 empresa_id=empresa.id,
-                obra_id=None,
+                obra_id=obra.id,
                 papel_id=papel_fluxo.id,
                 usuario_id=usuario.id,
-                prioridade=1,
                 ativo=True,
             )
             db.session.add(responsavel_empresa)
@@ -630,12 +628,11 @@ class TestGeracaoAprovacoes:
 
             responsavel_empresa.ativo = False
             db.session.add(
-                WorkflowResponsavel(
+                ObraUsuario(
                     empresa_id=empresa.id,
                     obra_id=obra.id,
                     papel_id=papel_fluxo.id,
                     usuario_id=usuario2.id,
-                    prioridade=1,
                     ativo=True,
                 )
             )
