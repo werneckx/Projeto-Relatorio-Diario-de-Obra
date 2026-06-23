@@ -1,12 +1,14 @@
 ﻿from app.routes.auth_common import *
+from collections import defaultdict
 from datetime import datetime
 
 from app.services.config_service import ConfigService
 from app.models.configuracao import ConfigDefinicao, EmpresaConfig
 from app.models.usuario import Papel, Permissao, PapelPermissao
-from app.models.workflow import WorkflowDefinicao, WorkflowEtapa, WorkflowResponsavel
-from app.models.obra import Obra
+from app.models.workflow import WorkflowDefinicao, WorkflowEtapa, WorkflowExecucao, WorkflowExecucaoEtapa
+from app.models.obra import Obra, ObraUsuario
 from app.models.usuario import Usuario
+from app.services.workflow_service import WorkflowService
 
 
 def _ensure_workflow_default_definition():
@@ -31,16 +33,28 @@ def _ensure_workflow_default_definition():
 
 @auth_bp.app_context_processor
 def inject_company_info():
-    if current_user.is_authenticated:
-        empresa = getattr(current_user, 'empresa', None)
+    def _company_defaults(usuario=None):
+        return dict(
+            nome_empresa="Não logado" if usuario is None else "Não definida",
+            logo_empresa="logo/logo_sistema.png",
+            icone_empresa="logo/icone_sistema.png",
+            usuario_atual=usuario,
+        )
 
-        # `current_user.empresa` pode estar detached/expired no contexto de render.
-        # Recarrega a instância pela chave primária antes de acessar atributos.
+    try:
+        is_authenticated = current_user.is_authenticated
+    except Exception:
+        return _company_defaults()
+
+    if is_authenticated:
         empresa_db = None
-        if empresa is not None:
-            empresa_id = getattr(empresa, "id", None)
-            if empresa_id is not None:
-                empresa_db = db.session.get(type(empresa), empresa_id)
+        try:
+            empresa_id = getattr(current_user, "empresa_id", None)
+        except Exception:
+            return _company_defaults()
+
+        if empresa_id is not None:
+            empresa_db = db.session.get(Empresa, empresa_id)
 
         nome = empresa_db.nome if empresa_db is not None else "Não definida"
 
@@ -63,12 +77,7 @@ def inject_company_info():
             usuario_atual=current_user
         )
 
-    return dict(
-        nome_empresa="Não logado",
-        logo_empresa="logo/logo_sistema.png",
-        icone_empresa="logo/icone_sistema.png",
-        usuario_atual=None
-    )
+    return _company_defaults()
 
 @auth_bp.get("/empresa")
 @login_required
@@ -108,23 +117,219 @@ def empresa():
         if mapa.get('workflow.default')
         else 'SIMPLES'
     )
-    workflow_responsaveis = (
-        WorkflowResponsavel.query
-        .filter_by(empresa_id=empresa_id, ativo=True)
-        .outerjoin(Obra, Obra.id == WorkflowResponsavel.obra_id)
-        .outerjoin(Papel, Papel.id == WorkflowResponsavel.papel_id)
-        .outerjoin(Usuario, Usuario.id == WorkflowResponsavel.usuario_id)
-        .order_by(
-            WorkflowResponsavel.obra_id.isnot(None).asc(),
-            Obra.nome.asc(),
-            Papel.nome.asc(),
-            WorkflowResponsavel.prioridade.asc(),
-            WorkflowResponsavel.id.asc(),
-        )
-        .all()
-    )
     obras = Obra.query.filter_by(empresa_id=empresa_id).order_by(Obra.nome).all()
     permissoes_disponiveis = Permissao.query.filter((Permissao.empresa_id == empresa_id) | (Permissao.empresa_id.is_(None))).order_by(Permissao.chave).all()
+    workflow_default = WorkflowService._resolver_workflow_empresa_padrao(empresa_id) if empresa_id else None
+    workflow_etapas_map = {
+        workflow.id: WorkflowService.obter_etapas_ordenadas(workflow.id)
+        for workflow in workflows
+    }
+    workflow_execucoes = (
+        WorkflowExecucao.query
+        .filter_by(empresa_id=empresa_id)
+        .order_by(
+            WorkflowExecucao.ativo.desc(),
+            WorkflowExecucao.iniciado_em.desc(),
+            WorkflowExecucao.id.desc(),
+        )
+        .limit(12)
+        .all()
+    )
+    workflow_execucoes_all = WorkflowExecucao.query.filter_by(empresa_id=empresa_id).all()
+    workflow_execucao_etapas_pendentes = WorkflowExecucaoEtapa.query.filter_by(
+        empresa_id=empresa_id,
+        ativo=True,
+        status='PENDENTE',
+    ).all()
+    workflow_execucao_etapas_aprovadas = WorkflowExecucaoEtapa.query.filter_by(
+        empresa_id=empresa_id,
+        ativo=True,
+        status='APROVADO',
+    ).all()
+
+    workflow_status_counts = {
+        status: 0
+        for status in ['PENDENTE', 'EM_ANDAMENTO', 'APROVADO', 'REJEITADO', 'CANCELADO', 'REABERTO']
+    }
+    for execucao in workflow_execucoes_all:
+        workflow_status_counts[execucao.status] = workflow_status_counts.get(execucao.status, 0) + 1
+
+    workflow_obras_map = {
+        workflow.obra_id: workflow
+        for workflow in workflows
+        if workflow.obra_id is not None and workflow.ativo
+    }
+    obras_workflow_resumo = []
+    obras_herdando_total = 0
+    for obra in obras:
+        workflow_obra = workflow_obras_map.get(obra.id)
+        workflow_resolvido = workflow_obra or workflow_default
+        herda_empresa = workflow_obra is None and workflow_default is not None
+        if herda_empresa:
+            obras_herdando_total += 1
+        obras_workflow_resumo.append({
+            'obra': obra,
+            'workflow': workflow_resolvido,
+            'workflow_proprio': workflow_obra,
+            'herda_empresa': herda_empresa,
+            'tem_workflow': workflow_resolvido is not None,
+            'etapas_total': len(workflow_etapas_map.get(workflow_resolvido.id, [])) if workflow_resolvido else 0,
+        })
+
+    workflow_metricas = {
+        'total_definicoes': len(workflows),
+        'ativos_empresa': len(workflows_empresa_padrao),
+        'ativos_obra': sum(1 for workflow in workflows if workflow.obra_id is not None and workflow.ativo),
+        'obras_herdando': obras_herdando_total,
+        'obras_utilizando': sum(1 for resumo in obras_workflow_resumo if resumo['tem_workflow']),
+        'execucoes_total': len(workflow_execucoes_all),
+        'execucoes_ativas': sum(1 for execucao in workflow_execucoes_all if execucao.status in {'PENDENTE', 'EM_ANDAMENTO', 'REABERTO'}),
+        'execucoes_concluidas': sum(1 for execucao in workflow_execucoes_all if execucao.status == 'APROVADO'),
+        'execucoes_rejeitadas': sum(1 for execucao in workflow_execucoes_all if execucao.status == 'REJEITADO'),
+        'pendencias_aprovacao': len(workflow_execucao_etapas_pendentes),
+    }
+
+    workflows_resumo = []
+    for workflow in workflows:
+        etapas = workflow_etapas_map.get(workflow.id, [])
+        is_default = workflow_default is not None and workflow.id == workflow_default.id
+        workflows_resumo.append({
+            'item': workflow,
+            'etapas': etapas,
+            'etapas_total': len(etapas),
+            'is_default': is_default,
+            'escopo_label': workflow.obra.nome if workflow.obra_id and workflow.obra else 'Empresa',
+            'escopo_tipo': 'obra' if workflow.obra_id else 'empresa',
+        })
+
+    medias_etapa = {}
+    acumulado_etapa = defaultdict(lambda: {'segundos': 0.0, 'count': 0})
+    for etapa_execucao in workflow_execucao_etapas_aprovadas:
+        if not etapa_execucao.etapa_definicao_id or not etapa_execucao.aprovado_em or not etapa_execucao.criado_em:
+            continue
+        duracao = (etapa_execucao.aprovado_em - etapa_execucao.criado_em).total_seconds()
+        if duracao < 0:
+            continue
+        bucket = acumulado_etapa[etapa_execucao.etapa_definicao_id]
+        bucket['segundos'] += duracao
+        bucket['count'] += 1
+
+    for etapa_id, dados in acumulado_etapa.items():
+        media_horas = (dados['segundos'] / dados['count']) / 3600 if dados['count'] else 0
+        if media_horas >= 24:
+            medias_etapa[etapa_id] = f"{media_horas / 24:.1f} dias médio"
+        elif media_horas > 0:
+            medias_etapa[etapa_id] = f"{media_horas:.1f} h média"
+        else:
+            medias_etapa[etapa_id] = 'Sem média'
+
+    obra_usuario_relacoes = ObraUsuario.query.filter_by(empresa_id=empresa_id, ativo=True).all()
+    relacoes_por_obra = defaultdict(list)
+    relacoes_por_papel = defaultdict(list)
+    for relacao in obra_usuario_relacoes:
+        relacoes_por_obra[relacao.obra_id].append(relacao)
+        if relacao.papel_id:
+            relacoes_por_papel[relacao.papel_id].append(relacao)
+
+    workflow_matriz_responsabilidades = []
+    if workflow_default:
+        for etapa in workflow_etapas_map.get(workflow_default.id, []):
+            papel_id = etapa.papel_id or (etapa.papel.id if etapa.papel else None)
+            relacoes_papel = relacoes_por_papel.get(papel_id, [])
+            obras_vinculadas = len({rel.obra_id for rel in relacoes_papel if rel.obra_id})
+            usuario_atual = next(
+                (rel.colaborador for rel in relacoes_papel if rel.colaborador and rel.colaborador.ativo),
+                None,
+            )
+
+            if etapa.tipo_aprovador == 'RESPONSAVEL_OBRA':
+                workflow_matriz_responsabilidades.append({
+                    'papel': etapa.nome,
+                    'responsavel_atual': 'Responsáveis por obra',
+                    'obras_vinculadas': len([obra for obra in obras if obra.usuario_responsavel]),
+                })
+                continue
+
+            if etapa.usuario_aprovador:
+                workflow_matriz_responsabilidades.append({
+                    'papel': etapa.nome,
+                    'responsavel_atual': etapa.usuario_aprovador.nome,
+                    'obras_vinculadas': len(obras_workflow_resumo),
+                })
+                continue
+
+            workflow_matriz_responsabilidades.append({
+                'papel': etapa.papel.nome if etapa.papel else etapa.nome,
+                'responsavel_atual': usuario_atual.nome if usuario_atual else 'Não vinculado',
+                'obras_vinculadas': obras_vinculadas,
+            })
+
+    workflow_default_etapas_resumo = []
+    if workflow_default:
+        for etapa in workflow_etapas_map.get(workflow_default.id, []):
+            workflow_default_etapas_resumo.append({
+                'nivel': etapa.nivel,
+                'nome': etapa.nome,
+                'tipo': etapa.tipo_aprovador or 'USUARIO',
+                'papel': etapa.papel.nome if etapa.papel else (etapa.usuario_aprovador.nome if etapa.usuario_aprovador else etapa.nome),
+                'tempo_medio': medias_etapa.get(etapa.id, 'Sem histórico'),
+            })
+
+    obras_modal_payload = []
+    for resumo in obras_workflow_resumo:
+        obra = resumo['obra']
+        workflow_resolvido = resumo['workflow']
+        etapas_resolvidas = workflow_etapas_map.get(workflow_resolvido.id, []) if workflow_resolvido else []
+        execucoes_ativas_obra = [
+            execucao for execucao in workflow_execucoes_all
+            if execucao.obra_id == obra.id and execucao.status in {'PENDENTE', 'EM_ANDAMENTO', 'REABERTO'}
+        ]
+
+        matriz_obra = []
+        for etapa in etapas_resolvidas:
+            usuario_nome = 'Não definido'
+            if etapa.usuario_aprovador:
+                usuario_nome = etapa.usuario_aprovador.nome
+            elif etapa.tipo_aprovador == 'RESPONSAVEL_OBRA':
+                usuario_nome = obra.usuario_responsavel.nome if obra.usuario_responsavel else 'Não definido'
+            elif etapa.papel_id or etapa.papel:
+                papel_id = etapa.papel_id or (etapa.papel.id if etapa.papel else None)
+                relacao = next(
+                    (rel for rel in relacoes_por_obra.get(obra.id, []) if rel.papel_id == papel_id and rel.colaborador),
+                    None,
+                )
+                if relacao and relacao.colaborador:
+                    usuario_nome = relacao.colaborador.nome
+                else:
+                    usuario_nome = 'Não vinculado'
+
+            matriz_obra.append({
+                'papel': etapa.papel.nome if etapa.papel else etapa.nome,
+                'usuario': usuario_nome,
+            })
+
+        obras_modal_payload.append({
+            'obra_id': obra.id,
+            'obra_nome': obra.nome,
+            'workflow_nome': workflow_resolvido.nome if workflow_resolvido else 'Sem workflow',
+            'workflow_origem': 'Herdado da Empresa' if resumo['herda_empresa'] else ('Workflow Próprio da Obra' if resumo['workflow_proprio'] else 'Sem definição'),
+            'workflow_origem_tipo': 'empresa' if resumo['herda_empresa'] else ('obra' if resumo['workflow_proprio'] else 'indefinido'),
+            'responsavel': obra.usuario_responsavel.nome if obra.usuario_responsavel else 'Não definido',
+            'execucoes_ativas': len(execucoes_ativas_obra),
+            'matriz_total': len(matriz_obra),
+            'status': 'Com pendências' if execucoes_ativas_obra else 'Sem pendências',
+            'matriz': matriz_obra,
+            'workflow_etapas': [
+                {
+                    'nivel': etapa.nivel,
+                    'nome': etapa.nome,
+                    'tipo': etapa.tipo_aprovador or 'USUARIO',
+                    'papel': etapa.papel.nome if etapa.papel else etapa.nome,
+                    'tempo_medio': medias_etapa.get(etapa.id, 'Sem histórico'),
+                }
+                for etapa in etapas_resolvidas
+            ],
+        })
 
     # Permissão de edição efetiva (por segurança, permission_required já garante acesso)
     user = get_current_user()
@@ -136,7 +341,7 @@ def empresa():
             can_edit = False
 
     return render_template(
-        'empresa/empresa.html',
+        'empresa/empresa_v2.html',
         config_data=config_data,
         view_mode=True,
         config_map=mapa,
@@ -146,9 +351,18 @@ def empresa():
         papeis_workflow=papeis_workflow,
         usuarios_empresa=usuarios_empresa,
         workflows=workflows,
+        workflows_resumo=workflows_resumo,
         workflows_empresa_padrao=workflows_empresa_padrao,
         workflow_default_codigo=workflow_default_codigo,
-        workflow_responsaveis=workflow_responsaveis,
+        workflow_default=workflow_default,
+        workflow_default_etapas=workflow_etapas_map.get(workflow_default.id, []) if workflow_default else [],
+        workflow_default_etapas_resumo=workflow_default_etapas_resumo,
+        workflow_execucoes=workflow_execucoes,
+        workflow_status_counts=workflow_status_counts,
+        workflow_metricas=workflow_metricas,
+        workflow_matriz_responsabilidades=workflow_matriz_responsabilidades,
+        obras_workflow_resumo=obras_workflow_resumo,
+        obras_modal_payload=obras_modal_payload,
         obras=obras,
         permissoes_disponiveis=permissoes_disponiveis,
         can_edit=can_edit
@@ -449,113 +663,6 @@ def api_update_workflow_default():
             'codigo': workflow.codigo or workflow.nome,
             'nome': workflow.nome,
         })
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'ok': False, 'error': str(e)}), 500
-
-
-@auth_bp.post('/empresa/api_workflow_responsaveis')
-@login_required
-@permission_required('workflow.manage')
-def api_create_workflow_responsavel():
-    empresa_id = session.get('empresa_id')
-    data = request.get_json() or {}
-
-    papel_id = data.get('papel_id')
-    usuario_id = data.get('usuario_id')
-    obra_id = data.get('obra_id')
-    prioridade = data.get('prioridade', 1)
-
-    if not papel_id or not usuario_id:
-        return jsonify({'ok': False, 'error': 'Papel e usuário são obrigatórios.'}), 400
-
-    try:
-        papel_id = int(papel_id)
-        usuario_id = int(usuario_id)
-        obra_id = int(obra_id) if obra_id not in (None, '', 0, '0') else None
-        prioridade = int(prioridade or 1)
-    except Exception:
-        return jsonify({'ok': False, 'error': 'Parâmetros inválidos.'}), 400
-
-    papel = Papel.query.filter(
-        Papel.id == papel_id,
-        Papel.ativo.is_(True),
-        or_(Papel.empresa_id == empresa_id, Papel.empresa_id.is_(None)),
-    ).first()
-    if not papel:
-        return jsonify({'ok': False, 'error': 'Papel inválido para esta empresa.'}), 404
-
-    usuario = Usuario.query.filter_by(id=usuario_id, empresa_id=empresa_id, ativo=True).first()
-    if not usuario:
-        return jsonify({'ok': False, 'error': 'Usuário inválido para esta empresa.'}), 404
-
-    obra = None
-    if obra_id is not None:
-        obra = Obra.query.filter_by(id=obra_id, empresa_id=empresa_id).first()
-        if not obra:
-            return jsonify({'ok': False, 'error': 'Obra inválida para esta empresa.'}), 404
-
-    try:
-        (
-            WorkflowResponsavel.query
-            .filter_by(empresa_id=empresa_id, obra_id=obra_id, papel_id=papel_id, ativo=True)
-            .update(
-                {
-                    WorkflowResponsavel.ativo: False,
-                    WorkflowResponsavel.modificado_por: session.get('user_id'),
-                    WorkflowResponsavel.modificado_em: datetime.utcnow(),
-                },
-                synchronize_session=False,
-            )
-        )
-
-        responsavel = WorkflowResponsavel(
-            empresa_id=empresa_id,
-            obra_id=obra_id,
-            papel_id=papel_id,
-            usuario_id=usuario_id,
-            prioridade=max(prioridade, 1),
-            ativo=True,
-            criado_por=(session.get('user_id') if not current_app.config.get('TESTING') else None),
-        )
-        db.session.add(responsavel)
-        db.session.commit()
-        return jsonify({
-            'ok': True,
-            'responsavel': {
-                'id': responsavel.id,
-                'obra_id': responsavel.obra_id,
-                'obra_nome': obra.nome if obra else None,
-                'papel_id': responsavel.papel_id,
-                'papel_nome': papel.nome,
-                'usuario_id': responsavel.usuario_id,
-                'usuario_nome': usuario.nome,
-                'prioridade': responsavel.prioridade,
-            }
-        })
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'ok': False, 'error': str(e)}), 500
-
-
-@auth_bp.post('/empresa/api_workflow_responsaveis/<int:responsavel_id>/inativar')
-@login_required
-@permission_required('workflow.manage')
-def api_inativar_workflow_responsavel(responsavel_id):
-    empresa_id = session.get('empresa_id')
-    responsavel = WorkflowResponsavel.query.filter_by(
-        id=responsavel_id,
-        empresa_id=empresa_id,
-        ativo=True,
-    ).first()
-    if not responsavel:
-        return jsonify({'ok': False, 'error': 'Responsável não encontrado.'}), 404
-
-    try:
-        responsavel.ativo = False
-        responsavel.modificado_por = session.get('user_id')
-        db.session.commit()
-        return jsonify({'ok': True})
     except Exception as e:
         db.session.rollback()
         return jsonify({'ok': False, 'error': str(e)}), 500
