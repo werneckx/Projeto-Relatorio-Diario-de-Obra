@@ -42,6 +42,16 @@ class WorkflowService:
 
     DEFAULT_WORKFLOW_CODIGO = 'SIMPLES'
 
+    @staticmethod
+    def _order_by_nullable_asc(column):
+        """Compatível com MySQL: mantém nulos por último."""
+        return (column.is_(None), column.asc())
+
+    @staticmethod
+    def _order_by_nullable_desc(column):
+        """Compatível com MySQL: prioriza não nulos em ordem decrescente."""
+        return (column.is_(None), column.desc())
+
     # =========================================================================
     # RESOLUÇÃO DE WORKFLOW
     # =========================================================================
@@ -121,7 +131,7 @@ class WorkflowService:
             ativo=True,
         ).order_by(
             WorkflowEtapa.nivel.asc(),
-            WorkflowEtapa.ordem.asc().nullslast(),
+            *WorkflowService._order_by_nullable_asc(WorkflowEtapa.ordem),
             WorkflowEtapa.id.asc(),
         ).all()
 
@@ -144,7 +154,7 @@ class WorkflowService:
             Papel.nome == papel_codigo,
             Papel.ativo.is_(True),
             db.or_(Papel.empresa_id == empresa_id, Papel.empresa_id.is_(None)),
-        ).order_by(Papel.empresa_id.desc().nullsfirst(), Papel.id.asc()).first()
+        ).order_by(*WorkflowService._order_by_nullable_desc(Papel.empresa_id), Papel.id.asc()).first()
 
     def _resolver_aprovador(
         etapa: WorkflowEtapa,
@@ -156,9 +166,9 @@ class WorkflowService:
         Prioridade:
         1. Usuário específico
         2. Responsável da obra (quando aplicável)
-        3. Matriz explícita workflow_responsaveis
-        4. Papel alocado na obra
-        5. Papel atribuído ao usuário na empresa
+        3. Papel alocado na obra via obra_usuario
+
+        obra_usuario is the only official source for papel-based approvers.
         """
         if etapa.usuario_aprovador_id:
             return etapa.usuario_aprovador_id
@@ -478,7 +488,7 @@ class WorkflowService:
             WorkflowExecucaoEtapa.status == 'PENDENTE',
         ).order_by(
             WorkflowExecucaoEtapa.nivel.asc(),
-            WorkflowExecucaoEtapa.ordem.asc().nullslast(),
+            *WorkflowService._order_by_nullable_asc(WorkflowExecucaoEtapa.ordem),
             WorkflowExecucaoEtapa.id.asc(),
         ).first()
         return etapa
@@ -585,7 +595,7 @@ class WorkflowService:
             status='PENDENTE',
         ).order_by(
             WorkflowExecucaoEtapa.nivel.asc(),
-            WorkflowExecucaoEtapa.ordem.asc().nullslast(),
+            *WorkflowService._order_by_nullable_asc(WorkflowExecucaoEtapa.ordem),
             WorkflowExecucaoEtapa.id.asc(),
         ).first()
 
@@ -978,3 +988,6 @@ class WorkflowService:
             'vencido': vencido,
             'tempo_restante_horas': (vencimento - agora).total_seconds() / 3600 if not vencido else 0,
         }
+
+
+
