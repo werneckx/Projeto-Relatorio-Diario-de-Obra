@@ -192,13 +192,12 @@ def usuario(app, empresa, papel):
     from app.models.auditoria import AuditoriaLog
     from app.models.obra import ObraUsuario
     from app.models.rdo import RDOAprovacao, RDOAssinatura
-    from app.models.workflow import WorkflowResponsavel, WorkflowEtapa, WorkflowExecucaoEtapa
+    from app.models.workflow import WorkflowEtapa, WorkflowExecucaoEtapa
 
     db.session.query(UsuarioPapel).filter(UsuarioPapel.usuario_id == usr.id).delete(synchronize_session=False)
     db.session.query(ObraUsuario).filter(ObraUsuario.usuario_id == usr.id).delete(synchronize_session=False)
     db.session.query(RDOAprovacao).filter(RDOAprovacao.aprovador_id == usr.id).delete(synchronize_session=False)
     db.session.query(RDOAssinatura).filter(RDOAssinatura.usuario_id == usr.id).delete(synchronize_session=False)
-    db.session.query(WorkflowResponsavel).filter(WorkflowResponsavel.usuario_id == usr.id).delete(synchronize_session=False)
     db.session.query(WorkflowExecucaoEtapa).filter(
         WorkflowExecucaoEtapa.usuario_resolvido_id == usr.id
     ).delete(synchronize_session=False)
@@ -248,13 +247,12 @@ def usuario2(app, empresa, papel):
     from app.models.auditoria import AuditoriaLog
     from app.models.obra import ObraUsuario
     from app.models.rdo import RDOAprovacao, RDOAssinatura
-    from app.models.workflow import WorkflowResponsavel, WorkflowEtapa, WorkflowExecucaoEtapa
+    from app.models.workflow import WorkflowEtapa, WorkflowExecucaoEtapa
 
     db.session.query(UsuarioPapel).filter(UsuarioPapel.usuario_id == usr.id).delete(synchronize_session=False)
     db.session.query(ObraUsuario).filter(ObraUsuario.usuario_id == usr.id).delete(synchronize_session=False)
     db.session.query(RDOAprovacao).filter(RDOAprovacao.aprovador_id == usr.id).delete(synchronize_session=False)
     db.session.query(RDOAssinatura).filter(RDOAssinatura.usuario_id == usr.id).delete(synchronize_session=False)
-    db.session.query(WorkflowResponsavel).filter(WorkflowResponsavel.usuario_id == usr.id).delete(synchronize_session=False)
     db.session.query(WorkflowExecucaoEtapa).filter(
         WorkflowExecucaoEtapa.usuario_resolvido_id == usr.id
     ).delete(synchronize_session=False)
@@ -298,11 +296,10 @@ def usuario3(app, empresa, papel):
     yield usr
     from app.models.obra import ObraUsuario
     from app.models.rdo import RDOAprovacao, RDOAssinatura
-    from app.models.workflow import WorkflowResponsavel, WorkflowEtapa, WorkflowExecucaoEtapa
+    from app.models.workflow import WorkflowEtapa, WorkflowExecucaoEtapa
     db.session.query(ObraUsuario).filter(ObraUsuario.usuario_id == usr.id).delete(synchronize_session=False)
     db.session.query(RDOAprovacao).filter(RDOAprovacao.aprovador_id == usr.id).delete(synchronize_session=False)
     db.session.query(RDOAssinatura).filter(RDOAssinatura.usuario_id == usr.id).delete(synchronize_session=False)
-    db.session.query(WorkflowResponsavel).filter(WorkflowResponsavel.usuario_id == usr.id).delete(synchronize_session=False)
     db.session.query(WorkflowExecucaoEtapa).filter(
         WorkflowExecucaoEtapa.usuario_resolvido_id == usr.id
     ).delete(synchronize_session=False)
@@ -557,7 +554,6 @@ def obra(app, empresa, usuario, cliente):
         WorkflowEtapa,
         WorkflowExecucao,
         WorkflowExecucaoEtapa,
-        WorkflowResponsavel,
     )
     from app.models.obra import ObraUsuario, FrenteColaborador
 
@@ -606,9 +602,6 @@ def obra(app, empresa, usuario, cliente):
             synchronize_session=False
         )
 
-    db.session.query(WorkflowResponsavel).filter(WorkflowResponsavel.obra_id == obra_id).delete(
-        synchronize_session=False
-    )
     db.session.query(ObraUsuario).filter(ObraUsuario.obra_id == obra_id).delete(synchronize_session=False)
     db.session.query(Obra).filter(Obra.id == obra_id).delete(synchronize_session=False)
     db.session.commit()

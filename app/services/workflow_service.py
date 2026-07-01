@@ -12,15 +12,17 @@ Responsabilidades:
 
 from __future__ import annotations
 
+import json
 from datetime import timedelta
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from flask_login import current_user
 
 from app import db
-from app.models.obra import ObraUsuario
+from app.models.configuracao import ObraConfig
+from app.models.obra import Obra, ObraUsuario
 from app.models.rdo import RDO, RDOAprovacao, RDOAssinatura, RDOVersao
-from app.models.usuario import Papel, Usuario
+from app.models.usuario import Papel, PapelPermissao, Permissao, Usuario, UsuarioPapel
 from app.models.workflow import (
     WorkflowDefinicao,
     WorkflowEtapa,
@@ -41,6 +43,78 @@ class WorkflowService:
     """Serviço centralizado de workflow."""
 
     DEFAULT_WORKFLOW_CODIGO = 'SIMPLES'
+    WORKFLOW_DEFAULT_CONFIG_KEY = 'workflow.default'
+    WORKFLOW_ASSIGNMENTS_CONFIG_KEY = 'workflow.assignments'
+
+    @staticmethod
+    def _resumo_comportamento_workflow(workflow: WorkflowDefinicao) -> str:
+        tipo_fluxo = (workflow.tipo_fluxo or 'CONFIGURAVEL').upper()
+        if tipo_fluxo == 'SIMPLES':
+            return 'Fluxo enxuto com uma unica aprovacao obrigatoria.'
+        if tipo_fluxo == 'SEQUENCIAL':
+            return 'As etapas seguem uma ordem hierarquica, uma apos a outra.'
+        if tipo_fluxo == 'PARALELO':
+            return 'Todos os responsaveis do grupo recebem a etapa ao mesmo tempo.'
+        if tipo_fluxo == 'MATRIZ':
+            return 'O aprovador e resolvido conforme o papel configurado para a obra.'
+        if tipo_fluxo == 'CLIENTE_INTERNA':
+            return 'O fluxo percorre etapas internas e pode finalizar com aceite do cliente.'
+        return 'Fluxo configuravel com etapas, papeis e paralelismo definidos pela empresa ou pela obra.'
+
+    @staticmethod
+    def _montar_diagrama_preview_workflow(workflow: WorkflowDefinicao, etapas: Iterable[Dict[str, Any]]) -> Dict[str, Any]:
+        etapas_lista = list(etapas or [])
+        is_parallel = bool(workflow.aprovacao_paralela)
+        has_parallel_group = any(etapa.get('grupo_paralelo') not in (None, '', 0) for etapa in etapas_lista)
+
+        rows: List[Dict[str, Any]] = []
+        if is_parallel:
+            rows.append({
+                'kind': 'parallel',
+                'title': 'Aprovacao Paralela',
+                'subtitle': 'Todos recebem esta solicitacao ao mesmo tempo.',
+                'items': etapas_lista,
+            })
+        elif has_parallel_group:
+            grouped: Dict[Any, List[Dict[str, Any]]] = {}
+            sequenciais: List[Dict[str, Any]] = []
+            for etapa in etapas_lista:
+                grupo = etapa.get('grupo_paralelo')
+                if grupo in (None, '', 0):
+                    sequenciais.append(etapa)
+                    continue
+                grouped.setdefault(grupo, []).append(etapa)
+
+            for etapa in sequenciais:
+                rows.append({
+                    'kind': 'single',
+                    'title': etapa.get('nome') or 'Etapa',
+                    'subtitle': 'Etapa sequencial.',
+                    'items': [etapa],
+                })
+
+            for grupo, itens in sorted(grouped.items(), key=lambda item: item[0]):
+                itens_ordenados = sorted(itens, key=lambda etapa: (etapa.get('nivel') or 0, etapa.get('nome') or ''))
+                rows.append({
+                    'kind': 'parallel',
+                    'title': f'Grupo paralelo {grupo}',
+                    'subtitle': 'As etapas deste grupo disparam juntas.',
+                    'items': itens_ordenados,
+                })
+        else:
+            for etapa in etapas_lista:
+                rows.append({
+                    'kind': 'single',
+                    'title': etapa.get('nome') or 'Etapa',
+                    'subtitle': 'Etapa sequencial.',
+                    'items': [etapa],
+                })
+
+        return {
+            'tipo_fluxo': workflow.tipo_fluxo or 'CONFIGURAVEL',
+            'resumo': WorkflowService._resumo_comportamento_workflow(workflow),
+            'rows': rows,
+        }
 
     @staticmethod
     def _order_by_nullable_asc(column):
@@ -88,19 +162,89 @@ class WorkflowService:
         ).order_by(WorkflowDefinicao.id.asc()).first()
 
     @staticmethod
+    def _resolver_workflow_por_referencia(
+        empresa_id: int,
+        referencia: Optional[str],
+        obra_id: Optional[int] = None,
+        incluir_workflows_obra: bool = False,
+    ) -> Optional[WorkflowDefinicao]:
+        referencia_normalizada = str(referencia or '').strip()
+        if not referencia_normalizada:
+            return None
+
+        query = WorkflowDefinicao.query.filter(
+            WorkflowDefinicao.empresa_id == empresa_id,
+            WorkflowDefinicao.ativo.is_(True),
+        )
+        if incluir_workflows_obra:
+            if obra_id is not None:
+                query = query.filter(
+                    db.or_(
+                        WorkflowDefinicao.obra_id.is_(None),
+                        WorkflowDefinicao.obra_id == obra_id,
+                    )
+                )
+        else:
+            query = query.filter(WorkflowDefinicao.obra_id.is_(None))
+
+        referencia_lower = referencia_normalizada.lower()
+        workflow_id = None
+        if referencia_lower.startswith('id:'):
+            try:
+                workflow_id = int(referencia_normalizada.split(':', 1)[1].strip())
+            except (TypeError, ValueError):
+                workflow_id = None
+        elif referencia_normalizada.isdigit():
+            workflow_id = int(referencia_normalizada)
+
+        if workflow_id:
+            return query.filter(WorkflowDefinicao.id == workflow_id).order_by(WorkflowDefinicao.id.asc()).first()
+
+        return query.filter(
+            db.or_(
+                db.func.upper(db.func.trim(WorkflowDefinicao.codigo)) == referencia_normalizada.upper(),
+                db.func.upper(db.func.trim(WorkflowDefinicao.nome)) == referencia_normalizada.upper(),
+            )
+        ).order_by(WorkflowDefinicao.id.asc()).first()
+
+    @staticmethod
+    def _resolver_workflow_obra_por_configuracao(
+        empresa_id: int,
+        obra_id: Optional[int],
+    ) -> Optional[WorkflowDefinicao]:
+        if obra_id is None:
+            return None
+
+        config = ObraConfig.query.filter_by(
+            empresa_id=empresa_id,
+            obra_id=obra_id,
+            chave=WorkflowService.WORKFLOW_DEFAULT_CONFIG_KEY,
+        ).first()
+        if not config or not str(config.valor or '').strip():
+            return None
+
+        return WorkflowService._resolver_workflow_por_referencia(
+            empresa_id=empresa_id,
+            referencia=config.valor,
+            obra_id=obra_id,
+            incluir_workflows_obra=True,
+        )
+
+    @staticmethod
     def _resolver_workflow_empresa_padrao(empresa_id: int) -> Optional[WorkflowDefinicao]:
         try:
             codigo_padrao = ConfigService.obter_valor(
                 empresa_id=empresa_id,
                 obra_id=None,
-                chave='workflow.default',
+                chave=WorkflowService.WORKFLOW_DEFAULT_CONFIG_KEY,
             )
         except Exception:
             codigo_padrao = None
 
-        workflow = WorkflowService._resolver_workflow_empresa_por_codigo(
-            empresa_id,
-            codigo_padrao or WorkflowService.DEFAULT_WORKFLOW_CODIGO,
+        workflow = WorkflowService._resolver_workflow_por_referencia(
+            empresa_id=empresa_id,
+            referencia=codigo_padrao or WorkflowService.DEFAULT_WORKFLOW_CODIGO,
+            incluir_workflows_obra=False,
         )
         if workflow:
             return workflow
@@ -118,6 +262,10 @@ class WorkflowService:
     ) -> Optional[WorkflowDefinicao]:
         """Resolve o workflow aplicável pela cadeia obra -> empresa -> sistema."""
         workflow = WorkflowService._resolver_workflow_obra(empresa_id, obra_id)
+        if workflow:
+            return workflow
+
+        workflow = WorkflowService._resolver_workflow_obra_por_configuracao(empresa_id, obra_id)
         if workflow:
             return workflow
 
@@ -142,6 +290,78 @@ class WorkflowService:
             ativo=True,
         ).order_by(WorkflowExecucao.id.desc()).first()
 
+    @staticmethod
+    def listar_workflows_disponiveis_obra(
+        empresa_id: int,
+        obra_id: Optional[int] = None,
+    ) -> List[WorkflowDefinicao]:
+        query = WorkflowDefinicao.query.filter(
+            WorkflowDefinicao.empresa_id == empresa_id,
+            WorkflowDefinicao.ativo.is_(True),
+        )
+        if obra_id is not None:
+            query = query.filter(
+                db.or_(
+                    WorkflowDefinicao.obra_id.is_(None),
+                    WorkflowDefinicao.obra_id == obra_id,
+                )
+            )
+        else:
+            query = query.filter(WorkflowDefinicao.obra_id.is_(None))
+
+        return query.order_by(
+            WorkflowDefinicao.obra_id.isnot(None).desc(),
+            WorkflowDefinicao.nome.asc(),
+            WorkflowDefinicao.id.asc(),
+        ).all()
+
+    @staticmethod
+    def _obter_workflow_assignments_payload(
+        empresa_id: int,
+        obra_id: Optional[int],
+    ) -> Dict[str, Any]:
+        if not empresa_id or not obra_id:
+            return {}
+
+        row = ObraConfig.query.filter_by(
+            empresa_id=empresa_id,
+            obra_id=obra_id,
+            chave=WorkflowService.WORKFLOW_ASSIGNMENTS_CONFIG_KEY,
+        ).first()
+        if not row or not row.valor:
+            return {}
+
+        try:
+            payload = json.loads(row.valor) if isinstance(row.valor, str) else row.valor
+            return payload if isinstance(payload, dict) else {}
+        except Exception:
+            return {}
+
+    @staticmethod
+    def _obter_assignment_usuario_id(
+        empresa_id: int,
+        obra_id: Optional[int],
+        workflow_id: Optional[int],
+        etapa_id: Optional[int],
+    ) -> Optional[int]:
+        if not workflow_id or not etapa_id or not obra_id:
+            return None
+
+        payload = WorkflowService._obter_workflow_assignments_payload(empresa_id, obra_id)
+        payload_workflow_id = payload.get('workflow_id')
+        if payload_workflow_id not in (workflow_id, str(workflow_id)):
+            return None
+
+        assignments = payload.get('assignments') or {}
+        if not isinstance(assignments, dict):
+            return None
+
+        raw_value = assignments.get(str(etapa_id), assignments.get(etapa_id))
+        try:
+            return int(raw_value) if raw_value not in (None, '') else None
+        except (TypeError, ValueError):
+            return None
+
     # =========================================================================
     # RESOLUÇÃO DE RESPONSÁVEIS
     # =========================================================================
@@ -155,6 +375,372 @@ class WorkflowService:
             Papel.ativo.is_(True),
             db.or_(Papel.empresa_id == empresa_id, Papel.empresa_id.is_(None)),
         ).order_by(*WorkflowService._order_by_nullable_desc(Papel.empresa_id), Papel.id.asc()).first()
+
+    @staticmethod
+    def _papel_resolvido_etapa(etapa: WorkflowEtapa) -> Optional[Papel]:
+        papel = etapa.papel
+        if papel is None and etapa.papel_codigo:
+            papel = WorkflowService._resolver_papel_por_codigo(etapa.empresa_id, etapa.papel_codigo)
+        if papel is None and etapa.tipo_aprovador == 'CLIENTE':
+            papel = WorkflowService._resolver_papel_por_codigo(etapa.empresa_id, 'CLIENTE_OBRA')
+        return papel
+
+    @staticmethod
+    def _usuarios_elegiveis_etapa(
+        empresa_id: int,
+        obra_id: int,
+        etapa: WorkflowEtapa,
+    ) -> List[ObraUsuario]:
+        query = (
+            db.session.query(ObraUsuario)
+            .join(Usuario, Usuario.id == ObraUsuario.usuario_id)
+            .filter(
+                ObraUsuario.empresa_id == empresa_id,
+                ObraUsuario.obra_id == obra_id,
+                ObraUsuario.ativo.is_(True),
+                Usuario.ativo.is_(True),
+            )
+        )
+
+        if etapa.tipo_aprovador == 'USUARIO' and etapa.usuario_aprovador_id:
+            query = query.filter(ObraUsuario.usuario_id == etapa.usuario_aprovador_id)
+            return query.order_by(ObraUsuario.id.asc()).all()
+
+        if etapa.tipo_aprovador == 'RESPONSAVEL_OBRA':
+            obra = db.session.get(Obra, obra_id)
+            if not obra or not obra.usuario_responsavel_id:
+                return []
+            query = query.filter(ObraUsuario.usuario_id == obra.usuario_responsavel_id)
+            return query.order_by(ObraUsuario.id.asc()).all()
+
+        papel = WorkflowService._papel_resolvido_etapa(etapa)
+        papel_id = papel.id if papel else etapa.papel_id
+        if papel_id:
+            query = query.filter(ObraUsuario.papel_id == papel_id)
+        else:
+            return []
+
+        return query.order_by(ObraUsuario.id.asc()).all()
+
+    @staticmethod
+    def _usuarios_fallback_empresa(
+        empresa_id: int,
+    ) -> List[Usuario]:
+        return (
+            Usuario.query
+            .filter(
+                Usuario.empresa_id == empresa_id,
+                Usuario.ativo.is_(True),
+            )
+            .order_by(Usuario.email.asc(), Usuario.id.asc())
+            .all()
+        )
+
+    @staticmethod
+    def _usuario_elegivel_para_etapa(
+        empresa_id: int,
+        obra_id: int,
+        etapa: WorkflowEtapa,
+        usuario_id: Optional[int],
+    ) -> bool:
+        if not usuario_id:
+            return False
+
+        usuario_id_int = int(usuario_id)
+        if etapa.tipo_aprovador == 'USUARIO':
+            return etapa.usuario_aprovador_id == usuario_id_int
+
+        if etapa.tipo_aprovador == 'RESPONSAVEL_OBRA':
+            obra = db.session.get(Obra, obra_id)
+            return bool(obra and obra.usuario_responsavel_id == usuario_id_int)
+
+        elegiveis = WorkflowService._usuarios_elegiveis_etapa(empresa_id, obra_id, etapa)
+        if elegiveis:
+            return any(rel.usuario_id == usuario_id_int for rel in elegiveis)
+
+        usuario = db.session.get(Usuario, usuario_id_int)
+        return bool(usuario and usuario.empresa_id == empresa_id and usuario.ativo)
+
+    @staticmethod
+    def _garantir_vinculo_obra_usuario(
+        empresa_id: int,
+        obra_id: int,
+        usuario_id: int,
+        papel_id: Optional[int],
+    ) -> None:
+        vinculo = ObraUsuario.query.filter_by(
+            empresa_id=empresa_id,
+            obra_id=obra_id,
+            usuario_id=usuario_id,
+        ).first()
+        if not vinculo:
+            vinculo = ObraUsuario(
+                empresa_id=empresa_id,
+                obra_id=obra_id,
+                usuario_id=usuario_id,
+                papel_id=papel_id,
+                ativo=True,
+            )
+            db.session.add(vinculo)
+        else:
+            vinculo.ativo = True
+            if papel_id:
+                vinculo.papel_id = papel_id
+            db.session.add(vinculo)
+
+        db.session.flush()
+
+    @staticmethod
+    def _garantir_permissao_aprovacao(
+        empresa_id: int,
+        obra_id: int,
+        usuario_id: int,
+        papel_id: Optional[int],
+    ) -> None:
+        usuario = db.session.get(Usuario, usuario_id)
+        if not usuario or not usuario.ativo:
+            raise WorkflowResolucaoError(f'Usuário {usuario_id} inválido para aprovação.')
+
+        permissao = Permissao.query.filter(
+            Permissao.chave == 'rdo.approve',
+            Permissao.ativo.is_(True),
+            db.or_(Permissao.empresa_id.is_(None), Permissao.empresa_id == empresa_id),
+        ).order_by(*WorkflowService._order_by_nullable_desc(Permissao.empresa_id), Permissao.id.asc()).first()
+        if not permissao:
+            permissao = Permissao(
+                empresa_id=None,
+                chave='rdo.approve',
+                descricao='Aprovar ou rejeitar RDOs',
+                is_system=True,
+                ativo=True,
+            )
+            db.session.add(permissao)
+            db.session.flush()
+
+        papel_id_resolvido = papel_id
+        if not papel_id_resolvido:
+            usuario_papel_existente = UsuarioPapel.query.filter(
+                UsuarioPapel.usuario_id == usuario_id,
+                UsuarioPapel.ativo.is_(True),
+                UsuarioPapel.empresa_id == empresa_id,
+            ).order_by(UsuarioPapel.papel_id.asc()).first()
+            papel_id_resolvido = usuario_papel_existente.papel_id if usuario_papel_existente else None
+
+        if not papel_id_resolvido:
+            raise WorkflowResolucaoError(f'Usuário {usuario.nome} não possui papel elegível para receber permissão de aprovação.')
+
+        WorkflowService._garantir_vinculo_obra_usuario(
+            empresa_id=empresa_id,
+            obra_id=obra_id,
+            usuario_id=usuario_id,
+            papel_id=papel_id_resolvido,
+        )
+
+        usuario_papel = UsuarioPapel.query.filter_by(
+            empresa_id=empresa_id,
+            usuario_id=usuario_id,
+            papel_id=papel_id_resolvido,
+        ).first()
+        if not usuario_papel:
+            usuario_papel = UsuarioPapel(
+                empresa_id=empresa_id,
+                usuario_id=usuario_id,
+                papel_id=papel_id_resolvido,
+                ativo=True,
+            )
+            db.session.add(usuario_papel)
+        else:
+            usuario_papel.ativo = True
+            db.session.add(usuario_papel)
+
+        papel_perm = PapelPermissao.query.filter(
+            PapelPermissao.papel_id == papel_id_resolvido,
+            PapelPermissao.permissao_id == permissao.id,
+        ).order_by(*WorkflowService._order_by_nullable_desc(PapelPermissao.empresa_id), PapelPermissao.id.asc()).first()
+        if not papel_perm:
+            papel_perm = PapelPermissao(
+                empresa_id=empresa_id,
+                papel_id=papel_id_resolvido,
+                permissao_id=permissao.id,
+                ativo=True,
+            )
+            db.session.add(papel_perm)
+        else:
+            papel_perm.ativo = True
+            db.session.add(papel_perm)
+
+        db.session.flush()
+
+    @staticmethod
+    def validar_configuracao_workflow_obra(
+        empresa_id: int,
+        obra_id: int,
+        workflow_id: int,
+        assignments: Optional[Dict[str, Any]] = None,
+        auto_grant_signature: bool = False,
+    ) -> Dict[str, Any]:
+        workflow = db.session.get(WorkflowDefinicao, workflow_id)
+        if not workflow or workflow.empresa_id != empresa_id or not workflow.ativo:
+            raise WorkflowResolucaoError('Workflow selecionado é inválido para esta empresa.')
+
+        if workflow.obra_id not in (None, obra_id):
+            raise WorkflowResolucaoError('Workflow selecionado não pertence ao escopo desta obra.')
+
+        obra = db.session.get(Obra, obra_id)
+        if not obra or obra.empresa_id != empresa_id:
+            raise WorkflowResolucaoError('Obra inválida para configuração do workflow.')
+
+        assignments = assignments or {}
+        etapas = WorkflowService.obter_etapas_ordenadas(workflow.id)
+        etapas_resolvidas = []
+        erros = []
+
+        for etapa in etapas:
+            papel = WorkflowService._papel_resolvido_etapa(etapa)
+            papel_id = papel.id if papel else etapa.papel_id
+            elegiveis = WorkflowService._usuarios_elegiveis_etapa(empresa_id, obra_id, etapa)
+            fallback_usuarios = WorkflowService._usuarios_fallback_empresa(empresa_id) if not elegiveis else []
+            selected_raw = assignments.get(str(etapa.id), assignments.get(etapa.id))
+            selected_id = None
+            if selected_raw not in (None, ''):
+                try:
+                    selected_id = int(selected_raw)
+                except (TypeError, ValueError):
+                    selected_id = None
+
+            suggested_id = None
+            if etapa.tipo_aprovador == 'USUARIO' and etapa.usuario_aprovador_id:
+                suggested_id = etapa.usuario_aprovador_id
+            elif etapa.tipo_aprovador == 'RESPONSAVEL_OBRA' and obra.usuario_responsavel_id:
+                suggested_id = obra.usuario_responsavel_id
+            elif elegiveis:
+                suggested_id = elegiveis[0].usuario_id
+            elif fallback_usuarios:
+                suggested_id = fallback_usuarios[0].id
+
+            usuario_final_id = selected_id or suggested_id
+            if not usuario_final_id:
+                erros.append(f'A etapa "{etapa.nome}" não possui responsável elegível na obra.')
+                continue
+
+            if not WorkflowService._usuario_elegivel_para_etapa(empresa_id, obra_id, etapa, usuario_final_id):
+                erros.append(f'O usuário selecionado para a etapa "{etapa.nome}" não possui o papel exigido.')
+                continue
+
+            usuario_final = db.session.get(Usuario, usuario_final_id)
+            if not usuario_final or not usuario_final.ativo:
+                erros.append(f'O responsável da etapa "{etapa.nome}" está inativo.')
+                continue
+
+            usuarios_disponiveis = [
+                {
+                    'id': rel.usuario_id,
+                    'nome': rel.colaborador.nome if rel.colaborador else '',
+                    'email': rel.colaborador.email if rel.colaborador else '',
+                    'origem': 'obra',
+                }
+                for rel in elegiveis
+            ]
+            if not usuarios_disponiveis:
+                usuarios_disponiveis = [
+                    {
+                        'id': usuario.id,
+                        'nome': usuario.nome,
+                        'email': usuario.email,
+                        'origem': 'empresa',
+                    }
+                    for usuario in fallback_usuarios
+                ]
+                if not any(item['id'] == usuario_final.id for item in usuarios_disponiveis):
+                    usuarios_disponiveis.append({
+                        'id': usuario_final.id,
+                        'nome': usuario_final.nome,
+                        'email': usuario_final.email,
+                        'origem': 'empresa',
+                    })
+
+            if auto_grant_signature:
+                WorkflowService._garantir_permissao_aprovacao(empresa_id, obra_id, usuario_final_id, papel_id)
+
+            etapas_resolvidas.append({
+                'etapa_id': etapa.id,
+                'workflow_id': workflow.id,
+                'nivel': etapa.nivel,
+                'nome': etapa.nome,
+                'tipo_aprovador': etapa.tipo_aprovador,
+                'papel_id': papel_id,
+                'papel_nome': papel.nome if papel else None,
+                'usuario_aprovador_id': etapa.usuario_aprovador_id,
+                'grupo_paralelo': etapa.grupo_paralelo,
+                'assinatura_obrigatoria': bool(etapa.assinatura_obrigatoria),
+                'usuario_id': usuario_final_id,
+                'usuario_nome': usuario_final.nome,
+                'usuario_email': usuario_final.email,
+                'usuario_sugerido_id': suggested_id,
+                'fallback_empresa': not bool(elegiveis),
+                'usuarios_disponiveis': usuarios_disponiveis,
+            })
+
+        if erros:
+            raise WorkflowResolucaoError(' '.join(erros))
+
+        return {
+            'workflow': workflow,
+            'etapas': etapas_resolvidas,
+            'assignments': {str(item['etapa_id']): item['usuario_id'] for item in etapas_resolvidas},
+            'diagram': WorkflowService._montar_diagrama_preview_workflow(workflow, etapas_resolvidas),
+        }
+
+    @staticmethod
+    def construir_preview_workflow_obra(
+        empresa_id: int,
+        obra_id: int,
+        workflow_id: Optional[int] = None,
+        assignments: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        workflow = db.session.get(WorkflowDefinicao, workflow_id) if workflow_id else WorkflowService.resolver_workflow(empresa_id, obra_id)
+        if not workflow:
+            return {
+                'workflow_id': None,
+                'workflow_nome': 'Sem workflow',
+                'workflow_origem': 'Sem workflow',
+                'workflow_origem_tipo': 'indefinido',
+                'etapas': [],
+                'valid': False,
+                'errors': ['Nenhum workflow ativo encontrado para a obra.'],
+            }
+
+        payload = assignments or WorkflowService._obter_workflow_assignments_payload(empresa_id, obra_id).get('assignments') or {}
+        try:
+            validado = WorkflowService.validar_configuracao_workflow_obra(
+                empresa_id=empresa_id,
+                obra_id=obra_id,
+                workflow_id=workflow.id,
+                assignments=payload,
+                auto_grant_signature=False,
+            )
+            etapas = validado['etapas']
+            errors = []
+            valid = True
+        except WorkflowResolucaoError as exc:
+            etapas = []
+            errors = [str(exc)]
+            valid = False
+
+        return {
+            'workflow_id': workflow.id,
+            'workflow_nome': workflow.nome,
+            'workflow_codigo': workflow.codigo,
+            'workflow_descricao': workflow.descricao,
+            'tipo_fluxo': workflow.tipo_fluxo or 'CONFIGURAVEL',
+            'aprovacao_paralela': bool(workflow.aprovacao_paralela),
+            'workflow_origem': 'Workflow Próprio da Obra' if workflow.obra_id else 'Herdado da Empresa',
+            'workflow_origem_tipo': 'obra' if workflow.obra_id else 'empresa',
+            'etapas': etapas,
+            'diagram': WorkflowService._montar_diagrama_preview_workflow(workflow, etapas),
+            'valid': valid,
+            'errors': errors,
+        }
 
     def _resolver_aprovador(
         etapa: WorkflowEtapa,
@@ -170,18 +756,28 @@ class WorkflowService:
 
         obra_usuario is the only official source for papel-based approvers.
         """
+        if rdo:
+            manual_assignment_id = WorkflowService._obter_assignment_usuario_id(
+                empresa_id=etapa.empresa_id,
+                obra_id=rdo.obra_id,
+                workflow_id=etapa.workflow_id,
+                etapa_id=etapa.id,
+            )
+            if manual_assignment_id and WorkflowService._usuario_elegivel_para_etapa(
+                empresa_id=etapa.empresa_id,
+                obra_id=rdo.obra_id,
+                etapa=etapa,
+                usuario_id=manual_assignment_id,
+            ):
+                return manual_assignment_id
+
         if etapa.usuario_aprovador_id:
             return etapa.usuario_aprovador_id
 
-        papel = etapa.papel
-        if papel is None and etapa.papel_codigo:
-            papel = WorkflowService._resolver_papel_por_codigo(etapa.empresa_id, etapa.papel_codigo)
+        papel = WorkflowService._papel_resolvido_etapa(etapa)
 
         if etapa.tipo_aprovador == 'RESPONSAVEL_OBRA' and rdo and rdo.obra and rdo.obra.usuario_responsavel_id:
             return rdo.obra.usuario_responsavel_id
-
-        if etapa.tipo_aprovador == 'CLIENTE' and papel is None:
-            papel = WorkflowService._resolver_papel_por_codigo(etapa.empresa_id, 'CLIENTE_OBRA')
 
         papel_id = papel.id if papel else etapa.papel_id
         if not papel_id:
@@ -342,6 +938,13 @@ class WorkflowService:
             aprovador_id = WorkflowService._resolver_aprovador(etapa, rdo)
             if not aprovador_id:
                 raise WorkflowResolucaoError(f"Etapa {etapa.id} não possui aprovador definido")
+
+            WorkflowService._garantir_permissao_aprovacao(
+                empresa_id=rdo.empresa_id,
+                obra_id=rdo.obra_id,
+                usuario_id=aprovador_id,
+                papel_id=etapa.papel_id or (etapa.papel.id if etapa.papel else None),
+            )
 
             etapa_execucao = WorkflowExecucaoEtapa(
                 empresa_id=rdo.empresa_id,

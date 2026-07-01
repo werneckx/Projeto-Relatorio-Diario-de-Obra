@@ -22,7 +22,6 @@ DROP TABLE IF EXISTS workflow_etapas;
 DROP TABLE IF EXISTS workflow_definicoes;
 DROP TABLE IF EXISTS workflow_execucao_etapas;
 DROP TABLE IF EXISTS workflow_execucoes;
-DROP TABLE IF EXISTS workflow_responsaveis;
 DROP TABLE IF EXISTS usuario_documento_aceite;
 DROP TABLE IF EXISTS documentos_sistema;
 DROP TABLE IF EXISTS rdo_versoes;
@@ -1318,7 +1317,7 @@ INSERT INTO clientes (id, empresa_id, razao_social, nome_fantasia, cnpj, contato
 -- 4. Inserir Colaboradores (Próprios e Terceiros)
 -- Próprios
 INSERT INTO colaboradores (id, empresa_id, fornecedor_id, tipo, cadastro_pessoa_fisica, nome) VALUES
-(1, 2, NULL, 'PROPRIO', '123.456.789-00', 'Edson Rodrigues'),
+(1, 1, NULL, 'PROPRIO', '123.456.789-00', 'Edson Rodrigues'),
 (2, 1, NULL, 'PROPRIO', '222.333.444-55', 'João Pereira (Engenheiro)'),
 (3, 1, NULL, 'PROPRIO', '999.888.777-66', 'Ana Costa (Operadora)');
 
@@ -1337,7 +1336,7 @@ INSERT INTO colaboradores (id, empresa_id, cliente_id, tipo, nome) VALUES
 -- antes: 1=gestor(ADMIN), 2=operador, 3=supervisor
 -- agora: 1=admin master, 2=ex-usuario 1, 3=ex-usuario 2, 4=ex-usuario 3
 INSERT INTO usuarios (id, empresa_id, colaborador_id, email, senha_hash, is_system) VALUES
-(1, 2, 1, 'admin@nosde.com.br', 'scrypt:32768:8:1$NMXQmJ4GCOJVmNoe$c62100d1b8d581dddc096ec887df55f1a716ab08c8cbd8f6ff16eae875822597681b6b29e4633ef098f281d3b7ab47c7b8540be065efe25605c1ac82a441dbf8', TRUE), -- ADMIN MASTER (Acesso ao /admin exige papel global)
+(1, 1, 1, 'admin@nosde.com.br', 'scrypt:32768:8:1$NMXQmJ4GCOJVmNoe$c62100d1b8d581dddc096ec887df55f1a716ab08c8cbd8f6ff16eae875822597681b6b29e4633ef098f281d3b7ab47c7b8540be065efe25605c1ac82a441dbf8', TRUE), -- ADMIN MASTER (Acesso ao /admin exige papel global)
 (2, 1, 3, 'operador@horizonte.com.br', 'scrypt:32768:8:1$NMXQmJ4GCOJVmNoe$c62100d1b8d581dddc096ec887df55f1a716ab08c8cbd8f6ff16eae875822597681b6b29e4633ef098f281d3b7ab47c7b8540be065efe25605c1ac82a441dbf8', FALSE),
 (3, 1, 6, 'supervisor@bellavista.com.br', 'scrypt:32768:8:1$NMXQmJ4GCOJVmNoe$c62100d1b8d581dddc096ec887df55f1a716ab08c8cbd8f6ff16eae875822597681b6b29e4633ef098f281d3b7ab47c7b8540be065efe25605c1ac82a441dbf8', FALSE),
 (4, 1, 1, 'gestor@horizonte.com.br', 'scrypt:32768:8:1$NMXQmJ4GCOJVmNoe$c62100d1b8d581dddc096ec887df55f1a716ab08c8cbd8f6ff16eae875822597681b6b29e4633ef098f281d3b7ab47c7b8540be065efe25605c1ac82a441dbf8', FALSE);
@@ -1535,36 +1534,6 @@ CREATE TABLE workflow_etapas (
     CONSTRAINT fk_workflow_etapa_modificado_por FOREIGN KEY (modificado_por) REFERENCES usuarios(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- LEGADO / OPCIONAL:
--- Mantida por compatibilidade histórica. A resolução principal de aprovadores
--- por papel deve ocorrer via obra_usuario.
-CREATE TABLE IF NOT EXISTS workflow_responsaveis (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    empresa_id INT NOT NULL,
-    obra_id INT NULL,
-    papel_id INT NOT NULL,
-    usuario_id INT NOT NULL,
-    prioridade INT NOT NULL DEFAULT 1,
-    ativo BOOLEAN NOT NULL DEFAULT TRUE,
-
-    criado_por INT NULL,
-    modificado_por INT NULL,
-    criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
-    modificado_em DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-
-    UNIQUE KEY uk_workflow_responsavel_obra (obra_id, papel_id, usuario_id),
-    INDEX idx_workflow_resp_empresa (empresa_id),
-    INDEX idx_workflow_resp_obra (obra_id),
-    INDEX idx_workflow_resp_papel (papel_id),
-    INDEX idx_workflow_resp_usuario (usuario_id),
-
-    CONSTRAINT fk_workflow_resp_empresa FOREIGN KEY (empresa_id) REFERENCES empresa(id),
-    CONSTRAINT fk_workflow_resp_obra FOREIGN KEY (obra_id) REFERENCES obras(id),
-    CONSTRAINT fk_workflow_resp_papel FOREIGN KEY (papel_id) REFERENCES papeis(id),
-    CONSTRAINT fk_workflow_resp_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
-    CONSTRAINT fk_workflow_resp_criado_por FOREIGN KEY (criado_por) REFERENCES usuarios(id),
-    CONSTRAINT fk_workflow_resp_modificado_por FOREIGN KEY (modificado_por) REFERENCES usuarios(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE workflow_execucoes (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -1874,7 +1843,6 @@ INSERT INTO cad_listas (titulo, nome_interno, slug, modulo, tipo_lista, origem_d
 ('RDO - Versoes', 'rdo_versoes', 'rdo-versoes', 'RDO', 'Auditoria', 'MySQL', TRUE, TRUE),
 ('Workflows de Aprovacao', 'workflow_definicoes', 'workflow-definicoes', 'Sistema', 'Sistema', 'MySQL', TRUE, TRUE),
 ('Etapas do Workflow', 'workflow_etapas', 'workflow-etapas', 'Sistema', 'Sistema', 'MySQL', TRUE, TRUE),
-('Responsaveis do Workflow', 'workflow_responsaveis', 'workflow-responsaveis', 'Sistema', 'Configuracao', 'MySQL', TRUE, TRUE),
 ('Execucoes de Workflow', 'workflow_execucoes', 'workflow-execucoes', 'Sistema', 'Transacional', 'MySQL', TRUE, TRUE),
 ('Etapas da Execucao Workflow', 'workflow_execucao_etapas', 'workflow-execucao-etapas', 'Sistema', 'Transacional', 'MySQL', TRUE, TRUE),
 ('Notificacoes', 'notificacoes', 'notificacoes', 'Sistema', 'Transacional', 'MySQL', TRUE, TRUE),
@@ -2012,8 +1980,6 @@ INSERT INTO obra_usuario (id, empresa_id, obra_id, usuario_id, papel_id, ativo, 
 (22, 2, 20, 23, 5, TRUE, 21);
 
 -- A resolucao oficial por papel ocorre em runtime via obra_usuario.
--- workflow_responsaveis permanece apenas para compatibilidade legada
--- e não recebe mais seed operacional por padrão.
 
 INSERT INTO frente_colaborador (id, empresa_id, frente_id, colaborador_id, funcao_id, data_inicio, ativo, criado_por) VALUES
 (20, 2, 20, 22, 1, '2026-01-08', TRUE, 21),
@@ -2398,3 +2364,4 @@ SELECT e.id, 'workflow.sla_padrao_horas', '24' FROM empresa e
 ON DUPLICATE KEY UPDATE valor = valor;
 
 SET FOREIGN_KEY_CHECKS = 1;
+

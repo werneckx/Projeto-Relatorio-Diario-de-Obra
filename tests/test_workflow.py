@@ -10,11 +10,10 @@ from app.models.workflow import (
     WorkflowEtapa,
     WorkflowExecucao,
     WorkflowExecucaoEtapa,
-    WorkflowResponsavel,
 )
-from app.models.configuracao import ConfigDefinicao, EmpresaConfig
+from app.models.configuracao import ConfigDefinicao, EmpresaConfig, ObraConfig
 from app.models.rdo import RDO, RDOAprovacao, RDOVersao
-from app.models.usuario import Usuario, Papel
+from app.models.usuario import Usuario, Papel, Permissao, PapelPermissao
 from app.models.obra import Obra, FrenteTrabalho, ObraUsuario
 from app.models.empresa import Empresa
 from app.services.workflow_service import WorkflowService, WorkflowResolucaoError
@@ -150,6 +149,43 @@ class TestWorkflowResolucao:
         with app.app_context():
             resultado = WorkflowService.resolver_workflow(empresa.id, obra.id)
             assert resultado is None
+
+    def test_resolver_workflow_obra_por_configuracao(self, app, db_session, empresa, obra):
+        """A obra pode sobrescrever o workflow padrao via ObraConfig."""
+        with app.app_context():
+            db.session.add(
+                ConfigDefinicao(
+                    chave='workflow.default',
+                    descricao='Workflow padrao',
+                    tipo='STRING',
+                    valor_padrao='PADRAO',
+                    is_system=True,
+                )
+            )
+            workflow_empresa_a = WorkflowDefinicao(
+                empresa_id=empresa.id,
+                obra_id=None,
+                codigo='A',
+                nome='Workflow A',
+                ativo=True,
+            )
+            workflow_empresa_b = WorkflowDefinicao(
+                empresa_id=empresa.id,
+                obra_id=None,
+                codigo='B',
+                nome='Workflow B',
+                ativo=True,
+            )
+            db.session.add_all([workflow_empresa_a, workflow_empresa_b])
+            db.session.flush()
+
+            db.session.add(EmpresaConfig(empresa_id=empresa.id, chave='workflow.default', valor='B'))
+            db.session.add(ObraConfig(empresa_id=empresa.id, obra_id=obra.id, chave='workflow.default', valor='A'))
+            db.session.commit()
+
+            resultado = WorkflowService.resolver_workflow(empresa.id, obra.id)
+            assert resultado is not None
+            assert resultado.id == workflow_empresa_a.id
 
 
 class TestGeracaoAprovacoes:
@@ -316,6 +352,196 @@ class TestGeracaoAprovacoes:
             assert len(aprovacoes) == 1
             assert aprovacoes[0].aprovador_id == usuario2.id
 
+    def test_validar_configuracao_workflow_obra_auto_define_responsavel_e_permissao(
+        self, app, db_session, empresa, obra, usuario2
+    ):
+        """Selecionar workflow da obra resolve o usuario por papel e garante permissao de aprovacao."""
+        with app.app_context():
+            papel_fluxo = Papel(
+                empresa_id=empresa.id,
+                nome="COORDENADOR_OBRA",
+                ativo=True,
+            )
+            db.session.add(papel_fluxo)
+            db.session.flush()
+
+            workflow = WorkflowDefinicao(
+                empresa_id=empresa.id,
+                obra_id=None,
+                codigo="COORD",
+                nome="Workflow Coordenacao",
+                ativo=True,
+            )
+            db.session.add(workflow)
+            db.session.flush()
+
+            db.session.add(
+                WorkflowEtapa(
+                    empresa_id=empresa.id,
+                    workflow_id=workflow.id,
+                    nivel=1,
+                    nome="Aprovacao Tecnica",
+                    tipo_aprovador='PAPEL',
+                    papel_id=papel_fluxo.id,
+                    assinatura_obrigatoria=True,
+                    ativo=True,
+                )
+            )
+            db.session.add(
+                ObraUsuario(
+                    empresa_id=empresa.id,
+                    obra_id=obra.id,
+                    usuario_id=usuario2.id,
+                    papel_id=papel_fluxo.id,
+                    ativo=True,
+                )
+            )
+            db.session.commit()
+
+            validado = WorkflowService.validar_configuracao_workflow_obra(
+                empresa_id=empresa.id,
+                obra_id=obra.id,
+                workflow_id=workflow.id,
+                assignments={},
+                auto_grant_signature=True,
+            )
+
+            assert len(validado['etapas']) == 1
+            assert validado['etapas'][0]['usuario_id'] == usuario2.id
+
+            usuario2_atualizado = db.session.get(Usuario, usuario2.id)
+            assert usuario2_atualizado.tem_permissao('rdo.approve') is True
+
+    def test_validar_configuracao_workflow_obra_fallback_para_usuarios_da_empresa(
+        self, app, db_session, empresa, obra, usuario2
+    ):
+        """Sem elegiveis na obra, permite selecionar usuario ativo da empresa e vincula a obra automaticamente."""
+        with app.app_context():
+            papel_fluxo = Papel(
+                empresa_id=empresa.id,
+                nome="GERENTE_OBRA",
+                ativo=True,
+            )
+            db.session.add(papel_fluxo)
+            db.session.flush()
+
+            workflow = WorkflowDefinicao(
+                empresa_id=empresa.id,
+                obra_id=None,
+                codigo="GER",
+                nome="Workflow Gerencial",
+                ativo=True,
+            )
+            db.session.add(workflow)
+            db.session.flush()
+
+            etapa = WorkflowEtapa(
+                empresa_id=empresa.id,
+                workflow_id=workflow.id,
+                nivel=1,
+                nome="Aprovacao Final",
+                tipo_aprovador='PAPEL',
+                papel_id=papel_fluxo.id,
+                assinatura_obrigatoria=True,
+                ativo=True,
+            )
+            db.session.add(etapa)
+            db.session.commit()
+
+            preview = WorkflowService.construir_preview_workflow_obra(
+                empresa_id=empresa.id,
+                obra_id=obra.id,
+                workflow_id=workflow.id,
+            )
+            assert preview['etapas'][0]['fallback_empresa'] is True
+            assert any(option['id'] == usuario2.id for option in preview['etapas'][0]['usuarios_disponiveis'])
+
+            validado = WorkflowService.validar_configuracao_workflow_obra(
+                empresa_id=empresa.id,
+                obra_id=obra.id,
+                workflow_id=workflow.id,
+                assignments={str(etapa.id): usuario2.id},
+                auto_grant_signature=True,
+            )
+
+            assert validado['etapas'][0]['usuario_id'] == usuario2.id
+            vinculo = ObraUsuario.query.filter_by(
+                empresa_id=empresa.id,
+                obra_id=obra.id,
+                usuario_id=usuario2.id,
+            ).first()
+            assert vinculo is not None
+            assert vinculo.papel_id == papel_fluxo.id
+
+    def test_validar_configuracao_workflow_reaproveita_papel_permissao_existente(
+        self, app, db_session, empresa, obra, usuario2
+    ):
+        """Nao deve recriar papel_permissao quando o papel ja possui rdo.approve."""
+        with app.app_context():
+            papel_fluxo = Papel(
+                empresa_id=empresa.id,
+                nome="COORDENADOR_FLUXO",
+                ativo=True,
+            )
+            db.session.add(papel_fluxo)
+            db.session.flush()
+
+            permissao = Permissao(
+                empresa_id=None,
+                chave='rdo.approve',
+                descricao='Aprovar ou rejeitar RDOs',
+                is_system=True,
+                ativo=True,
+            )
+            db.session.add(permissao)
+            db.session.flush()
+
+            db.session.add(
+                PapelPermissao(
+                    empresa_id=None,
+                    papel_id=papel_fluxo.id,
+                    permissao_id=permissao.id,
+                    ativo=True,
+                )
+            )
+
+            workflow = WorkflowDefinicao(
+                empresa_id=empresa.id,
+                obra_id=None,
+                codigo="COORD",
+                nome="Workflow Coordenacao",
+                ativo=True,
+            )
+            db.session.add(workflow)
+            db.session.flush()
+
+            etapa = WorkflowEtapa(
+                empresa_id=empresa.id,
+                workflow_id=workflow.id,
+                nivel=1,
+                nome="Aprovacao Coordenada",
+                tipo_aprovador='PAPEL',
+                papel_id=papel_fluxo.id,
+                assinatura_obrigatoria=True,
+                ativo=True,
+            )
+            db.session.add(etapa)
+            db.session.commit()
+
+            validado = WorkflowService.validar_configuracao_workflow_obra(
+                empresa_id=empresa.id,
+                obra_id=obra.id,
+                workflow_id=workflow.id,
+                assignments={str(etapa.id): usuario2.id},
+                auto_grant_signature=True,
+            )
+
+            assert validado['etapas'][0]['usuario_id'] == usuario2.id
+            assert PapelPermissao.query.filter_by(
+                papel_id=papel_fluxo.id,
+                permissao_id=permissao.id,
+            ).count() == 1
+
     def test_gerar_aprovacoes_por_matriz_resolve_via_obra_usuario(
         self, app, db_session, empresa, obra, frente_trabalho, usuario, usuario2
     ):
@@ -438,7 +664,7 @@ class TestGeracaoAprovacoes:
             assert len(aprovacoes) == 1
             assert aprovacoes[0].aprovador_id == usuario.id
 
-    def test_gerar_aprovacoes_ignora_workflow_responsaveis_legado(
+    def test_gerar_aprovacoes_por_papel_sem_dependencia_de_estrutura_auxiliar(
         self, app, db_session, empresa, obra, frente_trabalho, usuario, usuario2
     ):
         """A configuração por obra deve sobrescrever a matriz padrão da empresa."""
@@ -478,16 +704,6 @@ class TestGeracaoAprovacoes:
                     obra_id=obra.id,
                     usuario_id=usuario.id,
                     papel_id=papel_fluxo.id,
-                    ativo=True,
-                )
-            )
-            db.session.add(
-                WorkflowResponsavel(
-                    empresa_id=empresa.id,
-                    obra_id=obra.id,
-                    papel_id=papel_fluxo.id,
-                    usuario_id=usuario2.id,
-                    prioridade=1,
                     ativo=True,
                 )
             )

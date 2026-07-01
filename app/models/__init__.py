@@ -11,7 +11,6 @@ from app.models.configuracao import ConfigDefinicao, EmpresaConfig, ObraConfig
 from app.models.workflow import (
     WorkflowDefinicao,
     WorkflowEtapa,
-    WorkflowResponsavel,
     WorkflowExecucao,
     WorkflowExecucaoEtapa,
 )

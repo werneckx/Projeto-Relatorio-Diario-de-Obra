@@ -98,37 +98,6 @@ class WorkflowEtapa(db.Model):
         return f'<WorkflowEtapa Workflow:{self.workflow_id} Nivel:{self.nivel}>'
 
 
-class WorkflowResponsavel(db.Model):
-    __tablename__ = "workflow_responsaveis"
-
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    empresa_id = db.Column(db.Integer, db.ForeignKey('empresa.id'), nullable=False, index=True)
-    obra_id = db.Column(db.Integer, db.ForeignKey('obras.id'), nullable=True, index=True)
-    papel_id = db.Column(db.Integer, db.ForeignKey('papeis.id'), nullable=False, index=True)
-    usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=False, index=True)
-    prioridade = db.Column(db.Integer, nullable=False, default=1)
-    ativo = db.Column(db.Boolean, nullable=False, default=True)
-
-    criado_por = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=True)
-    modificado_por = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=True)
-    criado_em = db.Column(db.DateTime, default=utcnow_naive)
-    modificado_em = db.Column(db.DateTime, default=utcnow_naive, onupdate=utcnow_naive)
-
-    empresa = db.relationship('Empresa')
-    obra = db.relationship('Obra')
-    papel = db.relationship('Papel', foreign_keys=[papel_id])
-    usuario = db.relationship('Usuario', foreign_keys=[usuario_id])
-    criador = db.relationship('Usuario', foreign_keys=[criado_por])
-    modificador = db.relationship('Usuario', foreign_keys=[modificado_por])
-
-    __table_args__ = (
-        db.UniqueConstraint('obra_id', 'papel_id', 'usuario_id', name='uk_workflow_responsavel_obra'),
-    )
-
-    def __repr__(self):
-        return f'<WorkflowResponsavel Obra:{self.obra_id} Papel:{self.papel_id} Usuario:{self.usuario_id}>'
-
-
 class WorkflowExecucao(db.Model):
     __tablename__ = "workflow_execucoes"
 

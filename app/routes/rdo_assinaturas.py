@@ -10,7 +10,7 @@ from app.utils.serializers import safe_model_to_dict
 
 @auth_bp.route("/assinar-rdo/<int:rdo_id>/salvar-workflow", methods=["POST"])
 @login_required
-@role_required(PERM_MANAGEMENT)  # Apenas Gestor/Admin define fluxo
+@permission_required('rdo.approve')
 def salvar_workflow_assinaturas(rdo_id):
     rdo = RDO.query.filter_by(id=rdo_id, ativo=True).first_or_404()
 
@@ -84,7 +84,7 @@ def salvar_workflow_assinaturas(rdo_id):
 
 @auth_bp.route("/assinar-rdo/<int:rdo_id>/aprovar-rdo", methods=["POST"])
 @login_required
-@role_required(PERM_SIGNATURE)  # Todos (exceto Leitor) podem assinar se estiverem no fluxo
+@permission_required('rdo.approve')
 def assinar_rdo(rdo_id):
     user_id = session.get("user_id")
     rdo = RDO.query.filter_by(id=rdo_id, ativo=True).first_or_404()
@@ -213,7 +213,7 @@ def assinar_rdo(rdo_id):
 
 @auth_bp.route("/assinar-rdo/<int:id_assinatura>/rejeitar-rdo", methods=["POST"])
 @login_required
-@role_required(PERM_SIGNATURE)
+@permission_required('rdo.approve')
 def rejeitar_assinatura(id_assinatura):
     dados = request.get_json() or {}
     motivo = dados.get('motivo')
