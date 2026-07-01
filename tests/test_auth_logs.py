@@ -27,6 +27,7 @@ def create_admin_user():
         empresa_id=empresa.id,
         colaborador_id=colaborador.id,
         ativo=True,
+        troca_senha_obrigatoria=False,
     )
     usuario.set_senha("Senha123")
     db.session.add(usuario)
@@ -99,6 +100,59 @@ def test_invalid_login_creates_failure_log(client, app):
         assert isinstance(acesso_log.detalhes, dict)
         assert 'motivo' in acesso_log.detalhes
         assert isinstance(acesso_log.detalhes['motivo'], str)
+
+
+def test_login_com_empresa_invalida_nao_cria_sessao(client, app):
+    with app.app_context():
+        empresa = Empresa(nome="Empresa Inativa", ativo=False)
+        db.session.add(empresa)
+        db.session.flush()
+
+        papel = Papel(nome="ADMIN", ativo=True, is_system=True)
+        db.session.add(papel)
+        db.session.flush()
+
+        usuario = Usuario(
+            email="empresa-invalida@test.com",
+            empresa_id=empresa.id,
+            ativo=True,
+        )
+        usuario.set_senha("Senha123")
+        db.session.add(usuario)
+        db.session.flush()
+
+        db.session.add(
+            UsuarioPapel(
+                empresa_id=empresa.id,
+                usuario_id=usuario.id,
+                papel_id=papel.id,
+                ativo=True,
+            )
+        )
+        db.session.commit()
+        usuario_id = usuario.id
+
+    csrf_token = client.get('/auth/login').data.decode('utf-8')
+    from re import search
+    m = search(r'name="csrf_token" value="([^"]+)"', csrf_token)
+    token = m.group(1) if m else None
+
+    response = client.post(
+        "/auth/login",
+        data={"email": "empresa-invalida@test.com", "senha": "Senha123", "csrf_token": token},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 302
+    assert "/auth/login" in response.headers["Location"]
+
+    with app.app_context():
+        acesso_log = AcessoLog.query.filter_by(usuario_id=usuario_id, acao='LOGIN_FALHA').first()
+        sessao = SessaoUsuario.query.filter_by(usuario_id=usuario_id, ativa=True).first()
+        assert acesso_log is not None
+        assert acesso_log.empresa_id is None
+        assert acesso_log.detalhes["motivo"] == "empresa invalida"
+        assert sessao is None
 
 
 def test_solicitar_recuperacao_senha_loga_evento(client, app):
@@ -205,7 +259,8 @@ def test_logout_registra_evento(client, app):
     with app.app_context():
         # Verificar que logout foi registrado
         acesso_log = AcessoLog.query.filter_by(
-            acao='LOGOUT'
+            usuario_id=user_id,
+            acao='LOGOUT',
         ).first()
         
         if acesso_log is not None:
