@@ -341,7 +341,7 @@ def empresa():
             can_edit = False
 
     return render_template(
-        'empresa/empresa_v2.html',
+        'empresa/empresa.html',
         config_data=config_data,
         view_mode=True,
         config_map=mapa,
