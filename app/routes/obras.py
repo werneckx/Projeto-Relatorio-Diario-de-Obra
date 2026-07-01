@@ -1,9 +1,27 @@
-﻿from app.routes.auth_common import *
+import json
+
+from app.routes.auth_common import *
 from app.models.cliente import Cliente
+from app.models.configuracao import ConfigDefinicao, EmpresaConfig, ObraConfig
 from app.models.obra import FrenteTrabalho, FrenteColaborador, ObraUsuario
+from app.models.workflow import WorkflowDefinicao, WorkflowEtapa
+from app.services.config_service import ConfigService
+from app.services.workflow_service import WorkflowResolucaoError, WorkflowService
 from app.utils.export_service import make_csv_response, make_xlsx_response, make_pdf_response
-from app.models.usuario import Colaborador
+from app.models.usuario import Colaborador, Papel, UsuarioPapel
 from sqlalchemy import func
+
+WORKFLOW_OBRA_MVP_CODES = {"SIMPLES", "SEQUENCIAL", "PARALELO"}
+
+
+def _is_workflow_obra_mvp(workflow):
+    return bool(
+        workflow
+        and (
+            (workflow.codigo or "").upper() in WORKFLOW_OBRA_MVP_CODES
+            or (workflow.tipo_fluxo or "").upper() in WORKFLOW_OBRA_MVP_CODES
+        )
+    )
 
 OBRA_EXPORT_COLUMNS = [
     ("id", "ID"),
@@ -35,6 +53,484 @@ def _get_centros_custo_options(empresa_id):
 
 def _current_empresa_id(user=None):
     return session.get("empresa_id") or getattr(user, "empresa_id", None)
+
+
+def _ensure_obra_workflow_config_definitions():
+    definitions = {
+        WorkflowService.WORKFLOW_DEFAULT_CONFIG_KEY: {
+            "descricao": "Workflow padrao da obra",
+            "tipo": "STRING",
+            "valor_padrao": "",
+        },
+        WorkflowService.WORKFLOW_ASSIGNMENTS_CONFIG_KEY: {
+            "descricao": "Responsaveis por etapa do workflow da obra",
+            "tipo": "JSON",
+            "valor_padrao": "{}",
+        },
+    }
+    changed = False
+    for chave, meta in definitions.items():
+        definicao = ConfigDefinicao.query.filter_by(chave=chave).first()
+        if definicao:
+            continue
+        definicao = ConfigDefinicao(
+            chave=chave,
+            descricao=meta["descricao"],
+            tipo=meta["tipo"],
+            valor_padrao=meta["valor_padrao"],
+            is_system=True,
+        )
+        db.session.add(definicao)
+        changed = True
+    if changed:
+        db.session.flush()
+
+
+def _build_obra_workflow_setup_context(empresa_id, obra_id=None):
+    base = {
+        "enabled": bool(obra_id),
+        "available_workflows": [],
+        "workflow_previews": {},
+        "user_options": [],
+        "selected_workflow_id": None,
+        "selected_workflow_reference": "",
+        "preview": {
+            "workflow_id": None,
+            "workflow_nome": "Sem workflow",
+            "workflow_origem": "Sem workflow",
+            "workflow_origem_tipo": "indefinido",
+            "etapas": [],
+            "valid": False,
+            "errors": ["Salve a obra primeiro para configurar um workflow individual."] if not obra_id else [],
+        },
+    }
+    if not empresa_id:
+        return base
+
+    _ensure_obra_workflow_config_definitions()
+    workflows = [
+        workflow
+        for workflow in WorkflowService.listar_workflows_disponiveis_obra(empresa_id, obra_id)
+        if _is_workflow_obra_mvp(workflow)
+    ]
+    workflow_padrao_empresa = WorkflowService._resolver_workflow_empresa_padrao(empresa_id)
+    workflow_padrao_id = (
+        workflow_padrao_empresa.id
+        if _is_workflow_obra_mvp(workflow_padrao_empresa)
+        else (workflows[0].id if workflows else None)
+    )
+    papeis = (
+        Papel.query
+        .filter(
+            Papel.ativo.is_(True),
+            db.or_(Papel.empresa_id == empresa_id, Papel.empresa_id.is_(None)),
+        )
+        .order_by(Papel.empresa_id.is_(None), Papel.nome.asc())
+        .all()
+    )
+    base["available_workflows"] = [
+        {
+            "id": workflow.id,
+            "nome": workflow.nome,
+            "codigo": workflow.codigo,
+            "descricao": workflow.descricao,
+            "tipo_fluxo": workflow.tipo_fluxo,
+            "escopo": "obra" if workflow.obra_id else "empresa",
+            "escopo_label": "Workflow da Obra" if workflow.obra_id else "Workflow da Empresa",
+            "is_default": workflow.id == workflow_padrao_id,
+        }
+        for workflow in workflows
+    ]
+    base["default_workflow_id"] = workflow_padrao_id
+    base["workflow_previews"] = {}
+    for workflow in workflows:
+        etapas_preview = WorkflowService.obter_etapas_ordenadas(workflow.id)
+        base["workflow_previews"][str(workflow.id)] = {
+            "workflow_id": workflow.id,
+            "workflow_nome": workflow.nome,
+            "workflow_codigo": workflow.codigo,
+            "workflow_descricao": workflow.descricao,
+            "tipo_fluxo": workflow.tipo_fluxo or "CONFIGURAVEL",
+            "aprovacao_paralela": bool(workflow.aprovacao_paralela),
+            "workflow_origem": "Padrao da Empresa" if workflow.id == workflow_padrao_id else "Workflow da Empresa",
+            "workflow_origem_tipo": "empresa",
+            "etapas": [
+                {
+                    "etapa_id": etapa.id,
+                    "workflow_id": workflow.id,
+                    "nivel": etapa.nivel,
+                    "nome": etapa.nome,
+                    "tipo_aprovador": "USUARIO" if etapa.tipo_aprovador == "USUARIO" else "PAPEL",
+                    "papel_id": etapa.papel_id,
+                    "papel_nome": etapa.papel.nome if etapa.papel else None,
+                    "usuario_aprovador_id": etapa.usuario_aprovador_id,
+                    "grupo_paralelo": etapa.grupo_paralelo,
+                    "assinatura_obrigatoria": bool(etapa.assinatura_obrigatoria),
+                    "regra_etapa": "TODOS",
+                }
+                for etapa in etapas_preview
+            ],
+            "valid": True,
+            "errors": [],
+        }
+    base["role_options"] = [
+        {"id": papel.id, "nome": papel.nome}
+        for papel in papeis
+    ]
+    usuarios_empresa = sorted(
+        Usuario.query
+        .filter_by(empresa_id=empresa_id, ativo=True)
+        .all(),
+        key=lambda usuario: (usuario.nome or usuario.email or "").strip().lower(),
+    )
+    papeis_por_usuario = {}
+    for usuario_papel in (
+        UsuarioPapel.query
+        .filter(
+            UsuarioPapel.ativo.is_(True),
+            db.or_(UsuarioPapel.empresa_id.is_(None), UsuarioPapel.empresa_id == empresa_id),
+        )
+        .all()
+    ):
+        papeis_por_usuario.setdefault(usuario_papel.usuario_id, set()).add(usuario_papel.papel_id)
+
+    base["user_options"] = [
+        {
+            "id": usuario.id,
+            "nome": usuario.nome,
+            "email": usuario.email,
+            "papel_ids": sorted(papeis_por_usuario.get(usuario.id, set())),
+        }
+        for usuario in usuarios_empresa
+    ]
+
+    if not obra_id:
+        base["selected_workflow_id"] = workflow_padrao_id
+        workflow_padrao = next((workflow for workflow in workflows if workflow.id == workflow_padrao_id), None)
+        if workflow_padrao:
+            etapas = WorkflowService.obter_etapas_ordenadas(workflow_padrao.id)
+            base["preview"] = {
+                "workflow_id": workflow_padrao.id,
+                "workflow_nome": workflow_padrao.nome,
+                "workflow_codigo": workflow_padrao.codigo,
+                "workflow_descricao": workflow_padrao.descricao,
+                "tipo_fluxo": workflow_padrao.tipo_fluxo or "CONFIGURAVEL",
+                "aprovacao_paralela": bool(workflow_padrao.aprovacao_paralela),
+                "workflow_origem": "Padrao da Empresa",
+                "workflow_origem_tipo": "empresa",
+                "etapas": [
+                    {
+                        "etapa_id": etapa.id,
+                        "workflow_id": workflow_padrao.id,
+                        "nivel": etapa.nivel,
+                        "nome": etapa.nome,
+                        "tipo_aprovador": "USUARIO" if etapa.tipo_aprovador == "USUARIO" else "PAPEL",
+                        "papel_id": etapa.papel_id,
+                        "papel_nome": etapa.papel.nome if etapa.papel else None,
+                        "usuario_aprovador_id": etapa.usuario_aprovador_id,
+                        "grupo_paralelo": etapa.grupo_paralelo,
+                        "assinatura_obrigatoria": bool(etapa.assinatura_obrigatoria),
+                        "regra_etapa": "TODOS",
+                    }
+                    for etapa in etapas
+                ],
+                "valid": True,
+                "errors": [],
+            }
+        return base
+
+    config_workflow = ObraConfig.query.filter_by(
+        empresa_id=empresa_id,
+        obra_id=obra_id,
+        chave=WorkflowService.WORKFLOW_DEFAULT_CONFIG_KEY,
+    ).first()
+    selected_reference = (config_workflow.valor or "").strip() if config_workflow and config_workflow.valor else ""
+    workflow_aplicado = WorkflowService.resolver_workflow(empresa_id, obra_id)
+    selected_workflow_id = workflow_aplicado.id if workflow_aplicado else None
+    if selected_reference:
+        workflow_override = WorkflowService._resolver_workflow_por_referencia(
+            empresa_id=empresa_id,
+            referencia=selected_reference,
+            obra_id=obra_id,
+            incluir_workflows_obra=True,
+        )
+        if workflow_override:
+            selected_workflow_id = workflow_override.id
+
+    base["selected_workflow_id"] = selected_workflow_id
+    base["selected_workflow_reference"] = selected_reference
+    if selected_workflow_id:
+        base["preview"] = WorkflowService.construir_preview_workflow_obra(
+            empresa_id=empresa_id,
+            obra_id=obra_id,
+            workflow_id=selected_workflow_id,
+        )
+        if selected_reference:
+            base["preview"]["workflow_origem"] = "Configurado na Obra"
+            base["preview"]["workflow_origem_tipo"] = "obra"
+
+    return base
+
+
+def _set_obra_config_value(empresa_id, obra_id, chave, valor):
+    row = ObraConfig.query.filter_by(
+        empresa_id=empresa_id,
+        obra_id=obra_id,
+        chave=chave,
+    ).first()
+
+    if valor in (None, "", {}, []):
+        if row:
+            db.session.delete(row)
+        return
+
+    serialized = json.dumps(valor, ensure_ascii=True) if isinstance(valor, (dict, list)) else str(valor)
+    if row:
+        row.valor = serialized
+        return
+
+    db.session.add(
+        ObraConfig(
+            empresa_id=empresa_id,
+            obra_id=obra_id,
+            chave=chave,
+            valor=serialized,
+        )
+    )
+
+
+def _resolver_papel_empresa_por_nome(empresa_id, nome):
+    nome_normalizado = (nome or "").strip().upper()
+    if not nome_normalizado:
+        return None
+    return (
+        Papel.query
+        .filter(
+            func.upper(func.trim(Papel.nome)) == nome_normalizado,
+            Papel.ativo.is_(True),
+            db.or_(Papel.empresa_id == empresa_id, Papel.empresa_id.is_(None)),
+        )
+        .order_by(Papel.empresa_id.is_(None), Papel.id.asc())
+        .first()
+    )
+
+
+def _ensure_usuario_gestor_obra(empresa_id, obra, usuario_id, criado_por=None):
+    if not empresa_id or not obra or not usuario_id:
+        return
+
+    papel_gestor = _resolver_papel_empresa_por_nome(empresa_id, ROLE_GESTOR)
+    if not papel_gestor:
+        return
+
+    usuario_papel = UsuarioPapel.query.filter_by(
+        empresa_id=empresa_id,
+        usuario_id=usuario_id,
+        papel_id=papel_gestor.id,
+    ).first()
+    if not usuario_papel:
+        usuario_papel = UsuarioPapel(
+            empresa_id=empresa_id,
+            usuario_id=usuario_id,
+            papel_id=papel_gestor.id,
+            ativo=True,
+        )
+        db.session.add(usuario_papel)
+    else:
+        usuario_papel.ativo = True
+        db.session.add(usuario_papel)
+
+    vinculo = ObraUsuario.query.filter_by(
+        empresa_id=empresa_id,
+        obra_id=obra.id,
+        usuario_id=usuario_id,
+    ).first()
+    if not vinculo:
+        vinculo = ObraUsuario(
+            empresa_id=empresa_id,
+            obra_id=obra.id,
+            usuario_id=usuario_id,
+            papel_id=papel_gestor.id,
+            ativo=True,
+            criado_por=criado_por,
+        )
+        set_audit_on_create(vinculo, user_id=criado_por)
+        db.session.add(vinculo)
+    else:
+        vinculo.ativo = True
+        if vinculo.papel_id in (None, papel_gestor.id):
+            vinculo.papel_id = papel_gestor.id
+        set_audit_on_update(vinculo, user_id=criado_por)
+        db.session.add(vinculo)
+
+
+def _upsert_obra_workflow_customizado(empresa_id, obra, source_workflow, workflow_config_data, actor_id):
+    custom_stages = workflow_config_data.get("custom_stages") if isinstance(workflow_config_data.get("custom_stages"), list) else []
+    if not custom_stages:
+        return None
+
+    workflow = (
+        WorkflowDefinicao.query
+        .filter_by(empresa_id=empresa_id, obra_id=obra.id, ativo=True)
+        .order_by(WorkflowDefinicao.id.asc())
+        .first()
+    )
+    if not workflow:
+        workflow = WorkflowDefinicao(
+            empresa_id=empresa_id,
+            obra_id=obra.id,
+            codigo=(f"OBRA_{obra.id}_{source_workflow.id}" if source_workflow else f"OBRA_{obra.id}"),
+            nome=(source_workflow.nome if source_workflow else f"Workflow {obra.nome}"),
+            descricao=(source_workflow.descricao if source_workflow else f"Workflow customizado da obra {obra.nome}"),
+            tipo_fluxo=(source_workflow.tipo_fluxo if source_workflow else 'CONFIGURAVEL'),
+            aprovacao_paralela=bool(workflow_config_data.get("aprovacao_paralela")),
+            rejeicao_cancela_fluxo=(source_workflow.rejeicao_cancela_fluxo if source_workflow else True),
+            cliente_obrigatorio=(source_workflow.cliente_obrigatorio if source_workflow else False),
+            assinatura_obrigatoria=(source_workflow.assinatura_obrigatoria if source_workflow else False),
+            permite_reprovar=(source_workflow.permite_reprovar if source_workflow else True),
+            comentario_reprovacao_obrigatorio=(source_workflow.comentario_reprovacao_obrigatorio if source_workflow else True),
+            sla_horas=(source_workflow.sla_horas if source_workflow else None),
+            sla_global_horas=(source_workflow.sla_global_horas if source_workflow else None),
+            permite_reabertura=(source_workflow.permite_reabertura if source_workflow else True),
+            permite_cancelamento=(source_workflow.permite_cancelamento if source_workflow else True),
+            ativo=True,
+            criado_por=actor_id,
+            modificado_por=actor_id,
+        )
+        db.session.add(workflow)
+        db.session.flush()
+    else:
+        workflow.nome = source_workflow.nome if source_workflow else workflow.nome
+        workflow.descricao = source_workflow.descricao if source_workflow else workflow.descricao
+        workflow.tipo_fluxo = source_workflow.tipo_fluxo if source_workflow else workflow.tipo_fluxo
+        workflow.aprovacao_paralela = bool(workflow_config_data.get("aprovacao_paralela"))
+        if source_workflow:
+            workflow.rejeicao_cancela_fluxo = source_workflow.rejeicao_cancela_fluxo
+            workflow.cliente_obrigatorio = source_workflow.cliente_obrigatorio
+            workflow.assinatura_obrigatoria = source_workflow.assinatura_obrigatoria
+            workflow.permite_reprovar = source_workflow.permite_reprovar
+            workflow.comentario_reprovacao_obrigatorio = source_workflow.comentario_reprovacao_obrigatorio
+            workflow.sla_horas = source_workflow.sla_horas
+            workflow.sla_global_horas = source_workflow.sla_global_horas
+            workflow.permite_reabertura = source_workflow.permite_reabertura
+            workflow.permite_cancelamento = source_workflow.permite_cancelamento
+        workflow.modificado_por = actor_id
+        db.session.add(workflow)
+
+    for etapa in WorkflowEtapa.query.filter_by(workflow_id=workflow.id).all():
+        db.session.delete(etapa)
+    db.session.flush()
+
+    for index, stage in enumerate(custom_stages, start=1):
+        nome_etapa = (stage.get("nome") or "").strip()
+        if not nome_etapa:
+            continue
+        tipo_aprovador = (stage.get("tipo_aprovador") or "PAPEL").strip().upper()
+        papel_id = stage.get("papel_id")
+        usuario_aprovador_id = stage.get("usuario_aprovador_id")
+        grupo_paralelo = 1 if workflow.aprovacao_paralela else None
+        db.session.add(
+            WorkflowEtapa(
+                empresa_id=empresa_id,
+                workflow_id=workflow.id,
+                nivel=index,
+                ordem=index,
+                nome=nome_etapa,
+                tipo_aprovador=tipo_aprovador if tipo_aprovador in {'USUARIO', 'PAPEL', 'CLIENTE', 'RESPONSAVEL_OBRA'} else 'PAPEL',
+                papel_id=int(papel_id) if papel_id not in (None, "") else None,
+                usuario_aprovador_id=int(usuario_aprovador_id) if usuario_aprovador_id not in (None, "") else None,
+                grupo_paralelo=grupo_paralelo,
+                obrigatorio=True,
+                obrigatoria=True,
+                assinatura_obrigatoria=bool(stage.get("assinatura_obrigatoria")),
+                ativo=True,
+                criado_por=actor_id,
+                modificado_por=actor_id,
+            )
+        )
+
+    return workflow
+
+
+def _build_obra_governanca_context(empresa_id, obra_id=None):
+    base = {
+        "definicoes_total": 0,
+        "overrides_total": 0,
+        "configs_resolvidas": [],
+        "overrides": [],
+        "workflow_proprio": None,
+        "workflow_aplicado": None,
+        "workflow_origem": "Sem workflow",
+        "workflow_origem_tipo": "indefinido",
+        "workflow_etapas": [],
+    }
+    if not empresa_id:
+        return base
+
+    definicoes = ConfigDefinicao.query.order_by(ConfigDefinicao.chave.asc()).all()
+    base["definicoes_total"] = len(definicoes)
+
+    if not obra_id:
+        return base
+
+    mapa_resolvido = ConfigService.obter_mapa_config(empresa_id=empresa_id, obra_id=obra_id)
+    empresa_cfg_map = {
+        cfg.chave: cfg.valor
+        for cfg in EmpresaConfig.query.filter_by(empresa_id=empresa_id).all()
+    }
+    obra_cfg_rows = ObraConfig.query.filter_by(empresa_id=empresa_id, obra_id=obra_id).all()
+    obra_cfg_map = {cfg.chave: cfg for cfg in obra_cfg_rows}
+
+    configs_resolvidas = []
+    for definicao in definicoes:
+        valor_resolvido = mapa_resolvido.get(definicao.chave)
+        if valor_resolvido in (None, "", []):
+            continue
+
+        origem = "Sistema"
+        if definicao.chave in empresa_cfg_map:
+            origem = "Empresa"
+        if definicao.chave in obra_cfg_map:
+            origem = "Obra"
+
+        configs_resolvidas.append({
+            "chave": definicao.chave,
+            "descricao": definicao.descricao,
+            "tipo": definicao.tipo,
+            "valor": valor_resolvido,
+            "origem": origem,
+        })
+
+    workflow_setup = _build_obra_workflow_setup_context(empresa_id, obra_id)
+    workflow_proprio = (
+        WorkflowDefinicao.query
+        .filter_by(empresa_id=empresa_id, obra_id=obra_id, ativo=True)
+        .order_by(WorkflowDefinicao.nome.asc())
+        .first()
+    )
+    workflow_aplicado = WorkflowService.resolver_workflow(empresa_id, obra_id)
+    workflow_etapas = WorkflowService.obter_etapas_ordenadas(workflow_aplicado.id) if workflow_aplicado else []
+
+    base.update({
+        "overrides_total": len(obra_cfg_rows),
+        "configs_resolvidas": configs_resolvidas[:8],
+        "overrides": [
+            {
+                "chave": cfg.chave,
+                "descricao": cfg.definicao.descricao if cfg.definicao else None,
+                "tipo": cfg.definicao.tipo if cfg.definicao else "STRING",
+                "valor": cfg.valor,
+            }
+            for cfg in obra_cfg_rows
+        ],
+        "workflow_proprio": workflow_proprio,
+        "workflow_aplicado": workflow_aplicado,
+        "workflow_origem": workflow_setup["preview"].get("workflow_origem") if workflow_setup.get("preview") else ("Workflow Proprio da Obra" if workflow_proprio else ("Herdado da Empresa" if workflow_aplicado else "Sem workflow")),
+        "workflow_origem_tipo": workflow_setup["preview"].get("workflow_origem_tipo") if workflow_setup.get("preview") else ("obra" if workflow_proprio else ("empresa" if workflow_aplicado else "indefinido")),
+        "workflow_etapas": workflow_etapas,
+        "workflow_setup": workflow_setup,
+    })
+    return base
 
 
 def _get_obras_permitidas_ids(user, empresa_id):
@@ -355,6 +851,7 @@ def criar_obra():
         mao_de_obra_options=mao_de_obra_options,
         equipe_obra=[],
         centros_custo=centros_custo,
+        obra_governanca=_build_obra_governanca_context(session.get('empresa_id')),
     )
 
 @auth_bp.post("/mudar-status-obras/<int:obraid>")
@@ -467,12 +964,17 @@ def gerar_obra():
     ativo = _parse_bool(request.form.get("ativo"), default=_parse_bool(request.form.get("status"), default=True))
     frentes_payload = request.form.get('frentes_json')
     equipe_payload = request.form.get('equipe_obra_json')
+    workflow_selected_raw = (request.form.get('workflow_selecionado_id') or "").strip()
+    workflow_config_payload = request.form.get('workflow_config_json')
 
     try:
         data_inicio = _parse_date(data_inicio_str)
         data_fim_planejada = _parse_date(data_fim_planejada_str)
         data_fim = _parse_date(data_fim_str)
         frentes_data = json.loads(frentes_payload) if frentes_payload else {}
+        workflow_config_data = json.loads(workflow_config_payload) if workflow_config_payload else {}
+        if not isinstance(workflow_config_data, dict):
+            workflow_config_data = {}
 
         if data_inicio and data_fim_planejada and data_fim_planejada < data_inicio:
             return _validation_error("Erro: a data de fim planejada não pode anteceder a data de início da obra.")
@@ -622,8 +1124,78 @@ def gerar_obra():
                     frente_existente.ativo = _parse_bool(f_edit.get('ativo'), default=True)
                     set_audit_on_update(frente_existente, user_id=audit_user_id)
 
+        if usuario_responsavel_id:
+            _ensure_usuario_gestor_obra(obra.empresa_id, obra, usuario_responsavel_id, criado_por=audit_user_id)
+
         # Legacy equipe de obra não possui modelo compatível com o schema atual.
         # O payload é preservado no formulário, mas não é gravado enquanto a tabela de suporte não estiver disponível.
+        _ensure_obra_workflow_config_definitions()
+        workflow_assignments = workflow_config_data.get("assignments") if isinstance(workflow_config_data.get("assignments"), dict) else {}
+        workflow_custom_stages = workflow_config_data.get("custom_stages") if isinstance(workflow_config_data.get("custom_stages"), list) else []
+        if workflow_selected_raw:
+            try:
+                workflow_selected_id = int(workflow_selected_raw)
+            except ValueError:
+                raise WorkflowResolucaoError("Workflow selecionado invÃ¡lido para a obra.")
+
+            workflow_source = db.session.get(WorkflowDefinicao, workflow_selected_id)
+            if not _is_workflow_obra_mvp(workflow_source):
+                raise WorkflowResolucaoError("Nesta tela, selecione apenas os workflows Simples, Sequencial ou Paralelo.")
+            custom_workflow = _upsert_obra_workflow_customizado(
+                empresa_id=obra.empresa_id,
+                obra=obra,
+                source_workflow=workflow_source,
+                workflow_config_data=workflow_config_data,
+                actor_id=audit_user_id,
+            )
+            workflow_alvo = custom_workflow or workflow_source
+            if custom_workflow and workflow_custom_stages:
+                workflow_assignments = {}
+                etapas_customizadas = WorkflowService.obter_etapas_ordenadas(custom_workflow.id)
+                for etapa_customizada, stage_payload in zip(etapas_customizadas, workflow_custom_stages):
+                    responsavel_usuario_id = stage_payload.get("responsavel_usuario_id")
+                    if responsavel_usuario_id in (None, ""):
+                        continue
+                    try:
+                        workflow_assignments[str(etapa_customizada.id)] = int(responsavel_usuario_id)
+                    except (TypeError, ValueError):
+                        continue
+            validado = WorkflowService.validar_configuracao_workflow_obra(
+                empresa_id=obra.empresa_id,
+                obra_id=obra.id,
+                workflow_id=workflow_alvo.id,
+                assignments=workflow_assignments,
+                auto_grant_signature=True,
+            )
+            _set_obra_config_value(
+                empresa_id=obra.empresa_id,
+                obra_id=obra.id,
+                chave=WorkflowService.WORKFLOW_DEFAULT_CONFIG_KEY,
+                valor=(f"id:{workflow_source.id}" if workflow_source and not custom_workflow else None),
+            )
+            _set_obra_config_value(
+                empresa_id=obra.empresa_id,
+                obra_id=obra.id,
+                chave=WorkflowService.WORKFLOW_ASSIGNMENTS_CONFIG_KEY,
+                valor={
+                    "workflow_id": validado["workflow"].id,
+                    "assignments": validado["assignments"],
+                },
+            )
+        else:
+            _set_obra_config_value(
+                empresa_id=obra.empresa_id,
+                obra_id=obra.id,
+                chave=WorkflowService.WORKFLOW_DEFAULT_CONFIG_KEY,
+                valor=None,
+            )
+            _set_obra_config_value(
+                empresa_id=obra.empresa_id,
+                obra_id=obra.id,
+                chave=WorkflowService.WORKFLOW_ASSIGNMENTS_CONFIG_KEY,
+                valor=None,
+            )
+
         db.session.commit()
         return redirect(url_for('auth.lista_obras'))
 
@@ -667,6 +1239,7 @@ def editar_obra(id):
         mao_de_obra_options=mao_de_obra_options,
         equipe_obra=equipe_obra,
         centros_custo=centros_custo,
+        obra_governanca=_build_obra_governanca_context(empresa_id, id),
     )
 
 @auth_bp.get("/visualizar-obra/<int:id>")
@@ -713,7 +1286,37 @@ def visualizar_obra(id):
         mao_de_obra_options=mao_de_obra_options,
         equipe_obra=equipe_obra,
         centros_custo=centros_custo,
+        obra_governanca=_build_obra_governanca_context(empresa_id, id),
     )
+
+
+@auth_bp.get("/obras/<int:id>/workflow-preview")
+@login_required
+@permission_required('obra.manage')
+def preview_workflow_obra(id):
+    scope_ids = get_user_scope_ids()
+    if scope_ids is not None and id not in scope_ids:
+        return jsonify({"ok": False, "error": "Acesso negado para esta obra."}), 403
+
+    empresa_id = session.get('empresa_id')
+    obra = Obra.query.filter_by(id=id, empresa_id=empresa_id).first_or_404()
+    workflow_id_raw = request.args.get("workflow_id")
+    workflow_id = None
+    if workflow_id_raw not in (None, ""):
+        try:
+            workflow_id = int(workflow_id_raw)
+        except ValueError:
+            return jsonify({"ok": False, "error": "Workflow invalido."}), 400
+        workflow = db.session.get(WorkflowDefinicao, workflow_id)
+        if not _is_workflow_obra_mvp(workflow):
+            return jsonify({"ok": False, "error": "Use apenas os workflows Simples, Sequencial ou Paralelo nesta tela."}), 400
+
+    preview = WorkflowService.construir_preview_workflow_obra(
+        empresa_id=empresa_id,
+        obra_id=obra.id,
+        workflow_id=workflow_id,
+    )
+    return jsonify({"ok": True, "preview": preview})
 
 
 def _get_frente_or_404(frente_id: int):
