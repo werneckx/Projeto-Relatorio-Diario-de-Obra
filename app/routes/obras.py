@@ -381,25 +381,73 @@ def _ensure_usuario_gestor_obra(empresa_id, obra, usuario_id, criado_por=None):
         db.session.add(vinculo)
 
 
+def _workflow_tem_historico_execucao(workflow_id):
+    if not workflow_id:
+        return False
+    return (
+        db.session.query(WorkflowExecucaoEtapa.id)
+        .join(WorkflowEtapa, WorkflowEtapa.id == WorkflowExecucaoEtapa.etapa_definicao_id)
+        .filter(WorkflowEtapa.workflow_id == workflow_id)
+        .first()
+        is not None
+    )
+
+
+def _arquivar_workflow_obra(workflow, actor_id):
+    if not workflow:
+        return
+
+    nome_suffix = f" [Hist {workflow.id}]"
+    codigo_suffix = f"_H{workflow.id}"
+    workflow.ativo = False
+    workflow.nome = f"{(workflow.nome or 'Workflow')[:max(1, 150 - len(nome_suffix))]}{nome_suffix}"
+    workflow.codigo = f"{(workflow.codigo or f'OBRA_{workflow.obra_id}_{workflow.id}')[:max(1, 50 - len(codigo_suffix))]}{codigo_suffix}"
+    workflow.modificado_por = actor_id
+    db.session.add(workflow)
+    db.session.flush()
+
+
 def _upsert_obra_workflow_customizado(empresa_id, obra, source_workflow, workflow_config_data, actor_id):
     custom_stages = workflow_config_data.get("custom_stages") if isinstance(workflow_config_data.get("custom_stages"), list) else []
     if not custom_stages:
         return None
 
-    workflow = (
+    expected_codigo = f"OBRA_{obra.id}_{source_workflow.id}" if source_workflow else f"OBRA_{obra.id}"
+    expected_nome = source_workflow.nome if source_workflow else f"Workflow {obra.nome}"
+    expected_descricao = source_workflow.descricao if source_workflow else f"Workflow customizado da obra {obra.nome}"
+    expected_tipo_fluxo = source_workflow.tipo_fluxo if source_workflow else 'CONFIGURAVEL'
+
+    workflows_obra = (
         WorkflowDefinicao.query
-        .filter_by(empresa_id=empresa_id, obra_id=obra.id, ativo=True)
-        .order_by(WorkflowDefinicao.id.asc())
-        .first()
+        .filter_by(empresa_id=empresa_id, obra_id=obra.id)
+        .order_by(WorkflowDefinicao.ativo.desc(), WorkflowDefinicao.id.asc())
+        .all()
     )
+
+    workflow = next((item for item in workflows_obra if item.ativo), None)
+    if not workflow and source_workflow:
+        workflow = next(
+            (
+                item for item in workflows_obra
+                if item.nome == expected_nome or item.codigo == expected_codigo
+            ),
+            None,
+        )
+    if not workflow and workflows_obra:
+        workflow = workflows_obra[0]
+
+    if workflow and _workflow_tem_historico_execucao(workflow.id):
+        _arquivar_workflow_obra(workflow, actor_id)
+        workflow = None
+
     if not workflow:
         workflow = WorkflowDefinicao(
             empresa_id=empresa_id,
             obra_id=obra.id,
-            codigo=(f"OBRA_{obra.id}_{source_workflow.id}" if source_workflow else f"OBRA_{obra.id}"),
-            nome=(source_workflow.nome if source_workflow else f"Workflow {obra.nome}"),
-            descricao=(source_workflow.descricao if source_workflow else f"Workflow customizado da obra {obra.nome}"),
-            tipo_fluxo=(source_workflow.tipo_fluxo if source_workflow else 'CONFIGURAVEL'),
+            codigo=expected_codigo,
+            nome=expected_nome,
+            descricao=expected_descricao,
+            tipo_fluxo=expected_tipo_fluxo,
             aprovacao_paralela=bool(workflow_config_data.get("aprovacao_paralela")),
             rejeicao_cancela_fluxo=(source_workflow.rejeicao_cancela_fluxo if source_workflow else True),
             cliente_obrigatorio=(source_workflow.cliente_obrigatorio if source_workflow else False),
@@ -417,9 +465,11 @@ def _upsert_obra_workflow_customizado(empresa_id, obra, source_workflow, workflo
         db.session.add(workflow)
         db.session.flush()
     else:
-        workflow.nome = source_workflow.nome if source_workflow else workflow.nome
-        workflow.descricao = source_workflow.descricao if source_workflow else workflow.descricao
-        workflow.tipo_fluxo = source_workflow.tipo_fluxo if source_workflow else workflow.tipo_fluxo
+        workflow.ativo = True
+        workflow.codigo = expected_codigo
+        workflow.nome = expected_nome
+        workflow.descricao = expected_descricao
+        workflow.tipo_fluxo = expected_tipo_fluxo
         workflow.aprovacao_paralela = bool(workflow_config_data.get("aprovacao_paralela"))
         if source_workflow:
             workflow.rejeicao_cancela_fluxo = source_workflow.rejeicao_cancela_fluxo
@@ -515,7 +565,7 @@ def _normalize_workflow_status(status):
             "icon": "fa-spinner",
         },
         "APROVADO": {
-            "label": "ConcluÃ­do",
+            "label": "Concluído",
             "badge_class": "border-emerald-200 bg-emerald-50 text-emerald-700",
             "dot_class": "bg-emerald-500",
             "icon": "fa-check-circle",
@@ -585,7 +635,7 @@ def _extract_workflow_error(payload):
 def _workflow_step_visual_status(step_status):
     return {
         "NAO_INICIADA": {
-            "label": "NÃ£o iniciada",
+            "label": "Não iniciada",
             "badge_class": "border-slate-200 bg-slate-100 text-slate-600",
             "icon": "fa-lock",
             "card_class": "border-slate-200 bg-slate-50/70",
@@ -597,7 +647,7 @@ def _workflow_step_visual_status(step_status):
             "card_class": "border-amber-200 bg-amber-50/40",
         },
         "EM_EXECUCAO": {
-            "label": "Em execuÃ§Ã£o",
+            "label": "Em execução",
             "badge_class": "border-blue-200 bg-blue-50 text-blue-700",
             "icon": "fa-spinner",
             "card_class": "border-blue-200 bg-blue-50/40",
@@ -678,7 +728,7 @@ def _build_workflow_execution_history(empresa_id, obra_id):
         requester_name = (
             getattr(requester, "nome", None)
             or getattr(execucao.criador, "nome", None)
-            or "NÃ£o identificado"
+            or "Não identificado"
         )
 
         current_level = execucao.etapa_atual_nivel
@@ -714,11 +764,11 @@ def _build_workflow_execution_history(empresa_id, obra_id):
             elif etapa.status == "APROVADO":
                 visual_status = "APROVADO"
                 status_message = "Aprovado por"
-                detail_message = user_name or "UsuÃ¡rio nÃ£o identificado"
+                detail_message = user_name or "Usuário não identificado"
             elif etapa.status == "REJEITADO":
                 visual_status = "REJEITADO"
                 status_message = "Rejeitado por"
-                detail_message = user_name or "UsuÃ¡rio nÃ£o identificado"
+                detail_message = user_name or "Usuário não identificado"
                 rejected_step = rejected_step or etapa
             elif etapa.status == "CANCELADO":
                 visual_status = "CANCELADA"
@@ -727,11 +777,11 @@ def _build_workflow_execution_history(empresa_id, obra_id):
             elif etapa.status == "PULADO":
                 visual_status = "IGNORADA"
                 status_message = "Ignorada"
-                detail_message = etapa.comentario or "Etapa nÃ£o necessÃ¡ria nesta execuÃ§Ã£o."
+                detail_message = etapa.comentario or "Etapa não necessária nesta execução."
             elif current_level and etapa.nivel == current_level and status_code in {"PENDENTE", "EM_ANDAMENTO", "REABERTO", "ERRO"}:
                 visual_status = "EM_EXECUCAO" if status_code != "PENDENTE" else "AGUARDANDO"
-                status_message = "Aguardando aprovaÃ§Ã£o"
-                detail_message = _humanize_duration(stage_start, now, prefix="HÃ¡ ")
+                status_message = "Aguardando aprovação"
+                detail_message = _humanize_duration(stage_start, now, prefix="Há ")
                 current_stage = current_stage or etapa
             else:
                 visual_status = "NAO_INICIADA"
@@ -761,7 +811,7 @@ def _build_workflow_execution_history(empresa_id, obra_id):
             })
 
         if status_code == "APROVADO":
-            summary_title = "Workflow concluÃ­do com sucesso"
+            summary_title = "Workflow concluído com sucesso"
             summary_lines = [
                 {"label": "Tempo total", "value": _humanize_duration(execucao.iniciado_em, execucao.finalizado_em or now)},
                 {"label": "Resumo", "value": "Todas as etapas executadas."},
@@ -769,26 +819,26 @@ def _build_workflow_execution_history(empresa_id, obra_id):
         elif status_code in {"PENDENTE", "EM_ANDAMENTO", "REABERTO"}:
             summary_title = "Workflow em andamento"
             summary_lines = [
-                {"label": "Etapa atual", "value": current_stage.nome if current_stage else "Aguardando definiÃ§Ã£o"},
+                {"label": "Etapa atual", "value": current_stage.nome if current_stage else "Aguardando definição"},
                 {"label": "Aguardando desde", "value": _format_datetime_br(stage_start_by_level.get(current_stage.nivel) if current_stage else execucao.iniciado_em)},
             ]
         elif status_code == "REJEITADO":
             summary_title = "Workflow rejeitado"
             summary_lines = [
-                {"label": "Etapa", "value": rejected_step.nome if rejected_step else "NÃ£o identificada"},
+                {"label": "Etapa", "value": rejected_step.nome if rejected_step else "Não identificada"},
                 {"label": "Motivo", "value": rejected_step.comentario if rejected_step and rejected_step.comentario else "Sem motivo informado."},
             ]
         elif status_code == "CANCELADO":
             summary_title = "Workflow cancelado"
             summary_lines = [
                 {"label": "Tempo total", "value": _humanize_duration(execucao.iniciado_em, execucao.finalizado_em or now)},
-                {"label": "Resumo", "value": "A execuÃ§Ã£o foi interrompida antes da conclusÃ£o."},
+                {"label": "Resumo", "value": "A execução foi interrompida antes da conclusão."},
             ]
         else:
             summary_title = "Workflow com erro"
             summary_lines = [
-                {"label": "Falha", "value": (workflow_error or (step_errors[0][1] if step_errors else {})).get("message", "Erro nÃ£o detalhado.")},
-                {"label": "CÃ³digo", "value": (workflow_error or (step_errors[0][1] if step_errors else {})).get("code") or "NÃ£o informado"},
+                {"label": "Falha", "value": (workflow_error or (step_errors[0][1] if step_errors else {})).get("message", "Erro não detalhado.")},
+                {"label": "Código", "value": (workflow_error or (step_errors[0][1] if step_errors else {})).get("code") or "Não informado"},
             ]
 
         history.append({
@@ -803,10 +853,10 @@ def _build_workflow_execution_history(empresa_id, obra_id):
             "duration_label": _humanize_duration(
                 execucao.iniciado_em,
                 execucao.finalizado_em or now,
-                prefix="Em execuÃ§Ã£o hÃ¡ " if status_code in {"PENDENTE", "EM_ANDAMENTO", "REABERTO"} else None,
+                prefix="Em execução há " if status_code in {"PENDENTE", "EM_ANDAMENTO", "REABERTO"} else None,
             ),
             "requester_name": requester_name,
-            "workflow_name": workflow_snapshot.get("nome") or getattr(execucao.workflow, "nome", None) or "Workflow nÃ£o identificado",
+            "workflow_name": workflow_snapshot.get("nome") or getattr(execucao.workflow, "nome", None) or "Workflow não identificado",
             "started_at_iso": execucao.iniciado_em.isoformat() if execucao.iniciado_em else None,
             "finished_at_iso": execucao.finalizado_em.isoformat() if execucao.finalizado_em else None,
             "summary_title": summary_title,
