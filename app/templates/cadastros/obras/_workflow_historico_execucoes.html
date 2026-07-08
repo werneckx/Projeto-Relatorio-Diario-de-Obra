@@ -1,0 +1,166 @@
+<div id="workflowHistoricoExecutionsRegion">
+    {% set historico_execucoes = obra_governanca.workflow_execucoes_historico %}
+    <div class="p-5">
+        <div class="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+            <div class="px-5 py-4 border-b border-slate-100 bg-slate-50/70 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                    <h4 class="text-sm font-bold uppercase tracking-wide text-slate-800">Histórico de Execução</h4>
+                    <p class="text-xs text-slate-500 mt-1">Auditoria das execuções de workflow desta obra.</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-bold text-slate-600">{{ historico_execucoes|length }} execução{{ '' if historico_execucoes|length == 1 else 'ões' }}</span>
+                    {% if not view_mode %}
+                    <button type="button" onclick="testCurrentWorkflow(this)" class="inline-flex items-center justify-center gap-2 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-bold text-blue-700 hover:bg-blue-100">
+                        <i class="fas fa-flask"></i> Testar Workflow
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+            {% if historico_execucoes %}
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-slate-100">
+                    <thead>
+                        <tr class="text-left text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
+                            <th class="px-5 py-4">Status</th>
+                            <th class="px-5 py-4">Data/Hora</th>
+                            <th class="px-5 py-4">Duração</th>
+                            <th class="px-5 py-4">Solicitante</th>
+                            <th class="px-5 py-4">Workflow</th>
+                            <th class="px-5 py-4 text-right">Acoes</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 bg-white">
+                        {% for execucao in historico_execucoes %}
+                        <tr class="hover:bg-slate-50/70 transition">
+                            <td class="px-5 py-4">
+                                <span class="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold {{ execucao.status_badge_class }}">
+                                    <span class="w-2 h-2 rounded-full {{ execucao.status_dot_class }}"></span>{{ execucao.status_label }}
+                                </span>
+                            </td>
+                            <td class="px-5 py-4 text-sm font-semibold text-slate-700 whitespace-nowrap">{{ execucao.started_at_label }}</td>
+                            <td class="px-5 py-4 text-sm text-slate-600 whitespace-nowrap">{{ execucao.duration_label }}</td>
+                            <td class="px-5 py-4 text-sm text-slate-700">{{ execucao.requester_name }}</td>
+                            <td class="px-5 py-4 text-sm font-semibold text-slate-800">{{ execucao.workflow_name }}</td>
+                            <td class="px-5 py-4 text-right">
+                                <div class="flex justify-end gap-2">
+                                    {% if not view_mode and execucao.status in ['PENDENTE', 'EM_ANDAMENTO', 'REABERTO'] %}
+                                    <button type="button" onclick="cancelWorkflowExecution('{{ execucao.id }}', this)" class="inline-flex items-center justify-center rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-bold text-rose-700 hover:bg-rose-100">
+                                        Cancelar
+                                    </button>
+                                    {% endif %}
+                                    <button type="button" onclick="openWorkflowExecutionModal('{{ execucao.id }}')" class="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">
+                                        Visualizar
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="px-6 py-12 text-center text-sm text-slate-500">Nenhuma execução registrada para esta obra.</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <template id="workflowExecutionModalTemplateCollection">
+        {% for execucao in historico_execucoes %}
+        <div id="workflowExecutionModal-{{ execucao.id }}" class="workflow-execution-modal fixed inset-0 z-[9999] hidden">
+            <div class="workflow-execution-backdrop fixed inset-0 z-[9998] bg-slate-950/60 backdrop-blur-sm" onclick="closeWorkflowExecutionModal('{{ execucao.id }}')"></div>
+            <div class="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6">
+                <div class="relative flex max-h-[90vh] w-full max-w-[1100px] flex-col overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-2xl shadow-slate-950/20">
+                    <div class="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5 sm:px-8">
+                        <div>
+                            <p class="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Workflow de Aprovação</p>
+                            <h4 class="mt-2 text-2xl font-black text-slate-900">Execução #{{ execucao.execution_number }}</h4>
+                            <div class="mt-3 flex flex-wrap gap-2">
+                                <span class="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold {{ execucao.status_badge_class }}">
+                                    <span class="w-2 h-2 rounded-full {{ execucao.status_dot_class }}"></span>{{ execucao.status_label }}
+                                </span>
+                                <span class="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-600">{{ execucao.workflow_name }}</span>
+                            </div>
+                            <p class="mt-3 text-sm text-slate-600">
+                                <span class="font-semibold text-slate-800">Solicitante:</span> {{ execucao.topo.solicitante }}
+                                <span class="mx-2 text-slate-300">•</span>
+                                <span class="font-semibold text-slate-800">Tempo total:</span> {{ execucao.topo.tempo }}
+                            </p>
+                        </div>
+                        <button type="button" onclick="closeWorkflowExecutionModal('{{ execucao.id }}')" class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 text-slate-500 hover:bg-slate-50">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="workflow-execution-modal-scroll flex-1 overflow-y-auto bg-slate-50/60 px-6 py-6 sm:px-8">
+                        <div class="mb-6 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                            {% for item in execucao.summary_lines %}
+                            <div class="rounded-2xl border border-slate-200 bg-white px-4 py-3"><div class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">{{ item.label }}</div><div class="mt-1 text-sm font-semibold text-slate-700">{{ item.value }}</div></div>
+                            {% endfor %}
+                            <div class="rounded-2xl border border-slate-200 bg-white px-4 py-3"><div class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Iniciado em</div><div class="mt-1 text-sm font-semibold text-slate-700">{{ execucao.topo.iniciado_em }}</div></div>
+                            <div class="rounded-2xl border border-slate-200 bg-white px-4 py-3"><div class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Tempo total</div><div class="mt-1 text-sm font-semibold text-slate-700">{{ execucao.topo.tempo }}</div></div>
+                        </div>
+                        {% if execucao.error %}
+                        <div class="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                            <div class="font-bold">Erro da execução</div>
+                            <div class="mt-1">{{ execucao.error.message }}</div>
+                            {% if execucao.error.code %}
+                            <div class="mt-2 text-xs font-black uppercase tracking-[0.16em] text-red-600">Código: {{ execucao.error.code }}</div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        <div class="space-y-4">
+                            {% for etapa in execucao.steps %}
+                            <div>
+                                {% if not loop.first %}
+                                <div class="flex justify-center py-1 text-slate-300"><i class="fas fa-arrow-down"></i></div>
+                                {% endif %}
+                                <div class="rounded-3xl border {{ etapa.card_class }} p-5 shadow-sm">
+                                    <div class="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:items-start">
+                                        <div class="flex items-start gap-3 lg:col-span-3">
+                                            <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600">
+                                                <i class="fas {{ etapa.icon }}"></i>
+                                            </div>
+                                            <div>
+                                                <div class="text-sm font-black text-slate-900">Etapa {{ loop.index }}</div>
+                                                <div class="mt-1 text-sm font-semibold text-slate-700">{{ etapa.nome }}</div>
+                                                <span class="mt-2 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] {{ etapa.badge_class }}"><i class="fas {{ etapa.icon }}"></i>{{ etapa.status_label }}</span>
+                                            </div>
+                                        </div>
+                                        <div class="space-y-2 lg:col-span-4">
+                                            {% if etapa.status == 'APROVADO' %}
+                                            <div class="text-sm text-slate-700"><span class="font-bold text-slate-900">Aprovado por:</span> {{ etapa.detail_message }}</div>
+                                            {% elif etapa.status == 'REJEITADO' %}
+                                            <div class="text-sm text-slate-700"><span class="font-bold text-slate-900">Rejeitado por:</span> {{ etapa.detail_message }}</div>
+                                            {% elif etapa.status == 'ERRO' %}
+                                            <div class="text-sm font-semibold text-red-700">{{ etapa.erro.message if etapa.erro else etapa.detail_message }}</div>
+                                            {% else %}
+                                            <div class="text-sm text-slate-700">{{ etapa.status_message }}{% if etapa.detail_message %} <span class="font-semibold">{{ etapa.detail_message }}</span>{% endif %}</div>
+                                            {% endif %}
+                                            {% if etapa.comentario %}
+                                            <div class="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700"><span class="font-bold text-slate-900">Observação:</span> {{ etapa.comentario }}</div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="grid grid-cols-1 gap-3 md:grid-cols-2 lg:col-span-4">
+                                            <div class="rounded-2xl border border-slate-200 bg-white px-4 py-3"><div class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Papel</div><div class="mt-1 text-sm font-semibold text-slate-700">{{ etapa.papel_nome or 'Não definido' }}</div></div>
+                                            <div class="rounded-2xl border border-slate-200 bg-white px-4 py-3"><div class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Responsável</div><div class="mt-1 text-sm font-semibold text-slate-700">{{ etapa.usuario_nome or 'Não definido' }}</div></div>
+                                        </div>
+                                        <div class="grid grid-cols-1 gap-3 sm:min-w-[200px] lg:col-span-1">
+                                            <div class="rounded-2xl border border-slate-200 bg-white px-4 py-3"><div class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Duração da etapa</div><div class="mt-1 text-sm font-semibold text-slate-700">{{ etapa.duracao_label if etapa.status != 'NAO_INICIADA' else '—' }}</div></div>
+                                            {% if etapa.aprovado_em_label %}
+                                            <div class="rounded-2xl border border-slate-200 bg-white px-4 py-3"><div class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Concluída em</div><div class="mt-1 text-sm font-semibold text-slate-700">{{ etapa.aprovado_em_label }}</div></div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="flex justify-end border-t border-slate-200 bg-white px-6 py-4 sm:px-8">
+                        <button type="button" onclick="closeWorkflowExecutionModal('{{ execucao.id }}')" class="inline-flex items-center justify-center rounded-2xl border border-slate-200 px-5 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50">Fechar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </template>
+</div>

@@ -1,13 +1,18 @@
 import json
+from datetime import date
 
 from app.routes.auth_common import *
 from app.models.cliente import Cliente
 from app.models.configuracao import ConfigDefinicao, EmpresaConfig, ObraConfig
+from app.models.notificacao import TipoNotificacao
 from app.models.obra import FrenteTrabalho, FrenteColaborador, ObraUsuario
-from app.models.workflow import WorkflowDefinicao, WorkflowEtapa
+from app.models.rdo import RDO, RDOAprovacao
+from app.models.workflow import WorkflowDefinicao, WorkflowEtapa, WorkflowExecucao, WorkflowExecucaoEtapa
 from app.services.config_service import ConfigService
+from app.services.notificacao_service import NotificacaoService
 from app.services.workflow_service import WorkflowResolucaoError, WorkflowService
 from app.utils.export_service import make_csv_response, make_xlsx_response, make_pdf_response
+from app.utils.datetime_utils import utcnow_naive
 from app.models.usuario import Colaborador, Papel, UsuarioPapel
 from sqlalchemy import func
 
@@ -464,6 +469,362 @@ def _upsert_obra_workflow_customizado(empresa_id, obra, source_workflow, workflo
     return workflow
 
 
+def _format_datetime_br(value):
+    if not value:
+        return "-"
+    return value.strftime("%d/%m/%Y %H:%M")
+
+
+def _humanize_duration(start, end=None, prefix=None):
+    if not start:
+        return "-"
+
+    end_value = end or utcnow_naive()
+    delta = end_value - start
+    total_seconds = max(int(delta.total_seconds()), 0)
+    minutes = max(total_seconds // 60, 1)
+
+    if minutes >= 60 * 24:
+        days = minutes // (60 * 24)
+        label = f"{days} dia" if days == 1 else f"{days} dias"
+    elif minutes >= 60:
+        hours = minutes // 60
+        remaining_minutes = minutes % 60
+        label = f"{hours}h"
+        if remaining_minutes:
+            label += f" {remaining_minutes}min"
+    else:
+        label = f"{minutes} min"
+
+    return f"{prefix}{label}" if prefix else label
+
+
+def _normalize_workflow_status(status):
+    normalized = (status or "").upper()
+    return {
+        "PENDENTE": {
+            "label": "Pendente",
+            "badge_class": "border-amber-200 bg-amber-50 text-amber-800",
+            "dot_class": "bg-amber-500",
+            "icon": "fa-hourglass-half",
+        },
+        "EM_ANDAMENTO": {
+            "label": "Em andamento",
+            "badge_class": "border-blue-200 bg-blue-50 text-blue-700",
+            "dot_class": "bg-blue-500",
+            "icon": "fa-spinner",
+        },
+        "APROVADO": {
+            "label": "ConcluÃ­do",
+            "badge_class": "border-emerald-200 bg-emerald-50 text-emerald-700",
+            "dot_class": "bg-emerald-500",
+            "icon": "fa-check-circle",
+        },
+        "REJEITADO": {
+            "label": "Rejeitado",
+            "badge_class": "border-rose-200 bg-rose-50 text-rose-700",
+            "dot_class": "bg-rose-500",
+            "icon": "fa-circle-xmark",
+        },
+        "CANCELADO": {
+            "label": "Cancelado",
+            "badge_class": "border-slate-200 bg-slate-100 text-slate-700",
+            "dot_class": "bg-slate-500",
+            "icon": "fa-ban",
+        },
+        "REABERTO": {
+            "label": "Em andamento",
+            "badge_class": "border-blue-200 bg-blue-50 text-blue-700",
+            "dot_class": "bg-blue-500",
+            "icon": "fa-rotate-left",
+        },
+        "ERRO": {
+            "label": "Erro",
+            "badge_class": "border-red-200 bg-red-50 text-red-700",
+            "dot_class": "bg-red-500",
+            "icon": "fa-triangle-exclamation",
+        },
+    }.get(normalized, {
+        "label": normalized.title() if normalized else "Indefinido",
+        "badge_class": "border-slate-200 bg-slate-100 text-slate-700",
+        "dot_class": "bg-slate-500",
+        "icon": "fa-circle-question",
+    })
+
+
+def _extract_workflow_error(payload):
+    if not isinstance(payload, dict):
+        return None
+
+    nested = payload.get("erro") if isinstance(payload.get("erro"), dict) else payload.get("error")
+    if isinstance(nested, dict):
+        message = (
+            nested.get("message")
+            or nested.get("mensagem")
+            or nested.get("descricao")
+            or nested.get("detail")
+        )
+        code = nested.get("code") or nested.get("codigo")
+        if message or code:
+            return {"message": message or "Erro ao executar workflow.", "code": code}
+
+    message = (
+        payload.get("error")
+        or payload.get("erro")
+        or payload.get("error_message")
+        or payload.get("mensagem_erro")
+        or payload.get("mensagem")
+        or payload.get("detail")
+    )
+    code = payload.get("error_code") or payload.get("codigo_erro")
+    if not message and not code:
+        return None
+    return {"message": message or "Erro ao executar workflow.", "code": code}
+
+
+def _workflow_step_visual_status(step_status):
+    return {
+        "NAO_INICIADA": {
+            "label": "NÃ£o iniciada",
+            "badge_class": "border-slate-200 bg-slate-100 text-slate-600",
+            "icon": "fa-lock",
+            "card_class": "border-slate-200 bg-slate-50/70",
+        },
+        "AGUARDANDO": {
+            "label": "Aguardando",
+            "badge_class": "border-amber-200 bg-amber-50 text-amber-800",
+            "icon": "fa-hourglass-half",
+            "card_class": "border-amber-200 bg-amber-50/40",
+        },
+        "EM_EXECUCAO": {
+            "label": "Em execuÃ§Ã£o",
+            "badge_class": "border-blue-200 bg-blue-50 text-blue-700",
+            "icon": "fa-spinner",
+            "card_class": "border-blue-200 bg-blue-50/40",
+        },
+        "APROVADO": {
+            "label": "Aprovada",
+            "badge_class": "border-emerald-200 bg-emerald-50 text-emerald-700",
+            "icon": "fa-check-circle",
+            "card_class": "border-emerald-200 bg-white",
+        },
+        "REJEITADO": {
+            "label": "Rejeitada",
+            "badge_class": "border-rose-200 bg-rose-50 text-rose-700",
+            "icon": "fa-circle-xmark",
+            "card_class": "border-rose-200 bg-rose-50/40",
+        },
+        "CANCELADA": {
+            "label": "Cancelada",
+            "badge_class": "border-slate-200 bg-slate-100 text-slate-700",
+            "icon": "fa-ban",
+            "card_class": "border-slate-200 bg-slate-50/80",
+        },
+        "ERRO": {
+            "label": "Erro",
+            "badge_class": "border-red-200 bg-red-50 text-red-700",
+            "icon": "fa-triangle-exclamation",
+            "card_class": "border-red-200 bg-red-50/50",
+        },
+        "IGNORADA": {
+            "label": "Ignorada",
+            "badge_class": "border-zinc-200 bg-zinc-100 text-zinc-700",
+            "icon": "fa-forward",
+            "card_class": "border-zinc-200 bg-zinc-50/70",
+        },
+    }[step_status]
+
+
+def _build_workflow_execution_history(empresa_id, obra_id):
+    if not empresa_id or not obra_id:
+        return []
+
+    execucoes = (
+        WorkflowExecucao.query
+        .filter_by(empresa_id=empresa_id, obra_id=obra_id)
+        .order_by(
+            WorkflowExecucao.iniciado_em.desc(),
+            WorkflowExecucao.id.desc(),
+        )
+        .all()
+    )
+
+    history = []
+    now = utcnow_naive()
+    for execucao in execucoes:
+        etapas = (
+            WorkflowExecucaoEtapa.query
+            .filter_by(execucao_id=execucao.id, ativo=True)
+            .order_by(
+                WorkflowExecucaoEtapa.nivel.asc(),
+                *WorkflowService._order_by_nullable_asc(WorkflowExecucaoEtapa.ordem),
+                WorkflowExecucaoEtapa.id.asc(),
+            )
+            .all()
+        )
+        workflow_snapshot = execucao.workflow_snapshot or {}
+        workflow_error = _extract_workflow_error(workflow_snapshot)
+        step_errors = []
+        for etapa in etapas:
+            error = _extract_workflow_error(etapa.etapa_snapshot or {})
+            if error:
+                step_errors.append((etapa.id, error))
+
+        status_code = "ERRO" if workflow_error or step_errors else (execucao.status or "PENDENTE").upper()
+        status_meta = _normalize_workflow_status(status_code)
+        execution_number = f"{(execucao.iniciado_em or now).year}-{execucao.id:06d}"
+
+        requester = getattr(execucao.rdo, "usuario", None) if execucao.rdo else None
+        requester_name = (
+            getattr(requester, "nome", None)
+            or getattr(execucao.criador, "nome", None)
+            or "NÃ£o identificado"
+        )
+
+        current_level = execucao.etapa_atual_nivel
+        stage_start_by_level = {}
+        completed_by_level = {}
+        levels = sorted({etapa.nivel for etapa in etapas})
+        previous_finished_at = execucao.iniciado_em
+        for level in levels:
+            stage_start_by_level[level] = previous_finished_at or execucao.iniciado_em
+            finished_times = [
+                etapa.aprovado_em
+                for etapa in etapas
+                if etapa.nivel == level and etapa.aprovado_em
+            ]
+            if finished_times:
+                completed_by_level[level] = max(finished_times)
+                previous_finished_at = completed_by_level[level]
+
+        current_stage = None
+        serialized_steps = []
+        rejected_step = None
+        for etapa in etapas:
+            snapshot = etapa.etapa_snapshot or {}
+            error = _extract_workflow_error(snapshot)
+            stage_start = stage_start_by_level.get(etapa.nivel) or execucao.iniciado_em
+            role_name = getattr(etapa.papel, "nome", None) or snapshot.get("papel_nome")
+            user_name = getattr(etapa.usuario_resolvido, "nome", None) or snapshot.get("usuario_nome")
+
+            if error:
+                visual_status = "ERRO"
+                status_message = "Erro ao executar"
+                detail_message = error.get("message")
+            elif etapa.status == "APROVADO":
+                visual_status = "APROVADO"
+                status_message = "Aprovado por"
+                detail_message = user_name or "UsuÃ¡rio nÃ£o identificado"
+            elif etapa.status == "REJEITADO":
+                visual_status = "REJEITADO"
+                status_message = "Rejeitado por"
+                detail_message = user_name or "UsuÃ¡rio nÃ£o identificado"
+                rejected_step = rejected_step or etapa
+            elif etapa.status == "CANCELADO":
+                visual_status = "CANCELADA"
+                status_message = "Cancelada"
+                detail_message = etapa.comentario or "Fluxo interrompido."
+            elif etapa.status == "PULADO":
+                visual_status = "IGNORADA"
+                status_message = "Ignorada"
+                detail_message = etapa.comentario or "Etapa nÃ£o necessÃ¡ria nesta execuÃ§Ã£o."
+            elif current_level and etapa.nivel == current_level and status_code in {"PENDENTE", "EM_ANDAMENTO", "REABERTO", "ERRO"}:
+                visual_status = "EM_EXECUCAO" if status_code != "PENDENTE" else "AGUARDANDO"
+                status_message = "Aguardando aprovaÃ§Ã£o"
+                detail_message = _humanize_duration(stage_start, now, prefix="HÃ¡ ")
+                current_stage = current_stage or etapa
+            else:
+                visual_status = "NAO_INICIADA"
+                status_message = "Aguardando etapa anterior"
+                detail_message = ""
+
+            serialized_steps.append({
+                "id": etapa.id,
+                "nivel": etapa.nivel,
+                "ordem": etapa.ordem,
+                "nome": etapa.nome,
+                "tipo_aprovador": etapa.tipo_aprovador,
+                "papel_nome": role_name,
+                "usuario_nome": user_name,
+                "status": visual_status,
+                "status_raw": etapa.status,
+                "status_message": status_message,
+                "detail_message": detail_message,
+                "badge_class": _workflow_step_visual_status(visual_status)["badge_class"],
+                "card_class": _workflow_step_visual_status(visual_status)["card_class"],
+                "icon": _workflow_step_visual_status(visual_status)["icon"],
+                "status_label": _workflow_step_visual_status(visual_status)["label"],
+                "aprovado_em_label": _format_datetime_br(etapa.aprovado_em) if etapa.aprovado_em else None,
+                "duracao_label": _humanize_duration(stage_start, etapa.aprovado_em or now) if stage_start else "-",
+                "comentario": etapa.comentario,
+                "erro": error,
+            })
+
+        if status_code == "APROVADO":
+            summary_title = "Workflow concluÃ­do com sucesso"
+            summary_lines = [
+                {"label": "Tempo total", "value": _humanize_duration(execucao.iniciado_em, execucao.finalizado_em or now)},
+                {"label": "Resumo", "value": "Todas as etapas executadas."},
+            ]
+        elif status_code in {"PENDENTE", "EM_ANDAMENTO", "REABERTO"}:
+            summary_title = "Workflow em andamento"
+            summary_lines = [
+                {"label": "Etapa atual", "value": current_stage.nome if current_stage else "Aguardando definiÃ§Ã£o"},
+                {"label": "Aguardando desde", "value": _format_datetime_br(stage_start_by_level.get(current_stage.nivel) if current_stage else execucao.iniciado_em)},
+            ]
+        elif status_code == "REJEITADO":
+            summary_title = "Workflow rejeitado"
+            summary_lines = [
+                {"label": "Etapa", "value": rejected_step.nome if rejected_step else "NÃ£o identificada"},
+                {"label": "Motivo", "value": rejected_step.comentario if rejected_step and rejected_step.comentario else "Sem motivo informado."},
+            ]
+        elif status_code == "CANCELADO":
+            summary_title = "Workflow cancelado"
+            summary_lines = [
+                {"label": "Tempo total", "value": _humanize_duration(execucao.iniciado_em, execucao.finalizado_em or now)},
+                {"label": "Resumo", "value": "A execuÃ§Ã£o foi interrompida antes da conclusÃ£o."},
+            ]
+        else:
+            summary_title = "Workflow com erro"
+            summary_lines = [
+                {"label": "Falha", "value": (workflow_error or (step_errors[0][1] if step_errors else {})).get("message", "Erro nÃ£o detalhado.")},
+                {"label": "CÃ³digo", "value": (workflow_error or (step_errors[0][1] if step_errors else {})).get("code") or "NÃ£o informado"},
+            ]
+
+        history.append({
+            "id": execucao.id,
+            "execution_number": execution_number,
+            "status": status_code,
+            "status_label": status_meta["label"],
+            "status_badge_class": status_meta["badge_class"],
+            "status_dot_class": status_meta["dot_class"],
+            "status_icon": status_meta["icon"],
+            "started_at_label": _format_datetime_br(execucao.iniciado_em),
+            "duration_label": _humanize_duration(
+                execucao.iniciado_em,
+                execucao.finalizado_em or now,
+                prefix="Em execuÃ§Ã£o hÃ¡ " if status_code in {"PENDENTE", "EM_ANDAMENTO", "REABERTO"} else None,
+            ),
+            "requester_name": requester_name,
+            "workflow_name": workflow_snapshot.get("nome") or getattr(execucao.workflow, "nome", None) or "Workflow nÃ£o identificado",
+            "started_at_iso": execucao.iniciado_em.isoformat() if execucao.iniciado_em else None,
+            "finished_at_iso": execucao.finalizado_em.isoformat() if execucao.finalizado_em else None,
+            "summary_title": summary_title,
+            "summary_lines": summary_lines,
+            "solicitante": requester_name,
+            "topo": {
+                "status": status_meta["label"],
+                "iniciado_em": _format_datetime_br(execucao.iniciado_em),
+                "tempo": _humanize_duration(execucao.iniciado_em, execucao.finalizado_em or now),
+                "solicitante": requester_name,
+            },
+            "error": workflow_error,
+            "steps": serialized_steps,
+        })
+
+    return history
+
+
 def _build_obra_governanca_context(empresa_id, obra_id=None):
     base = {
         "definicoes_total": 0,
@@ -475,6 +836,7 @@ def _build_obra_governanca_context(empresa_id, obra_id=None):
         "workflow_origem": "Sem workflow",
         "workflow_origem_tipo": "indefinido",
         "workflow_etapas": [],
+        "workflow_execucoes_historico": [],
     }
     if not empresa_id:
         return base
@@ -566,8 +928,18 @@ def _build_obra_governanca_context(empresa_id, obra_id=None):
             "regra_aprovacao": "Primeiro a responder" if str(workflow_regra).upper().startswith("PRIMEIRO") else "Todos devem aprovar",
             "tipo_fluxo": workflow_tipo_fluxo.title() if workflow_tipo_fluxo in {"SIMPLES", "SEQUENCIAL", "PARALELO"} else workflow_tipo_fluxo.title(),
         },
+        "workflow_execucoes_historico": _build_workflow_execution_history(empresa_id, obra_id),
     })
     return base
+
+
+def _render_workflow_historico_execucoes_html(empresa_id, obra_id, view_mode=False):
+    obra_governanca = _build_obra_governanca_context(empresa_id, obra_id)
+    return render_template(
+        "cadastros/obras/_workflow_historico_execucoes.html",
+        obra_governanca=obra_governanca,
+        view_mode=view_mode,
+    )
 
 
 def _get_obras_permitidas_ids(user, empresa_id):
@@ -1392,6 +1764,148 @@ def restaurar_workflow_padrao_obra(id):
         obra_id=obra.id,
     )
     return jsonify({"ok": True, "preview": preview})
+
+
+@auth_bp.post("/obras/<int:id>/workflow-testar")
+@login_required
+@permission_required('obra.manage')
+def testar_workflow_obra(id):
+    scope_ids = get_user_scope_ids()
+    if scope_ids is not None and id not in scope_ids:
+        return jsonify({"ok": False, "error": "Acesso negado para esta obra."}), 403
+
+    empresa_id = session.get('empresa_id')
+    actor_id = session.get('user_id')
+    obra = Obra.query.filter_by(id=id, empresa_id=empresa_id).first_or_404()
+
+    workflow_id = None
+    payload = request.get_json(silent=True) or {}
+    workflow_id_raw = (payload.get('workflow_id') or request.form.get('workflow_id') or '').strip()
+    if workflow_id_raw:
+        try:
+            workflow_id = int(workflow_id_raw)
+        except ValueError:
+            return jsonify({"ok": False, "error": "Workflow invalido."}), 400
+
+    workflow = db.session.get(WorkflowDefinicao, workflow_id) if workflow_id else WorkflowService.resolver_workflow(empresa_id, obra.id)
+    if not workflow:
+        return jsonify({"ok": False, "error": "Nenhum workflow ativo encontrado para esta obra."}), 400
+    if not _is_workflow_obra_mvp(workflow):
+        return jsonify({"ok": False, "error": "Use apenas os workflows Simples, Sequencial ou Paralelo nesta tela."}), 400
+
+    frente = (
+        FrenteTrabalho.query
+        .filter_by(empresa_id=empresa_id, obra_id=obra.id, ativo=True)
+        .order_by(FrenteTrabalho.id.asc())
+        .first()
+    )
+    if not frente:
+        frente = (
+            FrenteTrabalho.query
+            .filter_by(empresa_id=empresa_id, obra_id=obra.id)
+            .order_by(FrenteTrabalho.id.asc())
+            .first()
+        )
+    if not frente:
+        return jsonify({"ok": False, "error": "Cadastre pelo menos uma frente de trabalho para testar o workflow."}), 400
+
+    try:
+        rdo_teste = RDO(
+            empresa_id=empresa_id,
+            obra_id=obra.id,
+            frente_trabalho_id=frente.id,
+            data_rdo=date.today(),
+            status='PENDENTE',
+            ativo=False,
+            criado_por=actor_id,
+            modificado_por=actor_id,
+        )
+        db.session.add(rdo_teste)
+        db.session.flush()
+
+        execucao = WorkflowService.iniciar_execucao(
+            rdo_id=rdo_teste.id,
+            workflow_id=workflow.id,
+            sobrescrever=True,
+            origem='TESTE',
+        )
+
+        aprovacoes_pendentes = (
+            RDOAprovacao.query
+            .filter_by(rdo_id=rdo_teste.id, status='PENDENTE', ativo=True)
+            .order_by(RDOAprovacao.nivel.asc(), RDOAprovacao.id.asc())
+            .all()
+        )
+        nivel_atual = min((aprovacao.nivel for aprovacao in aprovacoes_pendentes), default=None)
+        for aprovacao in aprovacoes_pendentes:
+            if nivel_atual is not None and aprovacao.nivel != nivel_atual:
+                continue
+            NotificacaoService.criar_notificacao(
+                empresa_id=empresa_id,
+                usuario_id=aprovacao.aprovador_id,
+                tipo=TipoNotificacao.APROVACAO_PENDENTE,
+                titulo=f"Aprovacao Pendente: Workflow de teste da obra {obra.nome}",
+                mensagem=f"O workflow de teste da obra '{obra.nome}' aguarda sua aprovacao.",
+                link=url_for('auth.visualizar_rdo', rdo_id=rdo_teste.id),
+                obra_id=obra.id,
+                rdo_id=rdo_teste.id,
+                criado_por=actor_id,
+            )
+
+        db.session.commit()
+        history_html = _render_workflow_historico_execucoes_html(empresa_id, obra.id, view_mode=False)
+        return jsonify({
+            "ok": True,
+            "message": "Workflow de teste iniciado com sucesso.",
+            "execucao_id": execucao.id,
+            "history_html": history_html,
+        })
+    except WorkflowResolucaoError as exc:
+        db.session.rollback()
+        return jsonify({"ok": False, "error": str(exc)}), 400
+    except Exception:
+        db.session.rollback()
+        return jsonify({"ok": False, "error": "Nao foi possivel iniciar o workflow de teste."}), 500
+
+
+@auth_bp.post("/obras/<int:id>/workflow-execucoes/<int:execucao_id>/cancelar")
+@login_required
+@permission_required('obra.manage')
+def cancelar_execucao_workflow_obra(id, execucao_id):
+    scope_ids = get_user_scope_ids()
+    if scope_ids is not None and id not in scope_ids:
+        return jsonify({"ok": False, "error": "Acesso negado para esta obra."}), 403
+
+    empresa_id = session.get('empresa_id')
+    execucao = WorkflowExecucao.query.filter_by(
+        id=execucao_id,
+        empresa_id=empresa_id,
+        obra_id=id,
+    ).first()
+    if not execucao:
+        return jsonify({"ok": False, "error": "Execucao nao encontrada."}), 404
+
+    if execucao.ativo is False:
+        return jsonify({"ok": False, "error": "Esta execucao ja foi encerrada e nao pode ser cancelada."}), 400
+
+    if execucao.status not in {'PENDENTE', 'EM_ANDAMENTO', 'REABERTO'}:
+        return jsonify({"ok": False, "error": "Somente fluxos em andamento podem ser cancelados."}), 400
+
+    workflow_def = execucao.workflow or db.session.get(WorkflowDefinicao, execucao.workflow_id)
+    if workflow_def and workflow_def.permite_cancelamento is False:
+        return jsonify({"ok": False, "error": "Este workflow nao permite cancelamento."}), 400
+
+    motivo = ((request.get_json(silent=True) or {}).get('motivo') or '').strip() or 'Fluxo cancelado manualmente.'
+    ok, message = WorkflowService.cancelar_execucao(execucao.rdo_id, motivo=motivo, commit=True)
+    if not ok:
+        return jsonify({"ok": False, "error": message}), 400
+
+    history_html = _render_workflow_historico_execucoes_html(empresa_id, id, view_mode=False)
+    return jsonify({
+        "ok": True,
+        "message": message,
+        "history_html": history_html,
+    })
 
 
 def _get_frente_or_404(frente_id: int):

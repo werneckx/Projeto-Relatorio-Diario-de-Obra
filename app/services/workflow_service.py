@@ -1527,6 +1527,43 @@ class WorkflowService:
             execucao.modificado_em = utcnow_naive()
             db.session.add(execucao)
 
+    @staticmethod
+    def cancelar_execucao(
+        rdo_id: int,
+        motivo: Optional[str] = None,
+        commit: bool = True,
+    ) -> Tuple[bool, str]:
+        try:
+            execucao = WorkflowService.obter_execucao_ativa(rdo_id)
+            if not execucao:
+                return False, "Nenhuma execucao ativa encontrada para este workflow."
+            if execucao.status not in {'PENDENTE', 'EM_ANDAMENTO', 'REABERTO'}:
+                return False, "A execucao selecionada nao pode mais ser cancelada."
+
+            rdo = db.session.get(RDO, rdo_id)
+            if not rdo:
+                return False, "RDO nao encontrado."
+
+            WorkflowService._cancelar_fluxo(
+                rdo_id=rdo_id,
+                motivo=motivo or 'Fluxo cancelado manualmente.',
+            )
+
+            actor_id = WorkflowService._ator_id()
+            rdo.status = 'CANCELADO'
+            rdo.modificado_por = actor_id
+            rdo.modificado_em = utcnow_naive()
+            db.session.add(rdo)
+
+            if commit:
+                db.session.commit()
+            else:
+                db.session.flush()
+            return True, "Workflow cancelado com sucesso."
+        except Exception as exc:
+            db.session.rollback()
+            return False, str(exc)
+
     # =========================================================================
     # BLOQUEIO PÓS-APROVAÇÃO
     # =========================================================================
