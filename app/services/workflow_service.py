@@ -45,6 +45,15 @@ class WorkflowService:
     DEFAULT_WORKFLOW_CODIGO = 'SIMPLES'
     WORKFLOW_DEFAULT_CONFIG_KEY = 'workflow.default'
     WORKFLOW_ASSIGNMENTS_CONFIG_KEY = 'workflow.assignments'
+    WORKFLOW_APPROVAL_PERMISSION_KEYS = {
+        'rdo.view': 'Visualizar RDOs',
+        'rdo.approve': 'Aprovar ou rejeitar RDOs',
+        'rdo.sign': 'Assinar RDOs',
+        'workflow.view': 'Visualizar workflows',
+        'workflow.approve': 'Aprovar documentos em workflow',
+        'workflow.reject': 'Reprovar documentos em workflow',
+        'workflow.sign': 'Assinar documentos em workflow',
+    }
 
     @staticmethod
     def _resumo_comportamento_workflow(workflow: WorkflowDefinicao) -> str:
@@ -501,22 +510,6 @@ class WorkflowService:
         if not usuario or not usuario.ativo:
             raise WorkflowResolucaoError(f'Usuário {usuario_id} inválido para aprovação.')
 
-        permissao = Permissao.query.filter(
-            Permissao.chave == 'rdo.approve',
-            Permissao.ativo.is_(True),
-            db.or_(Permissao.empresa_id.is_(None), Permissao.empresa_id == empresa_id),
-        ).order_by(*WorkflowService._order_by_nullable_desc(Permissao.empresa_id), Permissao.id.asc()).first()
-        if not permissao:
-            permissao = Permissao(
-                empresa_id=None,
-                chave='rdo.approve',
-                descricao='Aprovar ou rejeitar RDOs',
-                is_system=True,
-                ativo=True,
-            )
-            db.session.add(permissao)
-            db.session.flush()
-
         papel_id_resolvido = papel_id
         if not papel_id_resolvido:
             usuario_papel_existente = UsuarioPapel.query.filter(
@@ -553,21 +546,38 @@ class WorkflowService:
             usuario_papel.ativo = True
             db.session.add(usuario_papel)
 
-        papel_perm = PapelPermissao.query.filter(
-            PapelPermissao.papel_id == papel_id_resolvido,
-            PapelPermissao.permissao_id == permissao.id,
-        ).order_by(*WorkflowService._order_by_nullable_desc(PapelPermissao.empresa_id), PapelPermissao.id.asc()).first()
-        if not papel_perm:
-            papel_perm = PapelPermissao(
-                empresa_id=empresa_id,
-                papel_id=papel_id_resolvido,
-                permissao_id=permissao.id,
-                ativo=True,
-            )
-            db.session.add(papel_perm)
-        else:
-            papel_perm.ativo = True
-            db.session.add(papel_perm)
+        for chave, descricao in WorkflowService.WORKFLOW_APPROVAL_PERMISSION_KEYS.items():
+            permissao = Permissao.query.filter(
+                Permissao.chave == chave,
+                Permissao.ativo.is_(True),
+                db.or_(Permissao.empresa_id.is_(None), Permissao.empresa_id == empresa_id),
+            ).order_by(*WorkflowService._order_by_nullable_desc(Permissao.empresa_id), Permissao.id.asc()).first()
+            if not permissao:
+                permissao = Permissao(
+                    empresa_id=None,
+                    chave=chave,
+                    descricao=descricao,
+                    is_system=True,
+                    ativo=True,
+                )
+                db.session.add(permissao)
+                db.session.flush()
+
+            papel_perm = PapelPermissao.query.filter(
+                PapelPermissao.papel_id == papel_id_resolvido,
+                PapelPermissao.permissao_id == permissao.id,
+            ).order_by(*WorkflowService._order_by_nullable_desc(PapelPermissao.empresa_id), PapelPermissao.id.asc()).first()
+            if not papel_perm:
+                papel_perm = PapelPermissao(
+                    empresa_id=empresa_id,
+                    papel_id=papel_id_resolvido,
+                    permissao_id=permissao.id,
+                    ativo=True,
+                )
+                db.session.add(papel_perm)
+            else:
+                papel_perm.ativo = True
+                db.session.add(papel_perm)
 
         db.session.flush()
 
@@ -617,6 +627,19 @@ class WorkflowService:
                 suggested_id = elegiveis[0].usuario_id
             elif fallback_usuarios:
                 suggested_id = fallback_usuarios[0].id
+
+            if (
+                auto_grant_signature
+                and etapa.tipo_aprovador == 'PAPEL'
+                and papel_id
+                and not elegiveis
+                and not selected_id
+            ):
+                papel_nome = papel.nome if papel else str(papel_id)
+                erros.append(
+                    f'A etapa "{etapa.nome}" usa o papel "{papel_nome}", mas nenhum usuario com este papel esta vinculado a obra. Vincule um usuario a obra antes de salvar o workflow.'
+                )
+                continue
 
             usuario_final_id = selected_id or suggested_id
             if not usuario_final_id:

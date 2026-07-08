@@ -410,7 +410,8 @@ class TestGeracaoAprovacoes:
             assert validado['etapas'][0]['usuario_id'] == usuario2.id
 
             usuario2_atualizado = db.session.get(Usuario, usuario2.id)
-            assert usuario2_atualizado.tem_permissao('rdo.approve') is True
+            for chave in WorkflowService.WORKFLOW_APPROVAL_PERMISSION_KEYS:
+                assert usuario2_atualizado.tem_permissao(chave) is True
 
     def test_validar_configuracao_workflow_obra_fallback_para_usuarios_da_empresa(
         self, app, db_session, empresa, obra, usuario2
@@ -455,6 +456,15 @@ class TestGeracaoAprovacoes:
             )
             assert preview['etapas'][0]['fallback_empresa'] is True
             assert any(option['id'] == usuario2.id for option in preview['etapas'][0]['usuarios_disponiveis'])
+
+            with pytest.raises(WorkflowResolucaoError, match="nenhum usuario com este papel esta vinculado"):
+                WorkflowService.validar_configuracao_workflow_obra(
+                    empresa_id=empresa.id,
+                    obra_id=obra.id,
+                    workflow_id=workflow.id,
+                    assignments={},
+                    auto_grant_signature=True,
+                )
 
             validado = WorkflowService.validar_configuracao_workflow_obra(
                 empresa_id=empresa.id,
