@@ -194,12 +194,24 @@ def _build_obra_workflow_setup_context(empresa_id, obra_id=None):
     ):
         papeis_por_usuario.setdefault(usuario_papel.usuario_id, set()).add(usuario_papel.papel_id)
 
+    papeis_obra_por_usuario = {}
+    if obra_id:
+        for vinculo in (
+            ObraUsuario.query
+            .filter_by(empresa_id=empresa_id, obra_id=obra_id, ativo=True)
+            .all()
+        ):
+            if vinculo.papel_id:
+                papeis_obra_por_usuario.setdefault(vinculo.usuario_id, set()).add(vinculo.papel_id)
+
     base["user_options"] = [
         {
             "id": usuario.id,
             "nome": usuario.nome,
             "email": usuario.email,
             "papel_ids": sorted(papeis_por_usuario.get(usuario.id, set())),
+            "obra_papel_ids": sorted(papeis_obra_por_usuario.get(usuario.id, set())),
+            "vinculado_obra": usuario.id in papeis_obra_por_usuario,
         }
         for usuario in usuarios_empresa
     ]
@@ -499,6 +511,7 @@ def _build_obra_governanca_context(empresa_id, obra_id=None):
             "tipo": definicao.tipo,
             "valor": valor_resolvido,
             "origem": origem,
+            "has_override": definicao.chave in obra_cfg_map,
         })
 
     workflow_setup = _build_obra_workflow_setup_context(empresa_id, obra_id)
@@ -510,25 +523,49 @@ def _build_obra_governanca_context(empresa_id, obra_id=None):
     )
     workflow_aplicado = WorkflowService.resolver_workflow(empresa_id, obra_id)
     workflow_etapas = WorkflowService.obter_etapas_ordenadas(workflow_aplicado.id) if workflow_aplicado else []
+    workflow_preview = workflow_setup.get("preview") or {}
+    workflow_preview_etapas = workflow_preview.get("etapas") or []
+    workflow_tipo_fluxo = (workflow_preview.get("tipo_fluxo") or getattr(workflow_aplicado, "tipo_fluxo", None) or "CONFIGURAVEL").upper()
+    workflow_regra = (
+        next((etapa.get("regra_etapa") for etapa in workflow_preview_etapas if etapa.get("regra_etapa")), None)
+        or "TODOS"
+    )
+    workflow_assinatura_obrigatoria = any(bool(etapa.get("assinatura_obrigatoria")) for etapa in workflow_preview_etapas)
+    workflow_tem_config_propria = bool(
+        workflow_proprio
+        or WorkflowService.WORKFLOW_DEFAULT_CONFIG_KEY in obra_cfg_map
+        or WorkflowService.WORKFLOW_ASSIGNMENTS_CONFIG_KEY in obra_cfg_map
+    )
 
     base.update({
         "overrides_total": len(obra_cfg_rows),
-        "configs_resolvidas": configs_resolvidas[:8],
+        "configs_resolvidas": configs_resolvidas,
         "overrides": [
             {
                 "chave": cfg.chave,
                 "descricao": cfg.definicao.descricao if cfg.definicao else None,
                 "tipo": cfg.definicao.tipo if cfg.definicao else "STRING",
                 "valor": cfg.valor,
+                "origem": "Obra",
+                "has_override": True,
             }
             for cfg in obra_cfg_rows
         ],
         "workflow_proprio": workflow_proprio,
         "workflow_aplicado": workflow_aplicado,
-        "workflow_origem": workflow_setup["preview"].get("workflow_origem") if workflow_setup.get("preview") else ("Workflow Proprio da Obra" if workflow_proprio else ("Herdado da Empresa" if workflow_aplicado else "Sem workflow")),
-        "workflow_origem_tipo": workflow_setup["preview"].get("workflow_origem_tipo") if workflow_setup.get("preview") else ("obra" if workflow_proprio else ("empresa" if workflow_aplicado else "indefinido")),
+        "workflow_origem": workflow_preview.get("workflow_origem") if workflow_preview else ("Workflow Proprio da Obra" if workflow_proprio else ("Herdado da Empresa" if workflow_aplicado else "Sem workflow")),
+        "workflow_origem_tipo": workflow_preview.get("workflow_origem_tipo") if workflow_preview else ("obra" if workflow_proprio else ("empresa" if workflow_aplicado else "indefinido")),
         "workflow_etapas": workflow_etapas,
         "workflow_setup": workflow_setup,
+        "workflow_tem_config_propria": workflow_tem_config_propria,
+        "workflow_summary": {
+            "workflow_atual": workflow_preview.get("workflow_nome") or (workflow_aplicado.nome if workflow_aplicado else "Sem workflow"),
+            "origem": workflow_preview.get("workflow_origem") or ("Obra" if workflow_proprio else ("Empresa" if workflow_aplicado else "Sistema")),
+            "origem_tipo": workflow_preview.get("workflow_origem_tipo") or ("obra" if workflow_proprio else ("empresa" if workflow_aplicado else "sistema")),
+            "assinatura_obrigatoria": workflow_assinatura_obrigatoria,
+            "regra_aprovacao": "Primeiro a responder" if str(workflow_regra).upper().startswith("PRIMEIRO") else "Todos devem aprovar",
+            "tipo_fluxo": workflow_tipo_fluxo.title() if workflow_tipo_fluxo in {"SIMPLES", "SEQUENCIAL", "PARALELO"} else workflow_tipo_fluxo.title(),
+        },
     })
     return base
 
@@ -1315,6 +1352,44 @@ def preview_workflow_obra(id):
         empresa_id=empresa_id,
         obra_id=obra.id,
         workflow_id=workflow_id,
+    )
+    return jsonify({"ok": True, "preview": preview})
+
+
+@auth_bp.post("/obras/<int:id>/workflow-restaurar-padrao")
+@login_required
+@permission_required('obra.manage')
+def restaurar_workflow_padrao_obra(id):
+    scope_ids = get_user_scope_ids()
+    if scope_ids is not None and id not in scope_ids:
+        return jsonify({"ok": False, "error": "Acesso negado para esta obra."}), 403
+
+    empresa_id = session.get('empresa_id')
+    obra = Obra.query.filter_by(id=id, empresa_id=empresa_id).first_or_404()
+
+    ObraConfig.query.filter(
+        ObraConfig.empresa_id == empresa_id,
+        ObraConfig.obra_id == obra.id,
+        ObraConfig.chave.in_([
+            WorkflowService.WORKFLOW_DEFAULT_CONFIG_KEY,
+            WorkflowService.WORKFLOW_ASSIGNMENTS_CONFIG_KEY,
+        ]),
+    ).delete(synchronize_session=False)
+
+    workflows_proprios = WorkflowDefinicao.query.filter_by(
+        empresa_id=empresa_id,
+        obra_id=obra.id,
+        ativo=True,
+    ).all()
+    for workflow in workflows_proprios:
+        workflow.ativo = False
+        workflow.modificado_por = session.get("user_id")
+        db.session.add(workflow)
+
+    db.session.commit()
+    preview = WorkflowService.construir_preview_workflow_obra(
+        empresa_id=empresa_id,
+        obra_id=obra.id,
     )
     return jsonify({"ok": True, "preview": preview})
 

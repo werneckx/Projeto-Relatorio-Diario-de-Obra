@@ -867,7 +867,7 @@
                             <input type="hidden" id="modal-frente-id" value="">
                             <p class="text-xs text-slate-500 flex items-center gap-2">
                                 <i class="fas fa-circle-info text-slate-400"></i>
-                                Registros Inativos sao preservados como historico e nao podem ser excluidos.
+                                Registros inativos são preservados como histórico e não podem ser excluídos.
                             </p>
                             <button type="button" onclick="closeColaboradoresModal()"
                                 class="px-5 h-11 rounded-2xl border border-slate-200 text-slate-600 text-sm font-bold hover:bg-slate-50 self-end sm:self-auto">
@@ -897,7 +897,7 @@
     <div class="px-5 pt-5">
         <div class="inline-flex rounded-2xl border border-slate-200 bg-slate-50 p-1 gap-1">
         <button type="button" class="obra-governanca-tab-trigger h-10 px-4 rounded-xl text-sm font-bold transition bg-white text-slate-800 shadow-sm" data-tab-trigger="workflow" onclick="switchObraGovernancaTab('workflow')">
-            Workflow
+            Workflow de Aprovação
         </button>
         <button type="button" class="obra-governanca-tab-trigger h-10 px-4 rounded-xl text-sm font-bold transition text-slate-500 hover:text-slate-700" data-tab-trigger="definicoes" onclick="switchObraGovernancaTab('definicoes')">
             Definições
@@ -916,7 +916,7 @@
                         <div class="mt-1 text-sm text-slate-500">Configure o tipo de fluxo e depois defina somente os aprovadores das etapas.</div>
                         <div class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-[minmax(260px,1fr),180px,minmax(280px,1.15fr)] xl:max-w-4xl">
                             <div>
-                                <label class="block text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400 mb-2">Tipo</label>
+                                <label class="block text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400 mb-2">Modelo de Workflow</label>
                                 {% if view_mode %}
                                 <input type="text" value="{{ workflow_setup.preview.workflow_nome }}" class="{{ final_input_css }}" readonly disabled>
                                 {% else %}
@@ -949,7 +949,7 @@
                                 <label class="block text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400 mb-2">Assinatura</label>
                                 <select id="workflowGlobalSignature" class="{{ final_input_css }} {{ select_view_css }}" {% if view_mode %}disabled{% endif %} onchange="handleWorkflowGlobalConfigChange()">
                                     <option value="1">Sim</option>
-                                    <option value="0">Nao</option>
+                                    <option value="0">Não</option>
                                 </select>
                             </div>
                             <div>
@@ -962,7 +962,15 @@
                         </div>
                         {% if not view_mode %}
                         <div id="workflowOwnConfigNotice" class="hidden mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
-                            Esta alteração criará uma configuração espec??fica para esta obra.
+                            Esta alteração criará uma configuração especifica para esta obra.
+                        </div>
+                        {% endif %}
+
+                        {% if not view_mode and obra_governanca.workflow_tem_config_propria %}
+                        <div class="mt-4 flex justify-end">
+                            <button type="button" onclick="restoreWorkflowCompanyDefault()" class="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100">
+                                <i class="fas fa-rotate-left"></i> Restaurar padrão da empresa
+                            </button>
                         </div>
                         {% endif %}
                     </div>
@@ -998,7 +1006,7 @@
                 {% set etapa_tipo = 'USUARIO' if etapa.tipo_aprovador == 'USUARIO' else 'PAPEL' %}
                 {% set etapa_valida = etapa.usuario_aprovador_id if etapa_tipo == 'USUARIO' else etapa.papel_id %}
                 <div class="rounded-2xl border {% if etapa_valida %}border-slate-200 bg-white{% else %}border-amber-200 bg-amber-50/40{% endif %} p-4 shadow-sm obra-workflow-etapa" data-stage-index="{{ loop.index0 }}" data-etapa-id="{{ etapa.etapa_id }}" {% if not view_mode %}draggable="true"{% endif %}>
-                    <div class="grid grid-cols-1 gap-3 lg:grid-cols-[auto,180px,220px,240px,150px,auto] lg:items-end">
+                    <div class="grid grid-cols-1 gap-3 lg:grid-cols-[auto,180px,220px,240px,auto] lg:items-end">
                         <div class="flex items-center gap-3 lg:pb-1">
                             <button type="button" class="{% if view_mode %}cursor-default{% else %}cursor-grab active:cursor-grabbing{% endif %} inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-400" title="Arraste para ordenar" {% if view_mode %}disabled{% endif %}>
                                 <i class="fas fa-grip-vertical"></i>
@@ -1009,32 +1017,28 @@
                                     {% if etapa.usuario_aprovador_id %}
                                     <span class="mt-1 inline-flex items-center gap-1.5 rounded-full border border-emerald-100 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-700"><i class="fas fa-check-circle"></i> Usuário definido</span>
                                     {% else %}
-                                    <span class="mt-1 inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-amber-800"><i class="fas fa-exclamation-triangle"></i> Sem usuário</span>
+                                    <span class="mt-1 inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-amber-800"><i class="fas fa-exclamation-triangle"></i> Pendente</span>
                                     {% endif %}
                                 {% else %}
                                     {% if etapa.papel_id %}
                                     <span class="mt-1 inline-flex items-center gap-1.5 rounded-full border border-emerald-100 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-700"><i class="fas fa-check-circle"></i> Papel definido</span>
                                     {% else %}
-                                    <span class="mt-1 inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-amber-800"><i class="fas fa-exclamation-triangle"></i> Sem papel</span>
+                                    <span class="mt-1 inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-amber-800"><i class="fas fa-exclamation-triangle"></i> Pendente</span>
                                     {% endif %}
                                 {% endif %}
                             </div>
                         </div>
                         <div>
                             <div class="mb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Tipo</div>
-                            <div class="h-10 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-600">{% if etapa_tipo == 'USUARIO' %}Por usu?rio fixo{% else %}Por papel{% endif %}</div>
+                            <div class="h-10 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-600">{% if etapa_tipo == 'USUARIO' %}Por usuário fixo{% else %}Por papel{% endif %}</div>
                         </div>
                         <div>
                             <div class="mb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Papel</div>
-                            <div class="h-10 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-600">{{ etapa.papel_nome or 'Papel n?o definido' }}</div>
+                            <div class="h-10 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-600">{{ etapa.papel_nome or 'Papel não definido' }}</div>
                         </div>
                         <div>
-                            <div class="mb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Usu?rio</div>
-                            <div class="h-10 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-600">{{ etapa.usuario_nome or 'Usu?rio n?o definido' }}</div>
-                        </div>
-                        <div>
-                            <div class="mb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Assinatura</div>
-                            <div class="h-10 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-600">{% if etapa.assinatura_obrigatoria %}Sim{% else %}N?o{% endif %}</div>
+                            <div class="mb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Usuário</div>
+                            <div class="h-10 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-600">{{ etapa.usuario_nome or 'Usuário não definido' }}</div>
                         </div>
                         <div class="flex justify-end lg:pb-1">
                             {% if not view_mode %}
@@ -1049,31 +1053,6 @@
                     Nenhum workflow aplicado encontrado para esta obra.
                 </div>
                 {% endif %}
-            </div>
-        </div>
-    </div>
-
-    <div id="workflow-diagram-modal" class="fixed inset-0 z-[9999] hidden" data-disable-global-picker-enhancer="true" aria-hidden="true">
-        <div class="absolute inset-0 bg-slate-950/45 backdrop-blur-[2px]" onclick="closeWorkflowDiagramModal()"></div>
-        <div class="relative z-10 flex min-h-full items-start justify-center overflow-y-auto p-4 pt-8 pb-8">
-            <div class="w-full max-w-4xl max-h-[88vh] rounded-[28px] border border-slate-200 bg-white shadow-2xl overflow-hidden flex flex-col">
-                <div class="px-6 py-5 border-b border-slate-100 bg-slate-50/70 flex items-start justify-between gap-4">
-                    <div>
-                        <div class="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Workflow</div>
-                        <h3 id="workflowDiagramModalTitle" class="mt-1 text-xl font-black text-slate-900">{{ workflow_setup.preview.workflow_nome or 'Workflow da Obra' }}</h3>
-                        <p id="workflowDiagramModalSubtitle" class="mt-2 text-sm text-slate-600">{{ workflow_setup.preview.diagram.resumo if workflow_setup.preview.diagram else 'Este workflow organiza a aprovação da obra em etapas.' }}</p>
-                    </div>
-                    <button type="button" onclick="closeWorkflowDiagramModal()" class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 hover:text-slate-700 hover:bg-slate-50">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="px-6 py-5 min-h-0 flex-1 overflow-hidden">
-                    <div class="flex flex-wrap items-center gap-2 mb-5">
-                        <span id="workflowModalOrigemBadge" class="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-700">Origem: {{ workflow_setup.preview.workflow_origem or 'Sistema' }}</span>
-                        <span id="workflowEtapasTotalBadge" class="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-600">{{ workflow_setup.preview.etapas|length }} etapas</span>
-                    </div>
-                    <div id="workflowDiagramContainer" class="h-full overflow-y-auto pr-1"></div>
-                </div>
             </div>
         </div>
     </div>
@@ -1097,9 +1076,9 @@
                                 <div class="text-sm font-bold text-slate-900 break-words">{{ cfg.chave }}</div>
                                 <div class="mt-1 text-xs text-slate-500">{{ cfg.descricao or 'Sem descrição cadastrada.' }}</div>
                             </div>
-                            <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] shrink-0 {% if cfg.origem == 'Obra' %}bg-blue-50 text-blue-700 border border-blue-100{% elif cfg.origem == 'Empresa' %}bg-emerald-50 text-emerald-700 border border-emerald-100{% else %}bg-slate-100 text-slate-600 border border-slate-200{% endif %}">{{ cfg.origem }}</span>
+                            <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] shrink-0 {% if cfg.origem == 'Obra' %}bg-blue-50 text-blue-700 border border-blue-100{% elif cfg.origem == 'Empresa' %}bg-emerald-50 text-emerald-700 border border-emerald-100{% else %}bg-slate-100 text-slate-600 border border-slate-200{% endif %}">{{ cfg.origem }}</span>{% if cfg.has_override %}<span class="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-amber-800">Override da obra</span>{% endif %}
                         </div>
-                        <div class="mt-3 text-sm font-semibold text-slate-700 break-words">{{ cfg.valor }}</div>
+                        <div class="mt-3 text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Valor aplicado</div><div class="mt-1 text-sm font-semibold text-slate-700 break-words">{{ cfg.valor }}</div>
                     </div>
                     {% else %}
                     <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 px-4 py-8 text-center text-sm text-slate-400">Nenhuma configuração em vigor disponível para esta obra.</div>
@@ -1118,7 +1097,7 @@
                     <div class="rounded-2xl border border-slate-200 bg-slate-50/40 p-4">
                         <div class="text-sm font-bold text-slate-900 break-words">{{ override.chave }}</div>
                         <div class="mt-1 text-xs text-slate-500">{{ override.descricao or 'Sem descrição cadastrada.' }}</div>
-                        <div class="mt-3 text-sm font-semibold text-slate-700 break-words">{{ override.valor }}</div>
+                        <div class="mt-3 text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Valor aplicado</div><div class="mt-1 text-sm font-semibold text-slate-700 break-words">{{ override.valor }}</div><div class="mt-2 inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-amber-800">Override específico da obra</div>
                     </div>
                     {% else %}
                     <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 px-4 py-8 text-center text-sm text-slate-400">Esta obra ainda não possui configurações próprias. Ela herda os valores da empresa e do sistema.</div>
@@ -3877,7 +3856,7 @@
 
         function getWorkflowUsersForRole(papelId) {
             if (!papelId) return [];
-            return obraWorkflowUserOptions.filter((usuario) => Array.isArray(usuario.papel_ids) && usuario.papel_ids.includes(Number(papelId)));
+            return obraWorkflowUserOptions.filter((usuario) => Array.isArray(usuario.obra_papel_ids) && usuario.obra_papel_ids.includes(Number(papelId)));
         }
 
         function getWorkflowPrimaryRoleForUser(usuarioId) {
@@ -3902,6 +3881,11 @@
             return getWorkflowResolvedUserForRole(stage.papel_id);
         }
 
+        function isWorkflowRoleMissingObraUser(stage) {
+            const tipo = normalizeWorkflowStageType(stage.tipo_aprovador);
+            return tipo === 'PAPEL' && Boolean(stage.papel_id) && getWorkflowUsersForRole(stage.papel_id).length === 0;
+        }
+
         function syncWorkflowStageDerivedFields(stage) {
             const tipo = normalizeWorkflowStageType(stage.tipo_aprovador);
             stage.tipo_aprovador = tipo;
@@ -3922,17 +3906,17 @@
                     return { label: 'Usuário definido', icon: 'fa-check-circle', badgeClass: 'border-emerald-100 bg-emerald-50 text-emerald-700', cardClass: 'border-slate-200 bg-white' };
                 }
                 if (stage.usuario_aprovador_id) {
-                    return { label: 'Sem papel', icon: 'fa-exclamation-triangle', badgeClass: 'border-amber-200 bg-amber-50 text-amber-800', cardClass: 'border-amber-200 bg-amber-50/40' };
+                    return { label: 'Pendente', icon: 'fa-exclamation-triangle', badgeClass: 'border-amber-200 bg-amber-50 text-amber-800', cardClass: 'border-amber-200 bg-amber-50/40', message: 'Selecione um papel aprovador.' };
                 }
-                return { label: 'Sem usuário', icon: 'fa-exclamation-triangle', badgeClass: 'border-amber-200 bg-amber-50 text-amber-800', cardClass: 'border-amber-200 bg-amber-50/40' };
+                return { label: 'Pendente', icon: 'fa-exclamation-triangle', badgeClass: 'border-amber-200 bg-amber-50 text-amber-800', cardClass: 'border-amber-200 bg-amber-50/40', message: 'Selecione um usuário aprovador.' };
             }
             if (stage.papel_id && getWorkflowResolvedUserForRole(stage.papel_id)) {
                 return { label: 'Papel definido', icon: 'fa-check-circle', badgeClass: 'border-emerald-100 bg-emerald-50 text-emerald-700', cardClass: 'border-slate-200 bg-white' };
             }
             if (stage.papel_id) {
-                return { label: 'Sem usuário', icon: 'fa-exclamation-triangle', badgeClass: 'border-amber-200 bg-amber-50 text-amber-800', cardClass: 'border-amber-200 bg-amber-50/40' };
+                return { label: 'Pendente', icon: 'fa-exclamation-triangle', badgeClass: 'border-amber-200 bg-amber-50 text-amber-800', cardClass: 'border-amber-200 bg-amber-50/40', message: 'Selecione um usuário aprovador.' };
             }
-            return { label: 'Sem papel', icon: 'fa-exclamation-triangle', badgeClass: 'border-amber-200 bg-amber-50 text-amber-800', cardClass: 'border-amber-200 bg-amber-50/40' };
+            return { label: 'Pendente', icon: 'fa-exclamation-triangle', badgeClass: 'border-amber-200 bg-amber-50 text-amber-800', cardClass: 'border-amber-200 bg-amber-50/40', message: 'Selecione um papel aprovador.' };
         }
 
         function getWorkflowStageTargetLabel(stage) {
@@ -4080,31 +4064,6 @@
 
         window.toggleWorkflowNodeDetails = toggleWorkflowNodeDetails;
 
-        function openWorkflowDiagramModal() {
-            const modal = el('workflow-diagram-modal');
-            const container = el('workflowDiagramContainer');
-            if (!modal) return;
-            if (modal.parentElement !== document.body) document.body.appendChild(modal);
-            modal.classList.remove('hidden');
-            modal.style.display = 'block';
-            modal.setAttribute('aria-hidden', 'false');
-            document.body.classList.add('overflow-hidden');
-            if (container) container.scrollTop = 0;
-            renderWorkflowDiagram(obraWorkflowState.preview || {});
-        }
-
-        function closeWorkflowDiagramModal() {
-            const modal = el('workflow-diagram-modal');
-            if (!modal) return;
-            modal.classList.add('hidden');
-            modal.style.display = '';
-            modal.setAttribute('aria-hidden', 'true');
-            document.body.classList.remove('overflow-hidden');
-        }
-
-        window.openWorkflowDiagramModal = openWorkflowDiagramModal;
-        window.closeWorkflowDiagramModal = closeWorkflowDiagramModal;
-
         function bindWorkflowStageEditorListeners() {
             document.querySelectorAll('.obra-workflow-stage-type').forEach((select) => {
                 if (select.dataset.boundWorkflowStageType === '1') return;
@@ -4176,7 +4135,6 @@
                     obraWorkflowState.dirtyCustomStages = true;
                     showWorkflowOwnConfigNotice();
                     syncObraWorkflowConfigField();
-                    renderWorkflowDiagram(obraWorkflowState.preview);
                     saveDraft();
                 });
             });
@@ -4191,7 +4149,6 @@
                     obraWorkflowState.dirtyCustomStages = true;
                     showWorkflowOwnConfigNotice();
                     syncObraWorkflowConfigField();
-                    renderWorkflowDiagram(obraWorkflowState.preview);
                     saveDraft();
                 });
             });
@@ -4332,7 +4289,6 @@
             normalizeWorkflowStagesOrder();
 
             updateWorkflowSummary(obraWorkflowState.preview);
-            renderWorkflowDiagram(preview);
 
             if (errorBox) {
                 const errors = Array.isArray(preview.errors) ?preview.errors.filter(Boolean) : [];
@@ -4397,24 +4353,9 @@
                        </select>`
                     : `<input type="text" class="${fixedInputClass}" value="${escapeHtml(displayUser?.nome || 'Usuário não definido')}" readonly disabled>`;
 
-                const signatureField = readOnly
-                    ? `<input type="text" class="${fixedInputClass}" value="${etapa.assinatura_obrigatoria ? 'Sim' : 'Não'}" readonly disabled>`
-                    : `<select class="${editableSelectClass} obra-workflow-stage-signature" data-stage-index="${index}">
-                            <option value="0" ${!etapa.assinatura_obrigatoria ? 'selected' : ''}>Não</option>
-                            <option value="1" ${etapa.assinatura_obrigatoria ? 'selected' : ''}>Sim</option>
-                       </select>`;
-
-                const stageRule = normalizeWorkflowStageRule(etapa.regra_etapa);
-                const ruleField = readOnly
-                    ? `<input type="text" class="${fixedInputClass}" value="${stageRule === 'PRIMEIRO' ? 'Primeiro a responder' : 'Todos devem aprovar'}" readonly disabled>`
-                    : `<select class="${editableSelectClass} obra-workflow-stage-rule" data-stage-index="${index}">
-                            <option value="TODOS" ${stageRule === 'TODOS' ? 'selected' : ''}>Todos devem aprovar</option>
-                            <option value="PRIMEIRO" ${stageRule === 'PRIMEIRO' ? 'selected' : ''}>Primeiro a responder</option>
-                       </select>`;
-
                 return `
                     <div class="rounded-2xl border ${stageStatus.cardClass} p-4 shadow-sm obra-workflow-etapa transition" data-stage-index="${index}" data-etapa-id="${escapeHtml(String(etapa.etapa_id || ''))}" ${readOnly ?'' : 'draggable="true"'}>
-                        <div class="grid grid-cols-1 gap-3 lg:grid-cols-[auto,160px,200px,230px,130px,190px,auto] lg:items-end">
+                        <div class="grid grid-cols-1 gap-3 lg:grid-cols-[auto,160px,200px,230px,auto] lg:items-end">
                             <div class="flex items-center gap-3 lg:pb-1">
                                 <button type="button" class="${readOnly ?'cursor-default' : 'cursor-grab active:cursor-grabbing'} inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-400" title="Arraste para ordenar" ${readOnly ?'disabled' : ''}>
                                     <i class="fas fa-grip-vertical"></i>
@@ -4438,14 +4379,6 @@
                             <div>
                                 <div class="mb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Usuário</div>
                                 ${userField}
-                            </div>
-                            <div>
-                                <div class="mb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Assinatura</div>
-                                ${signatureField}
-                            </div>
-                            <div>
-                                <div class="mb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Regra</div>
-                                ${ruleField}
                             </div>
                             <div class="flex justify-end lg:pb-1">
                                 ${readOnly || rules.isSimple ?'' : `<button type="button" onclick="removeWorkflowStageRow(${index})" class="inline-flex h-10 items-center justify-center rounded-xl border border-rose-200 bg-white px-3 text-xs font-bold text-rose-600 hover:bg-rose-50">Excluir</button>`}
@@ -4579,6 +4512,13 @@
                 : '<i class="fas fa-chevron-up"></i> Recolher todos';
         }
 
+        function updateWorkflowResponsaveisTitle() {
+            const title = el('workflowResponsaveisTitle');
+            if (!title) return;
+            const rules = getWorkflowRules();
+            title.textContent = rules.isSimple ? 'Responsáveis pela Aprovação' : (rules.isParallel ? 'Grupos e Responsáveis' : 'Etapas e Responsáveis');
+        }
+
         function createWorkflowApprover(groupKey) {
             const nextIndex = (obraWorkflowState.customStages || []).length;
             return {
@@ -4644,6 +4584,7 @@
         window.collapseAllWorkflowGroups = collapseAllWorkflowGroups;
         window.expandAllWorkflowGroups = expandAllWorkflowGroups;
         window.toggleAllWorkflowGroups = toggleAllWorkflowGroups;
+        window.restoreWorkflowCompanyDefault = restoreWorkflowCompanyDefault;
 
         function renderObraWorkflowPreview(preview) {
             const container = el('workflowEtapasContainer');
@@ -4663,7 +4604,7 @@
             updateWorkflowTipoDropdown();
             syncWorkflowGlobalControls();
             updateToggleAllWorkflowGroupsButton();
-            renderWorkflowDiagram(preview);
+            updateWorkflowResponsaveisTitle();
 
             if (errorBox) {
                 const errors = Array.isArray(preview.errors) ?preview.errors.filter(Boolean) : [];
@@ -4683,6 +4624,11 @@
                 const tipo = normalizeWorkflowStageType(stage.tipo_aprovador);
                 const displayRole = getWorkflowStageDisplayRole(stage);
                 const displayUser = getWorkflowStageDisplayUser(stage);
+                const status = getWorkflowStageStatus(stage);
+                const roleMissingObraUser = isWorkflowRoleMissingObraUser(stage);
+                const pendingMessage = roleMissingObraUser
+                    ? 'Nenhum usuário com este papel está vinculado à obra. Vincule um usuario a esta obra para habilitar a aprovação.'
+                    : (status.message || '');
                 const roleField = tipo === 'PAPEL' && !readOnly
                     ? `<select class="${editableSelectClass} obra-workflow-stage-role" data-stage-index="${stageIndex}">
                             <option value="">Selecione o papel</option>
@@ -4697,17 +4643,18 @@
                                 return `<option value="${escapeHtml(String(usuario.id))}" ${Number(usuario.id) === Number(stage.usuario_aprovador_id) ? 'selected' : ''}>${label}</option>`;
                             }).join('')}
                        </select>`
-                    : `<input type="text" class="${fixedInputClass}" value="${escapeHtml(displayUser?.nome || 'Usuario nao definido')}" readonly disabled>`;
+                    : `<input type="text" class="${fixedInputClass}" value="${escapeHtml(displayUser?.nome || (roleMissingObraUser ? 'Nenhum usuário vinculado à obra' : 'Usuário não definido'))}" readonly disabled>`;
                 return `
                     <div class="obra-workflow-etapa min-w-[280px] flex-1 rounded-2xl border border-slate-200 bg-white p-4 shadow-none" style="box-shadow:none" data-stage-index="${stageIndex}" data-etapa-id="${escapeHtml(String(stage.etapa_id || ''))}">
                         <div class="space-y-3">
+                            <div class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] ${status.badgeClass}"><i class="fas ${status.icon}"></i>${escapeHtml(status.label)}</div>
                             <div>
                                 <label class="mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Tipo de aprovador</label>
                                 ${readOnly
-                                    ? `<input type="text" class="${fixedInputClass}" value="${tipo === 'USUARIO' ? 'Por usuario' : 'Por papel'}" readonly disabled>`
+                                    ? `<input type="text" class="${fixedInputClass}" value="${tipo === 'USUARIO' ? 'Por usuário' : 'Por papel'}" readonly disabled>`
                                     : `<select class="${editableSelectClass} obra-workflow-stage-type" data-stage-index="${stageIndex}">
                                             <option value="PAPEL" ${tipo === 'PAPEL' ? 'selected' : ''}>Por papel</option>
-                                            <option value="USUARIO" ${tipo === 'USUARIO' ? 'selected' : ''}>Por usuario</option>
+                                            <option value="USUARIO" ${tipo === 'USUARIO' ? 'selected' : ''}>Por usuário</option>
                                        </select>`}
                             </div>
                             <div>
@@ -4715,9 +4662,10 @@
                                 ${roleField}
                             </div>
                             <div>
-                                <label class="mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Usuario</label>
+                                <label class="mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Usuário</label>
                                 ${userField}
                             </div>
+                            ${pendingMessage ? `<div class="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">${escapeHtml(pendingMessage)}</div>` : ''}
                             ${readOnly ? '' : `<button type="button" onclick="removeWorkflowApprover(${stageIndex})" ${groupSize <= 1 ? 'disabled' : ''} class="h-9 w-full rounded-xl border border-rose-300 bg-white text-xs font-bold text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40">Excluir</button>`}
                         </div>
                     </div>
@@ -4790,6 +4738,32 @@
             bindWorkflowStageEditorListeners();
             bindWorkflowStageDragSorting();
             syncObraWorkflowConfigField();
+        }
+
+
+        async function restoreWorkflowCompanyDefault() {
+            const confirmed = await showConfirm('Restaurar padrão da empresa', 'As configurações específicas de workflow desta obra serão removidas. Deseja continuar?');
+            if (!confirmed) return;
+            const url = '{{ url_for("auth.restaurar_workflow_padrao_obra", id=item.id) if item and item.id else "" }}';
+            if (!url) return;
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    },
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || !data.ok) throw new Error(data.error || 'Não foi possível restaurar o padrão da empresa.');
+                obraWorkflowState.dirtyCustomStages = false;
+                obraWorkflowState.preview = data.preview || obraWorkflowInitialPreview;
+                hydrateWorkflowCustomStages(obraWorkflowState.preview, true);
+                renderObraWorkflowPreview(obraWorkflowState.preview);
+                showToast('Workflow restaurado para o padrão da empresa.', 'success');
+            } catch (error) {
+                showToast(error.message || 'Erro ao restaurar o padrão da empresa.', 'error');
+            }
         }
 
         async function handleObraWorkflowChange() {
