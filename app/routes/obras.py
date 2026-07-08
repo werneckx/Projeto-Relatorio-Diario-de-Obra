@@ -820,7 +820,6 @@ def _build_workflow_execution_history(empresa_id, obra_id):
             summary_title = "Workflow em andamento"
             summary_lines = [
                 {"label": "Etapa atual", "value": current_stage.nome if current_stage else "Aguardando definição"},
-                {"label": "Aguardando desde", "value": _format_datetime_br(stage_start_by_level.get(current_stage.nivel) if current_stage else execucao.iniciado_em)},
             ]
         elif status_code == "REJEITADO":
             summary_title = "Workflow rejeitado"
