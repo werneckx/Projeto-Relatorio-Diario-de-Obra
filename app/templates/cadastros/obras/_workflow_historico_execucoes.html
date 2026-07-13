@@ -26,7 +26,7 @@
                             <th class="px-5 py-4">Duração</th>
                             <th class="px-5 py-4">Solicitante</th>
                             <th class="px-5 py-4">Workflow</th>
-                            <th class="px-5 py-4 text-right">Acoes</th>
+                            <th class="px-5 py-4 text-right">Ações</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 bg-white">
@@ -121,7 +121,6 @@
                                             </div>
                                             <div class="min-w-0">
                                                 <div class="text-sm font-black text-slate-900">Etapa {{ loop.index }}</div>
-                                                <div class="truncate text-base font-bold text-slate-800">{{ etapa.nome or ('Etapa ' ~ loop.index) }}</div>
                                                 <span class="mt-2 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] {{ etapa.badge_class }}"><i class="fas {{ etapa.icon }}"></i>{{ etapa.status_label }}</span>
                                             </div>
                                         </div>
