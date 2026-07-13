@@ -1503,8 +1503,10 @@ class WorkflowService:
         for aprov in pendentes:
             if aprovacao_executada_id and aprov.id == aprovacao_executada_id:
                 continue
-            aprov.status = 'CANCELADO'
-            aprov.data_aprovacao = utcnow_naive()
+            # A tabela rdo_aprovacoes em produção pode não aceitar o enum CANCELADO.
+            # Encerramos a pendência removendo-a do fluxo ativo e preservamos o
+            # cancelamento no snapshot da execução e no status do RDO.
+            aprov.ativo = False
             aprov.comentario = motivo or 'Fluxo cancelado por rejeição anterior'
             aprov.modificado_por = actor_id
             aprov.modificado_em = utcnow_naive()

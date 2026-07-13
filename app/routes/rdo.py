@@ -5,6 +5,7 @@ from app.services.arquivo_service import ArquivoService
 from app.services.auditoria_service import AuditoriaService
 from app.services.notificacao_service import NotificacaoService
 from app.services.workflow_service import WorkflowService, WorkflowResolucaoError
+from app.models.workflow import WorkflowExecucao
 from app.models.notificacao import TipoNotificacao
 from app.utils.serializers import safe_model_to_dict
 from app.utils.export_service import make_csv_response, make_xlsx_response, make_pdf_response
@@ -17,6 +18,24 @@ RDO_EXPORT_COLUMNS = [
     ("criado", "Criação"),
     ("responsavel", "Responsável"),
 ]
+
+
+def _get_rdo_visualizavel(rdo_id, empresa_id, allow_test_inactive=False):
+    query = RDO.query.filter_by(id=rdo_id, empresa_id=empresa_id)
+    rdo = query.filter_by(ativo=True).first()
+    if rdo or not allow_test_inactive:
+        return rdo
+
+    execucao_teste = WorkflowExecucao.query.filter_by(
+        empresa_id=empresa_id,
+        rdo_id=rdo_id,
+        ativo=True,
+        origem='TESTE',
+    ).first()
+    if not execucao_teste:
+        return None
+
+    return query.first()
 
 
 def _parse_export_columns(default_columns):
@@ -578,7 +597,9 @@ def gerar_rdo():
 @permission_required('rdo.view')
 def visualizar_rdo(rdo_id):
     empresa_id = session.get("empresa_id")
-    item = RDO.query.filter_by(id=rdo_id, empresa_id=empresa_id, ativo=True).first_or_404()
+    item = _get_rdo_visualizavel(rdo_id, empresa_id, allow_test_inactive=True)
+    if not item:
+        abort(404)
 
     # SECURITY: Verifica permissão na obra para leitura
     scope_ids = get_user_scope_ids()

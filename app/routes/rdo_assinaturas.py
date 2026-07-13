@@ -2,17 +2,38 @@ from app.routes.auth_common import *
 from app.services.auditoria_service import AuditoriaService
 from app.services.workflow_service import WorkflowService
 from app.utils.serializers import safe_model_to_dict
+from app.models.workflow import WorkflowExecucao
 
 #######################################################################################################
 ####################################################################################################### Assinaturas RDO
 #######################################################################################################
 
 
+def _get_rdo_aprovacao_accessivel(rdo_id, empresa_id, allow_test_inactive=False):
+    query = RDO.query.filter_by(id=rdo_id, empresa_id=empresa_id)
+    rdo = query.filter_by(ativo=True).first()
+    if rdo or not allow_test_inactive:
+        return rdo
+
+    execucao_teste = WorkflowExecucao.query.filter_by(
+        empresa_id=empresa_id,
+        rdo_id=rdo_id,
+        ativo=True,
+        origem='TESTE',
+    ).first()
+    if not execucao_teste:
+        return None
+
+    return query.first()
+
+
 @auth_bp.route("/assinar-rdo/<int:rdo_id>/salvar-workflow", methods=["POST"])
 @login_required
 @permission_required('rdo.approve')
 def salvar_workflow_assinaturas(rdo_id):
-    rdo = RDO.query.filter_by(id=rdo_id, ativo=True).first_or_404()
+    rdo = _get_rdo_aprovacao_accessivel(rdo_id, session.get('empresa_id'), allow_test_inactive=True)
+    if not rdo:
+        abort(404)
 
     scope_ids = get_user_scope_ids()
     if scope_ids is not None and rdo.obra_id not in scope_ids:
@@ -87,7 +108,9 @@ def salvar_workflow_assinaturas(rdo_id):
 @permission_required('rdo.approve')
 def assinar_rdo(rdo_id):
     user_id = session.get("user_id")
-    rdo = RDO.query.filter_by(id=rdo_id, ativo=True).first_or_404()
+    rdo = _get_rdo_aprovacao_accessivel(rdo_id, session.get('empresa_id'), allow_test_inactive=True)
+    if not rdo:
+        abort(404)
 
     scope_ids = get_user_scope_ids()
     if scope_ids is not None and rdo.obra_id not in scope_ids:
