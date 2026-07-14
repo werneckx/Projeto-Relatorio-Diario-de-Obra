@@ -816,10 +816,21 @@
 
         function syncEmpresaWorkflowControls() {
             const select = workflowEl('workflowCompanySelect');
+            const previewInput = workflowEl('workflowCompanySelectPreview');
+            const dropdownLabel = workflowEl('workflowCompanyTypeDropdownLabel');
             const signature = workflowEl('workflowCompanySignature');
             const rule = workflowEl('workflowCompanyRule');
             if (select) {
                 select.value = String(empresaWorkflowState.selectedWorkflowModel || 'simples');
+                const selectedOption = select.options[select.selectedIndex];
+                const selectedLabel = selectedOption ? selectedOption.text : 'Selecione';
+                if (previewInput) previewInput.value = selectedLabel;
+                if (dropdownLabel) dropdownLabel.textContent = selectedLabel;
+                document.querySelectorAll('.workflow-company-type-option').forEach((option) => {
+                    const isActive = option.dataset.workflowModel === select.value;
+                    option.classList.toggle('bg-blue-50', isActive);
+                    option.querySelector('.workflow-company-type-check')?.classList.toggle('hidden', !isActive);
+                });
             }
             if (signature) signature.value = empresaWorkflowState.globalSignature ? '1' : '0';
             if (rule) rule.value = empresaWorkflowState.globalRule;
@@ -904,19 +915,33 @@
         function bootstrapEmpresaWorkflowEditor() {
             const select = workflowEl('workflowCompanySelect');
             if (!select) return;
+            const dropdownButton = workflowEl('workflowCompanyTypeDropdownButton');
+            const dropdownMenu = workflowEl('workflowCompanyTypeDropdownMenu');
+
+            const closeWorkflowTypeDropdown = () => {
+                dropdownMenu?.classList.add('hidden');
+            };
+
+            const toggleWorkflowTypeDropdown = () => {
+                if (!isEmpresaWorkflowEditing()) return;
+                dropdownMenu?.classList.toggle('hidden');
+            };
 
             const handleWorkflowTypeChange = async (value) => {
                 if (!value || value === String(empresaWorkflowState.selectedWorkflowModel || 'simples')) {
                     syncEmpresaWorkflowControls();
+                    closeWorkflowTypeDropdown();
                     return;
                 }
                 if (empresaWorkflowState.dirty) {
                     const confirmed = await showConfirm('Alterar workflow', 'As alteracoes nao salvas serao descartadas. Deseja continuar?');
                     if (!confirmed) {
                         syncEmpresaWorkflowControls();
+                        closeWorkflowTypeDropdown();
                         return;
                     }
                 }
+                closeWorkflowTypeDropdown();
                 loadEmpresaWorkflowPreview(value);
             };
 
@@ -926,6 +951,20 @@
                     return;
                 }
                 await handleWorkflowTypeChange(event.target.value);
+            });
+
+            dropdownButton?.addEventListener('click', toggleWorkflowTypeDropdown);
+
+            dropdownMenu?.addEventListener('click', async (event) => {
+                const option = event.target.closest('.workflow-company-type-option');
+                if (!option) return;
+                await handleWorkflowTypeChange(option.dataset.workflowModel || '');
+            });
+
+            document.addEventListener('click', (event) => {
+                const wrapper = workflowEl('workflowCompanyTypeDropdown');
+                if (!wrapper || wrapper.contains(event.target)) return;
+                closeWorkflowTypeDropdown();
             });
 
             workflowEl('workflowCompanySignature')?.addEventListener('change', (event) => {
