@@ -8,7 +8,6 @@
     x-transition
     x-cloak
     class="scroll-mt-24 space-y-6"
-    data-no-tom-select="true"
 >
     {% call ui_form.section(
         'Workflows',
@@ -100,8 +99,7 @@
                     </label>
                     <select
                         id="workflowCompanySignature"
-                        data-no-tom-select="true"
-                        class="empresa-workflow-control"
+                        class="empresa-workflow-control h-9"
                         :class="empresaEditing ? 'empresa-workflow-control--edit' : 'empresa-workflow-control--view pointer-events-none select-none'"
                         :tabindex="empresaEditing ? 0 : -1"
                         :aria-disabled="String(!empresaEditing)"
@@ -117,8 +115,7 @@
                     </label>
                     <select
                         id="workflowCompanyRule"
-                        data-no-tom-select="true"
-                        class="empresa-workflow-control"
+                        class="empresa-workflow-control h-9"
                         :class="empresaEditing ? 'empresa-workflow-control--edit' : 'empresa-workflow-control--view pointer-events-none select-none'"
                         :tabindex="empresaEditing ? 0 : -1"
                         :aria-disabled="String(!empresaEditing)"
@@ -189,7 +186,7 @@
                 <input x-model="filtroObras" type="text" placeholder="Pesquisar obra..." class="empresa-workflow-control empresa-workflow-control--edit">
                 <input x-model="filtroWorkflow" type="text" placeholder="Filtrar por workflow..." class="empresa-workflow-control empresa-workflow-control--edit">
                 <input x-model="filtroResponsavel" type="text" placeholder="Responsavel..." class="empresa-workflow-control empresa-workflow-control--edit">
-                <select x-model="filtroStatus" class="empresa-workflow-control empresa-workflow-control--edit">
+                <select x-model="filtroStatus" class="empresa-workflow-control empresa-workflow-control--edit h-9">
                     <option value="">Todos os status</option>
                     <option value="Pendente">Pendente</option>
                     <option value="Em andamento">Em andamento</option>

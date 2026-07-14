@@ -177,6 +177,7 @@
                     prepareEmpresaRouteTransition();
                     initializeEmpresaGeneralFormState();
                     window.applyRequiredMarkers?.(document);
+                    scheduleEmpresaWorkflowSelectPickersEditing(this.empresaEditing);
                 },
                 mudarAba(aba) {
                     this.abaAtiva = aba;
@@ -239,6 +240,7 @@
                     if (this.empresaEditing) return;
                     this.empresaEditing = true;
                     replaceEmpresaRoute(empresaUrls.empresaEdit);
+                    setEmpresaWorkflowSelectPickersEditing(true);
                     renderEmpresaWorkflowCards();
                 },
                 cancelSectionEdit() {
@@ -251,6 +253,7 @@
                     this.empresaEditing = false;
                     pageData.startInEditMode = false;
                     replaceEmpresaRoute(empresaUrls.empresaView);
+                    setEmpresaWorkflowSelectPickersEditing(false);
                     renderEmpresaWorkflowCards();
                 },
                 saveSection() {
@@ -264,6 +267,7 @@
                     }
                     this.empresaEditing = false;
                     replaceEmpresaRoute(empresaUrls.empresaView);
+                    setEmpresaWorkflowSelectPickersEditing(false);
                 },
                 async criarDefinicao() {
                     try {
@@ -410,6 +414,32 @@
 
         function isEmpresaWorkflowEditing() {
             return Boolean(getEmpresaAppState()?.empresaEditing);
+        }
+
+        function setEmpresaWorkflowSelectPickersEditing(isEditing) {
+            ['workflowCompanySignature', 'workflowCompanyRule'].forEach((id) => {
+                const select = workflowEl(id);
+                if (!select) return;
+                if (select.tomselect) {
+                    if (isEditing) {
+                        select.tomselect.enable();
+                    } else {
+                        select.tomselect.disable();
+                    }
+                    return;
+                }
+                select.disabled = !isEditing;
+                if (isEditing) window.refreshSelectPicker?.(select);
+            });
+        }
+
+        function scheduleEmpresaWorkflowSelectPickersEditing(isEditing) {
+            const applyState = () => window.setTimeout(() => setEmpresaWorkflowSelectPickersEditing(isEditing), 0);
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', applyState, { once: true });
+                return;
+            }
+            applyState();
         }
 
         function getEmpresaWorkflowPreview(workflowId) {
