@@ -1,0 +1,46 @@
+{% import "components/form/macros.html" as ui_form %}
+
+{% if can_edit %}
+<div class="sticky bottom-4 z-30 w-full flex justify-center pointer-events-none" aria-label="Acoes da pagina">
+    <div class="pointer-events-auto flex w-[calc(100%-1.5rem)] max-w-5xl flex-col-reverse gap-3 rounded-[24px] border border-slate-200 bg-white/96 p-3 shadow-2xl shadow-slate-900/10 backdrop-blur-md sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex flex-1 flex-col-reverse gap-3 sm:flex-row sm:items-center">
+            <button
+                type="button"
+                x-show="hasGlobalActions() && isSectionEditing()"
+                x-transition.opacity.duration.200ms
+                @click="cancelSectionEdit()"
+                class="{{ ui_form.action_secondary_classes() }}"
+            >
+                <i class="fas fa-times"></i>
+                Cancelar
+            </button>
+            <button
+                type="button"
+                x-show="hasGlobalActions() && !isSectionEditing()"
+                x-transition.opacity.duration.200ms
+                @click="startSectionEdit()"
+                class="{{ ui_form.action_secondary_classes() }}"
+            >
+                <i class="fas fa-edit"></i>
+                <span x-text="'Editar'"></span>
+            </button>
+            <div x-show="!hasGlobalActions()" class="{{ ui_form.action_secondary_classes(extra='text-slate-500') }}">
+                <span x-text="getActionDescription()"></span>
+            </div>
+        </div>
+
+        <button
+            type="button"
+            x-show="hasGlobalActions() && isSectionEditing()"
+            x-transition.opacity.duration.200ms
+            @click="saveSection()"
+            :disabled="isSaveDisabled()"
+            id="submitBtn"
+            class="{{ ui_form.action_primary_classes() }}"
+        >
+            <i class="fas fa-save"></i>
+            <span x-text="'Salvar'"></span>
+        </button>
+    </div>
+</div>
+{% endif %}

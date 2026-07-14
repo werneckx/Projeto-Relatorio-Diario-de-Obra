@@ -1,111 +1,201 @@
-{# ABA: WORKFLOW #}
-<section x-show="abaAtiva==='workflow'" x-transition class="scroll-mt-24 space-y-6">
-    <div class="surface-card rounded-2xl overflow-hidden bg-white border border-slate-200 shadow-sm">
-        <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex flex-wrap items-center justify-between gap-4">
-            <div class="flex items-center gap-4">
-                <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0 text-sm">
-                    <i class="fas fa-sitemap"></i>
-                </div>
-                <div>
-                    <h3 class="font-semibold text-slate-800 text-sm uppercase tracking-wide">Workflow Padrão da Empresa</h3>
-                    <p class="text-xs text-slate-500 mt-1">Selecione o modelo e ajuste apenas os papéis aprovadores de cada etapa.</p>
-                </div>
-            </div>
+{% import "components/form/macros.html" as ui_form %}
+
+{% set workflow_input_base_css = "form-control-std h-9 block w-full appearance-none rounded-2xl text-sm" %}
+{% set workflow_input_edit_css = "border-slate-300 bg-white text-slate-600 shadow-sm placeholder:text-slate-400" %}
+{% set workflow_input_view_css = "cursor-default border-slate-200 bg-slate-100/60 font-semibold text-slate-800 shadow-none" %}
+{% set workflow_final_input_css = workflow_input_base_css ~ " " ~ workflow_input_edit_css %}
+{% set workflow_select_view_css = "!bg-slate-100/60 !text-slate-800 !opacity-100 bg-no-repeat font-semibold" %}
+
+<section
+    id="empresa-panel-workflow"
+    role="tabpanel"
+    aria-labelledby="empresa-tab-workflow"
+    x-show="abaAtiva === 'workflow'"
+    x-transition
+    x-cloak
+    class="scroll-mt-24 space-y-6"
+    data-no-tom-select="true"
+>
+    {% call ui_form.section(
+        'Workflows',
+        icon='fa-sitemap',
+        icon_box_class='bg-indigo-100 text-indigo-600',
+        variant='form'
+    ) %}
+    <div class="space-y-5">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div class="flex flex-wrap items-center gap-2">
-                <span class="inline-flex items-center rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-[11px] font-bold text-blue-700">
+                <span class="inline-flex items-center rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">
                     {{ workflow_metricas.obras_utilizando }} obra(s) com workflow
                 </span>
-                <span id="workflowCompanyDirtyBadge" class="hidden inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[11px] font-bold text-amber-700">
-                    Alterações não salvas
+                <span id="workflowCompanyDirtyBadge" class="hidden inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
+                    Alteracoes nao salvas
                 </span>
             </div>
         </div>
 
-        <div class="p-5">
-            <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div class="text-sm font-black text-slate-900">Workflow da Empresa</div>
-                <div class="mt-1 text-sm text-slate-500">O modelo selecionado abaixo define o padrão aplicado às obras que ainda não possuem workflow próprio.</div>
+        <div class="rounded-2xl border border-slate-200 bg-white p-5">
+            <div>
+                <h4 class="text-base font-bold text-slate-900">Workflow padrao da empresa</h4>
+                <p class="mt-1 text-sm text-slate-500">
+                    O modelo selecionado sera aplicado as obras que ainda nao possuem workflow proprio.
+                </p>
+            </div>
 
-                <div class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-[minmax(280px,1.15fr),180px,minmax(280px,1.2fr)]">
-                    <div class="min-w-0">
-                        <label class="block text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400 mb-2">Modelo de Workflow</label>
-                        <div class="relative">
-                            <select id="workflowCompanySelect" class="form-control-std h-11 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-800 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10">
-                                {% set default_model = 'paralelo' if workflow_default and (workflow_default.aprovacao_paralela or workflow_default.tipo_fluxo == 'PARALELO') else 'hierarquico' if workflow_default and (workflow_default.tipo_fluxo in ['SEQUENCIAL', 'HIERARQUICO', 'HIERARQUICA'] or 'hierar' in (workflow_default.nome or '')|lower) else 'simples' %}
-                                <option value="simples" {% if default_model == 'simples' %}selected{% endif %}>Aprovação Simples</option>
-                                <option value="paralelo" {% if default_model == 'paralelo' %}selected{% endif %}>Aprovação Paralela</option>
-                                <option value="hierarquico" {% if default_model == 'hierarquico' %}selected{% endif %}>Aprovação Hierarquica</option>
-                            </select>
+            <div class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-[minmax(260px,1.15fr),180px,minmax(280px,1.2fr)]">
+                <div class="min-w-0">
+                    <label for="workflowCompanySelect" class="mb-2 block text-xs font-bold uppercase text-slate-500">
+                        Modelo de workflow
+                    </label>
+
+                    <div x-show="!empresaEditing" x-transition.opacity.duration.200ms>
+                        <input
+                            type="text"
+                            id="workflowCompanySelectPreview"
+                            value=""
+                            class="{{ workflow_input_base_css }} {{ workflow_input_view_css }}"
+                            readonly
+                            disabled
+                        >
+                    </div>
+
+                    <div x-show="empresaEditing" x-transition.opacity.duration.200ms class="relative" id="workflowCompanyTypeDropdown">
+                        <select id="workflowCompanySelect" class="hidden" data-no-tom-select="true">
+                            {% set default_model = 'paralelo' if workflow_default and (workflow_default.aprovacao_paralela or workflow_default.tipo_fluxo == 'PARALELO') else 'hierarquico' if workflow_default and (workflow_default.tipo_fluxo in ['SEQUENCIAL', 'HIERARQUICO', 'HIERARQUICA'] or 'hierar' in (workflow_default.nome or '')|lower) else 'simples' %}
+                            <option value="simples" {% if default_model == 'simples' %}selected{% endif %}>Aprovacao simples</option>
+                            <option value="paralelo" {% if default_model == 'paralelo' %}selected{% endif %}>Aprovacao paralela</option>
+                            <option value="hierarquico" {% if default_model == 'hierarquico' %}selected{% endif %}>Aprovacao hierarquica</option>
+                        </select>
+
+                        <button
+                            type="button"
+                            id="workflowCompanyTypeDropdownButton"
+                            class="{{ workflow_final_input_css }} flex w-full items-center gap-2 border border-slate-200 bg-white px-4 pr-11 text-left font-semibold text-slate-800 transition-all duration-200"
+                        >
+                            <i class="fas fa-search text-slate-400"></i>
+                            <span id="workflowCompanyTypeDropdownLabel" class="min-w-0 flex-1 truncate">Selecione</span>
+                        </button>
+
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4 text-slate-400">
+                            <i class="fas fa-chevron-down text-xs"></i>
+                        </div>
+
+                        <div id="workflowCompanyTypeDropdownMenu" class="absolute left-0 right-0 top-[calc(100%+6px)] z-50 hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
+                            <button type="button" class="workflow-company-type-option flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50" data-workflow-model="simples">
+                                <span class="min-w-0 flex-1 truncate">Aprovacao simples</span>
+                                <i class="workflow-company-type-check fas fa-check hidden text-blue-600"></i>
+                            </button>
+                            <button type="button" class="workflow-company-type-option flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50" data-workflow-model="paralelo">
+                                <span class="min-w-0 flex-1 truncate">Aprovacao paralela</span>
+                                <i class="workflow-company-type-check fas fa-check hidden text-blue-600"></i>
+                            </button>
+                            <button type="button" class="workflow-company-type-option flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50" data-workflow-model="hierarquico">
+                                <span class="min-w-0 flex-1 truncate">Aprovacao hierarquica</span>
+                                <i class="workflow-company-type-check fas fa-check hidden text-blue-600"></i>
+                            </button>
                         </div>
                     </div>
-                    <div class="min-w-0">
-                        <label class="block text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400 mb-2">Assinatura</label>
-                        <select id="workflowCompanySignature" class="form-control-std h-11 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-800 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10">
-                            <option value="1">Sim</option>
-                            <option value="0">Não</option>
-                        </select>
-                    </div>
-                    <div class="min-w-0">
-                        <label class="block text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400 mb-2">Regra</label>
-                        <select id="workflowCompanyRule" class="form-control-std h-11 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-800 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10">
-                            <option value="TODOS">Todos devem aprovar</option>
-                            <option value="PRIMEIRO">Primeiro a responder</option>
-                        </select>
-                    </div>
                 </div>
 
-                <div id="workflowCompanyOwnConfigNotice" class="hidden mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
-                    As alterações abaixo serão aplicadas ao workflow corporativo selecionado.
+                <div class="min-w-0">
+                    <label for="workflowCompanySignature" class="mb-2 block text-xs font-bold uppercase text-slate-500">
+                        Assinatura
+                    </label>
+                    <select
+                        id="workflowCompanySignature"
+                        data-no-tom-select="true"
+                        :disabled="!empresaEditing"
+                        :class="empresaEditing ? '' : '{{ workflow_select_view_css }}'"
+                        class="{{ workflow_final_input_css }}"
+                    >
+                        <option value="1">Sim</option>
+                        <option value="0">Nao</option>
+                    </select>
+                </div>
+
+                <div class="min-w-0">
+                    <label for="workflowCompanyRule" class="mb-2 block text-xs font-bold uppercase text-slate-500">
+                        Regra
+                    </label>
+                    <select
+                        id="workflowCompanyRule"
+                        data-no-tom-select="true"
+                        :disabled="!empresaEditing"
+                        :class="empresaEditing ? '' : '{{ workflow_select_view_css }}'"
+                        class="{{ workflow_final_input_css }}"
+                    >
+                        <option value="TODOS">Todos devem aprovar</option>
+                        <option value="PRIMEIRO">Primeiro a responder</option>
+                    </select>
                 </div>
             </div>
-        </div>
 
-        <div class="px-5 pb-5">
-            <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div id="workflowCompanyOwnConfigNotice" class="mt-4 hidden rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+                As alteracoes abaixo serao aplicadas ao workflow corporativo selecionado.
+            </div>
+
+            <div x-show="!empresaEditing" x-transition.opacity.duration.200ms class="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                Clique em <strong>Editar</strong> na barra de acoes para habilitar alteracoes neste workflow padrao.
+            </div>
+
+            <div class="mt-5 rounded-2xl border border-slate-200 bg-white p-5">
                 <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                        <h4 id="workflowCompanyStagesTitle" class="text-sm font-bold uppercase tracking-wide text-slate-800">Etapas e Papéis</h4>
-                        <p id="workflowCompanySummary" class="mt-1 text-sm text-slate-500">Carregando estrutura do workflow...</p>
+                        <h4 id="workflowCompanyStagesTitle" class="text-sm font-semibold uppercase tracking-wide text-slate-800">
+                            Etapas e papeis
+                        </h4>
+                        <p id="workflowCompanySummary" class="mt-1 text-sm text-slate-500">
+                            Carregando estrutura do workflow...
+                        </p>
                     </div>
-                    <div class="flex flex-wrap gap-2">
-                        <button type="button" id="workflowCompanyAddStageButton" class="inline-flex h-10 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-700 hover:bg-slate-100">
-                            <i class="fas fa-plus"></i> Adicionar etapa
-                        </button>
-                    </div>
+
+                    <button
+                        type="button"
+                        id="workflowCompanyAddStageButton"
+                        x-show="empresaEditing"
+                        x-transition.opacity.duration.200ms
+                        class="inline-flex h-10 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-100"
+                    >
+                        <i class="fas fa-plus"></i>
+                        Adicionar etapa
+                    </button>
                 </div>
 
                 <div id="workflowCompanyStagesErrors" class="hidden rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"></div>
                 <div id="workflowCompanyStagesContainer" class="space-y-3"></div>
-                <div class="mt-5 flex justify-end border-t border-slate-100 pt-5">
-                    <button type="button" id="workflowCompanySaveButton" class="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 text-sm font-bold text-white hover:bg-slate-800">
-                        <i class="fas fa-save"></i> Salvar workflow
-                    </button>
-                </div>
             </div>
         </div>
     </div>
 
-    <div class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <div class="px-6 py-5 border-b border-slate-100 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <div class="flex flex-col gap-4 border-b border-slate-100 px-6 py-4 md:flex-row md:items-center md:justify-between">
             <div>
-                <h4 class="text-lg font-bold text-slate-900">Workflow por Obra</h4>
-                <p class="mt-1 text-sm text-slate-500">Consulte o modelo aplicado em cada obra e acompanhe o status real das execuções.</p>
+                <h4 class="text-base font-bold text-slate-900">Workflow por obra</h4>
+                <p class="mt-1 text-sm text-slate-500">
+                    Consulte o modelo aplicado em cada obra e acompanhe o status das execucoes.
+                </p>
             </div>
-            <button type="button" @click="legendaWorkflowVisible = true" class="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-slate-800">
-                <i class="fas fa-info-circle"></i> Legendas
+
+            <button
+                type="button"
+                @click="legendaWorkflowVisible = true"
+                class="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-slate-800"
+            >
+                <i class="fas fa-info-circle"></i>
+                Legendas
             </button>
         </div>
 
         <div class="px-6 pt-5">
             <div class="grid grid-cols-1 gap-3 lg:grid-cols-4">
-                <input x-model="filtroObras" type="text" placeholder="Pesquisar obra..." class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10">
-                <input x-model="filtroWorkflow" type="text" placeholder="Filtrar por workflow..." class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10">
-                <input x-model="filtroResponsavel" type="text" placeholder="Responsável..." class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10">
-                <select x-model="filtroStatus" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10">
+                <input x-model="filtroObras" type="text" placeholder="Pesquisar obra..." class="{{ ui_form.control_classes(extra='px-4 font-semibold transition-all duration-200') }}">
+                <input x-model="filtroWorkflow" type="text" placeholder="Filtrar por workflow..." class="{{ ui_form.control_classes(extra='px-4 font-semibold transition-all duration-200') }}">
+                <input x-model="filtroResponsavel" type="text" placeholder="Responsavel..." class="{{ ui_form.control_classes(extra='px-4 font-semibold transition-all duration-200') }}">
+                <select x-model="filtroStatus" class="{{ ui_form.select_classes(extra='px-4 font-semibold transition-all duration-200') }}">
                     <option value="">Todos os status</option>
                     <option value="Pendente">Pendente</option>
                     <option value="Em andamento">Em andamento</option>
-                    <option value="Concluído">Concluído</option>
+                    <option value="Concluido">Concluido</option>
                     <option value="Rejeitado">Rejeitado</option>
                     <option value="Cancelado">Cancelado</option>
                     <option value="Erro">Erro</option>
@@ -114,21 +204,22 @@
         </div>
 
         <div class="mt-5 overflow-x-auto">
-            <table class="min-w-full text-sm">
-                <thead class="bg-slate-50/70 border-y border-slate-100 text-left text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">
-                    <tr>
+            <table class="w-full text-left text-sm">
+                <thead>
+                    <tr class="border-b border-slate-200 bg-slate-50 text-[10px] font-bold uppercase text-slate-500">
                         <th class="px-6 py-4">Obra</th>
                         <th class="px-4 py-4">Modelo</th>
                         <th class="px-4 py-4">Etapas</th>
-                        <th class="px-4 py-4">Execuções</th>
-                        <th class="px-4 py-4">Responsável</th>
+                        <th class="px-4 py-4">Execucoes</th>
+                        <th class="px-4 py-4">Responsavel</th>
                         <th class="px-4 py-4">Origem</th>
                         <th class="px-6 py-4">Status</th>
                     </tr>
                 </thead>
+
                 <tbody x-show="filteredObras().length > 0">
                     <template x-for="obra in filteredObras()" :key="obra.obra_id">
-                        <tr class="border-b border-slate-100 text-slate-700">
+                        <tr class="group border-b border-slate-100 text-slate-700 transition-colors hover:bg-slate-50">
                             <td class="px-6 py-4 font-semibold text-slate-900" x-text="obra.obra_nome"></td>
                             <td class="px-4 py-4" x-text="obra.workflow_nome"></td>
                             <td class="px-4 py-4" x-text="(obra.workflow_etapas || []).length"></td>
@@ -151,4 +242,5 @@
             Nenhuma obra encontrada com os filtros informados.
         </div>
     </div>
+    {% endcall %}
 </section>

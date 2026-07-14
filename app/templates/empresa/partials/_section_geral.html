@@ -1,91 +1,123 @@
-{# ABA: GERAL — Identidade #}
-<section x-show="abaAtiva==='geral'" x-transition class="scroll-mt-24" x-data="{ editing:false }">
-    <div class="rounded-2xl bg-white border border-slate-100 shadow-sm overflow-hidden">
-        <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
-            <h3 class="font-bold text-slate-700 text-xs uppercase tracking-wider flex items-center gap-2">
-                <i class="fas fa-id-card text-slate-400"></i> Identidade da Empresa
-            </h3>
-            {% if can_edit %}
-            <button @click="editing = !editing"
-                :class="editing ? 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50' : 'bg-blue-600 border-transparent text-white hover:bg-blue-700'"
-                class="px-4 py-2 border rounded-xl text-sm font-semibold transition-all flex items-center gap-2 shadow-xs">
-                <i :class="editing ? 'fas fa-times text-xs' : 'fas fa-pen text-xs'"></i>
-                <span x-text="editing ? 'Cancelar Edição' : 'Editar Dados'"></span>
-            </button>
+{% import "components/form/macros.html" as ui_form %}
+
+<section id="empresa-panel-geral" role="tabpanel" aria-labelledby="empresa-tab-geral" x-show="abaAtiva === 'geral'" x-transition x-cloak class="scroll-mt-24">
+    {% call ui_form.section(
+        'Identidade da empresa',
+        icon='fa-id-card',
+        icon_box_class='bg-blue-100 text-blue-600',
+        variant='form'
+    ) %}
+
+    {% call ui_form.form_start(
+        action=url_for('auth.salvar_empresa', id=config_data.id),
+        form_id='empresaForm',
+        item=None,
+        extra_class='space-y-6',
+        enctype='multipart/form-data',
+        id_name=None
+    ) %}
+
+    <div>
+        <label for="nome_empresa" class="mb-2 block text-xs font-bold uppercase text-slate-500">
+            Nome da empresa
+        </label>
+        <input
+            id="nome_empresa"
+            type="text"
+            name="nome_empresa"
+            value="{{ config_data.nome if config_data else '' }}"
+            :readonly="!empresaEditing"
+            :class="empresaEditing ? 'bg-white border-slate-300 text-slate-800 shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-800 cursor-default shadow-none'"
+            class="{{ ui_form.control_classes(extra='px-4 font-semibold transition-all duration-200') }}"
+            placeholder="Construtora Exemplo Ltda"
+            required
+        >
+    </div>
+
+    <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+        <div class="flex flex-col rounded-2xl border border-slate-200 bg-white p-5">
+            <div class="mb-3 flex items-center justify-between gap-3">
+                <h4 class="text-base font-bold text-slate-900">Logotipo</h4>
+                {% if config_data and config_data.logo_path %}
+                <span class="text-xs font-medium text-emerald-600">Configurado</span>
+                {% endif %}
+            </div>
+
+            <div class="flex flex-1 flex-col rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 p-4">
+                <div id="preview-logo" class="flex h-44 w-full items-center justify-center overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-inner sm:h-52">
+                    {% if config_data and config_data.logo_path %}
+                    <img src="{{ url_for('static', filename=config_data.logo_path) }}" id="img-logo" alt="Logotipo da empresa" class="max-h-full max-w-full object-contain p-5">
+                    {% else %}
+                    <div class="text-center text-slate-300">
+                        <i class="fas fa-image mb-3 block text-4xl text-slate-200"></i>
+                        <span class="text-sm font-medium text-slate-400">Sem imagem</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div x-show="empresaEditing" x-transition.opacity.duration.200ms x-cloak class="mt-4 w-full">
+                    <input type="file" name="logo_empresa" id="logo_empresa" accept="image/*" class="hidden" onchange="previewImage(this, 'img-logo')">
+                    <label for="logo_empresa" class="block w-full cursor-pointer rounded-2xl border border-slate-200 bg-white py-3 text-center text-sm font-semibold text-slate-700 shadow-xs transition-all hover:border-slate-300 hover:bg-slate-50">
+                        <i class="fas fa-upload mr-2 text-xs text-slate-400"></i>
+                        Escolher imagem
+                    </label>
+                    <p class="mt-2 text-center text-xs text-slate-400">PNG transparente</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex flex-col rounded-2xl border border-slate-200 bg-white p-5">
+            <div class="mb-3 flex items-center justify-between gap-3">
+                <h4 class="text-base font-bold text-slate-900">Favicon</h4>
+                {% if config_data and config_data.icone_path %}
+                <span class="text-xs font-medium text-emerald-600">Configurado</span>
+                {% endif %}
+            </div>
+
+            <div class="flex flex-1 flex-col rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 p-4">
+                <div id="preview-icon" class="flex h-44 w-full items-center justify-center overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-inner sm:h-52">
+                    {% if config_data and config_data.icone_path %}
+                    <img src="{{ url_for('static', filename=config_data.icone_path) }}" id="img-icon" alt="Favicon da empresa" class="h-16 w-16 object-contain sm:h-20 sm:w-20">
+                    {% else %}
+                    <div class="text-center text-slate-300">
+                        <i class="fas fa-icons mb-3 block text-4xl text-slate-200"></i>
+                        <span class="text-sm font-medium text-slate-400">Sem imagem</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div x-show="empresaEditing" x-transition.opacity.duration.200ms x-cloak class="mt-4 w-full">
+                    <input type="file" name="icone_empresa" id="icone_empresa" accept="image/x-icon,image/png" class="hidden" onchange="previewImage(this, 'img-icon')">
+                    <label for="icone_empresa" class="block w-full cursor-pointer rounded-2xl border border-slate-200 bg-white py-3 text-center text-sm font-semibold text-slate-700 shadow-xs transition-all hover:border-slate-300 hover:bg-slate-50">
+                        <i class="fas fa-upload mr-2 text-xs text-slate-400"></i>
+                        Escolher icone
+                    </label>
+                    <p class="mt-2 text-center text-xs text-slate-400">PNG ou ICO, 32x32</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% set validade = ui_form.metadata_datetime(config_data.data_expiracao if config_data and config_data.data_expiracao is defined else none) %}
+    {% set criado = ui_form.metadata_datetime(config_data.criado_em if config_data and config_data.criado_em is defined else none) %}
+    {% set modificado = ui_form.metadata_datetime(config_data.modificado_em if config_data and config_data.modificado_em is defined else none) %}
+
+    {% if validade or criado or modificado %}
+    <div class="border-t border-slate-100 pt-4 text-xs text-slate-500">
+        <div class="flex flex-wrap gap-x-5 gap-y-2">
+            {% if validade %}
+            <span>Validade: <strong class="font-semibold text-slate-700">{{ validade }}</strong></span>
+            {% endif %}
+            {% if criado %}
+            <span>Criado em: <strong class="font-semibold text-slate-700">{{ criado }}</strong></span>
+            {% endif %}
+            {% if modificado %}
+            <span>Atualizado em: <strong class="font-semibold text-slate-700">{{ modificado }}</strong></span>
             {% endif %}
         </div>
-
-        {% call ui_form.form_start(action=url_for('auth.salvar_empresa'), form_id='empresaForm', item=None, extra_class='', enctype='multipart/form-data', id_name=None) %}
-        <div class="p-6 grid grid-cols-1 xl:grid-cols-[minmax(0,1.4fr),minmax(0,1fr)] gap-6">
-            <div class="space-y-5">
-                <div>
-                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Nome da Empresa</label>
-                    <div x-show="!editing" class="p-3.5 bg-slate-50/60 text-slate-700 font-medium rounded-xl border border-slate-200/60 text-sm">
-                        {{ config_data.nome if config_data else 'Não definido' }}
-                    </div>
-                    <div x-show="editing">
-                        <input type="text" name="nome_empresa" value="{{ config_data.nome if config_data else '' }}"
-                            class="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder-slate-400"
-                            placeholder="Ex: Construtora Exemplo Ltda" required>
-                    </div>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div class="space-y-2">
-                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide">Logotipo Principal</label>
-                    <div class="flex flex-col p-5 bg-slate-50/40 rounded-2xl border border-slate-200 border-dashed items-center">
-                        <div id="preview-logo" class="w-full h-32 flex items-center justify-center bg-white rounded-xl border border-slate-100 overflow-hidden shadow-inner mb-4">
-                            {% if config_data.logo_path %}
-                            <img src="{{ url_for('static', filename=config_data.logo_path) }}" id="img-logo" class="max-w-full max-h-full object-contain p-4">
-                            {% else %}
-                            <div class="text-center text-slate-300">
-                                <i class="fas fa-image text-4xl mb-2 block text-slate-200"></i>
-                                <span class="text-xs font-medium text-slate-400">Sem logotipo</span>
-                            </div>
-                            {% endif %}
-                        </div>
-                        <div x-show="editing" class="w-full">
-                            <input type="file" name="logo_empresa" id="logo_empresa" accept="image/*" class="hidden" onchange="previewImage(this, 'img-logo')">
-                            <label for="logo_empresa" class="block w-full py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl cursor-pointer hover:bg-slate-50 hover:border-slate-300 transition-all text-sm font-semibold text-center shadow-xs">
-                                <i class="fas fa-cloud-upload-alt mr-2 text-slate-400"></i> Escolher Imagem
-                            </label>
-                            <p class="text-[10px] text-slate-400 mt-2.5 text-center">Recomendado: PNG Transparente</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="space-y-2">
-                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide">Ícone do Navegador (Favicon)</label>
-                    <div class="flex flex-col p-5 bg-slate-50/40 rounded-2xl border border-slate-200 border-dashed items-center">
-                        <div id="preview-icon" class="w-full h-32 flex items-center justify-center bg-white rounded-xl border border-slate-100 overflow-hidden shadow-inner mb-4">
-                            {% if config_data.icone_path %}
-                            <img src="{{ url_for('static', filename=config_data.icone_path) }}" id="img-icon" class="w-12 h-12 object-contain">
-                            {% else %}
-                            <div class="text-center text-slate-300">
-                                <i class="fas fa-icons text-4xl mb-2 block text-slate-200"></i>
-                                <span class="text-xs font-medium text-slate-400">Sem Ícone</span>
-                            </div>
-                            {% endif %}
-                        </div>
-                        <div x-show="editing" class="w-full">
-                            <input type="file" name="icone_empresa" id="icone_empresa" accept="image/x-icon,image/png" class="hidden" onchange="previewImage(this, 'img-icon')">
-                            <label for="icone_empresa" class="block w-full py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl cursor-pointer hover:bg-slate-50 hover:border-slate-300 transition-all text-sm font-semibold text-center shadow-xs">
-                                <i class="fas fa-cloud-upload-alt mr-2 text-slate-400"></i> Escolher Ícone
-                            </label>
-                            <p class="text-[10px] text-slate-400 mt-2.5 text-center">Recomendado: .ICO ou .PNG (32x32)</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div x-show="editing" x-transition class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
-            <button type="button" @click="editing = false" class="px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 font-semibold text-sm transition-all shadow-xs">Cancelar</button>
-            <button type="submit" class="px-6 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 shadow-md shadow-emerald-600/10 transition-all font-bold text-sm flex items-center gap-2">
-                <i class="fas fa-check text-xs"></i> Salvar Alterações
-            </button>
-        </div>
-        {% endcall %}
     </div>
+    {% endif %}
+
+    {% endcall %}
+    {% endcall %}
 </section>
