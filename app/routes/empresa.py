@@ -4,7 +4,7 @@ from datetime import datetime
 
 from app.services.config_service import ConfigService
 from app.models.configuracao import ConfigDefinicao, EmpresaConfig
-from app.models.usuario import Papel, Permissao, PapelPermissao
+from app.models.usuario import Papel, Permissao, PapelPermissao, UsuarioPapel
 from app.models.workflow import WorkflowDefinicao, WorkflowEtapa, WorkflowExecucao, WorkflowExecucaoEtapa
 from app.models.obra import Obra, ObraUsuario
 from app.models.usuario import Usuario
@@ -26,6 +26,153 @@ def _ensure_workflow_default_definition():
     db.session.add(definicao)
     db.session.flush()
     return definicao
+
+
+def _formatar_data_workflow(datahora):
+    if not datahora:
+        return 'Sem registro'
+
+    agora = datetime.now()
+    if datahora.date() == agora.date():
+        return f"Hoje às {datahora.strftime('%H:%M')}"
+
+    return datahora.strftime('%d/%m/%Y às %H:%M')
+
+
+def _normalize_workflow_status(status):
+    normalized = (status or "").upper()
+    return {
+        "PENDENTE": {
+            "label": "Pendente",
+            "badge_class": "border-amber-200 bg-amber-50 text-amber-800",
+            "dot_class": "bg-amber-500",
+            "icon": "fa-hourglass-half",
+        },
+        "EM_ANDAMENTO": {
+            "label": "Em andamento",
+            "badge_class": "border-blue-200 bg-blue-50 text-blue-700",
+            "dot_class": "bg-blue-500",
+            "icon": "fa-spinner",
+        },
+        "APROVADO": {
+            "label": "Concluído",
+            "badge_class": "border-emerald-200 bg-emerald-50 text-emerald-700",
+            "dot_class": "bg-emerald-500",
+            "icon": "fa-check-circle",
+        },
+        "REJEITADO": {
+            "label": "Rejeitado",
+            "badge_class": "border-rose-200 bg-rose-50 text-rose-700",
+            "dot_class": "bg-rose-500",
+            "icon": "fa-circle-xmark",
+        },
+        "CANCELADO": {
+            "label": "Cancelado",
+            "badge_class": "border-slate-200 bg-slate-100 text-slate-700",
+            "dot_class": "bg-slate-500",
+            "icon": "fa-ban",
+        },
+        "REABERTO": {
+            "label": "Em andamento",
+            "badge_class": "border-blue-200 bg-blue-50 text-blue-700",
+            "dot_class": "bg-blue-500",
+            "icon": "fa-rotate-left",
+        },
+        "ERRO": {
+            "label": "Erro",
+            "badge_class": "border-red-200 bg-red-50 text-red-700",
+            "dot_class": "bg-red-500",
+            "icon": "fa-triangle-exclamation",
+        },
+    }.get(normalized, {
+        "label": normalized.title() if normalized else "Sem execução",
+        "badge_class": "border-slate-200 bg-slate-100 text-slate-700",
+        "dot_class": "bg-slate-400",
+        "icon": "fa-circle-question",
+    })
+
+
+def _build_empresa_workflow_editor_context(empresa_id, workflows_empresa_padrao, workflow_default):
+    role_options = []
+    user_options = []
+    workflow_previews = {}
+    default_workflow_id = workflow_default.id if workflow_default else None
+
+    if not empresa_id:
+        return role_options, user_options, workflow_previews, default_workflow_id
+
+    papeis = (
+        Papel.query
+        .filter(
+            Papel.ativo.is_(True),
+            db.or_(Papel.empresa_id == empresa_id, Papel.empresa_id.is_(None)),
+        )
+        .order_by(Papel.empresa_id.is_(None), Papel.nome.asc())
+        .all()
+    )
+    role_options = [{"id": papel.id, "nome": papel.nome} for papel in papeis]
+
+    usuarios_empresa = sorted(
+        Usuario.query
+        .filter_by(empresa_id=empresa_id, ativo=True)
+        .all(),
+        key=lambda usuario: (usuario.nome or usuario.email or "").strip().lower(),
+    )
+    papeis_por_usuario = {}
+    for usuario_papel in (
+        UsuarioPapel.query
+        .filter(
+            UsuarioPapel.ativo.is_(True),
+            db.or_(UsuarioPapel.empresa_id.is_(None), UsuarioPapel.empresa_id == empresa_id),
+        )
+        .all()
+    ):
+        papeis_por_usuario.setdefault(usuario_papel.usuario_id, set()).add(usuario_papel.papel_id)
+
+    user_options = [
+        {
+            "id": usuario.id,
+            "nome": usuario.nome,
+            "email": usuario.email,
+            "papel_ids": sorted(papeis_por_usuario.get(usuario.id, set())),
+        }
+        for usuario in usuarios_empresa
+    ]
+
+    for workflow in workflows_empresa_padrao:
+        etapas_preview = WorkflowService.obter_etapas_ordenadas(workflow.id)
+        workflow_previews[str(workflow.id)] = {
+            "workflow_id": workflow.id,
+            "workflow_nome": workflow.nome,
+            "workflow_codigo": workflow.codigo,
+            "workflow_descricao": workflow.descricao,
+            "tipo_fluxo": workflow.tipo_fluxo or "CONFIGURAVEL",
+            "aprovacao_paralela": bool(workflow.aprovacao_paralela),
+            "assinatura_obrigatoria": bool(workflow.assinatura_obrigatoria),
+            "workflow_origem": "Padrao da Empresa" if workflow.id == default_workflow_id else "Workflow da Empresa",
+            "workflow_origem_tipo": "empresa",
+            "etapas": [
+                {
+                    "etapa_id": etapa.id,
+                    "workflow_id": workflow.id,
+                    "nivel": etapa.nivel,
+                    "nome": etapa.nome,
+                    "tipo_aprovador": "USUARIO" if etapa.tipo_aprovador == "USUARIO" else "PAPEL",
+                    "papel_id": etapa.papel_id,
+                    "papel_nome": etapa.papel.nome if etapa.papel else None,
+                    "usuario_aprovador_id": etapa.usuario_aprovador_id,
+                    "usuario_nome": etapa.usuario_aprovador.nome if etapa.usuario_aprovador else None,
+                    "grupo_paralelo": etapa.grupo_paralelo,
+                    "assinatura_obrigatoria": bool(etapa.assinatura_obrigatoria),
+                    "regra_etapa": "TODOS" if workflow.aprovacao_paralela else "PRIMEIRO",
+                }
+                for etapa in etapas_preview
+            ],
+            "valid": True,
+            "errors": [],
+        }
+
+    return role_options, user_options, workflow_previews, default_workflow_id
 
 #######################################################################################################
 ####################################################################################################### Empresa
@@ -120,6 +267,14 @@ def empresa():
     obras = Obra.query.filter_by(empresa_id=empresa_id).order_by(Obra.nome).all()
     permissoes_disponiveis = Permissao.query.filter((Permissao.empresa_id == empresa_id) | (Permissao.empresa_id.is_(None))).order_by(Permissao.chave).all()
     workflow_default = WorkflowService._resolver_workflow_empresa_padrao(empresa_id) if empresa_id else None
+    workflow_role_options, workflow_user_options, workflow_preview_by_id, workflow_default_id = _build_empresa_workflow_editor_context(
+        empresa_id,
+        workflows_empresa_padrao,
+        workflow_default,
+    )
+    workflow_default_ultima_edicao = _formatar_data_workflow(
+        (workflow_default.modificado_em or workflow_default.criado_em) if workflow_default else None
+    )
     workflow_etapas_map = {
         workflow.id: WorkflowService.obter_etapas_ordenadas(workflow.id)
         for workflow in workflows
@@ -280,10 +435,23 @@ def empresa():
         obra = resumo['obra']
         workflow_resolvido = resumo['workflow']
         etapas_resolvidas = workflow_etapas_map.get(workflow_resolvido.id, []) if workflow_resolvido else []
-        execucoes_ativas_obra = [
+        execucoes_obra = [
             execucao for execucao in workflow_execucoes_all
-            if execucao.obra_id == obra.id and execucao.status in {'PENDENTE', 'EM_ANDAMENTO', 'REABERTO'}
+            if execucao.obra_id == obra.id
         ]
+        execucoes_ativas_obra = [
+            execucao for execucao in execucoes_obra
+            if execucao.status in {'PENDENTE', 'EM_ANDAMENTO', 'REABERTO'}
+        ]
+        ultima_execucao = sorted(
+            execucoes_obra,
+            key=lambda execucao: (
+                execucao.iniciado_em or execucao.criado_em or datetime.min,
+                execucao.id or 0,
+            ),
+            reverse=True,
+        )[0] if execucoes_obra else None
+        status_meta = _normalize_workflow_status(ultima_execucao.status if ultima_execucao else None)
 
         matriz_obra = []
         for etapa in etapas_resolvidas:
@@ -317,7 +485,14 @@ def empresa():
             'responsavel': obra.usuario_responsavel.nome if obra.usuario_responsavel else 'Não definido',
             'execucoes_ativas': len(execucoes_ativas_obra),
             'matriz_total': len(matriz_obra),
-            'status': 'Com pendências' if execucoes_ativas_obra else 'Sem pendências',
+            'status': status_meta['label'],
+            'status_code': (ultima_execucao.status if ultima_execucao else 'SEM_EXECUCAO'),
+            'status_badge_class': status_meta['badge_class'],
+            'status_dot_class': status_meta['dot_class'],
+            'status_icon': status_meta['icon'],
+            'ultima_atualizacao': _formatar_data_workflow(
+                (workflow_resolvido.modificado_em or workflow_resolvido.criado_em) if workflow_resolvido else None
+            ),
             'matriz': matriz_obra,
             'workflow_etapas': [
                 {
@@ -355,12 +530,17 @@ def empresa():
         workflows_empresa_padrao=workflows_empresa_padrao,
         workflow_default_codigo=workflow_default_codigo,
         workflow_default=workflow_default,
+        workflow_default_ultima_edicao=workflow_default_ultima_edicao,
         workflow_default_etapas=workflow_etapas_map.get(workflow_default.id, []) if workflow_default else [],
         workflow_default_etapas_resumo=workflow_default_etapas_resumo,
         workflow_execucoes=workflow_execucoes,
         workflow_status_counts=workflow_status_counts,
         workflow_metricas=workflow_metricas,
         workflow_matriz_responsabilidades=workflow_matriz_responsabilidades,
+        workflow_role_options=workflow_role_options,
+        workflow_user_options=workflow_user_options,
+        workflow_preview_by_id=workflow_preview_by_id,
+        workflow_default_id=workflow_default_id,
         obras_workflow_resumo=obras_workflow_resumo,
         obras_modal_payload=obras_modal_payload,
         obras=obras,
@@ -663,6 +843,88 @@ def api_update_workflow_default():
             'codigo': workflow.codigo or workflow.nome,
             'nome': workflow.nome,
         })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+@auth_bp.post('/empresa/api_workflows/<int:workflow_id>')
+@login_required
+@permission_required('workflow.manage')
+def api_update_workflow_empresa(workflow_id):
+    empresa_id = session.get('empresa_id')
+    data = request.get_json() or {}
+
+    workflow = WorkflowDefinicao.query.filter(
+        WorkflowDefinicao.id == workflow_id,
+        WorkflowDefinicao.empresa_id == empresa_id,
+        WorkflowDefinicao.obra_id.is_(None),
+        WorkflowDefinicao.ativo.is_(True),
+    ).first()
+    if not workflow:
+        return jsonify({'ok': False, 'error': 'Workflow não encontrado para esta empresa.'}), 404
+
+    etapas_payload = data.get('etapas') or []
+    if not etapas_payload:
+        return jsonify({'ok': False, 'error': 'O workflow deve possuir ao menos uma etapa.'}), 400
+
+    try:
+        workflow.assinatura_obrigatoria = bool(data.get('assinatura_obrigatoria'))
+        workflow.aprovacao_paralela = bool(data.get('aprovacao_paralela'))
+        workflow.tipo_fluxo = (data.get('tipo_fluxo') or workflow.tipo_fluxo or 'CONFIGURAVEL').strip().upper()
+        workflow.modificado_por = session.get('user_id') if not current_app.config.get('TESTING') else None
+
+        etapas_existentes = (
+            WorkflowEtapa.query
+            .filter_by(workflow_id=workflow.id)
+            .order_by(WorkflowEtapa.id.asc())
+            .all()
+        )
+
+        for idx, etapa_existente in enumerate(etapas_existentes, start=1):
+            etapa_existente.nivel = 1000 + idx
+            etapa_existente.ordem = 1000 + idx
+
+        for index, etapa_payload in enumerate(etapas_payload, start=1):
+            tipo_aprovador = (etapa_payload.get('tipo_aprovador') or 'PAPEL').strip().upper()
+            if tipo_aprovador not in {'USUARIO', 'PAPEL'}:
+                tipo_aprovador = 'PAPEL'
+
+            nome_etapa = (etapa_payload.get('nome') or '').strip() or f'Etapa {index}'
+            papel_id = etapa_payload.get('papel_id') if tipo_aprovador == 'PAPEL' else None
+            usuario_aprovador_id = etapa_payload.get('usuario_aprovador_id') if tipo_aprovador == 'USUARIO' else None
+            grupo_paralelo = etapa_payload.get('grupo_paralelo')
+
+            if tipo_aprovador == 'PAPEL' and not papel_id:
+                return jsonify({'ok': False, 'error': f'Selecione o papel da etapa {index}.'}), 400
+            if tipo_aprovador == 'USUARIO' and not usuario_aprovador_id:
+                return jsonify({'ok': False, 'error': f'Selecione o usuário da etapa {index}.'}), 400
+
+            etapa = etapas_existentes[index - 1] if index - 1 < len(etapas_existentes) else WorkflowEtapa(
+                empresa_id=empresa_id,
+                workflow_id=workflow.id,
+                criado_por=session.get('user_id') if not current_app.config.get('TESTING') else None,
+            )
+            if etapa.id is None:
+                db.session.add(etapa)
+
+            etapa.nivel = index
+            etapa.ordem = index
+            etapa.nome = nome_etapa
+            etapa.tipo_aprovador = tipo_aprovador
+            etapa.papel_id = int(papel_id) if papel_id else None
+            etapa.usuario_aprovador_id = int(usuario_aprovador_id) if usuario_aprovador_id else None
+            etapa.grupo_paralelo = int(grupo_paralelo) if grupo_paralelo not in (None, '', 0, '0') else None
+            etapa.assinatura_obrigatoria = workflow.assinatura_obrigatoria
+            etapa.ativo = True
+            etapa.modificado_por = session.get('user_id') if not current_app.config.get('TESTING') else None
+
+        for etapa_sobrando in etapas_existentes[len(etapas_payload):]:
+            etapa_sobrando.ativo = False
+            etapa_sobrando.modificado_por = session.get('user_id') if not current_app.config.get('TESTING') else None
+
+        db.session.commit()
+        return jsonify({'ok': True, 'workflow_id': workflow.id})
     except Exception as e:
         db.session.rollback()
         return jsonify({'ok': False, 'error': str(e)}), 500
