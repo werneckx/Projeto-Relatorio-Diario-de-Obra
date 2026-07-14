@@ -118,6 +118,10 @@
   animation: fadeInUp 0.4s ease-out forwards;
 }
 
+.animate-fade-in-up {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
 /* Mobile: label-driven tables (ERP-like). */
 @media (max-width: 1024px) {
   table.ds-mobile-labels thead {

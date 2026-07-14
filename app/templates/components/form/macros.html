@@ -114,15 +114,20 @@ inactive_label='Inativo', wrapper_class='min-w-[160px]') %}
 </div>
 {% endmacro %}
 
-{% macro section(title, icon='fa-pen', icon_box_class='bg-blue-50 text-blue-600') %}
-<div class="bg-white rounded-xl border border-slate-200/80 shadow-xs overflow-hidden">
-  <div class="px-4 py-3 border-b border-slate-100 bg-slate-50/70 flex items-center gap-2.5">
-    <div class="w-7 h-7 rounded-lg {{ icon_box_class }} flex items-center justify-center shrink-0 text-xs shadow-xs">
+{% macro section(title, icon='fa-pen', icon_box_class='bg-blue-50 text-blue-600', variant='default') %}
+{% set panel_class = 'surface-card rounded-2xl overflow-hidden bg-white border border-slate-200 shadow-sm' if variant == 'form' else 'bg-white rounded-xl border border-slate-200/80 shadow-xs overflow-hidden' %}
+{% set header_class = 'px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3' if variant == 'form' else 'px-4 py-3 border-b border-slate-100 bg-slate-50/70 flex items-center gap-2.5' %}
+{% set body_class = 'p-6 space-y-6' if variant == 'form' else 'p-4 sm:p-5 space-y-4' %}
+{% set icon_class = 'w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-sm' if variant == 'form' else 'w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-xs shadow-xs' %}
+{% set title_class = 'font-semibold text-slate-800 text-sm uppercase tracking-wide truncate' if variant == 'form' else 'font-bold text-slate-700 text-xs uppercase tracking-wider truncate' %}
+<div class="{{ panel_class }}">
+  <div class="{{ header_class }}">
+    <div class="{{ icon_class }} {{ icon_box_class }}">
       <i class="fas {{ icon }}"></i>
     </div>
-    <h3 class="font-bold text-slate-700 text-xs uppercase tracking-wider truncate">{{ title }}</h3>
+    <h3 class="{{ title_class }}">{{ title }}</h3>
   </div>
-  <div class="p-4 sm:p-5 space-y-4">
+  <div class="{{ body_class }}">
     {{ caller() }}
   </div>
 </div>
