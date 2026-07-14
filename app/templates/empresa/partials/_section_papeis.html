@@ -27,11 +27,11 @@
             <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <div class="md:col-span-1">
                     <label class="mb-1.5 block text-xs font-bold uppercase text-slate-500">Nome do papel</label>
-                    <input x-model="formPapel.nome" type="text" class="{{ ui_form.dynamic_control_classes() }} {{ ui_form.dynamic_edit_classes() }}" required>
+                    <input x-model="formPapel.nome" type="text" class="{{ ui_form.dynamic_control_classes(extra='empresa-form-control empresa-form-control--edit') }}" required>
                 </div>
                 <div class="md:col-span-2">
                     <label class="mb-1.5 block text-xs font-bold uppercase text-slate-500">Descricao</label>
-                    <input x-model="formPapel.descricao" type="text" class="{{ ui_form.dynamic_control_classes() }} {{ ui_form.dynamic_edit_classes() }}">
+                    <input x-model="formPapel.descricao" type="text" class="{{ ui_form.dynamic_control_classes(extra='empresa-form-control empresa-form-control--edit') }}">
                 </div>
             </div>
             <div>

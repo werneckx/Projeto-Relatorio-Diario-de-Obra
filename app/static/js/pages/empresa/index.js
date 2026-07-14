@@ -720,9 +720,9 @@
         }
 
         function renderEmpresaWorkflowRoleSelect(stage, stageIndex, disabled) {
-            const baseClasses = 'empresa-workflow-control';
-            const editClasses = 'empresa-workflow-control--edit';
-            const viewClasses = 'empresa-workflow-control--view pointer-events-none select-none';
+            const baseClasses = 'form-control-std h-9 text-sm block w-full rounded-2xl appearance-none empresa-form-control';
+            const editClasses = 'empresa-form-control--edit';
+            const viewClasses = 'empresa-form-control--view pointer-events-none select-none';
             return `
                 <select class="empresa-workflow-stage-role ${baseClasses} ${disabled ? viewClasses : editClasses}" data-stage-index="${stageIndex}" tabindex="${disabled ? '-1' : '0'}" aria-disabled="${disabled ? 'true' : 'false'}">
                     <option value="">Selecione o papel</option>
@@ -1078,7 +1078,7 @@
                     const input = document.createElement('input');
                     input.type = 'text';
                     input.value = cur.trim() === 'Nao definido' ? '' : cur.trim();
-                    input.className = 'form-control-std h-9 text-sm block w-full rounded-2xl appearance-none bg-white border-slate-300 text-slate-600 shadow-sm placeholder:text-slate-400 font-mono';
+                    input.className = 'form-control-std h-9 text-sm block w-full rounded-2xl appearance-none empresa-form-control empresa-form-control--edit font-mono';
                     input.style.maxWidth = '200px';
 
                     const save = document.createElement('button');

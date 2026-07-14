@@ -27,8 +27,8 @@
             name="nome_empresa"
             value="{{ config_data.nome if config_data else '' }}"
             :readonly="!empresaEditing"
-            class="{{ ui_form.dynamic_control_classes() }}"
-            :class="empresaEditing ? '{{ ui_form.dynamic_edit_classes() }}' : '{{ ui_form.dynamic_view_classes() }}'"
+            class="{{ ui_form.dynamic_control_classes(extra='empresa-form-control') }}"
+            :class="empresaEditing ? 'empresa-form-control--edit' : 'empresa-form-control--view'"
             placeholder="Construtora Exemplo Ltda"
             required
         >

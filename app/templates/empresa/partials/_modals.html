@@ -30,10 +30,10 @@
 ) %}
 <div class="border-b border-slate-100 px-6 py-4">
     <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <input x-model="filtroObras" type="text" placeholder="Pesquisar obra" class="{{ ui_form.dynamic_control_classes() }} {{ ui_form.dynamic_edit_classes() }}">
-        <input x-model="filtroWorkflow" type="text" placeholder="Workflow" class="{{ ui_form.dynamic_control_classes() }} {{ ui_form.dynamic_edit_classes() }}">
-        <input x-model="filtroResponsavel" type="text" placeholder="Responsavel" class="{{ ui_form.dynamic_control_classes() }} {{ ui_form.dynamic_edit_classes() }}">
-        <select x-model="filtroStatus" class="{{ ui_form.dynamic_control_classes() }} {{ ui_form.dynamic_edit_classes() }}">
+        <input x-model="filtroObras" type="text" placeholder="Pesquisar obra" class="{{ ui_form.dynamic_control_classes(extra='empresa-form-control empresa-form-control--edit') }}">
+        <input x-model="filtroWorkflow" type="text" placeholder="Workflow" class="{{ ui_form.dynamic_control_classes(extra='empresa-form-control empresa-form-control--edit') }}">
+        <input x-model="filtroResponsavel" type="text" placeholder="Responsavel" class="{{ ui_form.dynamic_control_classes(extra='empresa-form-control empresa-form-control--edit') }}">
+        <select x-model="filtroStatus" class="{{ ui_form.dynamic_control_classes(extra='empresa-form-control empresa-form-control--edit') }}">
             <option value="">Status</option>
             <option value="Pendente">Pendente</option>
             <option value="Em andamento">Em andamento</option>

@@ -19,11 +19,11 @@
             <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <div>
                     <label class="mb-2 block text-xs font-bold uppercase text-slate-500">Chave</label>
-                    <input x-model="novoDefinicao.chave" type="text" class="{{ ui_form.dynamic_control_classes() }} {{ ui_form.dynamic_edit_classes() }}" required>
+                    <input x-model="novoDefinicao.chave" type="text" class="{{ ui_form.dynamic_control_classes(extra='empresa-form-control empresa-form-control--edit') }}" required>
                 </div>
                 <div>
                     <label class="mb-2 block text-xs font-bold uppercase text-slate-500">Tipo</label>
-                    <select x-model="novoDefinicao.tipo" class="{{ ui_form.dynamic_control_classes() }} {{ ui_form.dynamic_edit_classes() }}">
+                    <select x-model="novoDefinicao.tipo" class="{{ ui_form.dynamic_control_classes(extra='empresa-form-control empresa-form-control--edit') }}">
                         <option value="STRING">STRING</option>
                         <option value="INT">INT</option>
                         <option value="BOOLEAN">BOOLEAN</option>
@@ -32,12 +32,12 @@
                 </div>
                 <div>
                     <label class="mb-2 block text-xs font-bold uppercase text-slate-500">Valor inicial</label>
-                    <input x-model="novoDefinicao.valor" type="text" class="{{ ui_form.dynamic_control_classes() }} {{ ui_form.dynamic_edit_classes() }}" placeholder="Valor padrao">
+                    <input x-model="novoDefinicao.valor" type="text" class="{{ ui_form.dynamic_control_classes(extra='empresa-form-control empresa-form-control--edit') }}" placeholder="Valor padrao">
                 </div>
             </div>
             <div>
                 <label class="mb-2 block text-xs font-bold uppercase text-slate-500">Descricao</label>
-                <input x-model="novoDefinicao.descricao" type="text" class="{{ ui_form.dynamic_control_classes() }} {{ ui_form.dynamic_edit_classes() }}" placeholder="Descricao curta da funcionalidade desse parametro">
+                <input x-model="novoDefinicao.descricao" type="text" class="{{ ui_form.dynamic_control_classes(extra='empresa-form-control empresa-form-control--edit') }}" placeholder="Descricao curta da funcionalidade desse parametro">
             </div>
             <div class="flex justify-end gap-2 pt-2">
                 <button type="button" @click="novaDefinicaoVisible=false" class="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50">Cancelar</button>
