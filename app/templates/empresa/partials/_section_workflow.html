@@ -46,9 +46,10 @@
                         <select
                             id="workflowCompanySelect"
                             data-no-tom-select="true"
-                            :disabled="!empresaEditing"
-                            class="{{ ui_form.dynamic_control_classes() }}"
-                            :class="empresaEditing ? '{{ ui_form.dynamic_edit_classes() }}' : '{{ ui_form.dynamic_select_view_classes() }}'"
+                            class="{{ ui_form.dynamic_control_classes(extra='pr-10') }}"
+                            :class="empresaEditing ? '{{ ui_form.dynamic_edit_classes() }}' : '{{ ui_form.dynamic_select_view_classes() }} pointer-events-none select-none'"
+                            :tabindex="empresaEditing ? 0 : -1"
+                            :aria-disabled="String(!empresaEditing)"
                         >
                             {% set default_model = 'paralelo' if workflow_default and (workflow_default.aprovacao_paralela or workflow_default.tipo_fluxo == 'PARALELO') else 'hierarquico' if workflow_default and (workflow_default.tipo_fluxo in ['SEQUENCIAL', 'HIERARQUICO', 'HIERARQUICA'] or 'hierar' in (workflow_default.nome or '')|lower) else 'simples' %}
                             <option value="simples" {% if default_model == 'simples' %}selected{% endif %}>Aprovacao simples</option>
@@ -56,7 +57,7 @@
                             <option value="hierarquico" {% if default_model == 'hierarquico' %}selected{% endif %}>Aprovacao hierarquica</option>
                         </select>
 
-                        <div x-show="empresaEditing" class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400">
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400" :class="empresaEditing ? 'opacity-100' : 'opacity-0'">
                             <i class="fas fa-chevron-down text-xs"></i>
                         </div>
                     </div>
@@ -66,32 +67,46 @@
                     <label for="workflowCompanySignature" class="mb-2 block text-xs font-bold uppercase text-slate-500">
                         Assinatura
                     </label>
-                    <select
-                        id="workflowCompanySignature"
-                        data-no-tom-select="true"
-                        :disabled="!empresaEditing"
-                        class="{{ ui_form.dynamic_control_classes() }}"
-                        :class="empresaEditing ? '{{ ui_form.dynamic_edit_classes() }}' : '{{ ui_form.dynamic_select_view_classes() }}'"
-                    >
-                        <option value="1">Sim</option>
-                        <option value="0">Nao</option>
-                    </select>
+                    <div class="relative">
+                        <select
+                            id="workflowCompanySignature"
+                            data-no-tom-select="true"
+                            class="{{ ui_form.dynamic_control_classes(extra='pr-10') }}"
+                            :class="empresaEditing ? '{{ ui_form.dynamic_edit_classes() }}' : '{{ ui_form.dynamic_select_view_classes() }} pointer-events-none select-none'"
+                            :tabindex="empresaEditing ? 0 : -1"
+                            :aria-disabled="String(!empresaEditing)"
+                        >
+                            <option value="1">Sim</option>
+                            <option value="0">Nao</option>
+                        </select>
+
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400" :class="empresaEditing ? 'opacity-100' : 'opacity-0'">
+                            <i class="fas fa-chevron-down text-xs"></i>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="min-w-0">
                     <label for="workflowCompanyRule" class="mb-2 block text-xs font-bold uppercase text-slate-500">
                         Regra
                     </label>
-                    <select
-                        id="workflowCompanyRule"
-                        data-no-tom-select="true"
-                        :disabled="!empresaEditing"
-                        class="{{ ui_form.dynamic_control_classes() }}"
-                        :class="empresaEditing ? '{{ ui_form.dynamic_edit_classes() }}' : '{{ ui_form.dynamic_select_view_classes() }}'"
-                    >
-                        <option value="TODOS">Todos devem aprovar</option>
-                        <option value="PRIMEIRO">Primeiro a responder</option>
-                    </select>
+                    <div class="relative">
+                        <select
+                            id="workflowCompanyRule"
+                            data-no-tom-select="true"
+                            class="{{ ui_form.dynamic_control_classes(extra='pr-10') }}"
+                            :class="empresaEditing ? '{{ ui_form.dynamic_edit_classes() }}' : '{{ ui_form.dynamic_select_view_classes() }} pointer-events-none select-none'"
+                            :tabindex="empresaEditing ? 0 : -1"
+                            :aria-disabled="String(!empresaEditing)"
+                        >
+                            <option value="TODOS">Todos devem aprovar</option>
+                            <option value="PRIMEIRO">Primeiro a responder</option>
+                        </select>
+
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400" :class="empresaEditing ? 'opacity-100' : 'opacity-0'">
+                            <i class="fas fa-chevron-down text-xs"></i>
+                        </div>
+                    </div>
                 </div>
             </div>
 

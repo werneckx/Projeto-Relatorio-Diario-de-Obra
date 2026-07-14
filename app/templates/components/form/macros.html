@@ -51,15 +51,15 @@ form-control-std h-9 text-sm block w-full rounded-2xl appearance-none {{ extra }
 {%- endmacro %}
 
 {% macro dynamic_edit_classes() -%}
-bg-white border-slate-300 text-slate-600 shadow-sm placeholder:text-slate-400
+border-slate-300 bg-white text-slate-600 shadow-sm placeholder:text-slate-400
 {%- endmacro %}
 
 {% macro dynamic_view_classes() -%}
-bg-slate-100/60 border-slate-200 text-slate-800 font-semibold shadow-none cursor-default
+cursor-default border-slate-200 bg-slate-100/60 font-semibold text-slate-800 shadow-none
 {%- endmacro %}
 
 {% macro dynamic_select_view_classes() -%}
-!bg-slate-100/60 !text-slate-800 !opacity-100 font-semibold bg-no-repeat cursor-default shadow-none
+cursor-default border-slate-200 bg-slate-100/60 font-semibold text-slate-800 shadow-none opacity-100
 {%- endmacro %}
 
 {% macro blank(value='') -%}
