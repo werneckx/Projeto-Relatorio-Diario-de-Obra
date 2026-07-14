@@ -692,7 +692,7 @@
         function renderEmpresaWorkflowRoleSelect(stage, stageIndex, disabled) {
             const baseClasses = 'form-control-std h-9 text-sm block w-full rounded-2xl appearance-none';
             const editClasses = 'bg-white border-slate-300 text-slate-600 shadow-sm placeholder:text-slate-400';
-            const viewClasses = 'cursor-default border-slate-200 bg-slate-100/60 font-semibold text-slate-800 shadow-none opacity-100 bg-no-repeat pointer-events-none select-none';
+            const viewClasses = 'cursor-default !border-slate-200 !bg-slate-100/60 font-semibold !text-slate-800 !shadow-none !opacity-100 bg-no-repeat pointer-events-none select-none';
             return `
                 <select class="empresa-workflow-stage-role ${baseClasses} ${disabled ? viewClasses : editClasses}" data-stage-index="${stageIndex}" tabindex="${disabled ? '-1' : '0'}" aria-disabled="${disabled ? 'true' : 'false'}">
                     <option value="">Selecione o papel</option>
