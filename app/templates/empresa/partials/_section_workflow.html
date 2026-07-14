@@ -47,7 +47,7 @@
                             id="workflowCompanySelectPreview"
                             type="text"
                             value=""
-                            class="{{ ui_form.dynamic_control_classes() }} {{ ui_form.dynamic_view_classes() }}"
+                            class="empresa-workflow-control empresa-workflow-control--view"
                             readonly
                         >
                     </div>
@@ -67,7 +67,7 @@
                         <button
                             type="button"
                             id="workflowCompanyTypeDropdownButton"
-                            class="form-control-std flex h-11 w-full items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 pr-11 text-left text-sm font-semibold text-slate-800"
+                            class="empresa-workflow-model-button"
                         >
                             <i class="fas fa-search text-slate-400"></i>
                             <span id="workflowCompanyTypeDropdownLabel" class="min-w-0 flex-1 truncate">Selecione</span>
@@ -101,8 +101,8 @@
                     <select
                         id="workflowCompanySignature"
                         data-no-tom-select="true"
-                        class="{{ ui_form.dynamic_control_classes() }}"
-                        :class="empresaEditing ? '{{ ui_form.dynamic_edit_classes() }}' : '{{ ui_form.dynamic_select_view_classes() }} pointer-events-none select-none'"
+                        class="empresa-workflow-control"
+                        :class="empresaEditing ? 'empresa-workflow-control--edit' : 'empresa-workflow-control--view pointer-events-none select-none'"
                         :tabindex="empresaEditing ? 0 : -1"
                         :aria-disabled="String(!empresaEditing)"
                     >
@@ -118,8 +118,8 @@
                     <select
                         id="workflowCompanyRule"
                         data-no-tom-select="true"
-                        class="{{ ui_form.dynamic_control_classes() }}"
-                        :class="empresaEditing ? '{{ ui_form.dynamic_edit_classes() }}' : '{{ ui_form.dynamic_select_view_classes() }} pointer-events-none select-none'"
+                        class="empresa-workflow-control"
+                        :class="empresaEditing ? 'empresa-workflow-control--edit' : 'empresa-workflow-control--view pointer-events-none select-none'"
                         :tabindex="empresaEditing ? 0 : -1"
                         :aria-disabled="String(!empresaEditing)"
                     >
@@ -186,10 +186,10 @@
 
         <div class="px-6 pt-5">
             <div class="grid grid-cols-1 gap-3 lg:grid-cols-4">
-                <input x-model="filtroObras" type="text" placeholder="Pesquisar obra..." class="{{ ui_form.dynamic_control_classes() }} {{ ui_form.dynamic_edit_classes() }}">
-                <input x-model="filtroWorkflow" type="text" placeholder="Filtrar por workflow..." class="{{ ui_form.dynamic_control_classes() }} {{ ui_form.dynamic_edit_classes() }}">
-                <input x-model="filtroResponsavel" type="text" placeholder="Responsavel..." class="{{ ui_form.dynamic_control_classes() }} {{ ui_form.dynamic_edit_classes() }}">
-                <select x-model="filtroStatus" class="{{ ui_form.dynamic_control_classes() }} {{ ui_form.dynamic_edit_classes() }}">
+                <input x-model="filtroObras" type="text" placeholder="Pesquisar obra..." class="empresa-workflow-control empresa-workflow-control--edit">
+                <input x-model="filtroWorkflow" type="text" placeholder="Filtrar por workflow..." class="empresa-workflow-control empresa-workflow-control--edit">
+                <input x-model="filtroResponsavel" type="text" placeholder="Responsavel..." class="empresa-workflow-control empresa-workflow-control--edit">
+                <select x-model="filtroStatus" class="empresa-workflow-control empresa-workflow-control--edit">
                     <option value="">Todos os status</option>
                     <option value="Pendente">Pendente</option>
                     <option value="Em andamento">Em andamento</option>

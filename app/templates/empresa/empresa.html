@@ -5,6 +5,85 @@
 
 {% block content %}
 {% call ui_form.page_shell() %}
+<style>
+    #empresaPageRoot .empresa-workflow-control {
+        appearance: none !important;
+        background: #ffffff !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 1rem !important;
+        box-shadow: none !important;
+        color: #475569 !important;
+        display: block;
+        font-family: inherit !important;
+        font-size: 0.875rem !important;
+        height: 36px !important;
+        line-height: 1.25rem !important;
+        min-height: 36px !important;
+        outline: none !important;
+        padding: 0 1rem !important;
+        transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease !important;
+        width: 100%;
+    }
+
+    #empresaPageRoot .empresa-workflow-control--edit {
+        background: #ffffff !important;
+        border-color: #cbd5e1 !important;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05) !important;
+        color: #475569 !important;
+        cursor: text;
+    }
+
+    #empresaPageRoot select.empresa-workflow-control--edit {
+        cursor: pointer;
+    }
+
+    #empresaPageRoot .empresa-workflow-control--view {
+        background: rgba(241, 245, 249, 0.6) !important;
+        border-color: #e2e8f0 !important;
+        box-shadow: none !important;
+        color: #1e293b !important;
+        cursor: default;
+        font-weight: 600;
+        opacity: 1 !important;
+    }
+
+    #empresaPageRoot select.empresa-workflow-control {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M5 7.5L10 12.5L15 7.5' stroke='%2394A3B8' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+        background-position: right 1rem center !important;
+        background-repeat: no-repeat !important;
+        background-size: 12px 12px !important;
+        padding-right: 2.75rem !important;
+    }
+
+    #empresaPageRoot .empresa-workflow-control:focus,
+    #empresaPageRoot .empresa-workflow-model-button:focus {
+        border-color: rgba(37, 99, 235, 0.55) !important;
+        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12) !important;
+    }
+
+    #empresaPageRoot .empresa-workflow-model-button {
+        align-items: center;
+        appearance: none !important;
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 1rem !important;
+        box-shadow: none !important;
+        color: #1e293b !important;
+        display: flex;
+        font-family: inherit !important;
+        font-size: 0.875rem !important;
+        font-weight: 600;
+        gap: 0.5rem;
+        height: 44px !important;
+        line-height: 1.25rem !important;
+        min-height: 44px !important;
+        outline: none !important;
+        padding: 0 2.75rem 0 1rem !important;
+        text-align: left;
+        width: 100%;
+    }
+</style>
+
 <div id="empresaPageRoot" x-data="empresaApp()" x-init="init()" class="animate-fade-in-up w-full space-y-6 pb-28">
     {% include "empresa/partials/_hero.html" %}
     {% include "empresa/partials/_tabs.html" %}
@@ -43,7 +122,7 @@
         }
     };
 </script>
-<script src="{{ url_for('static', filename='js/pages/empresa/index.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/pages/empresa/index.js') }}?v=20260714-workflow-controls" defer></script>
 <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 {% endcall %}
 {% endblock %}
