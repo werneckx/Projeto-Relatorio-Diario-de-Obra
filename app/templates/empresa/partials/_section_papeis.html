@@ -16,7 +16,7 @@
             <p class="text-xs text-slate-400">Gerencie os niveis de acesso e controle o escopo operacional de cada colaborador.</p>
         </div>
         {% if can_edit %}
-        <button x-show="empresaEditing" x-transition.opacity.duration.200ms @click="novoPapelVisible = !novoPapelVisible" class="inline-flex items-center gap-2 self-start rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/10 transition-all hover:bg-blue-700 sm:self-auto">
+        <button x-show="empresaEditing" @click="novoPapelVisible = !novoPapelVisible" class="inline-flex items-center gap-2 self-start rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/10 transition-colors hover:bg-blue-700 sm:self-auto">
             <i class="fas fa-plus text-xs"></i> Novo Papel
         </button>
         {% endif %}
@@ -27,11 +27,11 @@
             <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <div class="md:col-span-1">
                     <label class="mb-1.5 block text-xs font-bold uppercase text-slate-500">Nome do papel</label>
-                    <input x-model="formPapel.nome" type="text" class="{{ ui_form.control_classes() }}" required>
+                    <input x-model="formPapel.nome" type="text" class="{{ ui_form.dynamic_control_classes() }} {{ ui_form.dynamic_edit_classes() }}" required>
                 </div>
                 <div class="md:col-span-2">
                     <label class="mb-1.5 block text-xs font-bold uppercase text-slate-500">Descricao</label>
-                    <input x-model="formPapel.descricao" type="text" class="{{ ui_form.control_classes() }}">
+                    <input x-model="formPapel.descricao" type="text" class="{{ ui_form.dynamic_control_classes() }} {{ ui_form.dynamic_edit_classes() }}">
                 </div>
             </div>
             <div>

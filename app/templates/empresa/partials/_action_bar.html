@@ -7,7 +7,6 @@
             <button
                 type="button"
                 x-show="hasGlobalActions() && isSectionEditing()"
-                x-transition.opacity.duration.200ms
                 @click="cancelSectionEdit()"
                 class="{{ ui_form.action_secondary_classes() }}"
             >
@@ -17,7 +16,6 @@
             <button
                 type="button"
                 x-show="hasGlobalActions() && !isSectionEditing()"
-                x-transition.opacity.duration.200ms
                 @click="startSectionEdit()"
                 class="{{ ui_form.action_secondary_classes() }}"
             >
@@ -32,7 +30,6 @@
         <button
             type="button"
             x-show="hasGlobalActions() && isSectionEditing()"
-            x-transition.opacity.duration.200ms
             @click="saveSection()"
             :disabled="isSaveDisabled()"
             id="submitBtn"

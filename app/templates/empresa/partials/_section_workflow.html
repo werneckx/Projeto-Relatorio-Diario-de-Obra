@@ -1,11 +1,5 @@
 {% import "components/form/macros.html" as ui_form %}
 
-{% set workflow_input_base_css = "form-control-std h-9 block w-full appearance-none rounded-2xl text-sm" %}
-{% set workflow_input_edit_css = "border-slate-300 bg-white text-slate-600 shadow-sm placeholder:text-slate-400" %}
-{% set workflow_input_view_css = "cursor-default border-slate-200 bg-slate-100/60 font-semibold text-slate-800 shadow-none" %}
-{% set workflow_final_input_css = workflow_input_base_css ~ " " ~ workflow_input_edit_css %}
-{% set workflow_select_view_css = "!bg-slate-100/60 !text-slate-800 !opacity-100 bg-no-repeat font-semibold" %}
-
 <section
     id="empresa-panel-workflow"
     role="tabpanel"
@@ -48,51 +42,22 @@
                         Modelo de workflow
                     </label>
 
-                    <div x-show="!empresaEditing" x-transition.opacity.duration.200ms>
-                        <input
-                            type="text"
-                            id="workflowCompanySelectPreview"
-                            value=""
-                            class="{{ workflow_input_base_css }} {{ workflow_input_view_css }}"
-                            readonly
-                            disabled
+                    <div class="relative">
+                        <select
+                            id="workflowCompanySelect"
+                            data-no-tom-select="true"
+                            :disabled="!empresaEditing"
+                            class="{{ ui_form.dynamic_control_classes() }}"
+                            :class="empresaEditing ? '{{ ui_form.dynamic_edit_classes() }}' : '{{ ui_form.dynamic_select_view_classes() }}'"
                         >
-                    </div>
-
-                    <div x-show="empresaEditing" x-transition.opacity.duration.200ms class="relative" id="workflowCompanyTypeDropdown">
-                        <select id="workflowCompanySelect" class="hidden" data-no-tom-select="true">
                             {% set default_model = 'paralelo' if workflow_default and (workflow_default.aprovacao_paralela or workflow_default.tipo_fluxo == 'PARALELO') else 'hierarquico' if workflow_default and (workflow_default.tipo_fluxo in ['SEQUENCIAL', 'HIERARQUICO', 'HIERARQUICA'] or 'hierar' in (workflow_default.nome or '')|lower) else 'simples' %}
                             <option value="simples" {% if default_model == 'simples' %}selected{% endif %}>Aprovacao simples</option>
                             <option value="paralelo" {% if default_model == 'paralelo' %}selected{% endif %}>Aprovacao paralela</option>
                             <option value="hierarquico" {% if default_model == 'hierarquico' %}selected{% endif %}>Aprovacao hierarquica</option>
                         </select>
 
-                        <button
-                            type="button"
-                            id="workflowCompanyTypeDropdownButton"
-                            class="{{ workflow_final_input_css }} flex w-full items-center gap-2 border border-slate-200 bg-white px-4 pr-11 text-left font-semibold text-slate-800 transition-all duration-200"
-                        >
-                            <i class="fas fa-search text-slate-400"></i>
-                            <span id="workflowCompanyTypeDropdownLabel" class="min-w-0 flex-1 truncate">Selecione</span>
-                        </button>
-
-                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4 text-slate-400">
+                        <div x-show="empresaEditing" class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400">
                             <i class="fas fa-chevron-down text-xs"></i>
-                        </div>
-
-                        <div id="workflowCompanyTypeDropdownMenu" class="absolute left-0 right-0 top-[calc(100%+6px)] z-50 hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
-                            <button type="button" class="workflow-company-type-option flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50" data-workflow-model="simples">
-                                <span class="min-w-0 flex-1 truncate">Aprovacao simples</span>
-                                <i class="workflow-company-type-check fas fa-check hidden text-blue-600"></i>
-                            </button>
-                            <button type="button" class="workflow-company-type-option flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50" data-workflow-model="paralelo">
-                                <span class="min-w-0 flex-1 truncate">Aprovacao paralela</span>
-                                <i class="workflow-company-type-check fas fa-check hidden text-blue-600"></i>
-                            </button>
-                            <button type="button" class="workflow-company-type-option flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50" data-workflow-model="hierarquico">
-                                <span class="min-w-0 flex-1 truncate">Aprovacao hierarquica</span>
-                                <i class="workflow-company-type-check fas fa-check hidden text-blue-600"></i>
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -105,8 +70,8 @@
                         id="workflowCompanySignature"
                         data-no-tom-select="true"
                         :disabled="!empresaEditing"
-                        :class="empresaEditing ? '' : '{{ workflow_select_view_css }}'"
-                        class="{{ workflow_final_input_css }}"
+                        class="{{ ui_form.dynamic_control_classes() }}"
+                        :class="empresaEditing ? '{{ ui_form.dynamic_edit_classes() }}' : '{{ ui_form.dynamic_select_view_classes() }}'"
                     >
                         <option value="1">Sim</option>
                         <option value="0">Nao</option>
@@ -121,8 +86,8 @@
                         id="workflowCompanyRule"
                         data-no-tom-select="true"
                         :disabled="!empresaEditing"
-                        :class="empresaEditing ? '' : '{{ workflow_select_view_css }}'"
-                        class="{{ workflow_final_input_css }}"
+                        class="{{ ui_form.dynamic_control_classes() }}"
+                        :class="empresaEditing ? '{{ ui_form.dynamic_edit_classes() }}' : '{{ ui_form.dynamic_select_view_classes() }}'"
                     >
                         <option value="TODOS">Todos devem aprovar</option>
                         <option value="PRIMEIRO">Primeiro a responder</option>
@@ -134,7 +99,7 @@
                 As alteracoes abaixo serao aplicadas ao workflow corporativo selecionado.
             </div>
 
-            <div x-show="!empresaEditing" x-transition.opacity.duration.200ms class="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+            <div x-show="!empresaEditing" class="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
                 Clique em <strong>Editar</strong> na barra de acoes para habilitar alteracoes neste workflow padrao.
             </div>
 
@@ -153,7 +118,6 @@
                         type="button"
                         id="workflowCompanyAddStageButton"
                         x-show="empresaEditing"
-                        x-transition.opacity.duration.200ms
                         class="inline-flex h-10 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-100"
                     >
                         <i class="fas fa-plus"></i>
@@ -188,10 +152,10 @@
 
         <div class="px-6 pt-5">
             <div class="grid grid-cols-1 gap-3 lg:grid-cols-4">
-                <input x-model="filtroObras" type="text" placeholder="Pesquisar obra..." class="{{ ui_form.control_classes(extra='px-4 font-semibold transition-all duration-200') }}">
-                <input x-model="filtroWorkflow" type="text" placeholder="Filtrar por workflow..." class="{{ ui_form.control_classes(extra='px-4 font-semibold transition-all duration-200') }}">
-                <input x-model="filtroResponsavel" type="text" placeholder="Responsavel..." class="{{ ui_form.control_classes(extra='px-4 font-semibold transition-all duration-200') }}">
-                <select x-model="filtroStatus" class="{{ ui_form.select_classes(extra='px-4 font-semibold transition-all duration-200') }}">
+                <input x-model="filtroObras" type="text" placeholder="Pesquisar obra..." class="{{ ui_form.dynamic_control_classes() }} {{ ui_form.dynamic_edit_classes() }}">
+                <input x-model="filtroWorkflow" type="text" placeholder="Filtrar por workflow..." class="{{ ui_form.dynamic_control_classes() }} {{ ui_form.dynamic_edit_classes() }}">
+                <input x-model="filtroResponsavel" type="text" placeholder="Responsavel..." class="{{ ui_form.dynamic_control_classes() }} {{ ui_form.dynamic_edit_classes() }}">
+                <select x-model="filtroStatus" class="{{ ui_form.dynamic_control_classes() }} {{ ui_form.dynamic_edit_classes() }}">
                     <option value="">Todos os status</option>
                     <option value="Pendente">Pendente</option>
                     <option value="Em andamento">Em andamento</option>

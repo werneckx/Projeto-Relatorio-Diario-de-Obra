@@ -139,6 +139,15 @@
         }, 120);
     }
 
+    function replaceEmpresaRoute(url) {
+        if (!url || window.location.href === url) return;
+        try {
+            window.history.pushState({ empresaRoute: url }, '', url);
+        } catch (_) {
+            // A troca de URL e apenas cosmetica; se falhar, mantemos a tela sem reload.
+        }
+    }
+
         function empresaApp() {
             return {
                 abaAtiva: localStorage.getItem('empresa_aba_ativa') || 'geral',
@@ -165,7 +174,6 @@
 
                 init() {
                     this.abaAtiva = localStorage.getItem('empresa_aba_ativa') || this.abaAtiva || 'geral';
-                    this.empresaEditing = Boolean(pageData.startInEditMode);
                     prepareEmpresaRouteTransition();
                     initializeEmpresaGeneralFormState();
                     window.applyRequiredMarkers?.(document);
@@ -228,23 +236,21 @@
                     return false;
                 },
                 startSectionEdit() {
-                    if (!pageData.startInEditMode && empresaUrls.empresaEdit) {
-                        navigateEmpresaRoute(empresaUrls.empresaEdit);
-                        return;
-                    }
+                    if (this.empresaEditing) return;
                     this.empresaEditing = true;
+                    replaceEmpresaRoute(empresaUrls.empresaEdit);
                     renderEmpresaWorkflowCards();
                 },
                 cancelSectionEdit() {
-                    if (pageData.startInEditMode && empresaUrls.empresaView) {
-                        navigateEmpresaRoute(empresaUrls.empresaView);
-                        return;
-                    }
                     resetEmpresaGeneralForm();
                     window.resetEmpresaWorkflowEditor?.();
+                    this.novoDefinicao = { chave: '', descricao: '', valor: '', tipo: 'STRING' };
                     this.novaDefinicaoVisible = false;
                     this.resetFormPapel();
+                    this.resetFormWorkflow();
                     this.empresaEditing = false;
+                    pageData.startInEditMode = false;
+                    replaceEmpresaRoute(empresaUrls.empresaView);
                     renderEmpresaWorkflowCards();
                 },
                 saveSection() {
@@ -257,6 +263,7 @@
                         return;
                     }
                     this.empresaEditing = false;
+                    replaceEmpresaRoute(empresaUrls.empresaView);
                 },
                 async criarDefinicao() {
                     try {
@@ -683,8 +690,11 @@
         }
 
         function renderEmpresaWorkflowRoleSelect(stage, stageIndex, disabled) {
+            const baseClasses = 'form-control-std h-9 text-sm block w-full rounded-2xl appearance-none';
+            const editClasses = 'bg-white border-slate-300 text-slate-600 shadow-sm placeholder:text-slate-400';
+            const viewClasses = '!bg-slate-100/60 !text-slate-800 !opacity-100 font-semibold bg-no-repeat cursor-default shadow-none border-slate-200';
             return `
-                <select class="empresa-workflow-stage-role form-control-std h-9 w-full rounded-2xl ${disabled ? 'bg-slate-100 border-slate-200 text-slate-800 font-semibold cursor-not-allowed' : 'bg-white text-slate-700'} text-sm" data-stage-index="${stageIndex}" ${disabled ? 'disabled' : ''}>
+                <select class="empresa-workflow-stage-role ${baseClasses} ${disabled ? viewClasses : editClasses}" data-stage-index="${stageIndex}" ${disabled ? 'disabled' : ''}>
                     <option value="">Selecione o papel</option>
                     ${empresaWorkflowRoleOptions.map((papel) => `
                         <option value="${papel.id}" ${Number(papel.id) === Number(stage.papel_id) ? 'selected' : ''}>${papel.nome}</option>
@@ -806,21 +816,10 @@
 
         function syncEmpresaWorkflowControls() {
             const select = workflowEl('workflowCompanySelect');
-            const previewInput = workflowEl('workflowCompanySelectPreview');
-            const dropdownLabel = workflowEl('workflowCompanyTypeDropdownLabel');
             const signature = workflowEl('workflowCompanySignature');
             const rule = workflowEl('workflowCompanyRule');
             if (select) {
                 select.value = String(empresaWorkflowState.selectedWorkflowModel || 'simples');
-                const selectedOption = select.options[select.selectedIndex];
-                const selectedLabel = selectedOption ? selectedOption.text : 'Selecione';
-                if (previewInput) previewInput.value = selectedLabel;
-                if (dropdownLabel) dropdownLabel.textContent = selectedLabel;
-                document.querySelectorAll('.workflow-company-type-option').forEach((option) => {
-                    const isActive = option.dataset.workflowModel === select.value;
-                    option.classList.toggle('bg-blue-50', isActive);
-                    option.querySelector('.workflow-company-type-check')?.classList.toggle('hidden', !isActive);
-                });
             }
             if (signature) signature.value = empresaWorkflowState.globalSignature ? '1' : '0';
             if (rule) rule.value = empresaWorkflowState.globalRule;
@@ -905,21 +904,9 @@
         function bootstrapEmpresaWorkflowEditor() {
             const select = workflowEl('workflowCompanySelect');
             if (!select) return;
-            const dropdownButton = workflowEl('workflowCompanyTypeDropdownButton');
-            const dropdownMenu = workflowEl('workflowCompanyTypeDropdownMenu');
-
-            const closeWorkflowTypeDropdown = () => {
-                dropdownMenu?.classList.add('hidden');
-            };
-
-            const toggleWorkflowTypeDropdown = () => {
-                if (!isEmpresaWorkflowEditing()) return;
-                dropdownMenu?.classList.toggle('hidden');
-            };
 
             const handleWorkflowTypeChange = async (value) => {
                 if (!value || value === String(empresaWorkflowState.selectedWorkflowModel || 'simples')) {
-                    closeWorkflowTypeDropdown();
                     syncEmpresaWorkflowControls();
                     return;
                 }
@@ -927,30 +914,18 @@
                     const confirmed = await showConfirm('Alterar workflow', 'As alteracoes nao salvas serao descartadas. Deseja continuar?');
                     if (!confirmed) {
                         syncEmpresaWorkflowControls();
-                        closeWorkflowTypeDropdown();
                         return;
                     }
                 }
-                closeWorkflowTypeDropdown();
                 loadEmpresaWorkflowPreview(value);
             };
 
-            select.addEventListener('change', () => {
-                syncEmpresaWorkflowControls();
-            });
-
-            dropdownButton?.addEventListener('click', toggleWorkflowTypeDropdown);
-
-            dropdownMenu?.addEventListener('click', async (event) => {
-                const option = event.target.closest('.workflow-company-type-option');
-                if (!option) return;
-                await handleWorkflowTypeChange(option.dataset.workflowModel || '');
-            });
-
-            document.addEventListener('click', (event) => {
-                const wrapper = workflowEl('workflowCompanyTypeDropdown');
-                if (!wrapper || wrapper.contains(event.target)) return;
-                closeWorkflowTypeDropdown();
+            select.addEventListener('change', async (event) => {
+                if (!isEmpresaWorkflowEditing()) {
+                    syncEmpresaWorkflowControls();
+                    return;
+                }
+                await handleWorkflowTypeChange(event.target.value);
             });
 
             workflowEl('workflowCompanySignature')?.addEventListener('change', (event) => {
@@ -1034,7 +1009,7 @@
                     const input = document.createElement('input');
                     input.type = 'text';
                     input.value = cur.trim() === 'Nao definido' ? '' : cur.trim();
-                    input.className = 'border border-slate-200 px-3 py-1 text-sm rounded-xl focus:outline-none focus:border-blue-500 font-mono';
+                    input.className = 'form-control-std h-9 text-sm block w-full rounded-2xl appearance-none bg-white border-slate-300 text-slate-600 shadow-sm placeholder:text-slate-400 font-mono';
                     input.style.maxWidth = '200px';
 
                     const save = document.createElement('button');

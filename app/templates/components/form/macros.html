@@ -35,19 +35,31 @@
 {% endmacro %}
 
 {% macro control_classes(view_mode=false, extra='') -%}
-form-control-std h-9 text-sm block w-full rounded-2xl appearance-none {{ 'bg-slate-100/60 border-slate-200
-text-slate-800 font-semibold cursor-default' if view_mode else 'bg-white border-slate-300 text-slate-600 shadow-sm
-placeholder:text-slate-400' }} {{ extra }}
+{{ dynamic_control_classes(extra=(dynamic_view_classes() if view_mode else dynamic_edit_classes()) ~ ' ' ~ extra) }}
 {%- endmacro %}
 
 {% macro select_classes(view_mode=false, extra='') -%}
-{{ control_classes(view_mode=view_mode, extra='pr-10 ' ~ extra) }}
+{{ dynamic_control_classes(extra='pr-10 ' ~ (dynamic_select_view_classes() if view_mode else dynamic_edit_classes()) ~ ' ' ~ extra) }}
 {%- endmacro %}
 
 {% macro textarea_classes(view_mode=false, extra='') -%}
-form-control-std text-sm block w-full rounded-2xl px-4 py-3 min-h-[96px] resize-y {{ 'bg-slate-100/60 border-slate-200
-text-slate-800 font-semibold cursor-default' if view_mode else 'bg-white border-slate-300 text-slate-600 shadow-sm
-placeholder:text-slate-400' }} {{ extra }}
+form-control-std min-h-[96px] w-full resize-y rounded-2xl px-4 py-3 text-sm {{ dynamic_view_classes() if view_mode else dynamic_edit_classes() }} {{ extra }}
+{%- endmacro %}
+
+{% macro dynamic_control_classes(extra='') -%}
+form-control-std h-9 text-sm block w-full rounded-2xl appearance-none {{ extra }}
+{%- endmacro %}
+
+{% macro dynamic_edit_classes() -%}
+bg-white border-slate-300 text-slate-600 shadow-sm placeholder:text-slate-400
+{%- endmacro %}
+
+{% macro dynamic_view_classes() -%}
+bg-slate-100/60 border-slate-200 text-slate-800 font-semibold shadow-none cursor-default
+{%- endmacro %}
+
+{% macro dynamic_select_view_classes() -%}
+!bg-slate-100/60 !text-slate-800 !opacity-100 font-semibold bg-no-repeat cursor-default shadow-none
 {%- endmacro %}
 
 {% macro blank(value='') -%}

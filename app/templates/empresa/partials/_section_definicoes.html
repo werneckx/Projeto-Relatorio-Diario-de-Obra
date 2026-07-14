@@ -8,7 +8,7 @@
             <p class="text-xs text-slate-400">Configuracoes internas do sistema. Valores nativos de fabrica nao podem ser alterados.</p>
         </div>
         {% if can_edit %}
-        <button x-show="empresaEditing" x-transition.opacity.duration.200ms @click="novaDefinicaoVisible = !novaDefinicaoVisible" type="button" class="self-start rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/10 transition-all hover:bg-blue-700 sm:self-auto">
+        <button x-show="empresaEditing" @click="novaDefinicaoVisible = !novaDefinicaoVisible" type="button" class="self-start rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/10 transition-colors hover:bg-blue-700 sm:self-auto">
             <i class="fas fa-plus mr-2 text-xs"></i> Nova definicao
         </button>
         {% endif %}
@@ -19,11 +19,11 @@
             <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <div>
                     <label class="mb-2 block text-xs font-bold uppercase text-slate-500">Chave</label>
-                    <input x-model="novoDefinicao.chave" type="text" class="{{ ui_form.control_classes() }}" required>
+                    <input x-model="novoDefinicao.chave" type="text" class="{{ ui_form.dynamic_control_classes() }} {{ ui_form.dynamic_edit_classes() }}" required>
                 </div>
                 <div>
                     <label class="mb-2 block text-xs font-bold uppercase text-slate-500">Tipo</label>
-                    <select x-model="novoDefinicao.tipo" class="{{ ui_form.select_classes() }}">
+                    <select x-model="novoDefinicao.tipo" class="{{ ui_form.dynamic_control_classes() }} {{ ui_form.dynamic_edit_classes() }}">
                         <option value="STRING">STRING</option>
                         <option value="INT">INT</option>
                         <option value="BOOLEAN">BOOLEAN</option>
@@ -32,12 +32,12 @@
                 </div>
                 <div>
                     <label class="mb-2 block text-xs font-bold uppercase text-slate-500">Valor inicial</label>
-                    <input x-model="novoDefinicao.valor" type="text" class="{{ ui_form.control_classes() }}" placeholder="Valor padrao">
+                    <input x-model="novoDefinicao.valor" type="text" class="{{ ui_form.dynamic_control_classes() }} {{ ui_form.dynamic_edit_classes() }}" placeholder="Valor padrao">
                 </div>
             </div>
             <div>
                 <label class="mb-2 block text-xs font-bold uppercase text-slate-500">Descricao</label>
-                <input x-model="novoDefinicao.descricao" type="text" class="{{ ui_form.control_classes() }}" placeholder="Descricao curta da funcionalidade desse parametro">
+                <input x-model="novoDefinicao.descricao" type="text" class="{{ ui_form.dynamic_control_classes() }} {{ ui_form.dynamic_edit_classes() }}" placeholder="Descricao curta da funcionalidade desse parametro">
             </div>
             <div class="flex justify-end gap-2 pt-2">
                 <button type="button" @click="novaDefinicaoVisible=false" class="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50">Cancelar</button>
@@ -48,7 +48,7 @@
 
     <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
         {% for d in definicoes %}
-        <div class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 transition-all hover:bg-slate-50/40" data-chave="{{ d.chave }}">
+        <div class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 transition-colors hover:bg-slate-50/40" data-chave="{{ d.chave }}">
             <div class="flex items-start justify-between gap-2">
                 <div class="min-w-0 space-y-1.5">
                     <div class="flex flex-wrap items-center gap-2">
@@ -64,7 +64,7 @@
                     {{ config_map.get(d.chave) if config_map.get(d.chave) is not none else 'Nao definido' }}
                 </div>
                 {% if not d.is_system %}
-                <button x-show="empresaEditing" x-transition.opacity.duration.200ms type="button" class="shrink-0 rounded-2xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-600 transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900" data-action="edit">Editar</button>
+                <button x-show="empresaEditing" type="button" class="shrink-0 rounded-2xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900" data-action="edit">Editar</button>
                 {% else %}
                 <span class="shrink-0 rounded-lg border border-slate-100 bg-slate-50 px-2.5 py-1 text-xs italic text-slate-400 select-none">Apenas leitura</span>
                 {% endif %}
