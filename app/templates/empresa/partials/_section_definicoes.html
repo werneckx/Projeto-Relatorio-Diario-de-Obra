@@ -1,0 +1,80 @@
+{# ABA: DEFINIÇÕES #}
+<section x-show="abaAtiva==='definicoes'" x-transition class="scroll-mt-24">
+    <div class="rounded-2xl bg-white border border-slate-100 shadow-sm p-6">
+        <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+                <h3 class="text-base font-bold text-slate-800">Definições e Parâmetros</h3>
+                <p class="text-xs text-slate-400 mt-1">Configurações internas do sistema. Valores nativos de fábrica não podem ser alterados.</p>
+            </div>
+            {% if can_edit %}
+            <button @click="novaDefinicaoVisible = !novaDefinicaoVisible" type="button"
+                class="px-4 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 text-sm font-semibold shadow-md shadow-blue-600/10 flex items-center gap-2 self-start sm:self-auto transition-all">
+                <i class="fas fa-plus text-xs"></i> Nova Definição
+            </button>
+            {% endif %}
+        </div>
+
+        <div x-show="novaDefinicaoVisible" x-transition class="mb-6 p-5 bg-slate-50 rounded-2xl border border-slate-200/60">
+            <form @submit.prevent="criarDefinicao" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">Chave</label>
+                        <input x-model="novoDefinicao.chave" type="text" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all" required>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">Tipo</label>
+                        <select x-model="novoDefinicao.tipo" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all">
+                            <option value="STRING">STRING</option>
+                            <option value="INT">INT</option>
+                            <option value="BOOLEAN">BOOLEAN</option>
+                            <option value="JSON">JSON</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">Valor Inicial</label>
+                        <input x-model="novoDefinicao.valor" type="text" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all" placeholder="Valor padrão">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">Descrição</label>
+                    <input x-model="novoDefinicao.descricao" type="text" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all" placeholder="Descrição curta da funcionalidade desse parâmetro">
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" @click="novaDefinicaoVisible=false" class="px-4 py-2 text-sm font-semibold bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition-colors">Cancelar</button>
+                    <button type="submit" class="px-5 py-2 text-sm font-semibold bg-blue-600 text-white rounded-xl hover:bg-blue-700 shadow-sm transition-colors">Criar Parâmetro</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {% for d in definicoes %}
+            <div class="p-4 border border-slate-100 rounded-2xl bg-white hover:bg-slate-50/40 hover:border-slate-200/80 transition-all shadow-2xs flex flex-col gap-3" data-chave="{{ d.chave }}">
+                <div class="flex items-start justify-between gap-2">
+                    <div class="min-w-0 space-y-1.5">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <strong class="text-slate-800 text-sm font-bold tracking-tight font-mono truncate">{{ d.chave }}</strong>
+                            {% if d.is_system %}
+                            <span class="px-2 py-0.5 bg-slate-100 text-slate-600 text-[9px] font-bold rounded-lg border border-slate-200/60 uppercase tracking-wider flex items-center gap-1"><i class="fas fa-lock text-[8px] opacity-70"></i> Sistema</span>
+                            {% else %}
+                            <span class="px-2 py-0.5 bg-blue-50 text-blue-600 text-[9px] font-bold rounded-lg border border-blue-100/60 uppercase tracking-wider flex items-center gap-1"><i class="fas fa-sliders-h text-[8px] opacity-70"></i> Custom</span>
+                            {% endif %}
+                        </div>
+                        <div class="text-xs text-slate-400 leading-relaxed">{{ d.descricao }}</div>
+                    </div>
+                    <div class="text-xs font-bold text-slate-400 shrink-0" data-role="status" style="min-width:64px"></div>
+                </div>
+                <div class="flex items-center justify-between gap-3 border-t border-slate-100 pt-3">
+                    <div class="text-sm font-bold text-slate-700 bg-slate-50 px-3 py-1 rounded-lg border border-slate-200/40 font-mono truncate" data-role="valor">
+                        {{ config_map.get(d.chave) if config_map.get(d.chave) is not none else 'Não definido' }}
+                    </div>
+                    {% if not d.is_system %}
+                    <button type="button" class="px-3 py-1.5 border border-slate-200 text-slate-600 bg-white rounded-xl text-xs font-bold hover:bg-slate-50 hover:text-slate-900 hover:border-slate-300 transition-all shadow-2xs shrink-0" data-action="edit">Editar</button>
+                    {% else %}
+                    <span class="text-xs text-slate-400 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-100 italic select-none shrink-0">Apenas Leitura</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>

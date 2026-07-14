@@ -1,0 +1,142 @@
+{# MODAIS #}
+<div x-show="legendaWorkflowVisible" x-transition class="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm" style="display: none;">
+    <div @click.stop class="w-full max-w-md overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-2xl">
+        <div class="flex items-center justify-between gap-4 border-b border-slate-100 px-6 py-5">
+            <div>
+                <h3 class="text-lg font-bold text-slate-900">Legenda dos Status</h3>
+                <p class="mt-1 text-sm text-slate-500">Referência visual dos status reais das execuções.</p>
+            </div>
+            <button type="button" @click="legendaWorkflowVisible = false" class="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"><i class="fas fa-times text-sm"></i></button>
+        </div>
+        <div class="space-y-3 px-6 py-5 text-sm font-semibold">
+            <div class="flex items-center gap-3 text-amber-700"><span class="h-2.5 w-2.5 rounded-full bg-amber-500"></span> Pendente</div>
+            <div class="flex items-center gap-3 text-blue-700"><span class="h-2.5 w-2.5 rounded-full bg-blue-500"></span> Em andamento</div>
+            <div class="flex items-center gap-3 text-emerald-700"><span class="h-2.5 w-2.5 rounded-full bg-emerald-500"></span> Concluído</div>
+            <div class="flex items-center gap-3 text-rose-700"><span class="h-2.5 w-2.5 rounded-full bg-rose-500"></span> Rejeitado</div>
+            <div class="flex items-center gap-3 text-slate-700"><span class="h-2.5 w-2.5 rounded-full bg-slate-500"></span> Cancelado</div>
+            <div class="flex items-center gap-3 text-red-700"><span class="h-2.5 w-2.5 rounded-full bg-red-500"></span> Erro</div>
+        </div>
+    </div>
+</div>
+
+<div x-show="modalObrasVisible" x-transition class="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm" style="display: none;">
+    <div @click.stop class="flex h-[90vh] w-full max-w-7xl flex-col overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-2xl">
+        <div class="flex items-center justify-between gap-4 border-b border-slate-100 px-6 py-5">
+            <div>
+                <h3 class="text-lg font-bold text-slate-900">Obras e Workflows</h3>
+                <p class="mt-1 text-sm text-slate-500">Veja workflow aplicado, origem, responsáveis e fluxos ativos por obra.</p>
+            </div>
+            <button type="button" @click="fecharModalObras()" class="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"><i class="fas fa-times text-sm"></i></button>
+        </div>
+        <div class="border-b border-slate-100 px-6 py-4">
+            <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                <input x-model="filtroObras" type="text" placeholder="Pesquisar obra" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10">
+                <input x-model="filtroWorkflow" type="text" placeholder="Workflow" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10">
+                <input x-model="filtroResponsavel" type="text" placeholder="Responsável" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10">
+                <select x-model="filtroStatus" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10">
+                    <option value="">Status</option>
+                    <option value="Pendente">Pendente</option>
+                    <option value="Em andamento">Em andamento</option>
+                    <option value="Concluído">Concluído</option>
+                    <option value="Rejeitado">Rejeitado</option>
+                    <option value="Cancelado">Cancelado</option>
+                    <option value="Erro">Erro</option>
+                </select>
+            </div>
+        </div>
+        <div class="flex-1 overflow-y-auto px-6 py-5">
+            <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                <template x-for="obra in filteredObras()" :key="obra.obra_id">
+                    <div class="rounded-2xl border border-slate-200 bg-slate-50/70 p-5 shadow-sm">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <h4 class="text-base font-bold text-slate-900" x-text="obra.obra_nome"></h4>
+                                <p class="mt-1 text-sm text-slate-500">Workflow: <span class="font-semibold text-slate-700" x-text="obra.workflow_nome"></span></p>
+                            </div>
+                            <span class="rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em]" :class="obra.workflow_origem_tipo === 'empresa' ? 'border border-emerald-100 bg-emerald-50 text-emerald-700' : obra.workflow_origem_tipo === 'obra' ? 'border border-blue-100 bg-blue-50 text-blue-700' : 'border border-amber-100 bg-amber-50 text-amber-700'" x-text="obra.workflow_origem"></span>
+                        </div>
+                        <div class="mt-4 grid grid-cols-2 gap-3 text-sm text-slate-600">
+                            <div>Responsável <span class="font-semibold text-slate-800" x-text="obra.responsavel"></span></div>
+                            <div>Fluxos ativos <span class="font-semibold text-slate-800" x-text="obra.execucoes_ativas"></span></div>
+                            <div class="col-span-2">Status <span class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-bold" :class="obra.status_badge_class"><span class="h-2 w-2 rounded-full" :class="obra.status_dot_class"></span><span x-text="obra.status"></span></span></div>
+                            <div>Matriz <span class="font-semibold text-slate-800" x-text="obra.matriz_total + ' papéis'"></span></div>
+                        </div>
+                        <div class="mt-4"><button type="button" @click="abrirDetalhesObra(obra.obra_id)" class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-800">Detalhes</button></div>
+                    </div>
+                </template>
+            </div>
+            <div x-show="filteredObras().length === 0" class="flex h-full items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 px-4 py-12 text-sm text-slate-400">Nenhuma obra encontrada com os filtros informados.</div>
+        </div>
+    </div>
+</div>
+
+<div x-show="obraDetalheVisible && obraSelecionada" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm" style="display: none;">
+    <div @click.stop class="w-full max-w-6xl overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-2xl">
+        <template x-if="obraSelecionada">
+            <div>
+                <div class="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
+                    <div>
+                        <h3 class="text-xl font-bold text-slate-900" x-text="obraSelecionada.obra_nome"></h3>
+                        <p class="mt-1 text-sm text-slate-500">Visão executiva e operacional do workflow configurado para a obra.</p>
+                    </div>
+                    <button type="button" @click="fecharDetalhesObra()" class="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"><i class="fas fa-times text-sm"></i></button>
+                </div>
+                <div class="border-b border-slate-100 px-6"><div class="flex flex-wrap gap-2 py-4"><button type="button" @click="obraDetalheAba = 'resumo'" :class="obraDetalheAba === 'resumo' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'" class="rounded-xl border px-4 py-2 text-sm font-semibold transition-colors">Resumo</button><button type="button" @click="obraDetalheAba = 'workflow'" :class="obraDetalheAba === 'workflow' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'" class="rounded-xl border px-4 py-2 text-sm font-semibold transition-colors">Workflow</button><button type="button" @click="obraDetalheAba = 'responsaveis'" :class="obraDetalheAba === 'responsaveis' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'" class="rounded-xl border px-4 py-2 text-sm font-semibold transition-colors">Responsáveis</button><button type="button" @click="obraDetalheAba = 'historico'" :class="obraDetalheAba === 'historico' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'" class="rounded-xl border px-4 py-2 text-sm font-semibold transition-colors">Histórico</button></div></div>
+                <div class="px-6 py-6">
+                    <div x-show="obraDetalheAba === 'resumo'" class="grid grid-cols-1 gap-6 xl:grid-cols-3"><div class="rounded-2xl border border-slate-200 bg-slate-50/70 p-5"><div class="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Workflow</div><div class="mt-2 text-lg font-bold text-slate-900" x-text="obraSelecionada.workflow_nome"></div><div class="mt-3"><span class="rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em]" :class="obraSelecionada.workflow_origem_tipo === 'empresa' ? 'border border-emerald-100 bg-emerald-50 text-emerald-700' : obraSelecionada.workflow_origem_tipo === 'obra' ? 'border border-blue-100 bg-blue-50 text-blue-700' : 'border border-amber-100 bg-amber-50 text-amber-700'" x-text="obraSelecionada.workflow_origem"></span></div></div><div class="rounded-2xl border border-slate-200 bg-slate-50/70 p-5"><div class="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Responsável</div><div class="mt-2 text-lg font-bold text-slate-900" x-text="obraSelecionada.responsavel"></div></div><div class="rounded-2xl border border-slate-200 bg-slate-50/70 p-5"><div class="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Execuções Ativas</div><div class="mt-2 text-lg font-bold text-slate-900" x-text="obraSelecionada.execucoes_ativas"></div><div class="mt-3"><span class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-bold" :class="obraSelecionada.status_badge_class"><span class="h-2 w-2 rounded-full" :class="obraSelecionada.status_dot_class"></span><span x-text="obraSelecionada.status"></span></span></div></div></div>
+                    <div x-show="obraDetalheAba === 'workflow'" class="rounded-2xl border border-slate-200 bg-white p-5"><div class="flex items-start justify-between gap-3"><div><h4 class="text-lg font-bold text-slate-900">Workflow da Obra</h4><p class="mt-1 text-sm text-slate-500">Mesmo diagrama, destacando se a origem vem da empresa ou de uma configuração própria.</p></div><span class="rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em]" :class="obraSelecionada.workflow_origem_tipo === 'empresa' ? 'border border-emerald-100 bg-emerald-50 text-emerald-700' : obraSelecionada.workflow_origem_tipo === 'obra' ? 'border border-blue-100 bg-blue-50 text-blue-700' : 'border border-amber-100 bg-amber-50 text-amber-700'" x-text="obraSelecionada.workflow_origem"></span></div><div class="mt-6 overflow-x-auto pb-2"><div class="flex min-w-max items-stretch gap-3"><template x-for="(etapa, index) in obraSelecionada.workflow_etapas" :key="etapa.nivel + '-' + etapa.nome"><div class="flex items-center gap-3"><div class="w-[220px] rounded-2xl border border-slate-200 bg-slate-50/70 p-4"><div class="flex items-center justify-between gap-2"><span class="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900 text-xs font-black text-white" x-text="etapa.nivel"></span><span class="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400" x-text="etapa.tipo"></span></div><div class="mt-4 text-sm font-bold text-slate-900" x-text="etapa.nome"></div><div class="mt-2 text-xs text-slate-500">Papel associado</div><div class="text-sm font-semibold text-slate-700" x-text="etapa.papel"></div><div class="mt-3 text-xs text-slate-500">Tempo médio</div><div class="text-sm font-semibold text-slate-700" x-text="etapa.tempo_medio"></div></div><div class="text-slate-300" x-show="index < obraSelecionada.workflow_etapas.length - 1"><i class="fas fa-arrow-right text-lg"></i></div></div></template></div></div></div>
+                    <div x-show="obraDetalheAba === 'responsaveis'" class="rounded-2xl border border-slate-200 bg-white p-5"><h4 class="text-sm font-bold uppercase tracking-[0.16em] text-slate-500">Responsáveis</h4><div class="mt-4 overflow-hidden rounded-2xl border border-slate-100"><table class="min-w-full text-sm"><thead class="bg-slate-50 text-left text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400"><tr><th class="px-4 py-3">Papel</th><th class="px-4 py-3">Usuário</th></tr></thead><tbody><template x-for="item in obraSelecionada.matriz" :key="item.papel + item.usuario"><tr class="border-t border-slate-100"><td class="px-4 py-3 font-semibold text-slate-800" x-text="item.papel"></td><td class="px-4 py-3 text-slate-600" x-text="item.usuario"></td></tr></template></tbody></table></div></div>
+                    <div x-show="obraDetalheAba === 'historico'" class="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 px-4 py-10 text-center text-sm text-slate-400">Histórico detalhado da obra pode ser conectado aqui quando houver feed operacional por execução.</div>
+                </div>
+            </div>
+        </template>
+    </div>
+</div>
+
+<div x-show="editarPapelVisible" x-transition class="fixed inset-0 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4 z-50 animate-fade-in" style="display: none;">
+    <div @click.stop class="w-full max-w-2xl bg-white p-6 rounded-2xl border border-slate-100 shadow-xl max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center pb-3 border-b border-slate-100 mb-4">
+            <h3 class="text-base font-bold text-slate-900 flex items-center gap-2"><i class="fas fa-shield-alt text-slate-400"></i> Editar Configurações do Papel</h3>
+            <button type="button" @click="fecharModalEdicao()" class="w-7 h-7 rounded-lg bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors"><i class="fas fa-times text-xs"></i></button>
+        </div>
+        <p class="text-xs text-slate-400 leading-relaxed mb-4">Gerencie as permissões globais e os metadados associados a este perfil de privilégios.</p>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Nome do Papel</label>
+                <input type="text" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 bg-slate-50 text-slate-500" disabled placeholder="Carregando nome...">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Descrição</label>
+                <textarea rows="2" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 bg-slate-50 text-slate-500" disabled placeholder="Carregando descrição..."></textarea>
+            </div>
+            <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                <button type="button" @click="fecharModalEdicao()" class="px-4 py-2 text-sm font-semibold bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition-colors">Fechar Janela</button>
+                <button type="button" class="px-5 py-2 text-sm font-semibold bg-blue-600 text-white rounded-xl disabled:opacity-50" disabled>Salvar Alterações</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div x-show="editarWorkflowVisible" x-transition class="fixed inset-0 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4 z-50 animate-fade-in" style="display: none;">
+    <div @click.stop class="w-full max-w-2xl bg-white p-6 rounded-2xl border border-slate-100 shadow-xl max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center pb-3 border-b border-slate-100 mb-4">
+            <h3 class="text-base font-bold text-slate-900 flex items-center gap-2"><i class="fas fa-project-diagram text-slate-400"></i> Ajustar Arquitetura do Workflow</h3>
+            <button type="button" @click="fecharModalEdicao()" class="w-7 h-7 rounded-lg bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors"><i class="fas fa-times text-xs"></i></button>
+        </div>
+        <p class="text-xs text-slate-400 leading-relaxed mb-4">Modifique a ordem de aprovação e as alçadas responsáveis conectadas a esta regra de fluxo.</p>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Nome do Workflow</label>
+                <input type="text" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 bg-slate-50 text-slate-500" disabled placeholder="Carregando nome...">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Descrição</label>
+                <textarea rows="2" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 bg-slate-50 text-slate-500" disabled placeholder="Carregando descrição..."></textarea>
+            </div>
+            <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                <button type="button" @click="fecharModalEdicao()" class="px-4 py-2 text-sm font-semibold bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition-colors">Fechar Janela</button>
+                <button type="button" class="px-5 py-2 text-sm font-semibold bg-blue-600 text-white rounded-xl disabled:opacity-50" disabled>Salvar Alterações</button>
+            </div>
+        </div>
+    </div>
+</div>

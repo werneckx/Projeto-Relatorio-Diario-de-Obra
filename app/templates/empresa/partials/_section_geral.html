@@ -1,0 +1,91 @@
+{# ABA: GERAL — Identidade #}
+<section x-show="abaAtiva==='geral'" x-transition class="scroll-mt-24" x-data="{ editing:false }">
+    <div class="rounded-2xl bg-white border border-slate-100 shadow-sm overflow-hidden">
+        <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
+            <h3 class="font-bold text-slate-700 text-xs uppercase tracking-wider flex items-center gap-2">
+                <i class="fas fa-id-card text-slate-400"></i> Identidade da Empresa
+            </h3>
+            {% if can_edit %}
+            <button @click="editing = !editing"
+                :class="editing ? 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50' : 'bg-blue-600 border-transparent text-white hover:bg-blue-700'"
+                class="px-4 py-2 border rounded-xl text-sm font-semibold transition-all flex items-center gap-2 shadow-xs">
+                <i :class="editing ? 'fas fa-times text-xs' : 'fas fa-pen text-xs'"></i>
+                <span x-text="editing ? 'Cancelar Edição' : 'Editar Dados'"></span>
+            </button>
+            {% endif %}
+        </div>
+
+        {% call ui_form.form_start(action=url_for('auth.salvar_empresa'), form_id='empresaForm', item=None, extra_class='', enctype='multipart/form-data', id_name=None) %}
+        <div class="p-6 grid grid-cols-1 xl:grid-cols-[minmax(0,1.4fr),minmax(0,1fr)] gap-6">
+            <div class="space-y-5">
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Nome da Empresa</label>
+                    <div x-show="!editing" class="p-3.5 bg-slate-50/60 text-slate-700 font-medium rounded-xl border border-slate-200/60 text-sm">
+                        {{ config_data.nome if config_data else 'Não definido' }}
+                    </div>
+                    <div x-show="editing">
+                        <input type="text" name="nome_empresa" value="{{ config_data.nome if config_data else '' }}"
+                            class="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder-slate-400"
+                            placeholder="Ex: Construtora Exemplo Ltda" required>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="space-y-2">
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide">Logotipo Principal</label>
+                    <div class="flex flex-col p-5 bg-slate-50/40 rounded-2xl border border-slate-200 border-dashed items-center">
+                        <div id="preview-logo" class="w-full h-32 flex items-center justify-center bg-white rounded-xl border border-slate-100 overflow-hidden shadow-inner mb-4">
+                            {% if config_data.logo_path %}
+                            <img src="{{ url_for('static', filename=config_data.logo_path) }}" id="img-logo" class="max-w-full max-h-full object-contain p-4">
+                            {% else %}
+                            <div class="text-center text-slate-300">
+                                <i class="fas fa-image text-4xl mb-2 block text-slate-200"></i>
+                                <span class="text-xs font-medium text-slate-400">Sem logotipo</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div x-show="editing" class="w-full">
+                            <input type="file" name="logo_empresa" id="logo_empresa" accept="image/*" class="hidden" onchange="previewImage(this, 'img-logo')">
+                            <label for="logo_empresa" class="block w-full py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl cursor-pointer hover:bg-slate-50 hover:border-slate-300 transition-all text-sm font-semibold text-center shadow-xs">
+                                <i class="fas fa-cloud-upload-alt mr-2 text-slate-400"></i> Escolher Imagem
+                            </label>
+                            <p class="text-[10px] text-slate-400 mt-2.5 text-center">Recomendado: PNG Transparente</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide">Ícone do Navegador (Favicon)</label>
+                    <div class="flex flex-col p-5 bg-slate-50/40 rounded-2xl border border-slate-200 border-dashed items-center">
+                        <div id="preview-icon" class="w-full h-32 flex items-center justify-center bg-white rounded-xl border border-slate-100 overflow-hidden shadow-inner mb-4">
+                            {% if config_data.icone_path %}
+                            <img src="{{ url_for('static', filename=config_data.icone_path) }}" id="img-icon" class="w-12 h-12 object-contain">
+                            {% else %}
+                            <div class="text-center text-slate-300">
+                                <i class="fas fa-icons text-4xl mb-2 block text-slate-200"></i>
+                                <span class="text-xs font-medium text-slate-400">Sem Ícone</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div x-show="editing" class="w-full">
+                            <input type="file" name="icone_empresa" id="icone_empresa" accept="image/x-icon,image/png" class="hidden" onchange="previewImage(this, 'img-icon')">
+                            <label for="icone_empresa" class="block w-full py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl cursor-pointer hover:bg-slate-50 hover:border-slate-300 transition-all text-sm font-semibold text-center shadow-xs">
+                                <i class="fas fa-cloud-upload-alt mr-2 text-slate-400"></i> Escolher Ícone
+                            </label>
+                            <p class="text-[10px] text-slate-400 mt-2.5 text-center">Recomendado: .ICO ou .PNG (32x32)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div x-show="editing" x-transition class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+            <button type="button" @click="editing = false" class="px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 font-semibold text-sm transition-all shadow-xs">Cancelar</button>
+            <button type="submit" class="px-6 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 shadow-md shadow-emerald-600/10 transition-all font-bold text-sm flex items-center gap-2">
+                <i class="fas fa-check text-xs"></i> Salvar Alterações
+            </button>
+        </div>
+        {% endcall %}
+    </div>
+</section>

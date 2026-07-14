@@ -1,0 +1,103 @@
+{# ABA: PAPÉIS #}
+<section x-show="abaAtiva==='papeis'" x-transition class="rounded-2xl bg-white border border-slate-100 shadow-sm p-6 scroll-mt-24">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <div>
+            <h3 class="text-base font-bold text-slate-800">Papéis e Perfis de Acesso</h3>
+            <p class="text-xs text-slate-400 mt-1">Gerencie os níveis de acesso e controle o escopo operacional de cada colaborador.</p>
+        </div>
+        <button @click="novoPapelVisible = !novoPapelVisible"
+            class="px-4 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 shadow-md shadow-blue-600/10 transition-all inline-flex items-center gap-2 self-start sm:self-auto">
+            <i class="fas fa-plus text-xs"></i> Novo Papel
+        </button>
+    </div>
+
+    <div x-show="novoPapelVisible" x-transition class="mb-6 p-5 bg-slate-50 rounded-2xl border border-slate-200/60">
+        <form @submit.prevent="criarPapel" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="md:col-span-1">
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Nome do Papel</label>
+                    <input x-model="formPapel.nome" type="text" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all" required>
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Descrição</label>
+                    <input x-model="formPapel.descricao" type="text" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all">
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Permissões Vinculadas</label>
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 p-4 bg-white rounded-xl border border-slate-100">
+                    {% for perm in permissoes_disponiveis %}
+                    <label class="flex items-start gap-2.5 text-xs text-slate-600 cursor-pointer select-none py-1 hover:text-slate-900">
+                        <input type="checkbox" :value="'{{ perm.chave }}'" x-model="formPapel.permissoes" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500/20 mt-0.5">
+                        <span>{{ perm.descricao or perm.chave }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" @click="resetFormPapel()" class="px-4 py-2 text-sm font-semibold bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition-colors">Cancelar</button>
+                <button type="submit" class="px-5 py-2 text-sm font-semibold bg-blue-600 text-white rounded-xl hover:bg-blue-700 shadow-sm transition-colors">Criar Papel</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <div class="bg-slate-50/50 p-5 rounded-2xl border border-slate-100">
+            <div class="flex items-center justify-between mb-4">
+                <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Papéis Globais (Nativos)</h4>
+                <span class="px-2 py-0.5 bg-slate-100 text-slate-500 text-[9px] font-bold rounded-md border border-slate-200 uppercase tracking-wide">Leitura</span>
+            </div>
+            <div class="space-y-2.5">
+                {% for p in papeis_globais %}
+                <div class="p-4 bg-white border border-slate-100 rounded-xl shadow-2xs flex justify-between items-start gap-4">
+                    <div class="space-y-1 min-w-0">
+                        <span class="font-bold text-sm text-slate-800 block">{{ p.nome }}</span>
+                        <p class="text-xs text-slate-400 leading-relaxed">{{ p.descricao or 'Papel base nativo da estrutura global do sistema.' }}</p>
+                    </div>
+                    <button type="button" class="text-blue-600 hover:text-blue-700 font-bold text-xs whitespace-nowrap flex items-center gap-1 mt-0.5 transition-colors" title="Ver Permissões">
+                        <i class="fas fa-eye text-[11px]"></i> Ver
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="bg-blue-50/10 p-5 rounded-2xl border border-blue-50">
+            <div class="flex items-center justify-between mb-4">
+                <h4 class="text-xs font-bold text-blue-500 uppercase tracking-wider">Papéis Customizados</h4>
+                <span class="px-2 py-0.5 bg-blue-50 text-blue-600 text-[9px] font-bold rounded-md border border-blue-100/50 uppercase tracking-wide">Gerenciável</span>
+            </div>
+            <div class="space-y-2.5">
+                {% if papeis_empresa %}
+                {% for p in papeis_empresa %}
+                <div class="p-4 bg-white border border-slate-100 rounded-xl shadow-2xs flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+                    <div class="space-y-1 min-w-0">
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-sm text-slate-800">{{ p.nome }}</span>
+                            {% if p.inativo %}
+                            <span class="px-1.5 py-0.5 bg-rose-50 text-rose-600 text-[9px] font-bold rounded uppercase border border-rose-100/50">Inativo</span>
+                            {% else %}
+                            <span class="px-1.5 py-0.5 bg-emerald-50 text-emerald-600 text-[9px] font-bold rounded uppercase border border-emerald-100/50">Ativo</span>
+                            {% endif %}
+                        </div>
+                        <p class="text-xs text-slate-400 leading-relaxed">{{ p.descricao or 'Papel personalizado criado para a operação interna.' }}</p>
+                    </div>
+                    <div class="flex items-center gap-3 border-t sm:border-none pt-2 sm:pt-0 justify-end text-xs font-bold shrink-0 mt-0.5">
+                        <button @click="abrirEditarPapel({{ p.id }})" class="text-slate-500 hover:text-slate-900 flex items-center gap-1 transition-colors"><i class="fas fa-edit text-[10px]"></i> Editar</button>
+                        {% if p.inativo %}
+                        <button class="text-emerald-600 hover:text-emerald-700 flex items-center gap-1 transition-colors"><i class="fas fa-check text-[10px]"></i> Ativar</button>
+                        {% else %}
+                        <button class="text-rose-500 hover:text-rose-600 flex items-center gap-1 transition-colors"><i class="fas fa-ban text-[10px]"></i> Inativar</button>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="p-8 bg-white/60 border border-slate-200 border-dashed rounded-xl text-center text-slate-400 text-xs font-medium">
+                    Nenhum papel personalizado criado para esta organização.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
