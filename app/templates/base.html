@@ -839,7 +839,7 @@
 
                                 <div class="p-2">
 
-                                    <a href="{{ url_for('auth.empresa') }}"
+                                    <a href="{{ url_for('auth.visualizar_empresa', id=session.get('empresa_id')) if session.get('empresa_id') else url_for('auth.empresa') }}"
                                         class="flex items-center gap-3 p-3 rounded-2xl hover:bg-slate-50 transition">
 
                                         <div

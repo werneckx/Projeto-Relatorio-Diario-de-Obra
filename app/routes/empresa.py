@@ -226,16 +226,16 @@ def inject_company_info():
 
     return _company_defaults()
 
-@auth_bp.get("/empresa")
-@login_required
-@permission_required('empresa.manage')
-def empresa():
-    empresa_id = session.get('empresa_id')
+def _build_empresa_page_context(empresa_id, *, can_edit=False, start_in_edit_mode=False):
     empresa_db = Empresa.query.filter_by(id=empresa_id).first()
     config_data = {
+        'id': empresa_db.id if empresa_db else None,
         'nome': empresa_db.nome if empresa_db else '',
         'logo_path': empresa_db.logo_empresa if empresa_db and empresa_db.logo_empresa else 'logo/logo_sistema.png',
-        'icone_path': empresa_db.icone_empresa if empresa_db and empresa_db.icone_empresa else 'logo/icone_sistema.png'
+        'icone_path': empresa_db.icone_empresa if empresa_db and empresa_db.icone_empresa else 'logo/icone_sistema.png',
+        'data_expiracao': getattr(empresa_db, 'data_expiracao', None) if empresa_db else None,
+        'criado_em': empresa_db.criado_em if empresa_db else None,
+        'modificado_em': empresa_db.modificado_em if empresa_db else None,
     }
 
     # Mapa de configurações resolvidas (Obra não considerado aqui)
@@ -506,56 +506,123 @@ def empresa():
             ],
         })
 
-    # Permissão de edição efetiva (por segurança, permission_required já garante acesso)
-    user = get_current_user()
-    can_edit = False
-    if user:
-        try:
-            can_edit = user.tem_permissao('empresa.manage')
-        except Exception:
-            can_edit = False
+    return {
+        'config_data': config_data,
+        'view_mode': not start_in_edit_mode,
+        'empresa_view_url': url_for('auth.visualizar_empresa', id=empresa_id),
+        'empresa_edit_url': url_for('auth.editar_empresa', id=empresa_id) if can_edit else None,
+        'config_map': mapa,
+        'definicoes': definicoes,
+        'papeis_globais': papeis_globais,
+        'papeis_empresa': papeis_empresa,
+        'papeis_workflow': papeis_workflow,
+        'usuarios_empresa': usuarios_empresa,
+        'workflows': workflows,
+        'workflows_resumo': workflows_resumo,
+        'workflows_empresa_padrao': workflows_empresa_padrao,
+        'workflow_default_codigo': workflow_default_codigo,
+        'workflow_default': workflow_default,
+        'workflow_default_ultima_edicao': workflow_default_ultima_edicao,
+        'workflow_default_etapas': workflow_etapas_map.get(workflow_default.id, []) if workflow_default else [],
+        'workflow_default_etapas_resumo': workflow_default_etapas_resumo,
+        'workflow_execucoes': workflow_execucoes,
+        'workflow_status_counts': workflow_status_counts,
+        'workflow_metricas': workflow_metricas,
+        'workflow_matriz_responsabilidades': workflow_matriz_responsabilidades,
+        'workflow_role_options': workflow_role_options,
+        'workflow_user_options': workflow_user_options,
+        'workflow_preview_by_id': workflow_preview_by_id,
+        'workflow_default_id': workflow_default_id,
+        'obras_workflow_resumo': obras_workflow_resumo,
+        'obras_modal_payload': obras_modal_payload,
+        'obras': obras,
+        'permissoes_disponiveis': permissoes_disponiveis,
+        'can_edit': can_edit,
+        'start_in_edit_mode': start_in_edit_mode,
+    }
 
+
+def _render_empresa_page(empresa_id, *, can_edit=False, start_in_edit_mode=False):
     return render_template(
         'empresa/empresa.html',
-        config_data=config_data,
-        view_mode=True,
-        config_map=mapa,
-        definicoes=definicoes,
-        papeis_globais=papeis_globais,
-        papeis_empresa=papeis_empresa,
-        papeis_workflow=papeis_workflow,
-        usuarios_empresa=usuarios_empresa,
-        workflows=workflows,
-        workflows_resumo=workflows_resumo,
-        workflows_empresa_padrao=workflows_empresa_padrao,
-        workflow_default_codigo=workflow_default_codigo,
-        workflow_default=workflow_default,
-        workflow_default_ultima_edicao=workflow_default_ultima_edicao,
-        workflow_default_etapas=workflow_etapas_map.get(workflow_default.id, []) if workflow_default else [],
-        workflow_default_etapas_resumo=workflow_default_etapas_resumo,
-        workflow_execucoes=workflow_execucoes,
-        workflow_status_counts=workflow_status_counts,
-        workflow_metricas=workflow_metricas,
-        workflow_matriz_responsabilidades=workflow_matriz_responsabilidades,
-        workflow_role_options=workflow_role_options,
-        workflow_user_options=workflow_user_options,
-        workflow_preview_by_id=workflow_preview_by_id,
-        workflow_default_id=workflow_default_id,
-        obras_workflow_resumo=obras_workflow_resumo,
-        obras_modal_payload=obras_modal_payload,
-        obras=obras,
-        permissoes_disponiveis=permissoes_disponiveis,
-        can_edit=can_edit
+        **_build_empresa_page_context(
+            empresa_id,
+            can_edit=can_edit,
+            start_in_edit_mode=start_in_edit_mode,
+        ),
+    )
+
+
+def _user_can_manage_empresa():
+    user = get_current_user()
+    if not user:
+        return False
+    try:
+        return bool(user.tem_permissao('empresa.manage'))
+    except Exception:
+        return False
+
+
+@auth_bp.get("/empresa")
+@login_required
+def empresa():
+    empresa_id = session.get('empresa_id')
+    if not empresa_id:
+        abort(404)
+    return redirect(url_for('auth.visualizar_empresa', id=empresa_id))
+
+
+@auth_bp.get("/empresa/<int:id>")
+@login_required
+def visualizar_empresa(id):
+    empresa_id = session.get('empresa_id')
+    user = get_current_user()
+    if not user:
+        abort(403)
+
+    if not getattr(user, "is_admin", False) and id != empresa_id:
+        abort(403)
+
+    return _render_empresa_page(
+        id,
+        can_edit=_user_can_manage_empresa(),
+        start_in_edit_mode=False,
+    )
+
+
+@auth_bp.get("/empresa/<int:id>/editar")
+@login_required
+@permission_required('empresa.manage')
+def editar_empresa(id):
+    empresa_id = session.get('empresa_id')
+    user = get_current_user()
+    if not user:
+        abort(403)
+
+    if not getattr(user, "is_admin", False) and id != empresa_id:
+        abort(403)
+
+    return _render_empresa_page(
+        id,
+        can_edit=True,
+        start_in_edit_mode=True,
     )
 
 @auth_bp.route('/salvar-empresa', methods=['POST'])
+@auth_bp.post('/empresa/<int:id>/salvar')
 @login_required
 @permission_required('empresa.manage')
-def salvar_empresa():
+def salvar_empresa(id=None):
     nome_empresa = request.form.get('nome_empresa')
     logo_file = request.files.get('logo_empresa')
     icone_file = request.files.get('icone_empresa')
-    empresa_id = session.get('empresa_id')
+    empresa_id = id or session.get('empresa_id')
+
+    user = get_current_user()
+    if not user:
+        abort(403)
+    if not getattr(user, "is_admin", False) and empresa_id != session.get('empresa_id'):
+        abort(403)
 
     try:
         empresa_db = Empresa.query.get(empresa_id)
@@ -591,7 +658,7 @@ def salvar_empresa():
         db.session.rollback()
         flash(f'Erro ao salvar configurações: {str(e)}', 'danger')
 
-    return redirect(url_for('auth.empresa'))
+    return redirect(url_for('auth.editar_empresa', id=empresa_id))
 
 
 # ---------------------------------------------------------------------------
