@@ -283,9 +283,8 @@
                         <th class="px-4 py-4">Modelo</th>
                         <th class="px-4 py-4">Etapas</th>
                         <th class="px-4 py-4">Execucoes</th>
-                        <th class="px-4 py-4">Responsavel</th>
                         <th class="px-4 py-4">Origem</th>
-                        <th class="px-6 py-4">Status</th>
+                        <th class="px-6 py-4">Ações</th>
                     </tr>
                 </thead>
 
@@ -296,12 +295,10 @@
                             <td class="px-4 py-4" x-text="obra.workflow_nome"></td>
                             <td class="px-4 py-4" x-text="(obra.workflow_etapas || []).length"></td>
                             <td class="px-4 py-4" x-text="obra.execucoes_ativas"></td>
-                            <td class="px-4 py-4" x-text="obra.responsavel"></td>
                             <td class="px-4 py-4" x-text="obra.workflow_origem"></td>
                             <td class="px-6 py-4">
                                 <button type="button" @click="abrirDetalhesObra(obra.obra_id)" class="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold" :class="obra.status_badge_class">
-                                    <span class="h-2 w-2 rounded-full" :class="obra.status_dot_class"></span>
-                                    <span x-text="obra.status"></span>
+                                    Detalhes
                                 </button>
                             </td>
                         </tr>

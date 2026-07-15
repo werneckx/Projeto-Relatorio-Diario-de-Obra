@@ -113,8 +113,17 @@
             requestAnimationFrame(() => {
                 root.style.opacity = '1';
                 root.style.transform = 'translateY(0)';
+                window.setTimeout(() => {
+                    root.style.transition = '';
+                    root.style.opacity = '';
+                    root.style.transform = '';
+                }, 170);
             });
+            return;
         }
+        root.style.transition = '';
+        root.style.opacity = '';
+        root.style.transform = '';
     }
 
     function navigateEmpresaRoute(url) {
@@ -148,6 +157,26 @@
         }
     }
 
+    function setEmpresaPageScrollLocked(locked) {
+        const method = locked ? 'add' : 'remove';
+        document.documentElement.classList[method]('overflow-hidden');
+        document.body.classList[method]('overflow-hidden');
+    }
+
+    function syncEmpresaPageScrollLock() {
+        const state = getEmpresaAppState();
+        if (!state) {
+            setEmpresaPageScrollLocked(false);
+            return;
+        }
+        const hasOpenModal = Boolean(
+            state.legendaWorkflowVisible
+            || state.modalObrasVisible
+            || state.obraDetalheVisible
+        );
+        setEmpresaPageScrollLocked(hasOpenModal);
+    }
+
         function empresaApp() {
             return {
                 abaAtiva: localStorage.getItem('empresa_aba_ativa') || 'geral',
@@ -178,8 +207,12 @@
                     initializeEmpresaGeneralFormState();
                     setEmpresaEditingDataset(this.empresaEditing);
                     window.applyRequiredMarkers?.(document);
+                    syncEmpresaPageScrollLock();
                     if (typeof this.$watch === 'function') {
                         this.$watch('filtroStatus', syncEmpresaStatusFilterPickers);
+                        this.$watch('legendaWorkflowVisible', syncEmpresaPageScrollLock);
+                        this.$watch('modalObrasVisible', syncEmpresaPageScrollLock);
+                        this.$watch('obraDetalheVisible', syncEmpresaPageScrollLock);
                     }
                 },
                 mudarAba(aba) {
@@ -382,17 +415,25 @@
                         return matchObra && matchWorkflow && matchResponsavel && matchStatus;
                     });
                 },
-                abrirModalObras() { this.modalObrasVisible = true; },
-                fecharModalObras() { this.modalObrasVisible = false; },
+                abrirModalObras() {
+                    this.modalObrasVisible = true;
+                    syncEmpresaPageScrollLock();
+                },
+                fecharModalObras() {
+                    this.modalObrasVisible = false;
+                    syncEmpresaPageScrollLock();
+                },
                 abrirDetalhesObra(obraId) {
                     this.obraSelecionada = this.obrasWorkflowData.find((obra) => obra.obra_id === obraId) || null;
                     this.obraDetalheAba = 'resumo';
                     this.obraDetalheVisible = !!this.obraSelecionada;
+                    syncEmpresaPageScrollLock();
                 },
                 fecharDetalhesObra() {
                     this.obraDetalheVisible = false;
                     this.obraSelecionada = null;
                     this.obraDetalheAba = 'resumo';
+                    syncEmpresaPageScrollLock();
                 },
             };
         }
