@@ -23,7 +23,7 @@
                 </div>
                 <div>
                     <label class="mb-2 block text-xs font-bold uppercase text-slate-500">Tipo</label>
-                    <select x-model="novoDefinicao.tipo" class="{{ ui_form.dynamic_control_classes(extra='empresa-form-control empresa-form-control--edit') }}">
+                    <select x-model="novoDefinicao.tipo" class="{{ ui_form.select_classes() }}" data-placeholder="Tipo">
                         <option value="STRING">STRING</option>
                         <option value="INT">INT</option>
                         <option value="BOOLEAN">BOOLEAN</option>

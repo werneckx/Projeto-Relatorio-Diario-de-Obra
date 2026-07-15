@@ -176,12 +176,16 @@
                     this.abaAtiva = localStorage.getItem('empresa_aba_ativa') || this.abaAtiva || 'geral';
                     prepareEmpresaRouteTransition();
                     initializeEmpresaGeneralFormState();
+                    setEmpresaEditingDataset(this.empresaEditing);
                     window.applyRequiredMarkers?.(document);
-                    scheduleEmpresaWorkflowSelectPickersEditing(this.empresaEditing);
+                    if (typeof this.$watch === 'function') {
+                        this.$watch('filtroStatus', syncEmpresaStatusFilterPickers);
+                    }
                 },
                 mudarAba(aba) {
                     this.abaAtiva = aba;
                     localStorage.setItem('empresa_aba_ativa', aba);
+                    if (aba !== 'workflow') closeEmpresaWorkflowTypeDropdown();
                 },
                 focarAba(aba) {
                     document.querySelector(`[data-empresa-tab="${aba}"]`)?.focus();
@@ -239,8 +243,8 @@
                 startSectionEdit() {
                     if (this.empresaEditing) return;
                     this.empresaEditing = true;
+                    setEmpresaEditingDataset(true);
                     replaceEmpresaRoute(empresaUrls.empresaEdit);
-                    setEmpresaWorkflowSelectPickersEditing(true);
                     renderEmpresaWorkflowCards();
                 },
                 cancelSectionEdit() {
@@ -251,9 +255,10 @@
                     this.resetFormPapel();
                     this.resetFormWorkflow();
                     this.empresaEditing = false;
+                    setEmpresaEditingDataset(false);
                     pageData.startInEditMode = false;
                     replaceEmpresaRoute(empresaUrls.empresaView);
-                    setEmpresaWorkflowSelectPickersEditing(false);
+                    closeEmpresaWorkflowTypeDropdown();
                     renderEmpresaWorkflowCards();
                 },
                 saveSection() {
@@ -266,8 +271,8 @@
                         return;
                     }
                     this.empresaEditing = false;
+                    setEmpresaEditingDataset(false);
                     replaceEmpresaRoute(empresaUrls.empresaView);
-                    setEmpresaWorkflowSelectPickersEditing(false);
                 },
                 async criarDefinicao() {
                     try {
@@ -408,38 +413,182 @@
             return document.getElementById(id);
         }
 
+        function getEmpresaRoot() {
+            return document.getElementById('empresaPageRoot');
+        }
+
+        function setEmpresaEditingDataset(value) {
+            const root = getEmpresaRoot();
+            if (root) root.dataset.empresaEditing = value ? 'true' : 'false';
+        }
+
         function getEmpresaAppState() {
-            return document.getElementById('empresaPageRoot')?.__x?.$data || null;
+            const root = getEmpresaRoot();
+            if (!root) return null;
+            if (window.Alpine?.$data) {
+                try {
+                    const data = window.Alpine.$data(root);
+                    if (data) return data;
+                } catch (_) { }
+            }
+            return root.__x?.$data || root._x_dataStack?.[0] || null;
         }
 
         function isEmpresaWorkflowEditing() {
-            return Boolean(getEmpresaAppState()?.empresaEditing);
+            const state = getEmpresaAppState();
+            if (state && typeof state.empresaEditing !== 'undefined') {
+                return Boolean(state.empresaEditing);
+            }
+            const attr = getEmpresaRoot()?.dataset?.empresaEditing;
+            if (typeof attr !== 'undefined') return attr === 'true';
+            return Boolean(pageData.startInEditMode);
         }
 
-        function setEmpresaWorkflowSelectPickersEditing(isEditing) {
-            ['workflowCompanySignature', 'workflowCompanyRule'].forEach((id) => {
-                const select = workflowEl(id);
-                if (!select) return;
-                if (select.tomselect) {
-                    if (isEditing) {
-                        select.tomselect.enable();
-                    } else {
-                        select.tomselect.disable();
-                    }
-                    return;
-                }
-                select.disabled = !isEditing;
-                if (isEditing) window.refreshSelectPicker?.(select);
+        function escapeEmpresaWorkflowHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function getEmpresaWorkflowDropdownWrapper(element) {
+            return element?.closest?.('[data-workflow-custom-dropdown]') || null;
+        }
+
+        let activeEmpresaWorkflowDropdown = null;
+
+        function resetEmpresaWorkflowDropdownMenu(menu) {
+            if (!menu) return;
+            menu.classList.add('hidden');
+            menu.style.position = '';
+            menu.style.left = '';
+            menu.style.top = '';
+            menu.style.width = '';
+            menu.style.maxHeight = '';
+            menu.style.zIndex = '';
+        }
+
+        function restoreEmpresaWorkflowDropdownMenu() {
+            if (!activeEmpresaWorkflowDropdown) return;
+            const { wrapper, menu } = activeEmpresaWorkflowDropdown;
+            resetEmpresaWorkflowDropdownMenu(menu);
+            if (wrapper && menu && !wrapper.contains(menu)) {
+                wrapper.appendChild(menu);
+            }
+            activeEmpresaWorkflowDropdown = null;
+        }
+
+        function positionEmpresaWorkflowDropdownMenu(wrapper, menu) {
+            const button = wrapper.querySelector('[data-workflow-dropdown-button]');
+            if (!button || !menu) return;
+            const rect = button.getBoundingClientRect();
+            const gap = 6;
+            const viewportPadding = 12;
+            const availableBelow = window.innerHeight - rect.bottom - gap - viewportPadding;
+            const availableAbove = rect.top - gap - viewportPadding;
+            const openUp = availableBelow < 220 && availableAbove > availableBelow;
+            const maxHeight = Math.max(180, Math.min(288, openUp ? availableAbove : availableBelow));
+
+            menu.style.position = 'fixed';
+            menu.style.left = `${rect.left}px`;
+            menu.style.top = `${openUp ? Math.max(viewportPadding, rect.top - gap - maxHeight) : rect.bottom + gap}px`;
+            menu.style.width = `${rect.width}px`;
+            menu.style.maxHeight = `${maxHeight}px`;
+            menu.style.zIndex = '99999';
+            menu.classList.add('overflow-y-auto');
+            menu.classList.remove('hidden');
+        }
+
+        function closeEmpresaWorkflowDropdowns(exceptWrapper = null) {
+            const activeWrapper = activeEmpresaWorkflowDropdown?.wrapper || null;
+            if (!exceptWrapper || activeWrapper !== exceptWrapper) {
+                restoreEmpresaWorkflowDropdownMenu();
+            }
+            document.querySelectorAll('[data-workflow-custom-dropdown]').forEach((wrapper) => {
+                if (exceptWrapper && wrapper === exceptWrapper) return;
+                resetEmpresaWorkflowDropdownMenu(wrapper.querySelector('[data-workflow-dropdown-menu], #workflowCompanyTypeDropdownMenu'));
             });
         }
 
-        function scheduleEmpresaWorkflowSelectPickersEditing(isEditing) {
-            const applyState = () => window.setTimeout(() => setEmpresaWorkflowSelectPickersEditing(isEditing), 0);
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', applyState, { once: true });
+        function closeEmpresaWorkflowTypeDropdown() {
+            closeEmpresaWorkflowDropdowns();
+        }
+
+        function getEmpresaWorkflowDropdownLabel(select) {
+            const selectedOption = select?.selectedOptions?.[0];
+            if (selectedOption) return selectedOption.textContent.trim();
+            return select?.querySelector('option')?.textContent.trim() || 'Selecione';
+        }
+
+        function syncEmpresaWorkflowDropdown(wrapper) {
+            if (!wrapper) return;
+            const select = wrapper.querySelector('select');
+            if (!select) return;
+
+            const value = String(select.value ?? '');
+            const label = wrapper.querySelector('[data-workflow-dropdown-label], #workflowCompanyTypeDropdownLabel');
+            if (label) label.textContent = getEmpresaWorkflowDropdownLabel(select);
+
+            wrapper.querySelectorAll('[data-workflow-dropdown-option]').forEach((option) => {
+                const isActive = String(option.dataset.value ?? '') === value;
+                option.classList.toggle('bg-blue-50', isActive);
+                option.classList.toggle('text-blue-700', isActive);
+                option.querySelector('[data-workflow-dropdown-check], .workflow-company-type-check')?.classList.toggle('hidden', !isActive);
+            });
+        }
+
+        function syncEmpresaWorkflowDropdowns(context = document) {
+            const root = context && context.querySelectorAll ? context : document;
+            if (root.matches?.('[data-workflow-custom-dropdown]')) syncEmpresaWorkflowDropdown(root);
+            root.querySelectorAll?.('[data-workflow-custom-dropdown]').forEach(syncEmpresaWorkflowDropdown);
+        }
+
+        function canOpenEmpresaWorkflowDropdown(wrapper) {
+            return wrapper?.dataset.workflowDropdownMode !== 'edit' || isEmpresaWorkflowEditing();
+        }
+
+        function toggleEmpresaWorkflowDropdown(wrapper) {
+            if (!wrapper || !canOpenEmpresaWorkflowDropdown(wrapper)) return;
+            const menu = wrapper.querySelector('[data-workflow-dropdown-menu], #workflowCompanyTypeDropdownMenu');
+            if (!menu) return;
+            const shouldOpen = menu.classList.contains('hidden');
+            closeEmpresaWorkflowDropdowns(wrapper);
+            if (!shouldOpen) {
+                restoreEmpresaWorkflowDropdownMenu();
                 return;
             }
-            applyState();
+            syncEmpresaWorkflowDropdown(wrapper);
+            activeEmpresaWorkflowDropdown = { wrapper, menu };
+            document.body.appendChild(menu);
+            positionEmpresaWorkflowDropdownMenu(wrapper, menu);
+        }
+
+        function selectEmpresaWorkflowDropdownOption(option) {
+            const wrapper = getEmpresaWorkflowDropdownWrapper(option) || activeEmpresaWorkflowDropdown?.wrapper;
+            if (!wrapper || !canOpenEmpresaWorkflowDropdown(wrapper)) return;
+            const select = wrapper.querySelector('select');
+            if (!select) return;
+            select.value = String(option.dataset.value ?? '');
+            syncEmpresaWorkflowDropdown(wrapper);
+            closeEmpresaWorkflowDropdowns();
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+
+        function setEmpresaWorkflowSelectValue(select, value) {
+            if (!select) return;
+            const normalizedValue = String(value);
+            select.value = normalizedValue;
+            syncEmpresaWorkflowDropdown(getEmpresaWorkflowDropdownWrapper(select));
+        }
+
+        function syncEmpresaStatusFilterPickers(value) {
+            const normalizedValue = value == null ? '' : String(value);
+            document.querySelectorAll('select[x-model="filtroStatus"]').forEach((select) => {
+                select.value = normalizedValue;
+                syncEmpresaWorkflowDropdown(getEmpresaWorkflowDropdownWrapper(select));
+            });
         }
 
         function getEmpresaWorkflowPreview(workflowId) {
@@ -720,16 +869,37 @@
         }
 
         function renderEmpresaWorkflowRoleSelect(stage, stageIndex, disabled) {
-            const baseClasses = 'form-control-std h-9 text-sm block w-full rounded-2xl appearance-none empresa-form-control';
-            const editClasses = 'empresa-form-control--edit';
-            const viewClasses = 'empresa-form-control--view pointer-events-none select-none';
+            const baseClasses = 'form-control-std h-9 text-sm block w-full rounded-2xl appearance-none';
+            const editClasses = 'bg-white border-slate-300 text-slate-600 shadow-sm placeholder:text-slate-400';
+            const viewClasses = 'bg-slate-100/60 border-slate-200 text-slate-800 font-semibold shadow-none cursor-default pointer-events-none select-none';
+            const selectedRole = getEmpresaWorkflowRoleById(stage.papel_id);
+            const selectedLabel = selectedRole?.nome || 'Selecione o papel';
+            const buttonClasses = `${baseClasses} flex h-11 w-full items-center gap-2 rounded-2xl border px-4 pr-12 text-left font-semibold ${disabled ? viewClasses : editClasses}`;
+            const optionHtml = [
+                '<button type="button" class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50" data-workflow-dropdown-option data-value=""><span class="min-w-0 flex-1 truncate">Selecione o papel</span><i class="fas fa-check hidden text-blue-600" data-workflow-dropdown-check></i></button>',
+                ...empresaWorkflowRoleOptions.map((papel) => `
+                    <button type="button" class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50" data-workflow-dropdown-option data-value="${escapeEmpresaWorkflowHtml(papel.id)}">
+                        <span class="min-w-0 flex-1 truncate">${escapeEmpresaWorkflowHtml(papel.nome)}</span>
+                        <i class="fas fa-check hidden text-blue-600" data-workflow-dropdown-check></i>
+                    </button>
+                `),
+            ].join('');
             return `
-                <select class="empresa-workflow-stage-role ${baseClasses} ${disabled ? viewClasses : editClasses}" data-stage-index="${stageIndex}" tabindex="${disabled ? '-1' : '0'}" aria-disabled="${disabled ? 'true' : 'false'}">
-                    <option value="">Selecione o papel</option>
-                    ${empresaWorkflowRoleOptions.map((papel) => `
-                        <option value="${papel.id}" ${Number(papel.id) === Number(stage.papel_id) ? 'selected' : ''}>${papel.nome}</option>
-                    `).join('')}
-                </select>
+                <div class="relative" data-workflow-custom-dropdown data-workflow-dropdown-mode="edit">
+                    <select class="empresa-workflow-stage-role hidden" data-no-tom-select="true" data-stage-index="${stageIndex}" tabindex="${disabled ? '-1' : '0'}" aria-disabled="${disabled ? 'true' : 'false'}">
+                        <option value="">Selecione o papel</option>
+                        ${empresaWorkflowRoleOptions.map((papel) => `
+                            <option value="${escapeEmpresaWorkflowHtml(papel.id)}" ${Number(papel.id) === Number(stage.papel_id) ? 'selected' : ''}>${escapeEmpresaWorkflowHtml(papel.nome)}</option>
+                        `).join('')}
+                    </select>
+                    <button type="button" class="${buttonClasses}" data-workflow-dropdown-button tabindex="${disabled ? '-1' : '0'}" aria-disabled="${disabled ? 'true' : 'false'}">
+                        <span class="min-w-0 flex-1 truncate" data-workflow-dropdown-label>${escapeEmpresaWorkflowHtml(selectedLabel)}</span>
+                    </button>
+                    ${disabled ? '' : '<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4 text-slate-400"><i class="fas fa-chevron-down text-xs"></i></div>'}
+                    <div class="absolute left-0 right-0 top-[calc(100%+6px)] z-50 hidden max-h-72 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl" data-workflow-dropdown-menu>
+                        ${optionHtml}
+                    </div>
+                </div>
             `;
         }
 
@@ -774,7 +944,7 @@
                 ? '<span class="text-xs font-black text-slate-400">OU</span>'
                 : '<span class="text-xs font-black text-slate-400">E</span>';
             return `
-                <div class="flex items-stretch gap-4 overflow-x-auto px-2 py-4">
+                <div class="flex flex-wrap items-start gap-3">
                     ${group.items.map((item) => renderEmpresaWorkflowApproverCard(item.stage, item.index, group.items.length, rules)).join(separator)}
                     ${renderEmpresaWorkflowAddApproverButton(group.key, rules)}
                 </div>
@@ -811,7 +981,7 @@
             const minWidthClass = rules.isParallel ? 'min-w-[520px]' : '';
             const draggable = rules.isSimple || !isEmpresaWorkflowEditing() ? 'false' : 'true';
             return `
-                <div class="empresa-workflow-group-card ${minWidthClass} rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_12px_28px_rgba(15,23,42,0.06)]" data-workflow-group-key="${String(group.key)}" draggable="${draggable}">
+                <div class="empresa-workflow-group-card ${minWidthClass} rounded-2xl border border-slate-200 bg-white p-5 shadow-none" data-workflow-group-key="${String(group.key)}" draggable="${draggable}">
                     ${renderEmpresaWorkflowGroupHeader(group, groupIndex, groupsLength, rules)}
                     ${renderEmpresaWorkflowGroupContent(group, rules)}
                 </div>
@@ -842,6 +1012,7 @@
             renderEmpresaWorkflowSummary();
             bindEmpresaWorkflowStageListeners();
             bindEmpresaWorkflowDragSorting();
+            syncEmpresaWorkflowDropdowns(container);
         }
 
         function syncEmpresaWorkflowControls() {
@@ -857,13 +1028,15 @@
                 if (previewInput) previewInput.value = selectedLabel;
                 if (dropdownLabel) dropdownLabel.textContent = selectedLabel;
                 document.querySelectorAll('.workflow-company-type-option').forEach((option) => {
-                    const isActive = option.dataset.workflowModel === select.value;
+                    const isActive = option.dataset.value === select.value;
                     option.classList.toggle('bg-blue-50', isActive);
+                    option.classList.toggle('text-blue-700', isActive);
                     option.querySelector('.workflow-company-type-check')?.classList.toggle('hidden', !isActive);
                 });
             }
-            if (signature) signature.value = empresaWorkflowState.globalSignature ? '1' : '0';
-            if (rule) rule.value = empresaWorkflowState.globalRule;
+            setEmpresaWorkflowSelectValue(signature, empresaWorkflowState.globalSignature ? '1' : '0');
+            setEmpresaWorkflowSelectValue(rule, empresaWorkflowState.globalRule);
+            syncEmpresaWorkflowDropdowns(workflowEl('empresa-panel-workflow') || document);
         }
 
         function loadEmpresaWorkflowPreview(model) {
@@ -945,33 +1118,22 @@
         function bootstrapEmpresaWorkflowEditor() {
             const select = workflowEl('workflowCompanySelect');
             if (!select) return;
-            const dropdownButton = workflowEl('workflowCompanyTypeDropdownButton');
-            const dropdownMenu = workflowEl('workflowCompanyTypeDropdownMenu');
-
-            const closeWorkflowTypeDropdown = () => {
-                dropdownMenu?.classList.add('hidden');
-            };
-
-            const toggleWorkflowTypeDropdown = () => {
-                if (!isEmpresaWorkflowEditing()) return;
-                dropdownMenu?.classList.toggle('hidden');
-            };
 
             const handleWorkflowTypeChange = async (value) => {
                 if (!value || value === String(empresaWorkflowState.selectedWorkflowModel || 'simples')) {
                     syncEmpresaWorkflowControls();
-                    closeWorkflowTypeDropdown();
+                    closeEmpresaWorkflowTypeDropdown();
                     return;
                 }
                 if (empresaWorkflowState.dirty) {
                     const confirmed = await showConfirm('Alterar workflow', 'As alteracoes nao salvas serao descartadas. Deseja continuar?');
                     if (!confirmed) {
                         syncEmpresaWorkflowControls();
-                        closeWorkflowTypeDropdown();
+                        closeEmpresaWorkflowTypeDropdown();
                         return;
                     }
                 }
-                closeWorkflowTypeDropdown();
+                closeEmpresaWorkflowTypeDropdown();
                 loadEmpresaWorkflowPreview(value);
             };
 
@@ -983,18 +1145,34 @@
                 await handleWorkflowTypeChange(event.target.value);
             });
 
-            dropdownButton?.addEventListener('click', toggleWorkflowTypeDropdown);
+            document.addEventListener('click', (event) => {
+                const option = event.target.closest('[data-workflow-dropdown-option]');
+                if (option) {
+                    selectEmpresaWorkflowDropdownOption(option);
+                    return;
+                }
 
-            dropdownMenu?.addEventListener('click', async (event) => {
-                const option = event.target.closest('.workflow-company-type-option');
-                if (!option) return;
-                await handleWorkflowTypeChange(option.dataset.workflowModel || '');
+                const button = event.target.closest('[data-workflow-dropdown-button]');
+                if (button) {
+                    toggleEmpresaWorkflowDropdown(getEmpresaWorkflowDropdownWrapper(button));
+                    return;
+                }
+
+                if (!event.target.closest('[data-workflow-custom-dropdown]')) {
+                    closeEmpresaWorkflowDropdowns();
+                }
             });
 
-            document.addEventListener('click', (event) => {
-                const wrapper = workflowEl('workflowCompanyTypeDropdown');
-                if (!wrapper || wrapper.contains(event.target)) return;
-                closeWorkflowTypeDropdown();
+            window.addEventListener('scroll', () => {
+                if (activeEmpresaWorkflowDropdown) {
+                    positionEmpresaWorkflowDropdownMenu(activeEmpresaWorkflowDropdown.wrapper, activeEmpresaWorkflowDropdown.menu);
+                }
+            }, true);
+
+            window.addEventListener('resize', () => {
+                if (activeEmpresaWorkflowDropdown) {
+                    positionEmpresaWorkflowDropdownMenu(activeEmpresaWorkflowDropdown.wrapper, activeEmpresaWorkflowDropdown.menu);
+                }
             });
 
             workflowEl('workflowCompanySignature')?.addEventListener('change', (event) => {
@@ -1018,6 +1196,7 @@
             });
 
             loadEmpresaWorkflowPreview(select.value || 'simples');
+            syncEmpresaWorkflowDropdowns(workflowEl('empresa-panel-workflow') || document);
         }
 
         document.addEventListener('DOMContentLoaded', bootstrapEmpresaWorkflowEditor);
@@ -1078,7 +1257,7 @@
                     const input = document.createElement('input');
                     input.type = 'text';
                     input.value = cur.trim() === 'Nao definido' ? '' : cur.trim();
-                    input.className = 'form-control-std h-9 text-sm block w-full rounded-2xl appearance-none empresa-form-control empresa-form-control--edit font-mono';
+                    input.className = 'form-control-std h-9 text-sm block w-full rounded-2xl appearance-none bg-white border-slate-300 text-slate-600 shadow-sm placeholder:text-slate-400 font-mono';
                     input.style.maxWidth = '200px';
 
                     const save = document.createElement('button');

@@ -33,7 +33,7 @@
         <input x-model="filtroObras" type="text" placeholder="Pesquisar obra" class="{{ ui_form.dynamic_control_classes(extra='empresa-form-control empresa-form-control--edit') }}">
         <input x-model="filtroWorkflow" type="text" placeholder="Workflow" class="{{ ui_form.dynamic_control_classes(extra='empresa-form-control empresa-form-control--edit') }}">
         <input x-model="filtroResponsavel" type="text" placeholder="Responsavel" class="{{ ui_form.dynamic_control_classes(extra='empresa-form-control empresa-form-control--edit') }}">
-        <select x-model="filtroStatus" class="{{ ui_form.dynamic_control_classes(extra='empresa-form-control empresa-form-control--edit') }}">
+        <select x-model="filtroStatus" class="{{ ui_form.select_classes() }}" data-placeholder="Status">
             <option value="">Status</option>
             <option value="Pendente">Pendente</option>
             <option value="Em andamento">Em andamento</option>

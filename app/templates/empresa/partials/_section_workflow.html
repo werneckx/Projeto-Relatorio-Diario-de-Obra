@@ -1,4 +1,7 @@
 {% import "components/form/macros.html" as ui_form %}
+{% set workflow_input_base_css = "form-control-std h-9 text-sm block w-full rounded-2xl appearance-none" %}
+{% set workflow_input_edit_css = "bg-white border-slate-300 text-slate-600 shadow-sm placeholder:text-slate-400" %}
+{% set workflow_input_view_css = "bg-slate-100/60 border-slate-200 text-slate-800 font-semibold shadow-none cursor-default" %}
 
 <section
     id="empresa-panel-workflow"
@@ -22,16 +25,16 @@
                     {{ workflow_metricas.obras_utilizando }} obra(s) com workflow
                 </span>
                 <span id="workflowCompanyDirtyBadge" class="hidden inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
-                    Alteracoes nao salvas
+                    Alteracoes Não salvas
                 </span>
             </div>
         </div>
 
-        <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div class="rounded-3xl border border-slate-200 bg-white p-5">
             <div>
                 <h4 class="text-base font-bold text-slate-900">Workflow padrao da empresa</h4>
                 <p class="mt-1 text-sm text-slate-500">
-                    O modelo selecionado sera aplicado as obras que ainda nao possuem workflow proprio.
+                    O modelo selecionado sera aplicado as obras que ainda Não possuem workflow proprio.
                 </p>
             </div>
 
@@ -41,52 +44,50 @@
                         Modelo de workflow
                     </label>
 
-                    <div x-show="!empresaEditing">
+                    <div x-show="!empresaEditing" x-cloak>
                         <input
                             id="workflowCompanySelectPreview"
                             type="text"
                             value=""
-                            class="{{ ui_form.dynamic_control_classes(extra='empresa-form-control empresa-form-control--view') }}"
+                            class="{{ workflow_input_base_css }} {{ workflow_input_view_css }}"
                             readonly
+                            disabled
                         >
                     </div>
 
-                    <div x-show="empresaEditing" class="relative" id="workflowCompanyTypeDropdown">
+                    <div x-show="empresaEditing" x-cloak class="relative" id="workflowCompanyTypeDropdown" data-workflow-custom-dropdown data-workflow-dropdown-mode="edit">
                         <select
                             id="workflowCompanySelect"
                             data-no-tom-select="true"
                             class="hidden"
                         >
-                            {% set default_model = 'paralelo' if workflow_default and (workflow_default.aprovacao_paralela or workflow_default.tipo_fluxo == 'PARALELO') else 'hierarquico' if workflow_default and (workflow_default.tipo_fluxo in ['SEQUENCIAL', 'HIERARQUICO', 'HIERARQUICA'] or 'hierar' in (workflow_default.nome or '')|lower) else 'simples' %}
-                            <option value="simples" {% if default_model == 'simples' %}selected{% endif %}>Aprovacao simples</option>
-                            <option value="paralelo" {% if default_model == 'paralelo' %}selected{% endif %}>Aprovacao paralela</option>
-                            <option value="hierarquico" {% if default_model == 'hierarquico' %}selected{% endif %}>Aprovacao hierarquica</option>
+                            {% set default_model = 'paralelo' if workflow_default and (workflow_default.Aprovação_paralela or workflow_default.tipo_fluxo == 'PARALELO') else 'hierarquico' if workflow_default and (workflow_default.tipo_fluxo in ['SEQUENCIAL', 'HIERARQUICO', 'HIERARQUICA'] or 'hierar' in (workflow_default.nome or '')|lower) else 'simples' %}
+                            <option value="simples" {% if default_model == 'simples' %}selected{% endif %}>Aprovação simples</option>
+                            <option value="paralelo" {% if default_model == 'paralelo' %}selected{% endif %}>Aprovação paralela</option>
+                            <option value="hierarquico" {% if default_model == 'hierarquico' %}selected{% endif %}>Aprovação hierarquica</option>
                         </select>
 
                         <button
                             type="button"
                             id="workflowCompanyTypeDropdownButton"
-                            class="form-control-std empresa-workflow-model-button"
+                            data-workflow-dropdown-button
+                            class="{{ workflow_input_base_css }} {{ workflow_input_edit_css }} flex h-11 w-full items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 pr-24 text-left text-sm font-semibold text-slate-800"
                         >
                             <i class="fas fa-search text-slate-400"></i>
-                            <span id="workflowCompanyTypeDropdownLabel" class="min-w-0 flex-1 truncate">Selecione</span>
+                            <span id="workflowCompanyTypeDropdownLabel" data-workflow-dropdown-label class="min-w-0 flex-1 truncate">Selecione</span>
                         </button>
 
-                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4 text-slate-400">
-                            <i class="fas fa-chevron-down text-xs"></i>
-                        </div>
-
                         <div id="workflowCompanyTypeDropdownMenu" class="absolute left-0 right-0 top-[calc(100%+6px)] z-50 hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
-                            <button type="button" class="workflow-company-type-option flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50" data-workflow-model="simples">
-                                <span class="min-w-0 flex-1 truncate">Aprovacao simples</span>
+                            <button type="button" class="workflow-company-type-option flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50" data-workflow-dropdown-option data-value="simples">
+                                <span class="min-w-0 flex-1 truncate">Aprovação simples</span>
                                 <i class="workflow-company-type-check fas fa-check hidden text-blue-600"></i>
                             </button>
-                            <button type="button" class="workflow-company-type-option flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50" data-workflow-model="paralelo">
-                                <span class="min-w-0 flex-1 truncate">Aprovacao paralela</span>
+                            <button type="button" class="workflow-company-type-option flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50" data-workflow-dropdown-option data-value="paralelo">
+                                <span class="min-w-0 flex-1 truncate">Aprovação paralela</span>
                                 <i class="workflow-company-type-check fas fa-check hidden text-blue-600"></i>
                             </button>
-                            <button type="button" class="workflow-company-type-option flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50" data-workflow-model="hierarquico">
-                                <span class="min-w-0 flex-1 truncate">Aprovacao hierarquica</span>
+                            <button type="button" class="workflow-company-type-option flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50" data-workflow-dropdown-option data-value="hierarquico">
+                                <span class="min-w-0 flex-1 truncate">Aprovação hierarquica</span>
                                 <i class="workflow-company-type-check fas fa-check hidden text-blue-600"></i>
                             </button>
                         </div>
@@ -97,32 +98,70 @@
                     <label for="workflowCompanySignature" class="mb-2 block text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">
                         Assinatura
                     </label>
-                    <select
-                        id="workflowCompanySignature"
-                        class="{{ ui_form.dynamic_control_classes(extra='empresa-form-control') }}"
-                        :class="empresaEditing ? 'empresa-form-control--edit' : 'empresa-form-control--view pointer-events-none select-none'"
-                        :tabindex="empresaEditing ? 0 : -1"
-                        :aria-disabled="String(!empresaEditing)"
-                    >
-                        <option value="1">Sim</option>
-                        <option value="0">Nao</option>
-                    </select>
+                    <div class="relative" data-workflow-custom-dropdown data-workflow-dropdown-mode="edit">
+                        <select id="workflowCompanySignature" data-no-tom-select="true" class="hidden">
+                            <option value="1">Sim</option>
+                            <option value="0">Não</option>
+                        </select>
+                        <button
+                            type="button"
+                            data-workflow-dropdown-button
+                            class="{{ workflow_input_base_css }} flex h-11 w-full items-center gap-2 rounded-2xl border px-4 pr-12 text-left text-sm font-semibold"
+                            :class="empresaEditing ? '{{ workflow_input_edit_css }} bg-white border-slate-200 text-slate-800' : '{{ workflow_input_view_css }} pointer-events-none select-none'"
+                            :tabindex="empresaEditing ? 0 : -1"
+                            :aria-disabled="String(!empresaEditing)"
+                        >
+                            <span data-workflow-dropdown-label class="min-w-0 flex-1 truncate">Sim</span>
+                        </button>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4 text-slate-400" x-show="empresaEditing" x-cloak>
+                            <i class="fas fa-chevron-down text-xs"></i>
+                        </div>
+                        <div class="absolute left-0 right-0 top-[calc(100%+6px)] z-50 hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl" data-workflow-dropdown-menu>
+                            <button type="button" class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50" data-workflow-dropdown-option data-value="1">
+                                <span class="min-w-0 flex-1 truncate">Sim</span>
+                                <i class="fas fa-check hidden text-blue-600" data-workflow-dropdown-check></i>
+                            </button>
+                            <button type="button" class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50" data-workflow-dropdown-option data-value="0">
+                                <span class="min-w-0 flex-1 truncate">Não</span>
+                                <i class="fas fa-check hidden text-blue-600" data-workflow-dropdown-check></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="min-w-0">
                     <label for="workflowCompanyRule" class="mb-2 block text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">
                         Regra
                     </label>
-                    <select
-                        id="workflowCompanyRule"
-                        class="{{ ui_form.dynamic_control_classes(extra='empresa-form-control') }}"
-                        :class="empresaEditing ? 'empresa-form-control--edit' : 'empresa-form-control--view pointer-events-none select-none'"
-                        :tabindex="empresaEditing ? 0 : -1"
-                        :aria-disabled="String(!empresaEditing)"
-                    >
-                        <option value="TODOS">Todos devem aprovar</option>
-                        <option value="PRIMEIRO">Primeiro a responder</option>
-                    </select>
+                    <div class="relative" data-workflow-custom-dropdown data-workflow-dropdown-mode="edit">
+                        <select id="workflowCompanyRule" data-no-tom-select="true" class="hidden">
+                            <option value="TODOS">Todos devem aprovar</option>
+                            <option value="PRIMEIRO">Primeiro a responder</option>
+                        </select>
+                        <button
+                            type="button"
+                            data-workflow-dropdown-button
+                            class="{{ workflow_input_base_css }} flex h-11 w-full items-center gap-2 rounded-2xl border px-4 pr-12 text-left text-sm font-semibold"
+                            :class="empresaEditing ? '{{ workflow_input_edit_css }} bg-white border-slate-200 text-slate-800' : '{{ workflow_input_view_css }} pointer-events-none select-none'"
+                            :tabindex="empresaEditing ? 0 : -1"
+                            :aria-disabled="String(!empresaEditing)"
+                        >
+                            <span data-workflow-dropdown-label class="min-w-0 flex-1 truncate">Todos devem aprovar</span>
+                        </button>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4 text-slate-400" x-show="empresaEditing" x-cloak>
+                            <i class="fas fa-chevron-down text-xs"></i>
+                        </div>
+                        <div class="absolute left-0 right-0 top-[calc(100%+6px)] z-50 hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl" data-workflow-dropdown-menu>
+                            <button type="button" class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50" data-workflow-dropdown-option data-value="TODOS">
+                                <span class="min-w-0 flex-1 truncate">Todos devem aprovar</span>
+                                <i class="fas fa-check hidden text-blue-600" data-workflow-dropdown-check></i>
+                            </button>
+                            <button type="button" class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50" data-workflow-dropdown-option data-value="PRIMEIRO">
+                                <span class="min-w-0 flex-1 truncate">Primeiro a responder</span>
+                                <i class="fas fa-check hidden text-blue-600" data-workflow-dropdown-check></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -183,18 +222,56 @@
 
         <div class="px-6 pt-5">
             <div class="grid grid-cols-1 gap-3 lg:grid-cols-4">
-                <input x-model="filtroObras" type="text" placeholder="Pesquisar obra..." class="{{ ui_form.dynamic_control_classes(extra='empresa-form-control empresa-form-control--edit') }}">
-                <input x-model="filtroWorkflow" type="text" placeholder="Filtrar por workflow..." class="{{ ui_form.dynamic_control_classes(extra='empresa-form-control empresa-form-control--edit') }}">
-                <input x-model="filtroResponsavel" type="text" placeholder="Responsavel..." class="{{ ui_form.dynamic_control_classes(extra='empresa-form-control empresa-form-control--edit') }}">
-                <select x-model="filtroStatus" class="{{ ui_form.dynamic_control_classes(extra='empresa-form-control empresa-form-control--edit') }}">
-                    <option value="">Todos os status</option>
-                    <option value="Pendente">Pendente</option>
-                    <option value="Em andamento">Em andamento</option>
-                    <option value="Concluido">Concluido</option>
-                    <option value="Rejeitado">Rejeitado</option>
-                    <option value="Cancelado">Cancelado</option>
-                    <option value="Erro">Erro</option>
-                </select>
+                <input x-model="filtroObras" type="text" placeholder="Pesquisar obra..." class="{{ workflow_input_base_css }} {{ workflow_input_edit_css }}">
+                <input x-model="filtroWorkflow" type="text" placeholder="Filtrar por workflow..." class="{{ workflow_input_base_css }} {{ workflow_input_edit_css }}">
+                <input x-model="filtroResponsavel" type="text" placeholder="Responsavel..." class="{{ workflow_input_base_css }} {{ workflow_input_edit_css }}">
+                <div class="relative" data-workflow-custom-dropdown data-workflow-dropdown-mode="always">
+                    <select x-model="filtroStatus" data-no-tom-select="true" class="hidden">
+                        <option value="">Todos os status</option>
+                        <option value="Pendente">Pendente</option>
+                        <option value="Em andamento">Em andamento</option>
+                        <option value="Concluido">Concluido</option>
+                        <option value="Rejeitado">Rejeitado</option>
+                        <option value="Cancelado">Cancelado</option>
+                        <option value="Erro">Erro</option>
+                    </select>
+                    <button type="button" data-workflow-dropdown-button class="{{ workflow_input_base_css }} {{ workflow_input_edit_css }} flex h-11 w-full items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 pr-12 text-left text-sm font-semibold text-slate-800">
+                        <span data-workflow-dropdown-label class="min-w-0 flex-1 truncate">Todos os status</span>
+                    </button>
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4 text-slate-400">
+                        <i class="fas fa-chevron-down text-xs"></i>
+                    </div>
+                    <div class="absolute left-0 right-0 top-[calc(100%+6px)] z-50 hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl" data-workflow-dropdown-menu>
+                        <button type="button" class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50" data-workflow-dropdown-option data-value="">
+                            <span class="min-w-0 flex-1 truncate">Todos os status</span>
+                            <i class="fas fa-check hidden text-blue-600" data-workflow-dropdown-check></i>
+                        </button>
+                        <button type="button" class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50" data-workflow-dropdown-option data-value="Pendente">
+                            <span class="min-w-0 flex-1 truncate">Pendente</span>
+                            <i class="fas fa-check hidden text-blue-600" data-workflow-dropdown-check></i>
+                        </button>
+                        <button type="button" class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50" data-workflow-dropdown-option data-value="Em andamento">
+                            <span class="min-w-0 flex-1 truncate">Em andamento</span>
+                            <i class="fas fa-check hidden text-blue-600" data-workflow-dropdown-check></i>
+                        </button>
+                        <button type="button" class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50" data-workflow-dropdown-option data-value="Concluido">
+                            <span class="min-w-0 flex-1 truncate">Concluido</span>
+                            <i class="fas fa-check hidden text-blue-600" data-workflow-dropdown-check></i>
+                        </button>
+                        <button type="button" class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50" data-workflow-dropdown-option data-value="Rejeitado">
+                            <span class="min-w-0 flex-1 truncate">Rejeitado</span>
+                            <i class="fas fa-check hidden text-blue-600" data-workflow-dropdown-check></i>
+                        </button>
+                        <button type="button" class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50" data-workflow-dropdown-option data-value="Cancelado">
+                            <span class="min-w-0 flex-1 truncate">Cancelado</span>
+                            <i class="fas fa-check hidden text-blue-600" data-workflow-dropdown-check></i>
+                        </button>
+                        <button type="button" class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50" data-workflow-dropdown-option data-value="Erro">
+                            <span class="min-w-0 flex-1 truncate">Erro</span>
+                            <i class="fas fa-check hidden text-blue-600" data-workflow-dropdown-check></i>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
 

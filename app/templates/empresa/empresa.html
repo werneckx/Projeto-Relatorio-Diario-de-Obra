@@ -84,7 +84,14 @@
     }
 </style>
 
-<div id="empresaPageRoot" x-data="empresaApp()" x-init="init()" class="animate-fade-in-up w-full space-y-6 pb-28">
+<div
+    id="empresaPageRoot"
+    x-data="empresaApp()"
+    x-init="init()"
+    data-empresa-editing="{{ 'true' if start_in_edit_mode else 'false' }}"
+    :data-empresa-editing="empresaEditing ? 'true' : 'false'"
+    class="animate-fade-in-up w-full space-y-6 pb-28"
+>
     {% include "empresa/partials/_hero.html" %}
     {% include "empresa/partials/_tabs.html" %}
 
@@ -122,7 +129,7 @@
         }
     };
 </script>
-<script src="{{ url_for('static', filename='js/pages/empresa/index.js') }}?v=20260714-empresa-inputs" defer></script>
+<script src="{{ url_for('static', filename='js/pages/empresa/index.js') }}?v=20260714-workflow-dropdown-portal" defer></script>
 <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 {% endcall %}
 {% endblock %}
