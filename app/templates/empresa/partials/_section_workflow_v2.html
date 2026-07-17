@@ -210,30 +210,76 @@
                     Clique em <strong>Editar</strong> na barra de ações para habilitar alterações neste workflow padrão.
                 </div>
 
-                <div class="mt-5 rounded-2xl border border-slate-200 bg-white p-5">
-                    <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                            <h4 id="workflowCompanyStagesTitle" class="text-sm font-semibold uppercase tracking-wide text-slate-800">
-                                Etapas e papéis
-                            </h4>
-                            <p id="workflowCompanySummary" class="mt-1 text-sm text-slate-500">
-                                Carregando estrutura do workflow...
-                            </p>
+                <div class="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-[320px,minmax(0,1fr)]">
+                    <aside class="rounded-3xl border border-slate-200 bg-slate-50/70 p-4 xl:sticky xl:top-24 xl:self-start">
+                        <div class="flex flex-col gap-2.5">
+                            <div>
+                                <h4 id="workflowCompanyStagesTitle" class="text-sm font-semibold uppercase tracking-wide text-slate-800">
+                                    Etapas e papéis
+                                </h4>
+                                <p id="workflowCompanySummary" class="mt-1 text-xs leading-5 text-slate-500">
+                                    Carregando estrutura do workflow...
+                                </p>
+                            </div>
+
+                            <button
+                                type="button"
+                                id="workflowCompanyAddStageButton"
+                                x-show="empresaEditing"
+                                class="inline-flex h-9 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3.5 text-xs font-bold text-slate-700 transition-colors hover:bg-slate-100"
+                            >
+                                <i class="fas fa-plus"></i>
+                                <span class="workflow-add-label">Adicionar etapa</span>
+                            </button>
                         </div>
 
-                        <button
-                            type="button"
-                            id="workflowCompanyAddStageButton"
-                            x-show="empresaEditing"
-                            class="inline-flex h-10 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-100"
-                        >
-                            <i class="fas fa-plus"></i>
-                            <span class="workflow-add-label">Adicionar etapa</span>
-                        </button>
-                    </div>
+                        <div id="workflowCompanyStagesErrors" class="mt-3 hidden rounded-2xl border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-xs text-rose-700"></div>
+                        <div id="workflowCompanyStagesContainer" class="mt-3 space-y-2.5"></div>
+                    </aside>
 
-                    <div id="workflowCompanyStagesErrors" class="hidden rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"></div>
-                    <div id="workflowCompanyStagesContainer" class="space-y-3"></div>
+                    <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                        <style>
+                            .workflow-canvas {
+                                overflow: hidden;
+                                padding: 18px 0 0;
+                            }
+
+                            .workflow-board {
+                                width: 100%;
+                                max-width: 100%;
+                            }
+
+                            .workflow-board svg {
+                                display: block;
+                                height: auto;
+                                max-width: 100%;
+                                width: 100%;
+                            }
+                        </style>
+
+                        <div class="flex flex-col gap-4 border-b border-slate-100 pb-5">
+                            <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                                <div>
+                                    <h5 class="text-lg font-bold text-slate-900">Diagrama do fluxo padrão</h5>
+                                    <p class="mt-1 text-sm text-slate-500">
+                                        A prévia é atualizada automaticamente conforme você ajusta etapas e papéis no painel lateral.
+                                    </p>
+                                </div>
+                                <span class="inline-flex w-fit items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-bold text-slate-600">
+                                    <i class="fas fa-project-diagram text-slate-400"></i>
+                                    <span id="workflowCompanyOverviewCount">0 etapas</span>
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="workflow-canvas mt-4" role="region" tabindex="0" aria-label="Diagrama do fluxo padrão de aprovação da empresa">
+                            <div id="workflowCompanyDiagram" class="workflow-board"></div>
+                        </div>
+
+                        <div id="workflowCompanyDiagramEmpty" class="mt-4 hidden rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-8 text-center text-sm text-slate-500">
+                            Nenhuma etapa configurada para este workflow padrão.
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

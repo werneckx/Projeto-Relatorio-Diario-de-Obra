@@ -861,9 +861,521 @@
                     const preEntryX = toX - 30;
                     return `M ${fromX} ${fromY} H ${gutterX} V ${laneY} H ${preEntryX} V ${toY} H ${toX}`;
                 },
+                getWorkflowParallelDiagramSvg(obra, etapas) {
+                    return this.getWorkflowParallelForkJoinDiagramSvg(obra, etapas);
+                    const neutral = '#475569';
+                    const green = '#15803d';
+                    const red = '#dc2626';
+                    const slate = '#64748b';
+                    const dark = '#0f172a';
+                    const parallelRule = String(obra?.regra_etapa || etapas[0]?.regra_etapa || 'TODOS').toUpperCase() === 'PRIMEIRO'
+                        ? 'PRIMEIRO'
+                        : 'TODOS';
+                    const approvers = etapas.flatMap((etapa, index) => {
+                        const source = String(etapa?.papel || etapa?.nome || `Aprovador ${index + 1}`);
+                        const parts = source.split(',').map((item) => normalizeWorkflowStageDisplay(item)).filter(Boolean);
+                        return (parts.length ? parts : [normalizeWorkflowStageDisplay(source)]).map((label, itemIndex) => ({
+                            id: `${index + 1}-${itemIndex + 1}`,
+                            label,
+                        }));
+                    });
+                    if (!approvers.length) return '';
+
+                    const margin = { top: 64, right: 120, bottom: 80, left: 72 };
+                    const spacing = {
+                        startToFork: 110,
+                        forkToCards: 92,
+                        cardGapX: 28,
+                        cardGapY: 40,
+                        cardsToJoin: 92,
+                        joinToDecision: 116,
+                        decisionToResult: 72,
+                        resultToEnd: 90,
+                        rejectToEnd: 80,
+                    };
+                    const startRadius = 28;
+                    const splitRadius = 18;
+                    const joinRadius = 18;
+                    const cardWidth = 176;
+                    const cardPaddingX = 16;
+                    const cardPaddingTop = 14;
+                    const cardPaddingBottom = 16;
+                    const cardLineHeight = 20;
+                    const maxCardLines = 3;
+                    const decisionHalf = 42;
+                    const approvedBadge = { width: 94, height: 22 };
+                    const rejectedBadge = { width: 96, height: 22 };
+
+                    const cardModels = approvers.map((item) => {
+                        const lines = wrapWorkflowSvgText(item.label, 16, maxCardLines);
+                        const height = cardPaddingTop + 14 + (lines.length * cardLineHeight) + cardPaddingBottom;
+                        return { ...item, lines, height };
+                    });
+
+                    const columns = approvers.length <= 4 ? approvers.length : (approvers.length <= 8 ? 3 : 1);
+                    const rowsCount = Math.ceil(cardModels.length / columns);
+                    const rows = Array.from({ length: rowsCount }, (_, rowIndex) => cardModels.slice(rowIndex * columns, (rowIndex + 1) * columns));
+                    const rowHeights = rows.map((row) => Math.max(...row.map((item) => item.height)));
+                    const totalCardsHeight = rowHeights.reduce((sum, value) => sum + value, 0) + (Math.max(rows.length - 1, 0) * spacing.cardGapY);
+                    const cardAreaHeight = Math.max(totalCardsHeight, 240);
+                    const startCx = margin.left;
+                    const forkX = startCx + startRadius + spacing.startToFork;
+                    const cardsX = forkX + spacing.forkToCards;
+                    const cardsAreaWidth = (columns * cardWidth) + (Math.max(columns - 1, 0) * spacing.cardGapX);
+                    const joinX = cardsX + cardsAreaWidth + spacing.cardsToJoin;
+                    const decisionCx = joinX + spacing.joinToDecision;
+                    const approvedBadgeX = decisionCx + decisionHalf + spacing.decisionToResult;
+                    const approvedEndX = approvedBadgeX + approvedBadge.width + spacing.resultToEnd;
+                    const endLabelWidth = 132;
+                    const width = approvedEndX + splitRadius + endLabelWidth + margin.right;
+                    const cardAreaTop = margin.top + 24;
+                    const cardAreaBottom = cardAreaTop + cardAreaHeight;
+                    const centerY = cardAreaTop + (cardAreaHeight / 2);
+                    const decisionCy = centerY;
+                    const approvedEndY = centerY;
+                    const rejectedBadgeX = decisionCx + decisionHalf + spacing.decisionToResult;
+                    const rejectedBadgeY = decisionCy + 56;
+                    const rejectedEndX = rejectedBadgeX + 26;
+                    const rejectedEndY = rejectedBadgeY + rejectedBadge.height + spacing.rejectToEnd;
+                    const height = Math.max(cardAreaBottom, rejectedEndY + splitRadius + margin.bottom);
+
+                    let currentY = cardAreaTop + ((cardAreaHeight - totalCardsHeight) / 2);
+                    const cardLayout = [];
+                    rows.forEach((row, rowIndex) => {
+                        const rowHeight = rowHeights[rowIndex];
+                        const rowWidth = (row.length * cardWidth) + (Math.max(row.length - 1, 0) * spacing.cardGapX);
+                        const rowStartX = cardsX + ((cardsAreaWidth - rowWidth) / 2);
+                        row.forEach((item, colIndex) => {
+                            const x = rowStartX + (colIndex * (cardWidth + spacing.cardGapX));
+                            const y = currentY + ((rowHeight - item.height) / 2);
+                            cardLayout.push({
+                                ...item,
+                                x,
+                                y,
+                                width: cardWidth,
+                                centerY: y + (item.height / 2),
+                            });
+                        });
+                        currentY += rowHeight + spacing.cardGapY;
+                    });
+
+                    const connectors = [];
+                    const shapes = [];
+                    const labels = [];
+
+                    connectors.push(this.renderWorkflowSvgPath(
+                        `M ${startCx + startRadius} ${centerY} H ${forkX - splitRadius}`,
+                        neutral,
+                        'workflow-arrow-neutral',
+                    ));
+                    shapes.push(`<circle cx="${startCx}" cy="${centerY}" r="${startRadius}" fill="${slate}" filter="url(#workflow-node-shadow)"></circle>`);
+                    shapes.push(`<circle cx="${forkX}" cy="${centerY}" r="${splitRadius}" fill="${slate}" filter="url(#workflow-node-shadow)"></circle>`);
+                    shapes.push(`<circle cx="${joinX}" cy="${centerY}" r="${joinRadius}" fill="${slate}" filter="url(#workflow-node-shadow)"></circle>`);
+                    labels.push(`<text x="${startCx}" y="${centerY + 4}" fill="#ffffff" text-anchor="middle" font-size="12" font-weight="800">Início</text>`);
+                    labels.push(`<text x="${forkX}" y="${centerY - 30}" fill="${slate}" text-anchor="middle" font-size="11" font-weight="800">Fork</text>`);
+                    labels.push(`<text x="${joinX}" y="${centerY - 30}" fill="${slate}" text-anchor="middle" font-size="11" font-weight="800">Join</text>`);
+
+                    cardLayout.forEach((card) => {
+                        connectors.push(this.renderWorkflowSvgPath(`M ${forkX} ${centerY} H ${card.x - 18} V ${card.centerY} H ${card.x}`, neutral));
+                        connectors.push(this.renderWorkflowSvgPath(`M ${card.x + card.width} ${card.centerY} H ${joinX}`, neutral, 'workflow-arrow-neutral'));
+                        shapes.push(`<rect x="${card.x}" y="${card.y}" width="${card.width}" height="${card.height}" rx="8" fill="#ffffff" stroke="#cbd5e1" filter="url(#workflow-card-shadow)"></rect>`);
+                        labels.push(`<text x="${card.x + cardPaddingX}" y="${card.y + 18}" fill="#475569" font-size="11" font-weight="800">PAPEL</text>`);
+                        labels.push(this.renderWorkflowSvgTextLines(
+                            card.lines,
+                            card.x + cardPaddingX,
+                            card.y + 44,
+                            cardLineHeight,
+                            `fill="${dark}" font-size="15" font-weight="800"`,
+                        ));
+                    });
+
+                    connectors.push(this.renderWorkflowSvgPath(`M ${joinX + joinRadius} ${centerY} H ${decisionCx - decisionHalf}`, neutral, 'workflow-arrow-neutral'));
+                    connectors.push(this.renderWorkflowSvgPath(`M ${decisionCx + decisionHalf} ${decisionCy} H ${approvedBadgeX}`, green));
+                    connectors.push(this.renderWorkflowSvgPath(`M ${approvedBadgeX + approvedBadge.width} ${approvedEndY} H ${approvedEndX - splitRadius}`, green, 'workflow-arrow-approved'));
+                    connectors.push(this.renderWorkflowSvgPath(`M ${decisionCx} ${decisionCy + decisionHalf} V ${rejectedBadgeY}`, red));
+                    connectors.push(this.renderWorkflowSvgPath(`M ${rejectedBadgeX + rejectedBadge.width} ${rejectedBadgeY + (rejectedBadge.height / 2)} H ${rejectedEndX}`, red));
+                    connectors.push(this.renderWorkflowSvgPath(`M ${rejectedEndX} ${rejectedBadgeY + (rejectedBadge.height / 2)} V ${rejectedEndY - splitRadius}`, red, 'workflow-arrow-rejected'));
+
+                    shapes.push(`<polygon points="${decisionCx},${decisionCy - decisionHalf} ${decisionCx + decisionHalf},${decisionCy} ${decisionCx},${decisionCy + decisionHalf} ${decisionCx - decisionHalf},${decisionCy}" fill="${slate}" filter="url(#workflow-node-shadow)"></polygon>`);
+                    shapes.push(`<circle cx="${approvedEndX}" cy="${approvedEndY}" r="${splitRadius}" fill="#16a34a"></circle>`);
+                    shapes.push(`<circle cx="${rejectedEndX}" cy="${rejectedEndY}" r="21" fill="${red}"></circle>`);
+                    labels.push(`<text x="${decisionCx}" y="${decisionCy - 8}" fill="#ffffff" text-anchor="middle" font-size="10" font-weight="800">Todos</text>`);
+                    labels.push(`<text x="${decisionCx}" y="${decisionCy + 10}" fill="#ffffff" text-anchor="middle" font-size="10" font-weight="800">${parallelRule === 'PRIMEIRO' ? 'responderam?' : 'aprovaram?'}</text>`);
+                    labels.push(this.renderWorkflowSvgBadge('Aprovado', approvedBadgeX, approvedEndY - (approvedBadge.height / 2), approvedBadge.width, approvedBadge.height, green));
+                    labels.push(this.renderWorkflowSvgBadge('Recusado', rejectedBadgeX, rejectedBadgeY, rejectedBadge.width, rejectedBadge.height, red));
+                    labels.push(`<path d="M ${approvedEndX - 8} ${approvedEndY} L ${approvedEndX - 2} ${approvedEndY + 6} L ${approvedEndX + 9} ${approvedEndY - 7}" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>`);
+                    labels.push(`<text x="${approvedEndX + 28}" y="${approvedEndY + 6}" fill="${green}" font-size="17" font-weight="800">Fim aprovado</text>`);
+                    labels.push(`<text x="${rejectedEndX}" y="${rejectedEndY + 4}" fill="#ffffff" text-anchor="middle" font-size="12" font-weight="800">Fim</text>`);
+
+                    return `
+                        <svg class="workflow-board-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Diagrama de aprovação paralela" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <marker id="workflow-arrow-neutral" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+                                    <path d="M 0 0 L 8 4 L 0 8 z" fill="${neutral}"></path>
+                                </marker>
+                                <marker id="workflow-arrow-approved" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+                                    <path d="M 0 0 L 8 4 L 0 8 z" fill="${green}"></path>
+                                </marker>
+                                <marker id="workflow-arrow-rejected" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+                                    <path d="M 0 0 L 8 4 L 0 8 z" fill="${red}"></path>
+                                </marker>
+                                <filter id="workflow-card-shadow" x="-10%" y="-10%" width="120%" height="130%">
+                                    <feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#0f172a" flood-opacity="0.10"></feDropShadow>
+                                </filter>
+                                <filter id="workflow-node-shadow" x="-20%" y="-20%" width="140%" height="140%">
+                                    <feDropShadow dx="0" dy="1" stdDeviation="1.2" flood-color="#0f172a" flood-opacity="0.16"></feDropShadow>
+                                </filter>
+                            </defs>
+                            <g font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+                                ${shapes.join('')}
+                                ${connectors.join('')}
+                                ${labels.join('')}
+                            </g>
+                        </svg>
+                    `;
+                },
+                getWorkflowParallelForkJoinDiagramSvg(obra, etapas) {
+                    const COLORS = {
+                        neutral: '#475569',
+                        green: '#15803d',
+                        red: '#dc2626',
+                        slate: '#64748b',
+                        dark: '#0f172a',
+                    };
+                    const L = {
+                        PADDING_X: 72,
+                        PADDING_TOP: 58,
+                        PADDING_BOTTOM: 86,
+                        CARD_WIDTH: 176,
+                        CARD_MIN_HEIGHT: 86,
+                        CARD_GAP: 28,
+                        ROW_GAP: 38,
+                        NODE_RADIUS: 28,
+                        DECISION_HALF: 42,
+                        VERTICAL_GAP: 72,
+                        RESULT_GAP: 80,
+                        BADGE_WIDTH: 96,
+                        BADGE_HEIGHT: 22,
+                        END_LABEL_WIDTH: 132,
+                        CONNECTOR_LANE_GAP: 24,
+                        CONNECTOR_GUTTER: 34,
+                    };
+                    const rule = String(obra?.regra_etapa || etapas[0]?.regra_etapa || 'TODOS').toUpperCase() === 'PRIMEIRO'
+                        ? 'PRIMEIRO'
+                        : 'TODOS';
+                    const normalizeApproverLabel = (label) => {
+                        const normalized = normalizeWorkflowStageDisplay(label);
+                        return normalized.toUpperCase() === 'CLIENTE OBRA' ? 'Cliente da Obra' : normalized;
+                    };
+                    const approvers = etapas.flatMap((etapa, index) => {
+                        const source = String(etapa?.papel || etapa?.nome || `Aprovador ${index + 1}`);
+                        const labels = source.split(',').map((item) => normalizeApproverLabel(item)).filter(Boolean);
+                        return (labels.length ? labels : [source]).map((label, itemIndex) => ({
+                            id: `${index + 1}-${itemIndex + 1}`,
+                            label: normalizeApproverLabel(label),
+                        }));
+                    });
+                    if (!approvers.length) return '';
+
+                    const createCard = (approver, index) => {
+                        const lines = wrapWorkflowSvgText(approver.label, 16, 3);
+                        return {
+                            ...approver,
+                            index,
+                            lines,
+                            width: L.CARD_WIDTH,
+                            height: Math.max(L.CARD_MIN_HEIGHT, 42 + (lines.length * 20)),
+                        };
+                    };
+                    const createCircleNode = (cx, cy, r) => ({ cx, cy, r });
+                    const createDecision = (cx, cy) => ({ cx, cy, half: L.DECISION_HALF });
+                    const createBadge = (x, y, width = L.BADGE_WIDTH, height = L.BADGE_HEIGHT) => ({ x, y, width, height });
+                    const anchor = (node, side = 'center') => {
+                        const radius = node.r ?? node.half ?? 0;
+                        if (side === 'top') return { x: node.cx ?? (node.x + node.width / 2), y: node.cy != null ? node.cy - radius : node.y };
+                        if (side === 'bottom') return { x: node.cx ?? (node.x + node.width / 2), y: node.cy != null ? node.cy + radius : node.y + node.height };
+                        if (side === 'left') return { x: node.cx != null ? node.cx - (node.r ?? node.half) : node.x, y: node.cy ?? (node.y + node.height / 2) };
+                        if (side === 'right') return { x: node.cx != null ? node.cx + (node.r ?? node.half) : node.x + node.width, y: node.cy ?? (node.y + node.height / 2) };
+                        return { x: node.cx ?? (node.x + node.width / 2), y: node.cy ?? (node.y + node.height / 2) };
+                    };
+                    const roundedPath = (points, radius = 12) => {
+                        if (points.length < 2) return '';
+                        const parts = [`M ${points[0].x} ${points[0].y}`];
+                        for (let index = 1; index < points.length; index += 1) {
+                            const current = points[index];
+                            const next = points[index + 1];
+                            if (!next) {
+                                parts.push(`L ${current.x} ${current.y}`);
+                                continue;
+                            }
+                            const previous = points[index - 1];
+                            const incomingHorizontal = previous.y === current.y;
+                            const outgoingHorizontal = next.y === current.y;
+                            if (incomingHorizontal === outgoingHorizontal) {
+                                parts.push(`L ${current.x} ${current.y}`);
+                                continue;
+                            }
+                            const before = { x: current.x, y: current.y };
+                            const after = { x: current.x, y: current.y };
+                            if (incomingHorizontal) before.x += previous.x < current.x ? -radius : radius;
+                            else before.y += previous.y < current.y ? -radius : radius;
+                            if (outgoingHorizontal) after.x += next.x < current.x ? -radius : radius;
+                            else after.y += next.y < current.y ? -radius : radius;
+                            parts.push(`L ${before.x} ${before.y}`);
+                            parts.push(`Q ${current.x} ${current.y} ${after.x} ${after.y}`);
+                        }
+                        return parts.join(' ');
+                    };
+                    const drawConnector = (points, color, markerId = '') => this.renderWorkflowSvgPath(roundedPath(points), color, markerId);
+                    const calculateLayout = () => {
+                        const cards = approvers.map(createCard);
+                        const cardHeight = Math.max(...cards.map((card) => card.height));
+                        cards.forEach((card) => {
+                            card.height = cardHeight;
+                        });
+                        const columns = approvers.length <= 4 ? approvers.length : (approvers.length <= 8 ? 3 : 4);
+                        const rows = Math.ceil(cards.length / columns);
+                        const rowGroups = Array.from({ length: rows }, (_, rowIndex) => cards.slice(rowIndex * columns, (rowIndex + 1) * columns));
+                        const rowHeights = rowGroups.map((row) => Math.max(...row.map((card) => card.height)));
+                        const gridWidth = (columns * L.CARD_WIDTH) + ((columns - 1) * L.CARD_GAP);
+                        const gridHeight = rowHeights.reduce((sum, height) => sum + height, 0) + ((rows - 1) * L.ROW_GAP);
+                        const width = Math.max(
+                            L.PADDING_X * 2 + gridWidth,
+                            L.PADDING_X * 2 + L.DECISION_HALF * 2 + L.RESULT_GAP + L.BADGE_WIDTH + L.RESULT_GAP + L.NODE_RADIUS * 2 + L.END_LABEL_WIDTH,
+                        );
+                        const centerX = width / 2;
+                        const start = createCircleNode(centerX, L.PADDING_TOP + L.NODE_RADIUS, L.NODE_RADIUS);
+                        const split = { x: centerX, y: anchor(start, 'bottom').y + L.VERTICAL_GAP };
+                        const gridTop = split.y + L.VERTICAL_GAP;
+                        const gridLeft = centerX - (gridWidth / 2);
+                        let currentY = gridTop;
+                        rowGroups.forEach((row, rowIndex) => {
+                            const rowHeight = rowHeights[rowIndex];
+                            const rowWidth = (row.length * L.CARD_WIDTH) + ((row.length - 1) * L.CARD_GAP);
+                            const rowStartX = gridLeft + ((gridWidth - rowWidth) / 2);
+                            row.forEach((card, colIndex) => {
+                                card.x = rowStartX + (colIndex * (L.CARD_WIDTH + L.CARD_GAP));
+                                card.y = currentY + ((rowHeight - card.height) / 2);
+                            });
+                            currentY += rowHeight + L.ROW_GAP;
+                        });
+                        const sync = { x: centerX, y: gridTop + gridHeight + L.VERTICAL_GAP };
+                        const decision = createDecision(centerX, sync.y + L.VERTICAL_GAP);
+                        const approvedBadge = createBadge(anchor(decision, 'right').x + L.RESULT_GAP, decision.cy - (L.BADGE_HEIGHT / 2), 58, L.BADGE_HEIGHT);
+                        const approvedEnd = createCircleNode(anchor(approvedBadge, 'right').x + L.RESULT_GAP + 18, decision.cy, 18);
+                        const rejectedBadge = createBadge(decision.cx - 29, anchor(decision, 'bottom').y + L.VERTICAL_GAP, 58, L.BADGE_HEIGHT);
+                        const rejectedEnd = createCircleNode(decision.cx, anchor(rejectedBadge, 'bottom').y + L.RESULT_GAP, 18);
+                        const height = Math.max(anchor(rejectedEnd, 'bottom').y + L.PADDING_BOTTOM, anchor(approvedEnd, 'bottom').y + L.PADDING_BOTTOM);
+                        return { cards, columns, rows, gridLeft, gridTop, gridWidth, width, height, start, split, sync, decision, approvedBadge, approvedEnd, rejectedBadge, rejectedEnd };
+                    };
+
+                    const layout = calculateLayout();
+                    const connectors = [];
+                    const shapes = [];
+                    const labels = [];
+
+                    connectors.push(drawConnector([anchor(layout.start, 'bottom'), layout.split], COLORS.neutral));
+                    layout.cards.forEach((card) => {
+                        const cardTop = anchor(card, 'top');
+                        const cardBottom = anchor(card, 'bottom');
+                        const splitLaneY = layout.gridTop - L.CONNECTOR_LANE_GAP;
+                        const cardColumn = card.index % layout.columns;
+                        const useLeftGutter = cardColumn < layout.columns / 2;
+                        const gutterX = useLeftGutter
+                            ? layout.gridLeft - L.CONNECTOR_GUTTER
+                            : layout.gridLeft + layout.gridWidth + L.CONNECTOR_GUTTER;
+                        const cardExitY = cardBottom.y + L.CONNECTOR_LANE_GAP;
+                        const isSingleCard = layout.cards.length === 1;
+                        const isSingleRow = layout.rows === 1;
+                        const isCenterColumn = layout.columns % 2 === 1 && cardColumn === Math.floor(layout.columns / 2);
+                        connectors.push(drawConnector([
+                            layout.split,
+                            { x: layout.split.x, y: splitLaneY },
+                            { x: cardTop.x, y: splitLaneY },
+                            cardTop,
+                        ], COLORS.neutral, 'workflow-arrow-neutral'));
+                        if (isSingleCard || (isSingleRow && isCenterColumn)) {
+                            connectors.push(drawConnector([cardBottom, layout.sync], COLORS.neutral));
+                        } else if (isSingleRow) {
+                            connectors.push(drawConnector([
+                                cardBottom,
+                                { x: cardBottom.x, y: layout.sync.y },
+                                layout.sync,
+                            ], COLORS.neutral));
+                        } else {
+                            connectors.push(drawConnector([
+                                cardBottom,
+                                { x: cardBottom.x, y: cardExitY },
+                                { x: gutterX, y: cardExitY },
+                                { x: gutterX, y: layout.sync.y },
+                                layout.sync,
+                            ], COLORS.neutral));
+                        }
+                    });
+                    connectors.push(drawConnector([layout.sync, anchor(layout.decision, 'top')], COLORS.neutral, 'workflow-arrow-neutral'));
+                    connectors.push(drawConnector([anchor(layout.decision, 'right'), anchor(layout.approvedBadge, 'left')], COLORS.green));
+                    connectors.push(drawConnector([anchor(layout.approvedBadge, 'right'), anchor(layout.approvedEnd, 'left')], COLORS.green, 'workflow-arrow-approved'));
+                    connectors.push(drawConnector([
+                        anchor(layout.decision, 'bottom'),
+                        { x: anchor(layout.decision, 'bottom').x, y: anchor(layout.rejectedBadge, 'top').y - 18 },
+                        anchor(layout.rejectedBadge, 'top'),
+                    ], COLORS.red));
+                    connectors.push(drawConnector([anchor(layout.rejectedBadge, 'bottom'), anchor(layout.rejectedEnd, 'top')], COLORS.red, 'workflow-arrow-rejected'));
+
+                    shapes.push(`<circle cx="${layout.start.cx}" cy="${layout.start.cy}" r="${layout.start.r}" fill="${COLORS.slate}" filter="url(#workflow-node-shadow)"></circle>`);
+                    layout.cards.forEach((card) => {
+                        shapes.push(`<rect x="${card.x}" y="${card.y}" width="${card.width}" height="${card.height}" rx="8" fill="#ffffff" stroke="#cbd5e1" filter="url(#workflow-card-shadow)"></rect>`);
+                        labels.push(`<text x="${card.x + 16}" y="${card.y + 18}" fill="#475569" font-size="11" font-weight="800">APROVAÇÃO</text>`);
+                        labels.push(this.renderWorkflowSvgTextLines(card.lines, card.x + 16, card.y + 44, 20, `fill="${COLORS.dark}" font-size="15" font-weight="800"`));
+                    });
+                    shapes.push(`<polygon points="${layout.decision.cx},${layout.decision.cy - layout.decision.half} ${layout.decision.cx + layout.decision.half},${layout.decision.cy} ${layout.decision.cx},${layout.decision.cy + layout.decision.half} ${layout.decision.cx - layout.decision.half},${layout.decision.cy}" fill="${COLORS.slate}" filter="url(#workflow-node-shadow)"></polygon>`);
+                    shapes.push(`<circle cx="${layout.approvedEnd.cx}" cy="${layout.approvedEnd.cy}" r="${layout.approvedEnd.r}" fill="#16a34a"></circle>`);
+                    shapes.push(`<circle cx="${layout.rejectedEnd.cx}" cy="${layout.rejectedEnd.cy}" r="${layout.rejectedEnd.r}" fill="${COLORS.red}"></circle>`);
+                    labels.push(`<text x="${layout.start.cx}" y="${layout.start.cy + 4}" fill="#ffffff" text-anchor="middle" font-size="12" font-weight="800">Início</text>`);
+                    labels.push(`<text x="${layout.decision.cx}" y="${layout.decision.cy - 8}" fill="#ffffff" text-anchor="middle" font-size="10" font-weight="800">Todos</text>`);
+                    labels.push(`<text x="${layout.decision.cx}" y="${layout.decision.cy + 10}" fill="#ffffff" text-anchor="middle" font-size="10" font-weight="800">${rule === 'PRIMEIRO' ? 'responderam?' : 'aprovaram?'}</text>`);
+                    labels.push(this.renderWorkflowSvgBadge('Sim', layout.approvedBadge.x, layout.approvedBadge.y, layout.approvedBadge.width, layout.approvedBadge.height, COLORS.green));
+                    labels.push(this.renderWorkflowSvgBadge('Não', layout.rejectedBadge.x, layout.rejectedBadge.y, layout.rejectedBadge.width, layout.rejectedBadge.height, COLORS.red));
+                    labels.push(`<path d="M ${layout.approvedEnd.cx - 8} ${layout.approvedEnd.cy} L ${layout.approvedEnd.cx - 2} ${layout.approvedEnd.cy + 6} L ${layout.approvedEnd.cx + 9} ${layout.approvedEnd.cy - 7}" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>`);
+                    labels.push(`<path d="M ${layout.rejectedEnd.cx - 6} ${layout.rejectedEnd.cy - 6} L ${layout.rejectedEnd.cx + 6} ${layout.rejectedEnd.cy + 6} M ${layout.rejectedEnd.cx + 6} ${layout.rejectedEnd.cy - 6} L ${layout.rejectedEnd.cx - 6} ${layout.rejectedEnd.cy + 6}" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round"></path>`);
+                    labels.push(`<text x="${layout.approvedEnd.cx + 28}" y="${layout.approvedEnd.cy + 6}" fill="${COLORS.green}" font-size="17" font-weight="800">Aprovado</text>`);
+                    labels.push(`<text x="${layout.rejectedEnd.cx + 28}" y="${layout.rejectedEnd.cy + 6}" fill="${COLORS.red}" font-size="17" font-weight="800">Recusado</text>`);
+
+                    return `
+                        <svg class="workflow-board-svg" width="100%" height="auto" viewBox="0 0 ${layout.width} ${layout.height}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Diagrama de aprovação paralela" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <marker id="workflow-arrow-neutral" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+                                    <path d="M 0 0 L 8 4 L 0 8 z" fill="${COLORS.neutral}"></path>
+                                </marker>
+                                <marker id="workflow-arrow-approved" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+                                    <path d="M 0 0 L 8 4 L 0 8 z" fill="${COLORS.green}"></path>
+                                </marker>
+                                <marker id="workflow-arrow-rejected" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+                                    <path d="M 0 0 L 8 4 L 0 8 z" fill="${COLORS.red}"></path>
+                                </marker>
+                                <filter id="workflow-card-shadow" x="-10%" y="-10%" width="120%" height="130%">
+                                    <feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#0f172a" flood-opacity="0.10"></feDropShadow>
+                                </filter>
+                                <filter id="workflow-node-shadow" x="-20%" y="-20%" width="140%" height="140%">
+                                    <feDropShadow dx="0" dy="1" stdDeviation="1.2" flood-color="#0f172a" flood-opacity="0.16"></feDropShadow>
+                                </filter>
+                            </defs>
+                            <g font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+                                ${shapes.join('')}
+                                ${connectors.join('')}
+                                ${labels.join('')}
+                            </g>
+                        </svg>
+                    `;
+                },
                 getWorkflowDiagramSvg(obra) {
                     const etapas = this.getObraFluxoEtapas(obra);
                     if (!etapas.length) return '';
+
+                    if (String(obra?.workflow_diagram_variant || '').toLowerCase() === 'parallel' || obra?.aprovacao_paralela) {
+                        return this.getWorkflowParallelForkJoinDiagramSvg(obra, etapas);
+                    }
+
+                    if (String(obra?.workflow_diagram_variant || '').toLowerCase() === 'parallel' || obra?.aprovacao_paralela) {
+                        const neutral = '#475569';
+                        const green = '#15803d';
+                        const red = '#dc2626';
+                        const slate = '#64748b';
+                        const dark = '#0f172a';
+                        const startRadius = 28;
+                        const cardWidth = 248;
+                        const cardHeight = 112;
+                        const topPadding = 56;
+                        const laneGap = 108;
+                        const width = 1240;
+                        const height = Math.max(440, topPadding + (etapas.length * cardHeight) + ((etapas.length - 1) * laneGap) + 220);
+                        const startCx = 64;
+                        const centerY = height / 2;
+                        const cardX = 198;
+                        const decisionCx = cardX + cardWidth + 96;
+                        const approvedBadgeX = decisionCx + 54;
+                        const approvedBadgeWidth = 94;
+                        const rejectedBadgeWidth = 96;
+                        const approvedTerminalX = width - 140;
+                        const approvedMergeX = approvedTerminalX - 36;
+                        const approvedAnchorY = Math.max(72, centerY - (((etapas.length - 1) * (cardHeight + laneGap)) / 4));
+                        const connectors = [];
+                        const shapes = [];
+                        const labels = [];
+
+                        connectors.push(this.renderWorkflowSvgPath(
+                            `M ${startCx + startRadius} ${centerY} H ${cardX - 34}`,
+                            neutral,
+                            'workflow-arrow-neutral',
+                        ));
+                        shapes.push(`<circle cx="${startCx}" cy="${centerY}" r="${startRadius}" fill="${slate}" filter="url(#workflow-node-shadow)"></circle>`);
+                        labels.push(`<text x="${startCx}" y="${centerY + 4}" fill="#ffffff" text-anchor="middle" font-size="12" font-weight="800">Início</text>`);
+
+                        etapas.forEach((etapa, index) => {
+                            const cardY = topPadding + (index * (cardHeight + laneGap));
+                            const rowY = cardY + (cardHeight / 2);
+                            const approvedBadgeY = rowY - 11;
+                            const rejectedBadgeX = decisionCx + 18;
+                            const rejectedBadgeY = rowY + 44;
+                            const rejectedCircleX = rejectedBadgeX + (rejectedBadgeWidth / 2);
+                            const rejectedCircleY = rejectedBadgeY + 70;
+                            const stageName = normalizeWorkflowStageDisplay(etapa.papel || etapa.nome || `Grupo ${index + 1}`);
+
+                            connectors.push(this.renderWorkflowSvgPath(`M ${cardX - 34} ${centerY} V ${rowY} H ${cardX}`, neutral));
+                            connectors.push(this.renderWorkflowSvgPath(`M ${cardX + cardWidth} ${rowY} H ${decisionCx - 42}`, neutral, 'workflow-arrow-neutral'));
+                            connectors.push(this.renderWorkflowSvgPath(`M ${decisionCx + 42} ${rowY} H ${approvedBadgeX}`, green));
+                            connectors.push(this.renderWorkflowSvgPath(`M ${approvedBadgeX + approvedBadgeWidth} ${rowY} H ${approvedMergeX} V ${approvedAnchorY} H ${approvedTerminalX - 22}`, green, 'workflow-arrow-approved'));
+                            connectors.push(this.renderWorkflowSvgPath(`M ${decisionCx} ${rowY + 38} V ${rejectedBadgeY + 11} H ${rejectedCircleX}`, red));
+                            connectors.push(this.renderWorkflowSvgPath(`M ${rejectedCircleX} ${rejectedBadgeY + 22} V ${rejectedCircleY - 22}`, red, 'workflow-arrow-rejected'));
+
+                            shapes.push(`<rect x="${cardX}" y="${cardY}" width="${cardWidth}" height="${cardHeight}" rx="8" fill="#ffffff" stroke="#cbd5e1" filter="url(#workflow-card-shadow)"></rect>`);
+                            shapes.push(`<polygon points="${decisionCx},${rowY - 38} ${decisionCx + 38},${rowY} ${decisionCx},${rowY + 38} ${decisionCx - 38},${rowY}" fill="${slate}" filter="url(#workflow-node-shadow)"></polygon>`);
+                            shapes.push(`<circle cx="${rejectedCircleX}" cy="${rejectedCircleY}" r="21" fill="${red}"></circle>`);
+                            labels.push(`<text x="${cardX + 16}" y="${cardY + 28}" fill="#475569" font-size="12" font-weight="800">PAPÉIS</text>`);
+                            labels.push(this.renderWorkflowSvgTextLines(
+                                wrapWorkflowSvgText(stageName, 22, 3),
+                                cardX + 16,
+                                cardY + 58,
+                                20,
+                                `fill="${dark}" font-size="15" font-weight="800"`,
+                            ));
+                            labels.push(`<text x="${decisionCx}" y="${rowY + 4}" fill="#ffffff" text-anchor="middle" font-size="11" font-weight="800">Decisão</text>`);
+                            labels.push(this.renderWorkflowSvgBadge('Aprovado', approvedBadgeX, approvedBadgeY, approvedBadgeWidth, 22, green));
+                            labels.push(this.renderWorkflowSvgBadge('Recusado', rejectedBadgeX, rejectedBadgeY, rejectedBadgeWidth, 22, red));
+                            labels.push(`<text x="${rejectedCircleX}" y="${rejectedCircleY + 4}" fill="#ffffff" text-anchor="middle" font-size="12" font-weight="800">Fim</text>`);
+                        });
+
+                        shapes.push(`<circle cx="${approvedTerminalX}" cy="${approvedAnchorY}" r="18" fill="#16a34a"></circle>`);
+                        labels.push(`<path d="M ${approvedTerminalX - 8} ${approvedAnchorY} L ${approvedTerminalX - 2} ${approvedAnchorY + 6} L ${approvedTerminalX + 9} ${approvedAnchorY - 7}" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>`);
+                        labels.push(`<text x="${approvedTerminalX + 28}" y="${approvedAnchorY + 6}" fill="${green}" font-size="17" font-weight="800">Fim aprovado</text>`);
+
+                        return `
+                            <svg class="workflow-board-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Diagrama de aprovação paralela" xmlns="http://www.w3.org/2000/svg">
+                                <defs>
+                                    <marker id="workflow-arrow-neutral" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+                                        <path d="M 0 0 L 8 4 L 0 8 z" fill="${neutral}"></path>
+                                    </marker>
+                                    <marker id="workflow-arrow-approved" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+                                        <path d="M 0 0 L 8 4 L 0 8 z" fill="${green}"></path>
+                                    </marker>
+                                    <marker id="workflow-arrow-rejected" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+                                        <path d="M 0 0 L 8 4 L 0 8 z" fill="${red}"></path>
+                                    </marker>
+                                    <filter id="workflow-card-shadow" x="-10%" y="-10%" width="120%" height="130%">
+                                        <feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#0f172a" flood-opacity="0.10"></feDropShadow>
+                                    </filter>
+                                    <filter id="workflow-node-shadow" x="-20%" y="-20%" width="140%" height="140%">
+                                        <feDropShadow dx="0" dy="1" stdDeviation="1.2" flood-color="#0f172a" flood-opacity="0.16"></feDropShadow>
+                                    </filter>
+                                </defs>
+                                <g font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+                                    ${shapes.join('')}
+                                    ${connectors.join('')}
+                                    ${labels.join('')}
+                                </g>
+                            </svg>
+                        `;
+                    }
 
                     const layout = this.getWorkflowDiagramLayout(etapas.length);
                     const neutral = '#475569';
@@ -1229,6 +1741,140 @@
             return Array.from(groupsMap.values()).sort((a, b) => Number(a.key) - Number(b.key));
         }
 
+        function getEmpresaWorkflowTypeLabel() {
+            const rules = getEmpresaWorkflowRules();
+            if (rules.isParallel) return 'Aprovação paralela';
+            if (rules.isSequential) return 'Aprovação hierárquica';
+            return 'Aprovação simples';
+        }
+
+        function getEmpresaWorkflowRuleLabel() {
+            return empresaWorkflowState.globalRule === 'PRIMEIRO'
+                ? 'Primeiro a responder'
+                : 'Todos devem aprovar';
+        }
+
+        function getEmpresaWorkflowDiagramEtapas() {
+            const rules = getEmpresaWorkflowRules();
+            return getEmpresaWorkflowVisualGroups().map((group, groupIndex) => {
+                const papeis = group.items
+                    .map(({ stage }) => getEmpresaWorkflowRoleById(stage.papel_id)?.nome || stage.nome || 'Papel não definido')
+                    .filter(Boolean);
+                const nome = rules.isParallel
+                    ? papeis.join(', ')
+                    : (papeis[0] || `Etapa ${groupIndex + 1}`);
+                return {
+                    nivel: groupIndex + 1,
+                    nome,
+                    papel: nome,
+                };
+            });
+        }
+
+        function renderEmpresaWorkflowParallelDiagram(etapas) {
+            const cardWidth = 240;
+            const cardHeight = 96;
+            const laneGap = 44;
+            const startRadius = 26;
+            const topPadding = 48;
+            const leftPadding = 84;
+            const width = 980;
+            const height = Math.max(240, topPadding * 2 + (etapas.length * cardHeight) + ((etapas.length - 1) * laneGap));
+            const startX = leftPadding;
+            const firstCardX = 170;
+            const decisionCx = firstCardX + cardWidth + 84;
+            const endX = decisionCx + 302;
+            const neutral = '#475569';
+            const green = '#15803d';
+            const dark = '#0f172a';
+            const slate = '#64748b';
+
+            const connectors = [];
+            const shapes = [];
+            const labels = [];
+            const centerY = height / 2;
+
+            connectors.push(`<path d="M ${startX + startRadius} ${centerY} H ${firstCardX - 24}" fill="none" stroke="${neutral}" stroke-width="2" stroke-linecap="round" marker-end="url(#workflow-parallel-arrow)"></path>`);
+            shapes.push(`<circle cx="${startX}" cy="${centerY}" r="${startRadius}" fill="${slate}"></circle>`);
+            labels.push(`<text x="${startX}" y="${centerY + 4}" fill="#ffffff" text-anchor="middle" font-size="12" font-weight="800">Início</text>`);
+
+            etapas.forEach((etapa, index) => {
+                const cardY = topPadding + (index * (cardHeight + laneGap));
+                const rowCenterY = cardY + (cardHeight / 2);
+                const badgeX = decisionCx + 28;
+                const badgeY = rowCenterY - 11;
+                const stageName = normalizeWorkflowStageDisplay(etapa.papel || etapa.nome || `Grupo ${index + 1}`);
+
+                connectors.push(`<path d="M ${firstCardX - 24} ${centerY} V ${rowCenterY} H ${firstCardX}" fill="none" stroke="${neutral}" stroke-width="2" stroke-linecap="round"></path>`);
+                connectors.push(`<path d="M ${firstCardX + cardWidth} ${rowCenterY} H ${decisionCx - 42}" fill="none" stroke="${neutral}" stroke-width="2" stroke-linecap="round" marker-end="url(#workflow-parallel-arrow)"></path>`);
+                connectors.push(`<path d="M ${decisionCx + 42} ${rowCenterY} H ${badgeX}" fill="none" stroke="${green}" stroke-width="2" stroke-linecap="round"></path>`);
+                connectors.push(`<path d="M ${badgeX + 94} ${rowCenterY} H ${endX - 18}" fill="none" stroke="${green}" stroke-width="2" stroke-linecap="round" marker-end="url(#workflow-parallel-arrow-approved)"></path>`);
+
+                shapes.push(`<rect x="${firstCardX}" y="${cardY}" width="${cardWidth}" height="${cardHeight}" rx="10" fill="#ffffff" stroke="#cbd5e1"></rect>`);
+                shapes.push(`<polygon points="${decisionCx},${rowCenterY - 32} ${decisionCx + 32},${rowCenterY} ${decisionCx},${rowCenterY + 32} ${decisionCx - 32},${rowCenterY}" fill="${slate}"></polygon>`);
+                shapes.push(`<rect x="${badgeX}" y="${badgeY}" width="94" height="22" rx="11" fill="#ffffff" stroke="${green}" stroke-width="1.4"></rect>`);
+
+                labels.push(`<text x="${firstCardX + 16}" y="${cardY + 28}" fill="#475569" font-size="12" font-weight="800">GRUPO ${index + 1}</text>`);
+                labels.push(window.empresaApp().renderWorkflowSvgTextLines(
+                    wrapWorkflowSvgText(stageName, 22, 2),
+                    firstCardX + 16,
+                    cardY + 56,
+                    20,
+                    `fill="${dark}" font-size="15" font-weight="800"`
+                ));
+                labels.push(`<text x="${decisionCx}" y="${rowCenterY + 4}" fill="#ffffff" text-anchor="middle" font-size="11" font-weight="800">Decisão</text>`);
+                labels.push(`<text x="${badgeX + 47}" y="${rowCenterY + 4}" fill="${green}" text-anchor="middle" font-size="10" font-weight="800">APROVADO</text>`);
+            });
+
+            shapes.push(`<circle cx="${endX}" cy="${centerY}" r="18" fill="#16a34a"></circle>`);
+            labels.push(`<path d="M ${endX - 8} ${centerY} L ${endX - 2} ${centerY + 6} L ${endX + 9} ${centerY - 7}" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>`);
+            labels.push(`<text x="${endX + 28}" y="${centerY + 6}" fill="${green}" font-size="17" font-weight="800">Fim aprovado</text>`);
+
+            return `
+                <svg class="workflow-board-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Diagrama de aprovação paralela" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <marker id="workflow-parallel-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+                            <path d="M 0 0 L 8 4 L 0 8 z" fill="${neutral}"></path>
+                        </marker>
+                        <marker id="workflow-parallel-arrow-approved" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+                            <path d="M 0 0 L 8 4 L 0 8 z" fill="${green}"></path>
+                        </marker>
+                    </defs>
+                    <g font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+                        ${shapes.join('')}
+                        ${connectors.join('')}
+                        ${labels.join('')}
+                    </g>
+                </svg>
+            `;
+        }
+
+        function renderEmpresaWorkflowDiagramPreview() {
+            const countEl = workflowEl('workflowCompanyOverviewCount');
+            const diagramEl = workflowEl('workflowCompanyDiagram');
+            const emptyEl = workflowEl('workflowCompanyDiagramEmpty');
+            const etapas = getEmpresaWorkflowDiagramEtapas();
+            const rules = getEmpresaWorkflowRules();
+
+            if (countEl) {
+                countEl.textContent = `${etapas.length} ${etapas.length === 1 ? 'etapa' : 'etapas'}`;
+            }
+
+            if (!diagramEl || !emptyEl) return;
+
+            if (!etapas.length) {
+                diagramEl.innerHTML = '';
+                emptyEl.classList.remove('hidden');
+                return;
+            }
+
+            emptyEl.classList.add('hidden');
+            diagramEl.innerHTML = window.empresaApp().getWorkflowDiagramSvg({
+                workflow_etapas: etapas,
+                workflow_diagram_variant: rules.isParallel ? 'parallel' : 'default',
+            });
+        }
+
         function isEmpresaWorkflowGroupCollapsed(groupKey) {
             return Boolean(empresaWorkflowState.collapsedGroups?.[String(groupKey)]);
         }
@@ -1480,14 +2126,14 @@
         function renderEmpresaWorkflowApproverCard(stage, stageIndex, groupSize, rules) {
             const editing = isEmpresaWorkflowEditing();
             return `
-                <div class="empresa-workflow-stage-card min-w-[280px] flex-1 rounded-2xl border ${editing ? 'border-slate-200 bg-white' : 'border-slate-300 bg-slate-50/90'} p-4 shadow-none" data-stage-index="${stageIndex}" data-etapa-id="${String(stage.etapa_id || '')}">
-                    <div class="space-y-3">
+                <div class="empresa-workflow-stage-card min-w-0 flex-1 rounded-2xl border ${editing ? 'border-slate-200 bg-white' : 'border-slate-300 bg-slate-50/90'} p-3 shadow-none" data-stage-index="${stageIndex}" data-etapa-id="${String(stage.etapa_id || '')}">
+                    <div class="space-y-2.5">
                         <div>
                             <label class="mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Papel</label>
                             ${renderEmpresaWorkflowRoleSelect(stage, stageIndex, !editing)}
                         </div>
-                        ${editing ? '' : '<div class="rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-500">Somente leitura</div>'}
-                        ${rules.isSimple || !editing ? '' : `<button type="button" data-workflow-action="remove-approver" data-stage-index="${stageIndex}" ${groupSize <= 1 ? 'disabled' : ''} class="h-9 w-full rounded-xl border border-rose-300 bg-white text-xs font-bold text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40">Excluir</button>`}
+                        ${editing ? '' : '<div class="rounded-xl border border-slate-200 bg-slate-100 px-3 py-1.5 text-[11px] font-semibold text-slate-500">Somente leitura</div>'}
+                        ${rules.isSimple || !editing ? '' : `<button type="button" data-workflow-action="remove-approver" data-stage-index="${stageIndex}" ${groupSize <= 1 ? 'disabled' : ''} class="h-8 w-full rounded-xl border border-rose-300 bg-white text-[11px] font-bold text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40">Excluir</button>`}
                     </div>
                 </div>
             `;
@@ -1496,8 +2142,9 @@
         function renderEmpresaWorkflowAddApproverButton(groupKey, rules) {
             if (rules.isSimple || !isEmpresaWorkflowEditing()) return '';
             return `
-                <button type="button" data-workflow-action="add-approver" data-group-key="${String(groupKey)}" class="my-1 flex min-h-[148px] w-20 shrink-0 self-stretch items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/60 text-3xl font-black text-slate-400 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-500">
+                <button type="button" data-workflow-action="add-approver" data-group-key="${String(groupKey)}" class="my-1 flex min-h-[88px] w-full shrink-0 items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/60 px-3 py-3 text-xs font-black text-slate-500 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-500">
                     <i class="fas fa-plus"></i>
+                        <span class="ml-2">Adicionar papel</span>
                 </button>
             `;
         }
@@ -1505,7 +2152,7 @@
         function renderEmpresaWorkflowCollapsedState(rules) {
             const entityLabel = rules.isParallel ? 'Grupo' : 'Etapa';
             return `
-                <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-500">
+                <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-3 py-2.5 text-[11px] font-semibold text-slate-500">
                     ${entityLabel} recolhido. Arraste pelo icone para alterar a ordem.
                 </div>
             `;
@@ -1519,7 +2166,7 @@
                 ? '<span class="text-xs font-black text-slate-400">OU</span>'
                 : '<span class="text-xs font-black text-slate-400">E</span>';
             return `
-                <div class="flex flex-wrap items-start gap-3">
+                <div class="space-y-2.5">
                     ${group.items.map((item) => renderEmpresaWorkflowApproverCard(item.stage, item.index, group.items.length, rules)).join(separator)}
                     ${renderEmpresaWorkflowAddApproverButton(group.key, rules)}
                 </div>
@@ -1536,27 +2183,26 @@
             const canRemoveGroup = !rules.isSimple && groupsLength > 1 && editing;
 
             return `
-                <div class="mb-3 flex items-center justify-between gap-3">
+                <div class="mb-2.5 flex items-center justify-between gap-2">
                     <div class="flex items-center gap-2">
-                        <button type="button" class="inline-flex h-7 w-7 ${dragClasses} items-center justify-center rounded-lg bg-slate-100 text-slate-500 active:cursor-grabbing" aria-label="${dragLabel}">
+                        <button type="button" class="inline-flex h-6 w-6 ${dragClasses} items-center justify-center rounded-lg bg-slate-100 text-slate-500 active:cursor-grabbing" aria-label="${dragLabel}">
                             <i class="fas fa-grip-vertical"></i>
                         </button>
-                        <h5 class="text-sm font-black text-slate-900">${title}</h5>
+                        <h5 class="text-xs font-black text-slate-900">${title}</h5>
                         <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">${group.items.length} papel${group.items.length === 1 ? '' : 's'}</span>
                     </div>
-                    <div class="flex items-center gap-3">
-                        <button type="button" data-workflow-action="toggle-group" data-group-key="${String(group.key)}" class="text-xs font-bold text-slate-500 hover:text-slate-700">${isEmpresaWorkflowGroupCollapsed(group.key) ? 'Expandir' : 'Encolher'}</button>
-                        ${canRemoveGroup ? `<button type="button" data-workflow-action="remove-group" data-group-key="${String(group.key)}" class="text-xs font-bold text-rose-600 hover:text-rose-700">${removeLabel}</button>` : ''}
+                    <div class="flex items-center gap-2.5">
+                        <button type="button" data-workflow-action="toggle-group" data-group-key="${String(group.key)}" class="text-[11px] font-bold text-slate-500 hover:text-slate-700">${isEmpresaWorkflowGroupCollapsed(group.key) ? 'Expandir' : 'Encolher'}</button>
+                        ${canRemoveGroup ? `<button type="button" data-workflow-action="remove-group" data-group-key="${String(group.key)}" class="text-[11px] font-bold text-rose-600 hover:text-rose-700">${removeLabel}</button>` : ''}
                     </div>
                 </div>
             `;
         }
 
         function renderEmpresaWorkflowGroupCard(group, groupIndex, groupsLength, rules) {
-            const minWidthClass = rules.isParallel ? 'min-w-[520px]' : '';
             const draggable = rules.isSimple || !isEmpresaWorkflowEditing() ? 'false' : 'true';
             return `
-                <div class="empresa-workflow-group-card ${minWidthClass} rounded-2xl border border-slate-200 bg-white p-5 shadow-none" data-workflow-group-key="${String(group.key)}" draggable="${draggable}">
+                <div class="empresa-workflow-group-card rounded-2xl border border-slate-200 bg-white p-3 shadow-none" data-workflow-group-key="${String(group.key)}" draggable="${draggable}">
                     ${renderEmpresaWorkflowGroupHeader(group, groupIndex, groupsLength, rules)}
                     ${renderEmpresaWorkflowGroupContent(group, rules)}
                 </div>
@@ -1571,20 +2217,21 @@
             const groups = getEmpresaWorkflowVisualGroups();
 
             if (rules.isParallel) {
-                container.className = 'overflow-x-auto px-4 py-5';
+                container.className = 'space-y-3';
                 container.innerHTML = `
-                    <div class="flex min-w-full items-start gap-5">
+                    <div class="space-y-3">
                         ${groups.map((group, groupIndex) => renderEmpresaWorkflowGroupCard(group, groupIndex, groups.length, rules)).join('')}
                     </div>
                 `;
             } else {
-                container.className = 'space-y-5 p-4';
+                container.className = 'space-y-3';
                 container.innerHTML = groups
                     .map((group, groupIndex) => renderEmpresaWorkflowGroupCard(group, groupIndex, groups.length, rules))
-                    .join(rules.isSequential ? '<div class="flex justify-center text-slate-300"><i class="fas fa-arrow-down"></i></div>' : '');
+                    .join(rules.isSequential ? '<div class="flex justify-center text-xs text-slate-300"><i class="fas fa-arrow-down"></i></div>' : '');
             }
 
             renderEmpresaWorkflowSummary();
+            renderEmpresaWorkflowDiagramPreview();
             bindEmpresaWorkflowStageListeners();
             bindEmpresaWorkflowDragSorting();
             syncEmpresaWorkflowDropdowns(container);
