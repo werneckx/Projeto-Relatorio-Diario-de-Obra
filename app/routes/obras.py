@@ -875,6 +875,15 @@ def _build_workflow_execution_history(empresa_id, obra_id):
 
 
 def _build_obra_governanca_context(empresa_id, obra_id=None):
+    workflow_setup = _build_obra_workflow_setup_context(empresa_id, obra_id)
+    workflow_preview = workflow_setup.get("preview") or {}
+    workflow_preview_etapas = workflow_preview.get("etapas") or []
+    workflow_tipo_fluxo = (workflow_preview.get("tipo_fluxo") or "CONFIGURAVEL").upper()
+    workflow_regra = (
+        next((etapa.get("regra_etapa") for etapa in workflow_preview_etapas if etapa.get("regra_etapa")), None)
+        or "TODOS"
+    )
+    workflow_assinatura_obrigatoria = any(bool(etapa.get("assinatura_obrigatoria")) for etapa in workflow_preview_etapas)
     base = {
         "definicoes_total": 0,
         "overrides_total": 0,
@@ -886,6 +895,16 @@ def _build_obra_governanca_context(empresa_id, obra_id=None):
         "workflow_origem_tipo": "indefinido",
         "workflow_etapas": [],
         "workflow_execucoes_historico": [],
+        "workflow_setup": workflow_setup,
+        "workflow_tem_config_propria": False,
+        "workflow_summary": {
+            "workflow_atual": workflow_preview.get("workflow_nome") or "Sem workflow",
+            "origem": workflow_preview.get("workflow_origem") or "Sistema",
+            "origem_tipo": workflow_preview.get("workflow_origem_tipo") or "sistema",
+            "assinatura_obrigatoria": workflow_assinatura_obrigatoria,
+            "regra_aprovacao": "Primeiro a responder" if str(workflow_regra).upper().startswith("PRIMEIRO") else "Todos devem aprovar",
+            "tipo_fluxo": workflow_tipo_fluxo.title() if workflow_tipo_fluxo in {"SIMPLES", "SEQUENCIAL", "PARALELO"} else workflow_tipo_fluxo.title(),
+        },
     }
     if not empresa_id:
         return base
@@ -925,7 +944,6 @@ def _build_obra_governanca_context(empresa_id, obra_id=None):
             "has_override": definicao.chave in obra_cfg_map,
         })
 
-    workflow_setup = _build_obra_workflow_setup_context(empresa_id, obra_id)
     workflow_proprio = (
         WorkflowDefinicao.query
         .filter_by(empresa_id=empresa_id, obra_id=obra_id, ativo=True)
@@ -934,14 +952,7 @@ def _build_obra_governanca_context(empresa_id, obra_id=None):
     )
     workflow_aplicado = WorkflowService.resolver_workflow(empresa_id, obra_id)
     workflow_etapas = WorkflowService.obter_etapas_ordenadas(workflow_aplicado.id) if workflow_aplicado else []
-    workflow_preview = workflow_setup.get("preview") or {}
-    workflow_preview_etapas = workflow_preview.get("etapas") or []
     workflow_tipo_fluxo = (workflow_preview.get("tipo_fluxo") or getattr(workflow_aplicado, "tipo_fluxo", None) or "CONFIGURAVEL").upper()
-    workflow_regra = (
-        next((etapa.get("regra_etapa") for etapa in workflow_preview_etapas if etapa.get("regra_etapa")), None)
-        or "TODOS"
-    )
-    workflow_assinatura_obrigatoria = any(bool(etapa.get("assinatura_obrigatoria")) for etapa in workflow_preview_etapas)
     workflow_tem_config_propria = bool(
         workflow_proprio
         or WorkflowService.WORKFLOW_DEFAULT_CONFIG_KEY in obra_cfg_map
