@@ -78,7 +78,7 @@ body_class='flex-1 overflow-hidden p-0'
                             x-text="obra.matriz_total + ' papeis'"></span></div>
                 </div>
                 <div class="mt-4"><button type="button" @click="abrirDetalhesObra(obra.obra_id)"
-                        class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-800">Detalhes</button>
+                        class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50">Detalhes</button>
                 </div>
             </div>
         </template>
@@ -121,7 +121,7 @@ backdrop_class='!fixed !inset-0 h-[100dvh] w-screen bg-slate-700/45 backdrop-blu
                     @click="abrirDetalhesWorkflowObra(obraSelecionada)"
                     class="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-2xl border border-blue-200 bg-blue-50 px-5 text-sm font-bold text-blue-700 transition hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-200">
                     <i class="fas fa-up-right-from-square text-xs" aria-hidden="true"></i>
-                    Detalhes
+                    Abrir workflow da obra
                 </button>
             </div>
 
