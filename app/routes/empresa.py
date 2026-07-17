@@ -39,6 +39,91 @@ def _formatar_data_workflow(datahora):
     return datahora.strftime('%d/%m/%Y às %H:%M')
 
 
+def _formatar_duracao_media(segundos_total, quantidade):
+    if not quantidade or segundos_total <= 0:
+        return 'Sem histórico'
+
+    media_segundos = segundos_total / quantidade
+    dias = int(media_segundos // 86400)
+    horas = int((media_segundos % 86400) // 3600)
+    minutos = int((media_segundos % 3600) // 60)
+
+    if dias > 0:
+        return f'{dias}d {horas}h'
+    if horas > 0:
+        return f'{horas}h{minutos:02d}m'
+    return f'{max(minutos, 1)}min'
+
+
+def _formatar_duracao_execucao_workflow(inicio, fim=None, status=None):
+    if not inicio:
+        return 'Sem duração'
+
+    fim_calculo = fim or datetime.now()
+    segundos = max(int((fim_calculo - inicio).total_seconds()), 0)
+    dias = segundos // 86400
+    horas = (segundos % 86400) // 3600
+    minutos = (segundos % 3600) // 60
+
+    if dias:
+        duracao = f'{dias}d {horas}h'
+    elif horas:
+        duracao = f'{horas}h {minutos:02d}min'
+    elif minutos:
+        duracao = f'{minutos}min'
+    else:
+        duracao = 'menos de 1min'
+
+    if (status or '').upper() in {'PENDENTE', 'EM_ANDAMENTO', 'REABERTO'} and not fim:
+        return f'Em execução há {duracao}'
+    return duracao
+
+
+def _build_empresa_modal_workflow_history(execucoes_obra, detalhes_url):
+    execucoes_ordenadas = sorted(
+        execucoes_obra,
+        key=lambda execucao: (
+            execucao.iniciado_em or execucao.criado_em or datetime.min,
+            execucao.id or 0,
+        ),
+        reverse=True,
+    )
+
+    historico = []
+    for execucao in execucoes_ordenadas[:20]:
+        inicio = execucao.iniciado_em or execucao.criado_em
+        status_code = (execucao.status or 'PENDENTE').upper()
+        status_meta = _normalize_workflow_status(status_code)
+        workflow_snapshot = execucao.workflow_snapshot or {}
+        requester = getattr(execucao.rdo, 'usuario', None) if execucao.rdo else None
+        requester_name = (
+            getattr(requester, 'nome', None)
+            or getattr(execucao.criador, 'nome', None)
+            or 'Não identificado'
+        )
+        ano_execucao = (inicio or datetime.now()).year
+
+        historico.append({
+            'id': execucao.id,
+            'execution_number': f'{ano_execucao}-{execucao.id:06d}',
+            'status': status_code,
+            'status_label': status_meta['label'],
+            'status_badge_class': status_meta['badge_class'],
+            'status_dot_class': status_meta['dot_class'],
+            'started_at_label': _formatar_data_workflow(inicio),
+            'duration_label': _formatar_duracao_execucao_workflow(
+                inicio,
+                execucao.finalizado_em,
+                status_code,
+            ),
+            'requester_name': requester_name,
+            'workflow_name': workflow_snapshot.get('nome') or getattr(execucao.workflow, 'nome', None) or 'Workflow não identificado',
+            'detalhes_url': detalhes_url,
+        })
+
+    return historico
+
+
 def _normalize_workflow_status(status):
     normalized = (status or "").upper()
     return {
@@ -443,6 +528,20 @@ def _build_empresa_page_context(empresa_id, *, can_edit=False, start_in_edit_mod
             execucao for execucao in execucoes_obra
             if execucao.status in {'PENDENTE', 'EM_ANDAMENTO', 'REABERTO'}
         ]
+        status_counts_obra = defaultdict(int)
+        for execucao in execucoes_obra:
+            status_counts_obra[execucao.status or 'SEM_EXECUCAO'] += 1
+        status_breakdown_obra = []
+        for status, total in sorted(status_counts_obra.items(), key=lambda item: (-item[1], item[0] or '')):
+            status_info = _normalize_workflow_status(status)
+            status_breakdown_obra.append({
+                'status': status_info['label'],
+                'status_code': status,
+                'total': total,
+                'badge_class': status_info['badge_class'],
+                'dot_class': status_info['dot_class'],
+                'icon': status_info['icon'],
+            })
         ultima_execucao = sorted(
             execucoes_obra,
             key=lambda execucao: (
@@ -452,6 +551,42 @@ def _build_empresa_page_context(empresa_id, *, can_edit=False, start_in_edit_mod
             reverse=True,
         )[0] if execucoes_obra else None
         status_meta = _normalize_workflow_status(ultima_execucao.status if ultima_execucao else None)
+        execucoes_concluidas_obra = [
+            execucao for execucao in execucoes_obra
+            if execucao.finalizado_em and execucao.iniciado_em
+        ]
+
+        duracao_total_segundos = 0
+        for execucao in execucoes_concluidas_obra:
+            duracao = (execucao.finalizado_em - execucao.iniciado_em).total_seconds()
+            if duracao > 0:
+                duracao_total_segundos += duracao
+
+        execucoes_por_dia = defaultdict(lambda: {'execucoes': 0, 'erros': 0})
+        for execucao in execucoes_obra:
+            data_base = execucao.iniciado_em or execucao.criado_em
+            if not data_base:
+                continue
+            bucket = execucoes_por_dia[data_base.date()]
+            bucket['execucoes'] += 1
+            if execucao.status in {'REJEITADO', 'CANCELADO'}:
+                bucket['erros'] += 1
+
+        dias_com_execucao = sorted(execucoes_por_dia.keys())[-5:]
+        timeline_execucoes = [
+            {
+                'label': dia.strftime('%d/%m'),
+                'value': execucoes_por_dia[dia]['execucoes'],
+            }
+            for dia in dias_com_execucao
+        ]
+        timeline_erros = [
+            {
+                'label': dia.strftime('%d/%m'),
+                'value': execucoes_por_dia[dia]['erros'],
+            }
+            for dia in dias_com_execucao
+        ]
 
         matriz_obra = []
         for etapa in etapas_resolvidas:
@@ -476,15 +611,24 @@ def _build_empresa_page_context(empresa_id, *, can_edit=False, start_in_edit_mod
                 'usuario': usuario_nome,
             })
 
+        obra_workflow_url = f"{url_for('auth.editar_obra', id=obra.id, tab='workflow')}#workflow"
+        obra_workflow_historico_url = f"{url_for('auth.editar_obra', id=obra.id, tab='workflow-historico')}#workflow"
+
         obras_modal_payload.append({
             'obra_id': obra.id,
             'obra_nome': obra.nome,
+            'obra_workflow_url': obra_workflow_url,
+            'obra_workflow_historico_url': obra_workflow_historico_url,
             'workflow_nome': workflow_resolvido.nome if workflow_resolvido else 'Sem workflow',
             'workflow_origem': 'Herdado da Empresa' if resumo['herda_empresa'] else ('Workflow Próprio da Obra' if resumo['workflow_proprio'] else 'Sem definição'),
             'workflow_origem_tipo': 'empresa' if resumo['herda_empresa'] else ('obra' if resumo['workflow_proprio'] else 'indefinido'),
+            'workflow_tipo_resumo': 'Herdado' if resumo['herda_empresa'] else 'Próprio',
             'responsavel': obra.usuario_responsavel.nome if obra.usuario_responsavel else 'Não definido',
             'execucoes_ativas': len(execucoes_ativas_obra),
+            'execucoes_total': len(execucoes_obra),
+            'execucoes_status': status_breakdown_obra,
             'matriz_total': len(matriz_obra),
+            'duracao_media_fluxo': _formatar_duracao_media(duracao_total_segundos, len(execucoes_concluidas_obra)),
             'status': status_meta['label'],
             'status_code': (ultima_execucao.status if ultima_execucao else 'SEM_EXECUCAO'),
             'status_badge_class': status_meta['badge_class'],
@@ -494,6 +638,10 @@ def _build_empresa_page_context(empresa_id, *, can_edit=False, start_in_edit_mod
                 (workflow_resolvido.modificado_em or workflow_resolvido.criado_em) if workflow_resolvido else None
             ),
             'matriz': matriz_obra,
+            'workflow_historico': _build_empresa_modal_workflow_history(
+                execucoes_obra,
+                obra_workflow_historico_url,
+            ),
             'workflow_etapas': [
                 {
                     'nivel': etapa.nivel,
@@ -504,6 +652,8 @@ def _build_empresa_page_context(empresa_id, *, can_edit=False, start_in_edit_mod
                 }
                 for etapa in etapas_resolvidas
             ],
+            'timeline_execucoes': timeline_execucoes,
+            'timeline_erros': timeline_erros,
         })
 
     return {

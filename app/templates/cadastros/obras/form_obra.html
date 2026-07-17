@@ -879,7 +879,7 @@
             </div>
         </div>
 
-        <div class="surface-card rounded-2xl overflow-hidden bg-white border border-slate-200 shadow-sm">
+        <div id="workflow" class="surface-card rounded-2xl overflow-hidden bg-white border border-slate-200 shadow-sm">
     <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex flex-wrap items-center justify-between gap-4">
         <div class="flex items-center gap-4">
             <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0 text-sm">
@@ -4835,6 +4835,18 @@
             });
         }
 
+        function getInitialObraGovernancaTab() {
+            const params = new URLSearchParams(window.location.search);
+            const requestedTab = String(params.get('tab') || params.get('aba') || window.location.hash.replace('#', '') || '')
+                .toLowerCase()
+                .trim();
+
+            if (requestedTab === 'workflow-historico' || requestedTab === 'historico') {
+                return 'workflow-historico';
+            }
+            return 'workflow-definicoes';
+        }
+
 
         function ensureWorkflowExecutionModalRoot() {
             let root = document.getElementById('workflowExecutionModalRoot');
@@ -4964,7 +4976,7 @@
 
         function initObraGovernancaTabs() {
             if (!document.querySelector('.obra-governanca-tab-trigger')) return;
-            switchObraGovernancaTab('workflow-definicoes');
+            switchObraGovernancaTab(getInitialObraGovernancaTab());
             syncWorkflowExecutionModalRoot(document);
             hydrateWorkflowCustomStages(obraWorkflowState.preview, true);
             bindWorkflowStageEditorListeners();

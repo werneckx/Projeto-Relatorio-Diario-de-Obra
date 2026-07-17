@@ -93,6 +93,209 @@
             .trim();
     }
 
+    function escapeSvgText(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function normalizeWorkflowStageDisplay(value) {
+        return String(value || 'Responsável').replace(/_/g, ' ').trim() || 'Responsável';
+    }
+
+    function wrapWorkflowSvgText(value, maxChars = 18, maxLines = 3) {
+        const chunks = normalizeWorkflowStageDisplay(value)
+            .split(/\s+/)
+            .flatMap((word) => {
+                if (word.length <= maxChars) return [word];
+                const parts = [];
+                for (let index = 0; index < word.length; index += maxChars) {
+                    parts.push(word.slice(index, index + maxChars));
+                }
+                return parts;
+            });
+        const lines = [];
+        let currentLine = '';
+
+        chunks.forEach((word) => {
+            const nextLine = currentLine ? `${currentLine} ${word}` : word;
+            if (nextLine.length <= maxChars) {
+                currentLine = nextLine;
+                return;
+            }
+            if (currentLine) lines.push(currentLine);
+            currentLine = word;
+        });
+
+        if (currentLine) lines.push(currentLine);
+        if (lines.length <= maxLines) return lines;
+
+        const visibleLines = lines.slice(0, maxLines);
+        visibleLines[maxLines - 1] = `${visibleLines[maxLines - 1].slice(0, Math.max(maxChars - 3, 1))}...`;
+        return visibleLines;
+    }
+
+    function toNonNegativeNumber(value) {
+        const normalized = Number(value);
+        if (!Number.isFinite(normalized) || normalized < 0) return 0;
+        return normalized;
+    }
+
+    function parseTimelineLabel(label) {
+        const match = String(label || '').match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/);
+        if (!match) return Number.MAX_SAFE_INTEGER;
+        const day = Number(match[1]);
+        const month = Number(match[2]);
+        const year = match[3] ? Number(match[3].length === 2 ? `20${match[3]}` : match[3]) : new Date().getFullYear();
+        if (!Number.isFinite(day) || !Number.isFinite(month) || !Number.isFinite(year)) return Number.MAX_SAFE_INTEGER;
+        return (year * 10000) + (month * 100) + day;
+    }
+
+    function normalizeTimelineSeries(series) {
+        if (!Array.isArray(series)) return [];
+        return series.map((item) => ({
+            label: String(item?.label || '').trim(),
+            value: toNonNegativeNumber(item?.value),
+        })).filter((item) => item.label);
+    }
+
+    function mergeTimelineSeries(execucoes, erros) {
+        const labels = [];
+        const labelsSet = new Set();
+        const execucoesMap = new Map();
+        const errosMap = new Map();
+
+        normalizeTimelineSeries(execucoes).forEach((item) => {
+            execucoesMap.set(item.label, item.value);
+            if (!labelsSet.has(item.label)) {
+                labels.push(item.label);
+                labelsSet.add(item.label);
+            }
+        });
+
+        normalizeTimelineSeries(erros).forEach((item) => {
+            errosMap.set(item.label, item.value);
+            if (!labelsSet.has(item.label)) {
+                labels.push(item.label);
+                labelsSet.add(item.label);
+            }
+        });
+
+        return labels
+            .map((label) => ({
+                label,
+                execucoes: toNonNegativeNumber(execucoesMap.get(label)),
+                erros: toNonNegativeNumber(errosMap.get(label)),
+                order: parseTimelineLabel(label),
+            }))
+            .filter((item) => item.execucoes > 0)
+            .sort((a, b) => a.order - b.order || a.label.localeCompare(b.label))
+            .slice(-5)
+            .map(({ order, ...item }) => item);
+    }
+
+    function normalizeWorkflowTipoResumoSeguro(item) {
+        const origem = normalizeSearchText(item?.workflow_origem_tipo || item?.workflow_tipo_resumo);
+        return origem === 'empresa' || origem === 'herdado' ? 'Herdado' : 'Próprio';
+    }
+
+    function normalizeDuracaoMediaFluxo(value) {
+        const rawValue = String(value || '').trim();
+        const normalized = normalizeSearchText(rawValue);
+        if (!rawValue || normalized === 'sem historico' || normalized === '0 min' || normalized === '0 h' || normalized === 'nan') {
+            return {
+                value: 'Não disponível',
+                available: false,
+                helper: 'Ainda não existem execuções concluídas para calcular a duração média.',
+            };
+        }
+
+        return {
+            value: rawValue
+                .replace(/^(\d+)d\s*(\d+)h$/i, '$1 dia $2 h')
+                .replace(/^(\d+)h(\d{2})m$/i, '$1 h $2 min')
+                .replace(/^(\d+)min$/i, '$1 min'),
+            available: true,
+            helper: '',
+        };
+    }
+
+    function normalizeStatusBreakdown(series) {
+        if (!Array.isArray(series)) return [];
+        return series
+            .map((item) => {
+                const statusCode = String(item?.status_code || '');
+                return {
+                    status: statusCode.toUpperCase() === 'APROVADO' ? 'Concluído com Êxito' : String(item?.status || 'Sem execução'),
+                    status_code: statusCode,
+                    total: toNonNegativeNumber(item?.total),
+                    badge_class: String(item?.badge_class || 'border-slate-200 bg-slate-100 text-slate-700'),
+                    dot_class: String(item?.dot_class || 'bg-slate-400'),
+                    icon: String(item?.icon || 'fa-circle-question'),
+                };
+            })
+            .filter((item) => item.total > 0);
+    }
+
+    function normalizeWorkflowHistorico(series) {
+        if (!Array.isArray(series)) return [];
+        return series
+            .map((item) => ({
+                id: item?.id ?? '',
+                execution_number: String(item?.execution_number || ''),
+                status: String(item?.status || ''),
+                status_label: String(item?.status_label || 'Sem execucao'),
+                status_badge_class: String(item?.status_badge_class || 'border-slate-200 bg-slate-100 text-slate-700'),
+                status_dot_class: String(item?.status_dot_class || 'bg-slate-400'),
+                started_at_label: String(item?.started_at_label || 'Sem registro'),
+                duration_label: String(item?.duration_label || 'Sem duracao'),
+                requester_name: String(item?.requester_name || 'Nao identificado'),
+                workflow_name: String(item?.workflow_name || 'Workflow nao identificado'),
+                detalhes_url: String(item?.detalhes_url || ''),
+            }))
+            .filter((item) => item.id || item.execution_number || item.started_at_label !== 'Sem registro');
+    }
+
+    function normalizeObraDetalhe(item) {
+        if (!item) return null;
+        const workflowEtapas = Array.isArray(item.workflow_etapas)
+            ? item.workflow_etapas.map((etapa, index) => ({
+                nivel: toNonNegativeNumber(etapa?.nivel) || (index + 1),
+                nome: String(etapa?.nome || `Etapa ${index + 1}`),
+                papel: String(etapa?.papel || etapa?.nome || `Etapa ${index + 1}`),
+                tempo_medio: String(etapa?.tempo_medio || 'Sem histórico'),
+            }))
+            : [];
+        const timelineExecucoes = normalizeTimelineSeries(item.timeline_execucoes);
+        const timelineErros = normalizeTimelineSeries(item.timeline_erros);
+        const duracaoMediaFluxo = normalizeDuracaoMediaFluxo(item.duracao_media_fluxo);
+        const execucoesStatus = normalizeStatusBreakdown(item.execucoes_status);
+
+        return {
+            ...item,
+            obra_nome: String(item.obra_nome || 'Obra sem nome'),
+            workflow_nome: String(item.workflow_nome || 'Sem workflow'),
+            workflow_etapas: workflowEtapas,
+            execucoes_total: toNonNegativeNumber(item.execucoes_total),
+            execucoes_status: execucoesStatus,
+            workflow_tipo_resumo: normalizeWorkflowTipoResumoSeguro(item),
+            obra_workflow_url: String(item.obra_workflow_url || ''),
+            obra_workflow_historico_url: String(item.obra_workflow_historico_url || item.obra_workflow_url || ''),
+            workflow_historico: normalizeWorkflowHistorico(item.workflow_historico || item.workflow_execucoes_historico),
+            duracao_media_fluxo: duracaoMediaFluxo.value,
+            duracao_media_fluxo_disponivel: duracaoMediaFluxo.available,
+            duracao_media_fluxo_ajuda: duracaoMediaFluxo.helper,
+            timeline_execucoes: timelineExecucoes,
+            timeline_erros: timelineErros,
+            timeline_resumo: mergeTimelineSeries(timelineExecucoes, timelineErros),
+            matriz: Array.isArray(item.matriz) ? item.matriz : [],
+            ultima_atualizacao: String(item.ultima_atualizacao || 'não disponível'),
+        };
+    }
+
     function prefersReducedMotion() {
         return window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
     }
@@ -157,26 +360,6 @@
         }
     }
 
-    function setEmpresaPageScrollLocked(locked) {
-        const method = locked ? 'add' : 'remove';
-        document.documentElement.classList[method]('overflow-hidden');
-        document.body.classList[method]('overflow-hidden');
-    }
-
-    function syncEmpresaPageScrollLock() {
-        const state = getEmpresaAppState();
-        if (!state) {
-            setEmpresaPageScrollLocked(false);
-            return;
-        }
-        const hasOpenModal = Boolean(
-            state.legendaWorkflowVisible
-            || state.modalObrasVisible
-            || state.obraDetalheVisible
-        );
-        setEmpresaPageScrollLocked(hasOpenModal);
-    }
-
         function empresaApp() {
             return {
                 abaAtiva: localStorage.getItem('empresa_aba_ativa') || 'geral',
@@ -192,7 +375,7 @@
                 modalObrasVisible: false,
                 obraDetalheVisible: false,
                 obraSelecionada: null,
-                obraDetalheAba: 'resumo',
+                timelineTooltip: null,
                 filtroObras: '',
                 filtroWorkflow: '',
                 filtroResponsavel: '',
@@ -207,12 +390,8 @@
                     initializeEmpresaGeneralFormState();
                     setEmpresaEditingDataset(this.empresaEditing);
                     window.applyRequiredMarkers?.(document);
-                    syncEmpresaPageScrollLock();
                     if (typeof this.$watch === 'function') {
                         this.$watch('filtroStatus', syncEmpresaStatusFilterPickers);
-                        this.$watch('legendaWorkflowVisible', syncEmpresaPageScrollLock);
-                        this.$watch('modalObrasVisible', syncEmpresaPageScrollLock);
-                        this.$watch('obraDetalheVisible', syncEmpresaPageScrollLock);
                     }
                 },
                 mudarAba(aba) {
@@ -417,23 +596,378 @@
                 },
                 abrirModalObras() {
                     this.modalObrasVisible = true;
-                    syncEmpresaPageScrollLock();
                 },
                 fecharModalObras() {
                     this.modalObrasVisible = false;
-                    syncEmpresaPageScrollLock();
                 },
                 abrirDetalhesObra(obraId) {
-                    this.obraSelecionada = this.obrasWorkflowData.find((obra) => obra.obra_id === obraId) || null;
-                    this.obraDetalheAba = 'resumo';
+                    const obra = this.obrasWorkflowData.find((item) => item.obra_id === obraId) || null;
+                    this.obraSelecionada = normalizeObraDetalhe(obra);
                     this.obraDetalheVisible = !!this.obraSelecionada;
-                    syncEmpresaPageScrollLock();
                 },
                 fecharDetalhesObra() {
                     this.obraDetalheVisible = false;
                     this.obraSelecionada = null;
-                    this.obraDetalheAba = 'resumo';
-                    syncEmpresaPageScrollLock();
+                },
+                getObraWorkflowDetalhesUrl(obra) {
+                    return String(obra?.obra_workflow_url || '').trim() || '#';
+                },
+                getObraWorkflowHistoricoUrl(obra) {
+                    return String(obra?.obra_workflow_historico_url || obra?.obra_workflow_url || '').trim() || '#';
+                },
+                abrirDetalhesWorkflowObra(obra) {
+                    const url = this.getObraWorkflowDetalhesUrl(obra);
+                    if (!url || url === '#') return;
+                    window.location.assign(url);
+                },
+                getObraWorkflowHistorico(obra) {
+                    return Array.isArray(obra?.workflow_historico) ? obra.workflow_historico : [];
+                },
+                getObraTimelineSeries(obra) {
+                    return Array.isArray(obra?.timeline_resumo) ? obra.timeline_resumo : [];
+                },
+                getObraStatusSeries(obra) {
+                    return Array.isArray(obra?.execucoes_status) ? obra.execucoes_status : [];
+                },
+                getObraStatusTotal(obra) {
+                    return this.getObraStatusSeries(obra).reduce((total, item) => total + toNonNegativeNumber(item.total), 0);
+                },
+                getObraStatusMax(obra) {
+                    const values = this.getObraStatusSeries(obra).map((item) => toNonNegativeNumber(item.total));
+                    const max = Math.max(0, ...values);
+                    return max > 0 ? max : 1;
+                },
+                getObraStatusBarWidth(item, obra) {
+                    return `${Math.max((toNonNegativeNumber(item?.total) / this.getObraStatusMax(obra)) * 100, 0)}%`;
+                },
+                getObraStatusColor(item) {
+                    const code = String(item?.status_code || '').toUpperCase();
+                    if (code === 'APROVADO') return '#149318';
+                    if (code === 'REJEITADO' || code === 'ERRO') return '#d31313';
+                    if (code === 'CANCELADO') return '#64748b';
+                    if (code === 'PENDENTE') return '#f59e0b';
+                    if (code === 'EM_ANDAMENTO' || code === 'REABERTO') return '#64748b';
+                    return '#94a3b8';
+                },
+                getObraStatusDonutStyle(obra) {
+                    const series = this.getObraStatusSeries(obra);
+                    const total = this.getObraStatusTotal(obra);
+                    if (!series.length || total <= 0) {
+                        return 'background: conic-gradient(#cbd5e1 0 360deg)';
+                    }
+                    let cursor = 0;
+                    const segments = series.map((item) => {
+                        const start = cursor;
+                        const span = (toNonNegativeNumber(item.total) / total) * 360;
+                        cursor += span;
+                        return `${this.getObraStatusColor(item)} ${start}deg ${cursor}deg`;
+                    });
+                    return `background: conic-gradient(${segments.join(', ')})`;
+                },
+                getObraStatusSuccessPercent(obra) {
+                    const total = this.getObraStatusTotal(obra);
+                    if (total <= 0) return 0;
+                    const success = this.getObraStatusSeries(obra)
+                        .filter((item) => String(item.status_code || '').toUpperCase() === 'APROVADO')
+                        .reduce((sum, item) => sum + toNonNegativeNumber(item.total), 0);
+                    return Math.round((success / total) * 100);
+                },
+                getObraStatusLegend(obra) {
+                    return this.getObraStatusSeries(obra).slice(0, 3);
+                },
+                getObraTimelineMax(obra) {
+                    const values = this.getObraTimelineSeries(obra).flatMap((item) => [toNonNegativeNumber(item.execucoes), toNonNegativeNumber(item.erros)]);
+                    const max = Math.max(0, ...values);
+                    return max > 0 ? max : 1;
+                },
+                getObraTimelineChartWidthValue(obra) {
+                    const count = this.getObraTimelineSeries(obra).length;
+                    return Math.max(count * 104, 520);
+                },
+                getObraTimelineGeometry(obra) {
+                    const width = this.getObraTimelineChartWidthValue(obra);
+                    const height = 220;
+                    const margin = { top: 18, right: 18, bottom: 36, left: 42 };
+                    return {
+                        width,
+                        height,
+                        margin,
+                        plotWidth: Math.max(width - margin.left - margin.right, 1),
+                        plotHeight: Math.max(height - margin.top - margin.bottom, 1),
+                        baseline: height - margin.bottom,
+                    };
+                },
+                getObraTimelineX(index, obra) {
+                    const series = this.getObraTimelineSeries(obra);
+                    const geometry = this.getObraTimelineGeometry(obra);
+                    const stepWidth = geometry.plotWidth / Math.max(series.length, 1);
+                    return geometry.margin.left + (stepWidth * index) + (stepWidth / 2);
+                },
+                getObraTimelineY(value, obra) {
+                    const geometry = this.getObraTimelineGeometry(obra);
+                    const ratio = toNonNegativeNumber(value) / this.getObraTimelineMax(obra);
+                    return geometry.baseline - (ratio * geometry.plotHeight);
+                },
+                getObraTimelineBarWidth(obra) {
+                    const series = this.getObraTimelineSeries(obra);
+                    const geometry = this.getObraTimelineGeometry(obra);
+                    const stepWidth = geometry.plotWidth / Math.max(series.length, 1);
+                    return Math.min(34, Math.max(22, stepWidth * 0.38));
+                },
+                getObraTimelineBarX(index, obra) {
+                    return this.getObraTimelineX(index, obra) - (this.getObraTimelineBarWidth(obra) / 2);
+                },
+                getObraTimelineBarY(value, obra) {
+                    return this.getObraTimelineY(value, obra);
+                },
+                getObraTimelineBarSvgHeight(value, obra) {
+                    const geometry = this.getObraTimelineGeometry(obra);
+                    return Math.max(0, geometry.baseline - this.getObraTimelineY(value, obra));
+                },
+                getObraTimelineTicks(obra) {
+                    const max = this.getObraTimelineMax(obra);
+                    return [1, 0.75, 0.5, 0.25, 0].map((ratio, index) => ({
+                        key: `${index}-${Math.round(max * ratio)}`,
+                        value: Math.round(max * ratio),
+                        y: this.getObraTimelineY(Math.round(max * ratio), obra),
+                    }));
+                },
+                getObraTimelineTickStyle(tick) {
+                    return `top:${tick.y}px`;
+                },
+                getObraTimelineChartWidth(obra) {
+                    return `${this.getObraTimelineChartWidthValue(obra)}px`;
+                },
+                getObraTimelineBarStyle(item, index, obra) {
+                    const geometry = this.getObraTimelineGeometry(obra);
+                    return [
+                        `left:${this.getObraTimelineBarX(index, obra)}px`,
+                        `top:${this.getObraTimelineBarY(item.execucoes, obra)}px`,
+                        `width:${this.getObraTimelineBarWidth(obra)}px`,
+                        `height:${this.getObraTimelineBarSvgHeight(item.execucoes, obra)}px`,
+                    ].join(';');
+                },
+                getObraTimelinePointStyle(item, index, obra) {
+                    return `left:${this.getObraTimelineX(index, obra)}px; top:${this.getObraTimelineY(item.erros, obra)}px`;
+                },
+                getObraTimelineLabelStyle(index, obra) {
+                    const geometry = this.getObraTimelineGeometry(obra);
+                    const series = this.getObraTimelineSeries(obra);
+                    const stepWidth = geometry.plotWidth / Math.max(series.length, 1);
+                    return `left:${geometry.margin.left + (stepWidth * index)}px; width:${stepWidth}px; top:${geometry.height - 24}px`;
+                },
+                getObraTimelinePolylinePoints(obra) {
+                    return this.getObraTimelineSeries(obra)
+                        .map((item, index) => `${this.getObraTimelineX(index, obra)},${this.getObraTimelineY(item.erros, obra)}`)
+                        .join(' ');
+                },
+                getObraTimelineViewBox(obra) {
+                    const geometry = this.getObraTimelineGeometry(obra);
+                    return `0 0 ${geometry.width} ${geometry.height}`;
+                },
+                getObraTimelineTooltipText(item) {
+                    return `${item.label}\nExecuções de fluxo: ${toNonNegativeNumber(item.execucoes)}\nErros do fluxo: ${toNonNegativeNumber(item.erros)}`;
+                },
+                showObraTimelineTooltip(item, index, obra) {
+                    const geometry = this.getObraTimelineGeometry(obra);
+                    this.timelineTooltip = {
+                        label: item.label,
+                        execucoes: toNonNegativeNumber(item.execucoes),
+                        erros: toNonNegativeNumber(item.erros),
+                        left: `${this.getObraTimelineX(index, obra)}px`,
+                        top: `${Math.max(geometry.margin.top, this.getObraTimelineY(item.erros, obra) - 76)}px`,
+                    };
+                },
+                hideObraTimelineTooltip() {
+                    this.timelineTooltip = null;
+                },
+                getObraFluxoEtapas(obra) {
+                    return Array.isArray(obra?.workflow_etapas) ? obra.workflow_etapas : [];
+                },
+                getWorkflowDiagramStageCount() {
+                    return this.getObraFluxoEtapas(this.obraSelecionada).length;
+                },
+                getWorkflowDiagramLayout(stageCount) {
+                    const columns = stageCount <= 1 ? 1 : 2;
+                    const rowHeight = 250;
+                    const firstRowY = 88;
+                    const rows = Math.ceil(stageCount / columns);
+                    return {
+                        badgeH: 22,
+                        badgeW: 90,
+                        cardH: 110,
+                        cardW: 190,
+                        cardX: 130,
+                        columnWidth: 460,
+                        columns,
+                        decisionGap: 88,
+                        diamondHalf: 42,
+                        firstRowY,
+                        height: firstRowY + ((rows - 1) * rowHeight) + 184,
+                        rejectedBadgeW: 94,
+                        rowHeight,
+                        startCx: 54,
+                        startR: 28,
+                        width: columns === 1 ? 790 : 1270,
+                    };
+                },
+                getWorkflowDiagramStagePosition(index, layout) {
+                    const column = index % layout.columns;
+                    const row = Math.floor(index / layout.columns);
+                    const rowY = layout.firstRowY + (row * layout.rowHeight);
+                    const cardX = layout.cardX + (column * layout.columnWidth);
+                    const decisionCx = cardX + layout.cardW + layout.decisionGap;
+                    const approvedBadgeX = decisionCx + layout.diamondHalf + 18;
+                    return {
+                        approvedBadgeX,
+                        approvedBadgeY: rowY - (layout.badgeH / 2),
+                        cardX,
+                        cardY: rowY - (layout.cardH / 2),
+                        column,
+                        decisionCx,
+                        decisionCy: rowY,
+                        row,
+                        rowY,
+                    };
+                },
+                renderWorkflowSvgPath(d, color, markerId = '') {
+                    const marker = markerId ? ` marker-end="url(#${markerId})"` : '';
+                    return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"${marker}></path>`;
+                },
+                renderWorkflowSvgBadge(label, x, y, width, height, color) {
+                    const centerY = y + (height / 2) + 4;
+                    return [
+                        `<rect x="${x}" y="${y}" width="${width}" height="${height}" rx="${height / 2}" fill="#ffffff" stroke="${color}" stroke-width="1.4"></rect>`,
+                        `<text x="${x + (width / 2)}" y="${centerY}" fill="${color}" text-anchor="middle" font-size="10" font-weight="800">${escapeSvgText(label.toUpperCase())}</text>`,
+                    ].join('');
+                },
+                renderWorkflowSvgTextLines(lines, x, y, lineHeight, attrs) {
+                    return lines
+                        .map((line, index) => `<text x="${x}" y="${y + (index * lineHeight)}" ${attrs}>${escapeSvgText(line)}</text>`)
+                        .join('');
+                },
+                getWorkflowApprovedConnectorPath(currentStage, nextStage, layout) {
+                    const fromX = currentStage.approvedBadgeX + layout.badgeW;
+                    const fromY = currentStage.rowY;
+                    const toX = nextStage.cardX;
+                    const toY = nextStage.rowY;
+                    if (currentStage.row === nextStage.row) {
+                        return `M ${fromX} ${fromY} H ${toX}`;
+                    }
+                    const gutterX = Math.min(layout.width - 48, Math.max(fromX + 38, toX + 240));
+                    const laneY = nextStage.cardY - 18;
+                    const preEntryX = toX - 30;
+                    return `M ${fromX} ${fromY} H ${gutterX} V ${laneY} H ${preEntryX} V ${toY} H ${toX}`;
+                },
+                getWorkflowDiagramSvg(obra) {
+                    const etapas = this.getObraFluxoEtapas(obra);
+                    if (!etapas.length) return '';
+
+                    const layout = this.getWorkflowDiagramLayout(etapas.length);
+                    const neutral = '#475569';
+                    const green = '#15803d';
+                    const red = '#dc2626';
+                    const slate = '#64748b';
+                    const dark = '#0f172a';
+                    const stagePositions = etapas.map((_, index) => this.getWorkflowDiagramStagePosition(index, layout));
+                    const connectors = [];
+                    const shapes = [];
+                    const labels = [];
+
+                    connectors.push(this.renderWorkflowSvgPath(
+                        `M ${layout.startCx + layout.startR} ${layout.firstRowY} H ${stagePositions[0].cardX}`,
+                        neutral,
+                        'workflow-arrow-neutral',
+                    ));
+                    shapes.push(`<circle cx="${layout.startCx}" cy="${layout.firstRowY}" r="${layout.startR}" fill="${slate}" filter="url(#workflow-node-shadow)"></circle>`);
+                    labels.push(`<text x="${layout.startCx}" y="${layout.firstRowY + 4}" fill="#ffffff" text-anchor="middle" font-size="12" font-weight="800">Início</text>`);
+
+                    etapas.forEach((etapa, index) => {
+                        const stage = stagePositions[index];
+                        const isLast = index === etapas.length - 1;
+                        const cardRight = stage.cardX + layout.cardW;
+                        const decisionLeft = stage.decisionCx - layout.diamondHalf;
+                        const decisionRight = stage.decisionCx + layout.diamondHalf;
+                        const decisionBottom = stage.decisionCy + layout.diamondHalf;
+                        const approvedBadgeRight = stage.approvedBadgeX + layout.badgeW;
+                        const rejectedBadgeX = stage.decisionCx - (layout.rejectedBadgeW / 2);
+                        const rejectedBadgeY = decisionBottom + 16;
+                        const rejectedCircleY = rejectedBadgeY + layout.badgeH + 54;
+                        const stageName = normalizeWorkflowStageDisplay(etapa.papel || etapa.nome || 'Responsável');
+
+                        connectors.push(this.renderWorkflowSvgPath(`M ${cardRight} ${stage.rowY} H ${decisionLeft}`, neutral, 'workflow-arrow-neutral'));
+                        connectors.push(this.renderWorkflowSvgPath(`M ${decisionRight} ${stage.rowY} H ${stage.approvedBadgeX}`, green));
+                        connectors.push(this.renderWorkflowSvgPath(`M ${stage.decisionCx} ${decisionBottom} V ${rejectedBadgeY}`, red));
+                        connectors.push(this.renderWorkflowSvgPath(`M ${stage.decisionCx} ${rejectedBadgeY + layout.badgeH} V ${rejectedCircleY - 22}`, red, 'workflow-arrow-rejected'));
+
+                        if (!isLast) {
+                            const nextStage = stagePositions[index + 1];
+                            connectors.push(this.renderWorkflowSvgPath(
+                                this.getWorkflowApprovedConnectorPath(stage, nextStage, layout),
+                                green,
+                                'workflow-arrow-approved',
+                            ));
+                        } else {
+                            const finalCircleX = approvedBadgeRight + 76;
+                            const finalCircleY = stage.rowY;
+                            connectors.push(this.renderWorkflowSvgPath(`M ${approvedBadgeRight} ${stage.rowY} H ${finalCircleX - 24}`, green, 'workflow-arrow-approved'));
+                            shapes.push(`<circle cx="${finalCircleX}" cy="${finalCircleY}" r="18" fill="#16a34a"></circle>`);
+                            labels.push(`<path d="M ${finalCircleX - 8} ${finalCircleY} L ${finalCircleX - 2} ${finalCircleY + 6} L ${finalCircleX + 9} ${finalCircleY - 7}" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>`);
+                            labels.push(`<text x="${finalCircleX + 28}" y="${finalCircleY + 6}" fill="${green}" font-size="17" font-weight="800">Fim aprovado</text>`);
+                        }
+
+                        shapes.push(`<rect x="${stage.cardX}" y="${stage.cardY}" width="${layout.cardW}" height="${layout.cardH}" rx="8" fill="#ffffff" stroke="#cbd5e1" filter="url(#workflow-card-shadow)"></rect>`);
+                        shapes.push(`<polygon points="${stage.decisionCx},${stage.decisionCy - layout.diamondHalf} ${stage.decisionCx + layout.diamondHalf},${stage.decisionCy} ${stage.decisionCx},${stage.decisionCy + layout.diamondHalf} ${stage.decisionCx - layout.diamondHalf},${stage.decisionCy}" fill="${slate}" filter="url(#workflow-node-shadow)"></polygon>`);
+                        shapes.push(`<circle cx="${stage.decisionCx}" cy="${rejectedCircleY}" r="21" fill="${red}"></circle>`);
+                        labels.push(`<text x="${stage.cardX + 16}" y="${stage.cardY + 30}" fill="#475569" font-size="12" font-weight="800">ETAPA ${escapeSvgText(etapa.nivel || index + 1)}</text>`);
+                        labels.push(this.renderWorkflowSvgTextLines(
+                            wrapWorkflowSvgText(stageName, 18, 3),
+                            stage.cardX + 16,
+                            stage.cardY + 62,
+                            22,
+                            `fill="${dark}" font-size="17" font-weight="800"`,
+                        ));
+                        labels.push(`<text x="${stage.decisionCx}" y="${stage.decisionCy + 4}" fill="#ffffff" text-anchor="middle" font-size="11" font-weight="800">Decisão</text>`);
+                        labels.push(this.renderWorkflowSvgBadge('Aprovado', stage.approvedBadgeX, stage.approvedBadgeY, layout.badgeW, layout.badgeH, green));
+                        labels.push(this.renderWorkflowSvgBadge('Recusado', rejectedBadgeX, rejectedBadgeY, layout.rejectedBadgeW, layout.badgeH, red));
+                        labels.push(`<text x="${stage.decisionCx}" y="${rejectedCircleY + 4}" fill="#ffffff" text-anchor="middle" font-size="12" font-weight="800">Fim</text>`);
+                    });
+
+                    return `
+                        <svg class="workflow-board-svg" viewBox="0 0 ${layout.width} ${layout.height}" role="img" aria-label="Diagrama de aprovação" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <marker id="workflow-arrow-neutral" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+                                    <path d="M 0 0 L 8 4 L 0 8 z" fill="${neutral}"></path>
+                                </marker>
+                                <marker id="workflow-arrow-approved" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+                                    <path d="M 0 0 L 8 4 L 0 8 z" fill="${green}"></path>
+                                </marker>
+                                <marker id="workflow-arrow-rejected" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+                                    <path d="M 0 0 L 8 4 L 0 8 z" fill="${red}"></path>
+                                </marker>
+                                <filter id="workflow-card-shadow" x="-10%" y="-10%" width="120%" height="130%">
+                                    <feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#0f172a" flood-opacity="0.10"></feDropShadow>
+                                </filter>
+                                <filter id="workflow-node-shadow" x="-20%" y="-20%" width="140%" height="140%">
+                                    <feDropShadow dx="0" dy="1" stdDeviation="1.2" flood-color="#0f172a" flood-opacity="0.16"></feDropShadow>
+                                </filter>
+                            </defs>
+                            <g font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+                                ${shapes.join('')}
+                                ${connectors.join('')}
+                                ${labels.join('')}
+                            </g>
+                        </svg>
+                    `;
+                },
+                formatWorkflowStageName(value) {
+                    return normalizeWorkflowStageDisplay(value);
+                },
+                isUltimaEtapaFluxo(obra, index) {
+                    return index === this.getObraFluxoEtapas(obra).length - 1;
+                },
+                getFluxoAprovadoDestino(obra, index) {
+                    return this.isUltimaEtapaFluxo(obra, index) ? 'Fim aprovado' : 'Próxima aprovação';
                 },
             };
         }
