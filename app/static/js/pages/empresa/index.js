@@ -138,6 +138,55 @@
         return visibleLines;
     }
 
+    function wrapWorkflowSvgRoleTokenLines(value, maxChars = 20, maxLines = 4) {
+        const tokens = normalizeWorkflowStageDisplay(value)
+            .split(/\s+/)
+            .filter(Boolean)
+            .flatMap((word) => {
+                const lower = word.toLowerCase();
+                if (lower === 'e' || lower === 'ou') {
+                    return [{ text: lower, connector: true }];
+                }
+                const upper = word.toUpperCase();
+                if (upper.length <= maxChars) {
+                    return [{ text: upper, connector: false }];
+                }
+                const parts = [];
+                for (let index = 0; index < upper.length; index += maxChars) {
+                    parts.push({ text: upper.slice(index, index + maxChars), connector: false });
+                }
+                return parts;
+            });
+        const lines = [];
+        let currentLine = [];
+        let currentLength = 0;
+        const lineLength = (line) => line.reduce((sum, token) => sum + token.text.length, Math.max(line.length - 1, 0));
+
+        tokens.forEach((token) => {
+            const nextLength = currentLength + (currentLine.length ? 1 : 0) + token.text.length;
+            if (!currentLine.length || nextLength <= maxChars) {
+                currentLine.push(token);
+                currentLength = nextLength;
+                return;
+            }
+            lines.push(currentLine);
+            currentLine = [token];
+            currentLength = token.text.length;
+        });
+
+        if (currentLine.length) lines.push(currentLine);
+        if (lines.length <= maxLines) return lines;
+
+        const visibleLines = lines.slice(0, maxLines);
+        const lastLine = visibleLines[maxLines - 1];
+        const ellipsis = { text: '...', connector: false };
+        while (lastLine.length && lineLength([...lastLine, ellipsis]) > maxChars) {
+            lastLine.pop();
+        }
+        lastLine.push(ellipsis);
+        return visibleLines;
+    }
+
     function toNonNegativeNumber(value) {
         const normalized = Number(value);
         if (!Number.isFinite(normalized) || normalized < 0) return 0;
@@ -887,10 +936,10 @@
                     return {
                         badgeH: 22,
                         badgeW: 90,
-                        cardH: 110,
-                        cardW: 190,
+                        cardH: 150,
+                        cardW: 230,
                         cardX: 130,
-                        columnWidth: 460,
+                        columnWidth: 520,
                         columns,
                         decisionGap: 88,
                         diamondHalf: 42,
@@ -900,7 +949,7 @@
                         rowHeight,
                         startCx: 54,
                         startR: 28,
-                        width: columns === 1 ? 790 : 1270,
+                        width: columns === 1 ? 850 : 1390,
                     };
                 },
                 getWorkflowParallelForkJoinDiagramSize(obra, etapas) {
@@ -908,7 +957,7 @@
                         PADDING_X: 72,
                         PADDING_TOP: 58,
                         PADDING_BOTTOM: 86,
-                        CARD_WIDTH: 190,
+                        CARD_WIDTH: 240,
                         CARD_MIN_HEIGHT: 110,
                         CARD_GAP: 38,
                         NODE_RADIUS: 28,
@@ -928,17 +977,16 @@
                         const normalized = normalizeWorkflowStageDisplay(label);
                         return normalized.toUpperCase() === 'CLIENTE OBRA' ? 'Cliente da Obra' : normalized;
                     };
-                    const approvers = etapas.flatMap((etapa, index) => {
+                    const approvers = etapas.map((etapa, index) => {
                         const source = String(etapa?.papel || etapa?.nome || `Aprovador ${index + 1}`);
-                        const labels = source.split(',').map((item) => normalizeApproverLabel(item)).filter(Boolean);
-                        return (labels.length ? labels : [source]).map((label) => normalizeApproverLabel(label));
+                        return normalizeApproverLabel(source);
                     });
 
                     if (!approvers.length) {
                         return { width: 960, height: 420 };
                     }
 
-                    const cardHeights = approvers.map((label) => Math.max(L.CARD_MIN_HEIGHT, 62 + (wrapWorkflowSvgText(label, 18, 3).length * 22)));
+                    const cardHeights = approvers.map((label) => Math.max(L.CARD_MIN_HEIGHT, 62 + (wrapWorkflowSvgRoleTokenLines(label, 17, 4).length * 22)));
                     const normalizedCardHeight = Math.max(...cardHeights);
                     const gridHeight = (approvers.length * normalizedCardHeight) + ((approvers.length - 1) * L.CARD_GAP);
                     const startCx = L.PADDING_X + L.NODE_RADIUS;
@@ -1002,6 +1050,25 @@
                     return lines
                         .map((line, index) => `<text x="${x}" y="${y + (index * lineHeight)}" ${attrs}>${escapeSvgText(line)}</text>`)
                         .join('');
+                },
+                renderWorkflowSvgRoleTextLines(lines, x, y, lineHeight, color, fontSize = 17, clip = null) {
+                    const content = lines
+                        .map((line, index) => {
+                            const content = line
+                                .map((token, tokenIndex) => {
+                                    const space = tokenIndex ? '<tspan xml:space="preserve"> </tspan>' : '';
+                                    const weight = token.connector ? '400' : '800';
+                                    return `${space}<tspan font-weight="${weight}">${escapeSvgText(token.text)}</tspan>`;
+                                })
+                                .join('');
+                            return `<text x="${x}" y="${y + (index * lineHeight)}" fill="${color}" font-size="${fontSize}">${content}</text>`;
+                        })
+                        .join('');
+                    if (!clip?.id || !clip?.width || !clip?.height) return content;
+                    return [
+                        `<clipPath id="${clip.id}"><rect x="${x}" y="${clip.y ?? y - fontSize}" width="${clip.width}" height="${clip.height}"></rect></clipPath>`,
+                        `<g clip-path="url(#${clip.id})">${content}</g>`,
+                    ].join('');
                 },
                 getWorkflowApprovedConnectorPath(currentStage, nextStage, layout) {
                     const fromX = currentStage.approvedBadgeX + layout.badgeW;
@@ -1201,7 +1268,7 @@
                         PADDING_X: 72,
                         PADDING_TOP: 58,
                         PADDING_BOTTOM: 86,
-                        CARD_WIDTH: 190,
+                        CARD_WIDTH: 240,
                         CARD_MIN_HEIGHT: 110,
                         CARD_GAP: 38,
                         NODE_RADIUS: 28,
@@ -1224,19 +1291,19 @@
                         const normalized = normalizeWorkflowStageDisplay(label);
                         return normalized.toUpperCase() === 'CLIENTE OBRA' ? 'Cliente da Obra' : normalized;
                     };
-                    const approvers = etapas.flatMap((etapa, index) => {
+                    const approvers = etapas.map((etapa, index) => {
                         const source = String(etapa?.papel || etapa?.nome || `Aprovador ${index + 1}`);
-                        const labels = source.split(',').map((item) => normalizeApproverLabel(item)).filter(Boolean);
-                        return (labels.length ? labels : [source]).map((label, itemIndex) => ({
-                            id: `${index + 1}-${itemIndex + 1}`,
-                            label: normalizeApproverLabel(label),
+                        return {
+                            id: `${index + 1}`,
+                            label: normalizeApproverLabel(source),
+                            title: String(etapa?.rotulo || `Grupo ${index + 1}`),
                             nivel: etapa?.nivel || index + 1,
-                        }));
+                        };
                     });
                     if (!approvers.length) return '';
 
                     const createCard = (approver, index) => {
-                        const lines = wrapWorkflowSvgText(approver.label, 18, 3);
+                        const lines = wrapWorkflowSvgRoleTokenLines(approver.label, 17, 4);
                         return {
                             ...approver,
                             index,
@@ -1361,8 +1428,13 @@
                     shapes.push(`<circle cx="${layout.start.cx}" cy="${layout.start.cy}" r="${layout.start.r}" fill="${COLORS.slate}" filter="url(#${ids.nodeShadow})"></circle>`);
                     layout.cards.forEach((card) => {
                         shapes.push(`<rect x="${card.x}" y="${card.y}" width="${card.width}" height="${card.height}" rx="8" fill="#ffffff" stroke="#cbd5e1" filter="url(#${ids.cardShadow})"></rect>`);
-                        labels.push(`<text x="${card.x + 16}" y="${card.y + 30}" fill="#475569" font-size="12" font-weight="800">ETAPA ${escapeSvgText(card.nivel || card.index + 1)}</text>`);
-                        labels.push(this.renderWorkflowSvgTextLines(card.lines.map((line) => String(line).toUpperCase()), card.x + 16, card.y + 62, 22, `fill="${COLORS.dark}" font-size="17" font-weight="800"`));
+                        labels.push(`<text x="${card.x + 16}" y="${card.y + 30}" fill="#475569" font-size="12" font-weight="800">${escapeSvgText(card.title || `Grupo ${card.nivel || card.index + 1}`).toUpperCase()}</text>`);
+                        labels.push(this.renderWorkflowSvgRoleTextLines(card.lines, card.x + 16, card.y + 62, 22, COLORS.dark, 17, {
+                            id: `${svgId}-card-${card.index}-text-clip`,
+                            width: card.width - 32,
+                            height: card.height - 66,
+                            y: card.y + 44,
+                        }));
                     });
                     shapes.push(`<polygon points="${layout.decision.cx},${layout.decision.cy - layout.decision.half} ${layout.decision.cx + layout.decision.half},${layout.decision.cy} ${layout.decision.cx},${layout.decision.cy + layout.decision.half} ${layout.decision.cx - layout.decision.half},${layout.decision.cy}" fill="${COLORS.slate}" filter="url(#${ids.nodeShadow})"></polygon>`);
                     shapes.push(`<circle cx="${layout.approvedEnd.cx}" cy="${layout.approvedEnd.cy}" r="${layout.approvedEnd.r}" fill="#16a34a"></circle>`);
@@ -1575,13 +1647,20 @@
                         shapes.push(`<rect x="${stage.cardX}" y="${stage.cardY}" width="${layout.cardW}" height="${layout.cardH}" rx="8" fill="#ffffff" stroke="#cbd5e1" filter="url(#${ids.cardShadow})"></rect>`);
                         shapes.push(`<polygon points="${stage.decisionCx},${stage.decisionCy - layout.diamondHalf} ${stage.decisionCx + layout.diamondHalf},${stage.decisionCy} ${stage.decisionCx},${stage.decisionCy + layout.diamondHalf} ${stage.decisionCx - layout.diamondHalf},${stage.decisionCy}" fill="${slate}" filter="url(#${ids.nodeShadow})"></polygon>`);
                         shapes.push(`<circle cx="${stage.decisionCx}" cy="${rejectedCircleY}" r="21" fill="${red}"></circle>`);
-                        labels.push(`<text x="${stage.cardX + 16}" y="${stage.cardY + 30}" fill="#475569" font-size="12" font-weight="800">ETAPA ${escapeSvgText(etapa.nivel || index + 1)}</text>`);
-                        labels.push(this.renderWorkflowSvgTextLines(
-                            wrapWorkflowSvgText(stageName, 18, 3),
+                        labels.push(`<text x="${stage.cardX + 16}" y="${stage.cardY + 30}" fill="#475569" font-size="12" font-weight="800">${escapeSvgText(etapa.rotulo || `Etapa ${etapa.nivel || index + 1}`).toUpperCase()}</text>`);
+                        labels.push(this.renderWorkflowSvgRoleTextLines(
+                            wrapWorkflowSvgRoleTokenLines(stageName, 17, 4),
                             stage.cardX + 16,
                             stage.cardY + 62,
                             22,
-                            `fill="${dark}" font-size="17" font-weight="800"`,
+                            dark,
+                            17,
+                            {
+                                id: `${svgId}-stage-${index}-text-clip`,
+                                width: layout.cardW - 32,
+                                height: layout.cardH - 66,
+                                y: stage.cardY + 44,
+                            },
                         ));
                         labels.push(`<text x="${stage.decisionCx}" y="${stage.decisionCy + 4}" fill="#ffffff" text-anchor="middle" font-size="11" font-weight="800">Decisão</text>`);
                         labels.push(this.renderWorkflowSvgBadge('Aprovado', stage.approvedBadgeX, stage.approvedBadgeY, layout.badgeW, layout.badgeH, green));
@@ -2052,20 +2131,30 @@
             return 'Entre grupos/etapas: E';
         }
 
+        function joinEmpresaWorkflowDiagramApprovers(papeis, regra) {
+            const labels = (Array.isArray(papeis) ? papeis : [])
+                .map((papel) => normalizeWorkflowStageDisplay(papel))
+                .filter(Boolean);
+            if (!labels.length) return 'Papel nao definido';
+            if (labels.length === 1) return labels[0];
+            const connector = normalizeEmpresaWorkflowGroupRule(regra) === 'QUALQUER' ? ' ou ' : ' e ';
+            return `${labels.slice(0, -1).join(connector)}${connector}${labels[labels.length - 1]}`;
+        }
+
         function getEmpresaWorkflowDiagramEtapas() {
             const rules = getEmpresaWorkflowRules();
             return getEmpresaWorkflowVisualGroups().map((group, groupIndex) => {
+                const regra = getEmpresaWorkflowGroupRule(group);
                 const papeis = group.items
                     .map(({ stage }) => getEmpresaWorkflowRoleById(stage.papel_id)?.nome || stage.nome || 'Papel não definido')
                     .filter(Boolean);
-                const nome = rules.isParallel
-                    ? papeis.join(', ')
-                    : (papeis[0] || `Etapa ${groupIndex + 1}`);
-                const regra = getEmpresaWorkflowGroupRule(group);
+                const nome = joinEmpresaWorkflowDiagramApprovers(papeis, regra);
+                const entityLabel = rules.isParallel ? 'Grupo' : 'Etapa';
                 return {
                     nivel: groupIndex + 1,
                     nome,
                     papel: nome,
+                    rotulo: `${entityLabel} ${groupIndex + 1}`,
                     regra_aprovacao: regra,
                     regra_etapa: regra,
                 };
