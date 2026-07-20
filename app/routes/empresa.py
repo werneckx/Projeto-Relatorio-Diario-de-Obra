@@ -813,16 +813,10 @@ def _user_can_manage_empresa():
     except Exception:
         return False
 
-def _normalize_empresa_id(value):
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return None
-
 
 def _enforce_empresa_url_scope(requested_empresa_id):
-    requested_empresa_id = _normalize_empresa_id(requested_empresa_id)
-    current_empresa_id = _normalize_empresa_id(session.get('empresa_id'))
+    requested_empresa_id = normalize_empresa_id(requested_empresa_id)
+    current_empresa_id = normalize_empresa_id(session.get('empresa_id'))
     user = get_current_user()
 
     if not user or requested_empresa_id is None:
@@ -833,7 +827,7 @@ def _enforce_empresa_url_scope(requested_empresa_id):
             abort(404)
         return requested_empresa_id
 
-    if requested_empresa_id != current_empresa_id:
+    if requested_empresa_id != current_empresa_id or not user_can_access_empresa(user, requested_empresa_id):
         abort(403)
 
     return requested_empresa_id

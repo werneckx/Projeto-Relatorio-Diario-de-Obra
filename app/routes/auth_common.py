@@ -116,6 +116,15 @@ def login_required(f):
                 return jsonify({'ok': False, 'error': 'Você precisa estar logado para acessar esta página.'}), 401
             flash("Você precisa estar logado para acessar esta página.", "warning")
             return redirect(url_for("auth.login"))
+        user = get_current_user()
+        if not user or not user.ativo:
+            if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return jsonify({'ok': False, 'error': 'Sessão inválida.'}), 403
+            abort(403)
+        if not user_can_access_empresa(user, session.get("empresa_id")):
+            if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return jsonify({'ok': False, 'error': 'Empresa fora do escopo do usuário.'}), 403
+            abort(403)
         return f(*args, **kwargs)
     return decorated
 
@@ -151,6 +160,31 @@ def is_platform_admin(user=None):
     if user is None:
         user = get_current_user()
     return bool(user and getattr(user, "ativo", False) and getattr(user, "is_system_record", False))
+
+
+def normalize_empresa_id(value):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def user_can_access_empresa(user, empresa_id):
+    empresa_id = normalize_empresa_id(empresa_id)
+    if not user or not getattr(user, "ativo", False) or empresa_id is None:
+        return False
+
+    if is_platform_admin(user):
+        return bool(Empresa.query.filter_by(id=empresa_id, ativo=True).first())
+
+    if normalize_empresa_id(getattr(user, "empresa_id", None)) == empresa_id:
+        return True
+
+    return bool(UsuarioPapel.query.filter(
+        UsuarioPapel.usuario_id == user.id,
+        UsuarioPapel.empresa_id == empresa_id,
+        UsuarioPapel.ativo.is_(True),
+    ).first())
 
 
 def get_current_user_id():

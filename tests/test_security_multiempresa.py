@@ -147,6 +147,55 @@ class TestPermissaoEmpresas:
 class TestAcessoNegadoOutraEmpresa:
     """Testes de negação de acesso a dados de outra empresa."""
 
+    def test_sessao_com_empresa_fora_do_usuario_bloqueia_edicao(self, client, usuario_empresa1, empresa1, empresa2):
+        """Sessao adulterada/stale nao permite editar empresa que nao pertence ao usuario."""
+        usuario_empresa1.troca_senha_obrigatoria = False
+        db.session.commit()
+        with client.session_transaction() as sess:
+            sess["user_id"] = usuario_empresa1.id
+            sess["empresa_id"] = empresa2.id
+
+        resp = client.get(f"/auth/empresa/{empresa2.id}/editar")
+
+        assert resp.status_code == 403
+
+    def test_usuario_de_terceira_empresa_nao_edita_empresa_1_ou_2_por_url(self, client, empresa1, empresa2):
+        """Usuario fora das empresas 1 e 2 nao deve acessar nenhuma delas pela URL."""
+        empresa3 = Empresa(nome="Empresa 3", ativo=True)
+        db.session.add(empresa3)
+        db.session.flush()
+
+        papel3 = Papel(nome="Admin", empresa_id=empresa3.id, ativo=True)
+        db.session.add(papel3)
+        db.session.flush()
+
+        usuario3 = Usuario(
+            nome="Usuario Empresa 3",
+            email="usuario3@empresa3.com",
+            empresa_id=empresa3.id,
+            ativo=True,
+            troca_senha_obrigatoria=False,
+        )
+        usuario3.set_senha("senha123")
+        db.session.add(usuario3)
+        db.session.flush()
+        db.session.add(UsuarioPapel(
+            empresa_id=empresa3.id,
+            usuario_id=usuario3.id,
+            papel_id=papel3.id,
+            ativo=True,
+        ))
+        db.session.commit()
+
+        for empresa in (empresa1, empresa2):
+            with client.session_transaction() as sess:
+                sess["user_id"] = usuario3.id
+                sess["empresa_id"] = empresa.id
+
+            resp = client.get(f"/auth/empresa/{empresa.id}/editar")
+
+            assert resp.status_code == 403
+
     def test_admin_empresa_nao_acessa_empresa_por_url(self, client, usuario_empresa1, empresa1, empresa2):
         """Admin de uma empresa nao pode abrir outra empresa trocando a URL."""
         usuario_empresa1.troca_senha_obrigatoria = False
