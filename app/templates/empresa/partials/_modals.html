@@ -3,8 +3,8 @@
 
 {% call ui_modal.modal(
 'empresa-legenda-workflow-modal',
-title='Legenda dos Status',
-description='Referencia visual dos status reais das execucoes.',
+title='Legenda dos status',
+description='Referência visual dos status reais das execuções.',
 show_expr='legendaWorkflowVisible',
 close_action='legendaWorkflowVisible = false',
 size='sm',
@@ -15,7 +15,7 @@ body_class='space-y-3 px-6 py-5 text-sm font-semibold'
 <div class="flex items-center gap-3 text-blue-700"><span class="h-2.5 w-2.5 rounded-full bg-blue-500"></span> Em
     andamento</div>
 <div class="flex items-center gap-3 text-emerald-700"><span class="h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
-    Concluido</div>
+    Concluído</div>
 <div class="flex items-center gap-3 text-rose-700"><span class="h-2.5 w-2.5 rounded-full bg-rose-500"></span> Rejeitado
 </div>
 <div class="flex items-center gap-3 text-slate-700"><span class="h-2.5 w-2.5 rounded-full bg-slate-500"></span>
@@ -26,7 +26,7 @@ body_class='space-y-3 px-6 py-5 text-sm font-semibold'
 {% call ui_modal.modal(
 'empresa-obras-workflow-modal',
 title='Obras e Workflows',
-description='Veja workflow aplicado, origem, responsaveis e fluxos ativos por obra.',
+description='Veja workflow aplicado, origem, responsáveis e fluxos ativos por obra.',
 show_expr='modalObrasVisible',
 close_action='fecharModalObras()',
 size='full',
@@ -39,13 +39,13 @@ body_class='flex-1 overflow-hidden p-0'
             class="{{ ui_form.dynamic_control_classes(extra='empresa-form-control empresa-form-control--edit') }}">
         <input x-model="filtroWorkflow" type="text" placeholder="Workflow"
             class="{{ ui_form.dynamic_control_classes(extra='empresa-form-control empresa-form-control--edit') }}">
-        <input x-model="filtroResponsavel" type="text" placeholder="Responsavel"
+        <input x-model="filtroResponsavel" type="text" placeholder="Responsável"
             class="{{ ui_form.dynamic_control_classes(extra='empresa-form-control empresa-form-control--edit') }}">
         <select x-model="filtroStatus" class="{{ ui_form.select_classes() }}" data-placeholder="Status">
             <option value="">Status</option>
             <option value="Pendente">Pendente</option>
             <option value="Em andamento">Em andamento</option>
-            <option value="Concluido">Concluido</option>
+            <option value="Concluido">Concluído</option>
             <option value="Rejeitado">Rejeitado</option>
             <option value="Cancelado">Cancelado</option>
             <option value="Erro">Erro</option>
@@ -67,7 +67,7 @@ body_class='flex-1 overflow-hidden p-0'
                         x-text="obra.workflow_origem"></span>
                 </div>
                 <div class="mt-4 grid grid-cols-2 gap-3 text-sm text-slate-600">
-                    <div>Responsavel <span class="font-semibold text-slate-800" x-text="obra.responsavel"></span></div>
+                    <div>Responsável <span class="font-semibold text-slate-800" x-text="obra.responsavel"></span></div>
                     <div>Fluxos ativos <span class="font-semibold text-slate-800" x-text="obra.execucoes_ativas"></span>
                     </div>
                     <div class="col-span-2">Status <span
@@ -75,7 +75,7 @@ body_class='flex-1 overflow-hidden p-0'
                             :class="obra.status_badge_class"><span class="h-2 w-2 rounded-full"
                                 :class="obra.status_dot_class"></span><span x-text="obra.status"></span></span></div>
                     <div>Matriz <span class="font-semibold text-slate-800"
-                            x-text="obra.matriz_total + ' papeis'"></span></div>
+                            x-text="obra.matriz_total + ' papéis'"></span></div>
                 </div>
                 <div class="mt-4"><button type="button" @click="abrirDetalhesObra(obra.obra_id)"
                         class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50">Detalhes</button>
@@ -106,7 +106,7 @@ root_class='z-[210] !overflow-hidden overscroll-none',
 backdrop_class='!fixed !inset-0 h-[100dvh] w-screen bg-slate-700/45 backdrop-blur-[3px]'
 ) %}
 <template x-if="obraSelecionada">
-    <div class="bg-white px-6 py-6">
+    <div class="empresa-print-area bg-white px-6 py-6">
         <div class="mx-auto w-full max-w-[1440px] space-y-6">
             <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div class="min-w-0">
@@ -277,29 +277,89 @@ backdrop_class='!fixed !inset-0 h-[100dvh] w-screen bg-slate-700/45 backdrop-blu
                 <div class="grid grid-cols-1 gap-8 xl:grid-cols-[1fr_330px]">
                     <div class="min-w-0">
                         <style>
+                            .empresa-print-area .workflow-section-header {
+                                align-items: center;
+                                border-bottom: 1px solid #e2e8f0;
+                                display: flex;
+                                flex-wrap: wrap;
+                                gap: 12px;
+                                justify-content: space-between;
+                                margin: -4px -4px 18px;
+                                padding: 0 0 16px;
+                            }
+
+                            .empresa-print-area .workflow-zoom-button {
+                                align-items: center;
+                                border: 1px solid #e2e8f0;
+                                border-radius: 10px;
+                                color: #475569;
+                                display: inline-flex;
+                                height: 34px;
+                                justify-content: center;
+                                width: 34px;
+                            }
+
+                            .empresa-print-area .workflow-zoom-button:hover {
+                                background: #f8fafc;
+                                border-color: #cbd5e1;
+                                color: #0f172a;
+                            }
+
                             .workflow-canvas {
-                                overflow: hidden;
-                                padding: 18px 0 0;
+                                background: #ffffff;
+                                border: 1px solid #e2e8f0;
+                                border-radius: 12px;
+                                cursor: grab;
+                                max-height: min(70vh, 720px);
+                                overflow: auto;
+                                padding: 18px;
+                                scrollbar-color: #cbd5e1 #f8fafc;
+                            }
+
+                            .workflow-canvas.workflow-canvas--dragging,
+                            .workflow-canvas.workflow-canvas--dragging * {
+                                cursor: grabbing !important;
+                                user-select: none;
                             }
 
                             .workflow-board {
-                                width: 100%;
-                                max-width: 100%;
+                                transition: height 160ms ease, width 160ms ease;
+                                user-select: none;
                             }
 
                             .workflow-board svg {
                                 display: block;
-                                height: auto;
-                                max-width: 100%;
+                                height: 100%;
+                                max-width: none;
+                                pointer-events: none;
                                 width: 100%;
                             }
+
                         </style>
 
-                        <h5 class="text-lg font-medium text-slate-800">Diagrama de aprovação</h5>
+                        <div class="workflow-section-header">
+                            <div class="min-w-0">
+                                <h5 class="text-sm font-bold uppercase tracking-wide text-slate-800">Diagrama de aprovação</h5>
+                                <p class="mt-1 text-xs text-slate-500">Fluxo visual com etapas, decisões e saídas de aprovação.</p>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="inline-flex h-8 items-center rounded-full border border-slate-200 bg-slate-50 px-3 text-[11px] font-bold text-slate-600"
+                                    x-text="`${getObraFluxoEtapas(obraSelecionada).length} ${getObraFluxoEtapas(obraSelecionada).length === 1 ? 'etapa' : 'etapas'}`"></span>
+                                <div class="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1">
+                                    <button type="button" class="workflow-zoom-button" title="Reduzir zoom" aria-label="Reduzir zoom" @click="alterarZoomDiagrama(-0.1)">
+                                        <i class="fas fa-minus text-xs"></i>
+                                    </button>
+                                    <button type="button" class="h-8 min-w-14 rounded-lg px-2 text-xs font-bold tabular-nums text-slate-700 hover:bg-slate-50" title="Restaurar zoom" @click="resetarZoomDiagrama()" x-text="getZoomDiagramaLabel()"></button>
+                                    <button type="button" class="workflow-zoom-button" title="Aumentar zoom" aria-label="Aumentar zoom" @click="alterarZoomDiagrama(0.1)">
+                                        <i class="fas fa-plus text-xs"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
 
-                        <div class="workflow-canvas mt-6" role="region" tabindex="0" aria-label="Diagrama BPMN simplificado do fluxo de aprovação da obra">
+                        <div class="workflow-canvas" role="region" tabindex="0" aria-label="Diagrama BPMN simplificado do fluxo de aprovação da obra" title="Use Ctrl + rolagem para ampliar ou reduzir" @wheel="zoomDiagramaPorWheel($event)" @pointerdown="iniciarArrasteDiagrama($event)" @pointermove.window="arrastarDiagrama($event)" @pointerup.window="encerrarArrasteDiagrama()" @pointercancel.window="encerrarArrasteDiagrama()" @dragstart.prevent>
                             <template x-if="getObraFluxoEtapas(obraSelecionada).length > 0">
-                                <div class="workflow-board" x-html="getWorkflowDiagramSvg(obraSelecionada)"></div>
+                                <div class="workflow-board" :style="getWorkflowDiagramBoardStyle(obraSelecionada)" x-html="getWorkflowDiagramSvg(obraSelecionada)"></div>
                             </template>
                             <template x-if="getObraFluxoEtapas(obraSelecionada).length === 0">
                                 <div class="rounded-lg border border-dashed border-slate-300 bg-white p-5 text-center text-sm text-slate-500">

@@ -28,6 +28,7 @@ from app.models.workflow import (
     WorkflowEtapa,
     WorkflowExecucao,
     WorkflowExecucaoEtapa,
+    WorkflowGrupo,
 )
 from app.services.auditoria_service import AuditoriaService
 from app.services.config_service import ConfigService
@@ -835,6 +836,14 @@ class WorkflowService:
 
     @staticmethod
     def _workflow_snapshot(workflow: WorkflowDefinicao, etapas: Iterable[WorkflowEtapa]) -> Dict[str, Any]:
+        etapas_lista = list(etapas)
+        grupos = {
+            grupo.id: grupo
+            for grupo in WorkflowGrupo.query.filter_by(
+                workflow_id=workflow.id,
+                ativo=True,
+            ).order_by(WorkflowGrupo.ordem.asc(), WorkflowGrupo.id.asc()).all()
+        }
         return {
             'workflow_id': workflow.id,
             'codigo': workflow.codigo,
@@ -852,6 +861,15 @@ class WorkflowService:
             'permite_cancelamento': workflow.permite_cancelamento,
             'sla_horas': workflow.sla_horas,
             'sla_global_horas': workflow.sla_global_horas,
+            'grupos': [
+                {
+                    'id': grupo.id,
+                    'nome': grupo.nome,
+                    'ordem': grupo.ordem,
+                    'regra_aprovacao': grupo.regra_aprovacao or 'TODOS',
+                }
+                for grupo in grupos.values()
+            ],
             'etapas': [
                 {
                     'id': etapa.id,
@@ -863,18 +881,26 @@ class WorkflowService:
                     'papel_id': etapa.papel_id,
                     'papel_codigo': etapa.papel_codigo,
                     'usuario_aprovador_id': etapa.usuario_aprovador_id,
+                    'grupo_id': etapa.grupo_id,
+                    'grupo_nome': etapa.grupo.nome if etapa.grupo else None,
                     'grupo_paralelo': etapa.grupo_paralelo,
+                    'regra_aprovacao': (
+                        etapa.grupo.regra_aprovacao
+                        if etapa.grupo and etapa.grupo.regra_aprovacao
+                        else 'TODOS'
+                    ),
                     'obrigatorio': etapa.obrigatorio,
                     'obrigatoria': etapa.obrigatoria,
                     'assinatura_obrigatoria': etapa.assinatura_obrigatoria,
                     'sla_horas': etapa.sla_horas,
                 }
-                for etapa in etapas
+                for etapa in etapas_lista
             ],
         }
 
     @staticmethod
     def _etapa_snapshot(etapa: WorkflowEtapa, aprovador_id: Optional[int]) -> Dict[str, Any]:
+        regra_aprovacao = etapa.grupo.regra_aprovacao if etapa.grupo and etapa.grupo.regra_aprovacao else 'TODOS'
         return {
             'etapa_id': etapa.id,
             'nivel': etapa.nivel,
@@ -886,7 +912,10 @@ class WorkflowService:
             'papel_codigo': etapa.papel_codigo,
             'usuario_aprovador_id': etapa.usuario_aprovador_id,
             'usuario_resolvido_id': aprovador_id,
+            'grupo_id': etapa.grupo_id,
+            'grupo_nome': etapa.grupo.nome if etapa.grupo else None,
             'grupo_paralelo': etapa.grupo_paralelo,
+            'regra_aprovacao': regra_aprovacao,
             'obrigatorio': etapa.obrigatorio,
             'obrigatoria': etapa.obrigatoria,
             'assinatura_obrigatoria': etapa.assinatura_obrigatoria,
@@ -979,7 +1008,13 @@ class WorkflowService:
                 tipo_aprovador=etapa.tipo_aprovador,
                 papel_id=etapa.papel_id,
                 usuario_resolvido_id=aprovador_id,
+                grupo_id=etapa.grupo_id,
                 grupo_paralelo=etapa.grupo_paralelo,
+                regra_aprovacao=(
+                    etapa.grupo.regra_aprovacao
+                    if etapa.grupo and etapa.grupo.regra_aprovacao
+                    else 'TODOS'
+                ),
                 obrigatorio=etapa.obrigatorio,
                 assinatura_obrigatoria=etapa.assinatura_obrigatoria,
                 sla_horas=etapa.sla_horas,
@@ -1112,6 +1147,21 @@ class WorkflowService:
             ativo=True,
         ).filter(
             WorkflowExecucaoEtapa.status == 'PENDENTE',
+            WorkflowExecucaoEtapa.nivel == aprovacao.nivel,
+        ).order_by(
+            WorkflowExecucaoEtapa.nivel.asc(),
+            *WorkflowService._order_by_nullable_asc(WorkflowExecucaoEtapa.ordem),
+            WorkflowExecucaoEtapa.id.asc(),
+        ).first()
+        if etapa:
+            return etapa
+
+        etapa = WorkflowExecucaoEtapa.query.filter_by(
+            execucao_id=execucao.id,
+            usuario_resolvido_id=aprovacao.aprovador_id,
+            ativo=True,
+        ).filter(
+            WorkflowExecucaoEtapa.status == 'PENDENTE',
         ).order_by(
             WorkflowExecucaoEtapa.nivel.asc(),
             *WorkflowService._order_by_nullable_asc(WorkflowExecucaoEtapa.ordem),
@@ -1189,6 +1239,85 @@ class WorkflowService:
         if pendencias_anteriores > 0:
             return False, "Aguarde a aprovação do responsável anterior."
         return True, ""
+
+    @staticmethod
+    def _etapa_execucao_regra_aprovacao(etapa: Optional[WorkflowExecucaoEtapa]) -> str:
+        if not etapa:
+            return 'TODOS'
+        regra = etapa.regra_aprovacao or None
+        if not regra and isinstance(etapa.etapa_snapshot, dict):
+            regra = etapa.etapa_snapshot.get('regra_aprovacao') or etapa.etapa_snapshot.get('regra_etapa')
+        regra_normalizada = str(regra or 'TODOS').strip().upper()
+        if regra_normalizada in {'QUALQUER', 'PRIMEIRO', 'OU'}:
+            return 'QUALQUER'
+        return 'TODOS'
+
+    @staticmethod
+    def _query_etapas_mesmo_grupo(execucao_id: int, etapa: WorkflowExecucaoEtapa):
+        query = WorkflowExecucaoEtapa.query.filter(
+            WorkflowExecucaoEtapa.execucao_id == execucao_id,
+            WorkflowExecucaoEtapa.ativo.is_(True),
+        )
+        if etapa.grupo_id:
+            return query.filter(WorkflowExecucaoEtapa.grupo_id == etapa.grupo_id)
+        if etapa.grupo_paralelo not in (None, '', 0, '0'):
+            return query.filter(WorkflowExecucaoEtapa.grupo_paralelo == etapa.grupo_paralelo)
+        return query.filter(WorkflowExecucaoEtapa.nivel == etapa.nivel)
+
+    @staticmethod
+    def _pular_pendentes_do_grupo_qualquer(
+        rdo_id: int,
+        etapa_aprovada: Optional[WorkflowExecucaoEtapa],
+        aprovacao_executada_id: Optional[int],
+    ) -> None:
+        if not etapa_aprovada:
+            return
+        if WorkflowService._etapa_execucao_regra_aprovacao(etapa_aprovada) != 'QUALQUER':
+            return
+
+        actor_id = WorkflowService._ator_id()
+        siblings = WorkflowService._query_etapas_mesmo_grupo(
+            etapa_aprovada.execucao_id,
+            etapa_aprovada,
+        ).filter(
+            WorkflowExecucaoEtapa.id != etapa_aprovada.id,
+            WorkflowExecucaoEtapa.status == 'PENDENTE',
+        ).all()
+
+        for sibling in siblings:
+            sibling.status = 'PULADO'
+            sibling.comentario = 'Etapa dispensada: o grupo aceita aprovacao de qualquer responsavel.'
+            sibling.modificado_por = actor_id
+            sibling.modificado_em = utcnow_naive()
+            db.session.add(sibling)
+
+            aprovacao_query = RDOAprovacao.query.filter(
+                RDOAprovacao.rdo_id == rdo_id,
+                RDOAprovacao.status == 'PENDENTE',
+                RDOAprovacao.ativo.is_(True),
+            )
+            if sibling.usuario_resolvido_id:
+                aprovacao_query = aprovacao_query.filter(RDOAprovacao.aprovador_id == sibling.usuario_resolvido_id)
+            if sibling.nivel is not None:
+                aprovacao_query = aprovacao_query.filter(RDOAprovacao.nivel == sibling.nivel)
+
+            aprovacoes_sibling = aprovacao_query.all()
+            if not aprovacoes_sibling and sibling.usuario_resolvido_id:
+                aprovacoes_sibling = RDOAprovacao.query.filter(
+                    RDOAprovacao.rdo_id == rdo_id,
+                    RDOAprovacao.aprovador_id == sibling.usuario_resolvido_id,
+                    RDOAprovacao.status == 'PENDENTE',
+                    RDOAprovacao.ativo.is_(True),
+                ).all()
+
+            for aprovacao in aprovacoes_sibling:
+                if aprovacao_executada_id and aprovacao.id == aprovacao_executada_id:
+                    continue
+                aprovacao.ativo = False
+                aprovacao.comentario = 'Dispensada pela regra do grupo: qualquer responsavel aprova.'
+                aprovacao.modificado_por = actor_id
+                aprovacao.modificado_em = utcnow_naive()
+                db.session.add(aprovacao)
 
     @staticmethod
     def _todas_etapas_aprovadas(rdo_id: int) -> bool:
@@ -1296,6 +1425,11 @@ class WorkflowService:
                     etapa_execucao.modificado_por = actor_id
                     etapa_execucao.modificado_em = utcnow_naive()
                     db.session.add(etapa_execucao)
+                    WorkflowService._pular_pendentes_do_grupo_qualquer(
+                        aprovacao.rdo_id,
+                        etapa_execucao,
+                        aprovacao.id,
+                    )
 
                 WorkflowService._registrar_assinatura_formal(
                     aprovacao=aprovacao,
@@ -1503,10 +1637,7 @@ class WorkflowService:
         for aprov in pendentes:
             if aprovacao_executada_id and aprov.id == aprovacao_executada_id:
                 continue
-            # A tabela rdo_aprovacoes em produção pode não aceitar o enum CANCELADO.
-            # Encerramos a pendência removendo-a do fluxo ativo e preservamos o
-            # cancelamento no snapshot da execução e no status do RDO.
-            aprov.ativo = False
+            aprov.status = 'CANCELADO'
             aprov.comentario = motivo or 'Fluxo cancelado por rejeição anterior'
             aprov.modificado_por = actor_id
             aprov.modificado_em = utcnow_naive()

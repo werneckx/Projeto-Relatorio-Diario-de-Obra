@@ -1,76 +1,15 @@
 {% import "components/form/macros.html" as ui_form %}
-{% import "components/macros.html" as ui %}
 
 <section id="empresa-panel-definicoes" role="tabpanel" aria-labelledby="empresa-tab-definicoes" x-show="abaAtiva === 'definicoes'" x-transition x-cloak class="scroll-mt-24">
-    {% call ui_form.section('Definicoes e parametros', icon='fa-sliders-h', icon_box_class='bg-blue-100 text-blue-600', variant='form') %}
-    <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-            <p class="text-xs text-slate-400">Configuracoes internas do sistema. Valores nativos de fabrica nao podem ser alterados.</p>
+    {% call ui_form.section('Definições e parâmetros', icon='fa-sliders-h', icon_box_class='bg-blue-100 text-blue-600', variant='form') %}
+    <div class="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-6 py-12 text-center">
+        <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-white text-blue-600 shadow-sm">
+            <i class="fas fa-screwdriver-wrench"></i>
         </div>
-        {% if can_edit %}
-        <button x-show="empresaEditing" @click="novaDefinicaoVisible = !novaDefinicaoVisible" type="button" class="self-start rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/10 transition-colors hover:bg-blue-700 sm:self-auto">
-            <i class="fas fa-plus mr-2 text-xs"></i> Nova definicao
-        </button>
-        {% endif %}
-    </div>
-
-    <div x-show="novaDefinicaoVisible" x-transition x-cloak class="mb-6 rounded-2xl border border-slate-200/60 bg-slate-50 p-5">
-        <form @submit.prevent="criarDefinicao" class="space-y-4">
-            <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <div>
-                    <label class="mb-2 block text-xs font-bold uppercase text-slate-500">Chave</label>
-                    <input x-model="novoDefinicao.chave" type="text" class="{{ ui_form.dynamic_control_classes(extra='empresa-form-control empresa-form-control--edit') }}" required>
-                </div>
-                <div>
-                    <label class="mb-2 block text-xs font-bold uppercase text-slate-500">Tipo</label>
-                    <select x-model="novoDefinicao.tipo" class="{{ ui_form.select_classes() }}" data-placeholder="Tipo">
-                        <option value="STRING">STRING</option>
-                        <option value="INT">INT</option>
-                        <option value="BOOLEAN">BOOLEAN</option>
-                        <option value="JSON">JSON</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="mb-2 block text-xs font-bold uppercase text-slate-500">Valor inicial</label>
-                    <input x-model="novoDefinicao.valor" type="text" class="{{ ui_form.dynamic_control_classes(extra='empresa-form-control empresa-form-control--edit') }}" placeholder="Valor padrao">
-                </div>
-            </div>
-            <div>
-                <label class="mb-2 block text-xs font-bold uppercase text-slate-500">Descricao</label>
-                <input x-model="novoDefinicao.descricao" type="text" class="{{ ui_form.dynamic_control_classes(extra='empresa-form-control empresa-form-control--edit') }}" placeholder="Descricao curta da funcionalidade desse parametro">
-            </div>
-            <div class="flex justify-end gap-2 pt-2">
-                <button type="button" @click="novaDefinicaoVisible=false" class="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50">Cancelar</button>
-                <button type="submit" class="rounded-2xl bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700">Criar parametro</button>
-            </div>
-        </form>
-    </div>
-
-    <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-        {% for d in definicoes %}
-        <div class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 transition-colors hover:bg-slate-50/40" data-chave="{{ d.chave }}">
-            <div class="flex items-start justify-between gap-2">
-                <div class="min-w-0 space-y-1.5">
-                    <div class="flex flex-wrap items-center gap-2">
-                        <strong class="truncate font-mono text-sm font-bold tracking-tight text-slate-800">{{ d.chave }}</strong>
-                        {{ ui.badge('Sistema' if d.is_system else 'Custom', 'neutral' if d.is_system else 'info') }}
-                    </div>
-                    <div class="text-xs leading-relaxed text-slate-400">{{ d.descricao }}</div>
-                </div>
-                <div class="shrink-0 text-xs font-bold text-slate-400" data-role="status" style="min-width:64px"></div>
-            </div>
-            <div class="flex items-center justify-between gap-3 border-t border-slate-100 pt-3">
-                <div class="truncate rounded-lg border border-slate-200/40 bg-slate-50 px-3 py-1 font-mono text-sm font-bold text-slate-700" data-role="valor">
-                    {{ config_map.get(d.chave) if config_map.get(d.chave) is not none else 'Nao definido' }}
-                </div>
-                {% if not d.is_system %}
-                <button x-show="empresaEditing" type="button" class="shrink-0 rounded-2xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900" data-action="edit">Editar</button>
-                {% else %}
-                <span class="shrink-0 rounded-lg border border-slate-100 bg-slate-50 px-2.5 py-1 text-xs italic text-slate-400 select-none">Apenas leitura</span>
-                {% endif %}
-            </div>
-        </div>
-        {% endfor %}
+        <h4 class="mt-4 text-base font-bold text-slate-900">Seção em desenvolvimento</h4>
+        <p class="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-500">
+            A gestão de definições e parâmetros da empresa está sendo preparada e será habilitada em uma próxima etapa.
+        </p>
     </div>
     {% endcall %}
 </section>

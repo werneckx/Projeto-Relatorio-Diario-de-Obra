@@ -263,6 +263,7 @@
         if (!item) return null;
         const workflowEtapas = Array.isArray(item.workflow_etapas)
             ? item.workflow_etapas.map((etapa, index) => ({
+                ...etapa,
                 nivel: toNonNegativeNumber(etapa?.nivel) || (index + 1),
                 nome: String(etapa?.nome || `Etapa ${index + 1}`),
                 papel: String(etapa?.papel || etapa?.nome || `Etapa ${index + 1}`),
@@ -376,6 +377,8 @@
                 obraDetalheVisible: false,
                 obraSelecionada: null,
                 timelineTooltip: null,
+                workflowDiagramDragging: null,
+                workflowDiagramZoom: 1,
                 workflowSubtab: localStorage.getItem('empresa_workflow_subtab') || 'configuracao',
                 filtroObras: '',
                 filtroWorkflow: '',
@@ -425,7 +428,7 @@
                     return this.empresaEditing;
                 },
                 hasGlobalActions() {
-                    return true;
+                    return ['geral', 'workflow'].includes(this.abaAtiva);
                 },
                 getActionDescription() {
                     if (this.abaAtiva === 'geral') {
@@ -439,14 +442,10 @@
                             : 'Ative a edicao para modificar o workflow padrao da empresa.';
                     }
                     if (this.abaAtiva === 'definicoes') {
-                        return this.empresaEditing
-                            ? 'Agora os botoes de criar e editar definicoes estao habilitados.'
-                            : 'Ative a edicao para habilitar os botoes desta secao.';
+                        return 'A secao de definicoes esta em desenvolvimento.';
                     }
                     if (this.abaAtiva === 'papeis') {
-                        return this.empresaEditing
-                            ? 'Agora os botoes de criar e editar papeis estao habilitados.'
-                            : 'Ative a edicao para habilitar os botoes desta secao.';
+                        return 'A secao de papeis esta em desenvolvimento.';
                     }
                     return 'Use os controles disponiveis nesta secao.';
                 },
@@ -605,11 +604,102 @@
                 abrirDetalhesObra(obraId) {
                     const obra = this.obrasWorkflowData.find((item) => item.obra_id === obraId) || null;
                     this.obraSelecionada = normalizeObraDetalhe(obra);
+                    this.resetarZoomDiagrama();
                     this.obraDetalheVisible = !!this.obraSelecionada;
                 },
                 fecharDetalhesObra() {
                     this.obraDetalheVisible = false;
                     this.obraSelecionada = null;
+                    this.encerrarArrasteDiagrama();
+                    this.resetarZoomDiagrama();
+                },
+                alterarZoomDiagrama(delta) {
+                    const nextZoom = Number(this.workflowDiagramZoom || 1) + Number(delta || 0);
+                    this.workflowDiagramZoom = Math.min(2, Math.max(0.5, Math.round(nextZoom * 10) / 10));
+                    return this.workflowDiagramZoom;
+                },
+                zoomDiagramaPorWheel(event) {
+                    if (!event || !event.currentTarget || !event.ctrlKey) {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    event.stopPropagation();
+                    const canvas = event.currentTarget;
+                    const currentZoom = Math.min(2, Math.max(0.5, Number(this.workflowDiagramZoom || 1)));
+                    const rect = canvas.getBoundingClientRect();
+                    const offsetX = event.clientX - rect.left;
+                    const offsetY = event.clientY - rect.top;
+                    const anchorX = canvas.scrollLeft + offsetX;
+                    const anchorY = canvas.scrollTop + offsetY;
+                    const nextZoom = this.alterarZoomDiagrama(event.deltaY < 0 ? 0.1 : -0.1);
+
+                    if (nextZoom === currentZoom) {
+                        return;
+                    }
+
+                    window.requestAnimationFrame(() => {
+                        const ratio = nextZoom / currentZoom;
+                        canvas.scrollLeft = (anchorX * ratio) - offsetX;
+                        canvas.scrollTop = (anchorY * ratio) - offsetY;
+                    });
+                },
+                iniciarArrasteDiagrama(event) {
+                    if (!event || !event.currentTarget || event.button !== 0) {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    const canvas = event.currentTarget;
+                    if (typeof canvas.setPointerCapture === 'function' && event.pointerId != null) {
+                        canvas.setPointerCapture(event.pointerId);
+                    }
+                    this.workflowDiagramDragging = {
+                        canvas,
+                        pointerId: event.pointerId,
+                        startX: event.clientX,
+                        startY: event.clientY,
+                        scrollLeft: canvas.scrollLeft,
+                        scrollTop: canvas.scrollTop,
+                    };
+                    canvas.classList.add('workflow-canvas--dragging');
+                },
+                arrastarDiagrama(event) {
+                    const drag = this.workflowDiagramDragging;
+                    if (!drag || !drag.canvas || !event) {
+                        return;
+                    }
+                    if (event.buttons !== 1) {
+                        this.encerrarArrasteDiagrama();
+                        return;
+                    }
+
+                    event.preventDefault();
+                    drag.canvas.scrollLeft = drag.scrollLeft - (event.clientX - drag.startX);
+                    drag.canvas.scrollTop = drag.scrollTop - (event.clientY - drag.startY);
+                },
+                encerrarArrasteDiagrama() {
+                    if (this.workflowDiagramDragging?.canvas) {
+                        const { canvas, pointerId } = this.workflowDiagramDragging;
+                        if (typeof canvas.releasePointerCapture === 'function' && pointerId != null && canvas.hasPointerCapture?.(pointerId)) {
+                            canvas.releasePointerCapture(pointerId);
+                        }
+                        this.workflowDiagramDragging.canvas.classList.remove('workflow-canvas--dragging');
+                    }
+                    this.workflowDiagramDragging = null;
+                },
+                resetarZoomDiagrama() {
+                    this.workflowDiagramZoom = 1;
+                },
+                getZoomDiagramaLabel() {
+                    return `${Math.round((this.workflowDiagramZoom || 1) * 100)}%`;
+                },
+                getWorkflowDiagramBoardStyle(obra) {
+                    const zoom = Math.min(2, Math.max(0.5, Number(this.workflowDiagramZoom || 1)));
+                    const baseSize = this.getWorkflowDiagramBaseSize(obra);
+                    const width = Math.round(baseSize.width * zoom);
+                    const height = Math.round(baseSize.height * zoom);
+                    return `width:${width}px; min-width:${width}px; height:${height}px; min-height:${height}px;`;
                 },
                 getObraWorkflowDetalhesUrl(obra) {
                     return String(obra?.obra_workflow_url || '').trim() || '#';
@@ -812,6 +902,71 @@
                         startR: 28,
                         width: columns === 1 ? 790 : 1270,
                     };
+                },
+                getWorkflowParallelForkJoinDiagramSize(obra, etapas) {
+                    const L = {
+                        PADDING_X: 72,
+                        PADDING_TOP: 58,
+                        PADDING_BOTTOM: 86,
+                        CARD_WIDTH: 190,
+                        CARD_MIN_HEIGHT: 110,
+                        CARD_GAP: 38,
+                        NODE_RADIUS: 28,
+                        DECISION_HALF: 42,
+                        START_TO_SPLIT: 86,
+                        SPLIT_TO_CARD: 90,
+                        CARD_TO_SYNC: 92,
+                        SYNC_TO_DECISION: 110,
+                        RESULT_GAP: 80,
+                        APPROVED_BADGE_WIDTH: 90,
+                        BADGE_HEIGHT: 22,
+                        END_GAP: 76,
+                        END_LABEL_WIDTH: 138,
+                        REJECT_GAP: 40,
+                    };
+                    const normalizeApproverLabel = (label) => {
+                        const normalized = normalizeWorkflowStageDisplay(label);
+                        return normalized.toUpperCase() === 'CLIENTE OBRA' ? 'Cliente da Obra' : normalized;
+                    };
+                    const approvers = etapas.flatMap((etapa, index) => {
+                        const source = String(etapa?.papel || etapa?.nome || `Aprovador ${index + 1}`);
+                        const labels = source.split(',').map((item) => normalizeApproverLabel(item)).filter(Boolean);
+                        return (labels.length ? labels : [source]).map((label) => normalizeApproverLabel(label));
+                    });
+
+                    if (!approvers.length) {
+                        return { width: 960, height: 420 };
+                    }
+
+                    const cardHeights = approvers.map((label) => Math.max(L.CARD_MIN_HEIGHT, 62 + (wrapWorkflowSvgText(label, 18, 3).length * 22)));
+                    const normalizedCardHeight = Math.max(...cardHeights);
+                    const gridHeight = (approvers.length * normalizedCardHeight) + ((approvers.length - 1) * L.CARD_GAP);
+                    const startCx = L.PADDING_X + L.NODE_RADIUS;
+                    const splitX = startCx + L.NODE_RADIUS + L.START_TO_SPLIT;
+                    const cardX = splitX + L.SPLIT_TO_CARD;
+                    const syncX = cardX + L.CARD_WIDTH + L.CARD_TO_SYNC;
+                    const decisionCx = syncX + L.SYNC_TO_DECISION;
+                    const approvedBadgeX = decisionCx + L.DECISION_HALF + L.RESULT_GAP;
+                    const approvedEndCx = approvedBadgeX + L.APPROVED_BADGE_WIDTH + L.END_GAP;
+                    const width = approvedEndCx + L.NODE_RADIUS + 28 + L.END_LABEL_WIDTH + L.PADDING_X;
+                    const decisionCy = L.PADDING_TOP + Math.max(gridHeight / 2, L.NODE_RADIUS + L.DECISION_HALF);
+                    const approvedBottom = decisionCy + L.NODE_RADIUS;
+                    const rejectedBadgeY = decisionCy + L.DECISION_HALF + L.REJECT_GAP;
+                    const rejectedEndBottom = rejectedBadgeY + L.BADGE_HEIGHT + L.RESULT_GAP + 18;
+                    const height = Math.max(L.PADDING_TOP + gridHeight + L.PADDING_BOTTOM, rejectedEndBottom + L.PADDING_BOTTOM, approvedBottom + L.PADDING_BOTTOM);
+
+                    return { width, height };
+                },
+                getWorkflowDiagramBaseSize(obra) {
+                    const etapas = this.getObraFluxoEtapas(obra);
+                    if (!etapas.length) {
+                        return { width: 960, height: 420 };
+                    }
+                    if (String(obra?.workflow_diagram_variant || '').toLowerCase() === 'parallel' || obra?.aprovacao_paralela) {
+                        return this.getWorkflowParallelForkJoinDiagramSize(obra, etapas);
+                    }
+                    const layout = this.getWorkflowDiagramLayout(etapas.length);
+                    return { width: layout.width, height: layout.height };
                 },
                 getWorkflowDiagramStagePosition(index, layout) {
                     const column = index % layout.columns;
@@ -1046,19 +1201,21 @@
                         PADDING_X: 72,
                         PADDING_TOP: 58,
                         PADDING_BOTTOM: 86,
-                        CARD_WIDTH: 176,
-                        CARD_MIN_HEIGHT: 86,
-                        CARD_GAP: 28,
-                        ROW_GAP: 38,
+                        CARD_WIDTH: 190,
+                        CARD_MIN_HEIGHT: 110,
+                        CARD_GAP: 38,
                         NODE_RADIUS: 28,
                         DECISION_HALF: 42,
-                        VERTICAL_GAP: 72,
+                        START_TO_SPLIT: 86,
+                        SPLIT_TO_CARD: 90,
+                        CARD_TO_SYNC: 92,
+                        SYNC_TO_DECISION: 110,
                         RESULT_GAP: 80,
-                        BADGE_WIDTH: 96,
+                        APPROVED_BADGE_WIDTH: 90,
                         BADGE_HEIGHT: 22,
-                        END_LABEL_WIDTH: 132,
-                        CONNECTOR_LANE_GAP: 24,
-                        CONNECTOR_GUTTER: 34,
+                        END_GAP: 76,
+                        END_LABEL_WIDTH: 138,
+                        REJECT_GAP: 40,
                     };
                     const rule = String(obra?.regra_etapa || etapas[0]?.regra_etapa || 'TODOS').toUpperCase() === 'PRIMEIRO'
                         ? 'PRIMEIRO'
@@ -1073,18 +1230,19 @@
                         return (labels.length ? labels : [source]).map((label, itemIndex) => ({
                             id: `${index + 1}-${itemIndex + 1}`,
                             label: normalizeApproverLabel(label),
+                            nivel: etapa?.nivel || index + 1,
                         }));
                     });
                     if (!approvers.length) return '';
 
                     const createCard = (approver, index) => {
-                        const lines = wrapWorkflowSvgText(approver.label, 16, 3);
+                        const lines = wrapWorkflowSvgText(approver.label, 18, 3);
                         return {
                             ...approver,
                             index,
                             lines,
                             width: L.CARD_WIDTH,
-                            height: Math.max(L.CARD_MIN_HEIGHT, 42 + (lines.length * 20)),
+                            height: Math.max(L.CARD_MIN_HEIGHT, 62 + (lines.length * 22)),
                         };
                     };
                     const createCircleNode = (cx, cy, r) => ({ cx, cy, r });
@@ -1133,130 +1291,106 @@
                         cards.forEach((card) => {
                             card.height = cardHeight;
                         });
-                        const columns = approvers.length <= 4 ? approvers.length : (approvers.length <= 8 ? 3 : 4);
-                        const rows = Math.ceil(cards.length / columns);
-                        const rowGroups = Array.from({ length: rows }, (_, rowIndex) => cards.slice(rowIndex * columns, (rowIndex + 1) * columns));
-                        const rowHeights = rowGroups.map((row) => Math.max(...row.map((card) => card.height)));
-                        const gridWidth = (columns * L.CARD_WIDTH) + ((columns - 1) * L.CARD_GAP);
-                        const gridHeight = rowHeights.reduce((sum, height) => sum + height, 0) + ((rows - 1) * L.ROW_GAP);
-                        const width = Math.max(
-                            L.PADDING_X * 2 + gridWidth,
-                            L.PADDING_X * 2 + L.DECISION_HALF * 2 + L.RESULT_GAP + L.BADGE_WIDTH + L.RESULT_GAP + L.NODE_RADIUS * 2 + L.END_LABEL_WIDTH,
-                        );
-                        const centerX = width / 2;
-                        const start = createCircleNode(centerX, L.PADDING_TOP + L.NODE_RADIUS, L.NODE_RADIUS);
-                        const split = { x: centerX, y: anchor(start, 'bottom').y + L.VERTICAL_GAP };
-                        const gridTop = split.y + L.VERTICAL_GAP;
-                        const gridLeft = centerX - (gridWidth / 2);
-                        let currentY = gridTop;
-                        rowGroups.forEach((row, rowIndex) => {
-                            const rowHeight = rowHeights[rowIndex];
-                            const rowWidth = (row.length * L.CARD_WIDTH) + ((row.length - 1) * L.CARD_GAP);
-                            const rowStartX = gridLeft + ((gridWidth - rowWidth) / 2);
-                            row.forEach((card, colIndex) => {
-                                card.x = rowStartX + (colIndex * (L.CARD_WIDTH + L.CARD_GAP));
-                                card.y = currentY + ((rowHeight - card.height) / 2);
-                            });
-                            currentY += rowHeight + L.ROW_GAP;
+                        const gridHeight = (cards.length * cardHeight) + ((cards.length - 1) * L.CARD_GAP);
+                        const startCx = L.PADDING_X + L.NODE_RADIUS;
+                        const splitX = startCx + L.NODE_RADIUS + L.START_TO_SPLIT;
+                        const cardX = splitX + L.SPLIT_TO_CARD;
+                        const syncX = cardX + L.CARD_WIDTH + L.CARD_TO_SYNC;
+                        const decisionCx = syncX + L.SYNC_TO_DECISION;
+                        const approvedBadgeX = decisionCx + L.DECISION_HALF + L.RESULT_GAP;
+                        const approvedEndCx = approvedBadgeX + L.APPROVED_BADGE_WIDTH + L.END_GAP;
+                        const width = approvedEndCx + L.NODE_RADIUS + 28 + L.END_LABEL_WIDTH + L.PADDING_X;
+                        const centerY = L.PADDING_TOP + Math.max(gridHeight / 2, L.NODE_RADIUS + L.DECISION_HALF);
+                        const gridTop = centerY - (gridHeight / 2);
+                        cards.forEach((card, index) => {
+                            card.x = cardX;
+                            card.y = gridTop + (index * (cardHeight + L.CARD_GAP));
                         });
-                        const sync = { x: centerX, y: gridTop + gridHeight + L.VERTICAL_GAP };
-                        const decision = createDecision(centerX, sync.y + L.VERTICAL_GAP);
-                        const approvedBadge = createBadge(anchor(decision, 'right').x + L.RESULT_GAP, decision.cy - (L.BADGE_HEIGHT / 2), 58, L.BADGE_HEIGHT);
-                        const approvedEnd = createCircleNode(anchor(approvedBadge, 'right').x + L.RESULT_GAP + 18, decision.cy, 18);
-                        const rejectedBadge = createBadge(decision.cx - 29, anchor(decision, 'bottom').y + L.VERTICAL_GAP, 58, L.BADGE_HEIGHT);
-                        const rejectedEnd = createCircleNode(decision.cx, anchor(rejectedBadge, 'bottom').y + L.RESULT_GAP, 18);
-                        const height = Math.max(anchor(rejectedEnd, 'bottom').y + L.PADDING_BOTTOM, anchor(approvedEnd, 'bottom').y + L.PADDING_BOTTOM);
-                        return { cards, columns, rows, gridLeft, gridTop, gridWidth, width, height, start, split, sync, decision, approvedBadge, approvedEnd, rejectedBadge, rejectedEnd };
+                        const start = createCircleNode(startCx, centerY, L.NODE_RADIUS);
+                        const split = { x: splitX, y: centerY };
+                        const sync = { x: syncX, y: centerY };
+                        const decision = createDecision(decisionCx, centerY);
+                        const approvedBadge = createBadge(approvedBadgeX, centerY - (L.BADGE_HEIGHT / 2), L.APPROVED_BADGE_WIDTH, L.BADGE_HEIGHT);
+                        const approvedEnd = createCircleNode(approvedEndCx, centerY, 18);
+                        const rejectedBadge = createBadge(decisionCx - 47, anchor(decision, 'bottom').y + L.REJECT_GAP, 94, L.BADGE_HEIGHT);
+                        const rejectedEnd = createCircleNode(decisionCx, anchor(rejectedBadge, 'bottom').y + L.RESULT_GAP, 18);
+                        const height = Math.max(L.PADDING_TOP + gridHeight + L.PADDING_BOTTOM, anchor(rejectedEnd, 'bottom').y + L.PADDING_BOTTOM, anchor(approvedEnd, 'bottom').y + L.PADDING_BOTTOM);
+                        return { cards, width, height, start, split, sync, decision, approvedBadge, approvedEnd, rejectedBadge, rejectedEnd };
                     };
 
                     const layout = calculateLayout();
                     const connectors = [];
                     const shapes = [];
                     const labels = [];
+                    const svgId = `workflow-parallel-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+                    const ids = {
+                        neutralArrow: `${svgId}-arrow-neutral`,
+                        approvedArrow: `${svgId}-arrow-approved`,
+                        rejectedArrow: `${svgId}-arrow-rejected`,
+                        cardShadow: `${svgId}-card-shadow`,
+                        nodeShadow: `${svgId}-node-shadow`,
+                    };
 
-                    connectors.push(drawConnector([anchor(layout.start, 'bottom'), layout.split], COLORS.neutral));
+                    connectors.push(drawConnector([anchor(layout.start, 'right'), layout.split], COLORS.neutral));
                     layout.cards.forEach((card) => {
-                        const cardTop = anchor(card, 'top');
-                        const cardBottom = anchor(card, 'bottom');
-                        const splitLaneY = layout.gridTop - L.CONNECTOR_LANE_GAP;
-                        const cardColumn = card.index % layout.columns;
-                        const useLeftGutter = cardColumn < layout.columns / 2;
-                        const gutterX = useLeftGutter
-                            ? layout.gridLeft - L.CONNECTOR_GUTTER
-                            : layout.gridLeft + layout.gridWidth + L.CONNECTOR_GUTTER;
-                        const cardExitY = cardBottom.y + L.CONNECTOR_LANE_GAP;
-                        const isSingleCard = layout.cards.length === 1;
-                        const isSingleRow = layout.rows === 1;
-                        const isCenterColumn = layout.columns % 2 === 1 && cardColumn === Math.floor(layout.columns / 2);
+                        const cardLeft = anchor(card, 'left');
+                        const cardRight = anchor(card, 'right');
                         connectors.push(drawConnector([
                             layout.split,
-                            { x: layout.split.x, y: splitLaneY },
-                            { x: cardTop.x, y: splitLaneY },
-                            cardTop,
-                        ], COLORS.neutral, 'workflow-arrow-neutral'));
-                        if (isSingleCard || (isSingleRow && isCenterColumn)) {
-                            connectors.push(drawConnector([cardBottom, layout.sync], COLORS.neutral));
-                        } else if (isSingleRow) {
-                            connectors.push(drawConnector([
-                                cardBottom,
-                                { x: cardBottom.x, y: layout.sync.y },
-                                layout.sync,
-                            ], COLORS.neutral));
-                        } else {
-                            connectors.push(drawConnector([
-                                cardBottom,
-                                { x: cardBottom.x, y: cardExitY },
-                                { x: gutterX, y: cardExitY },
-                                { x: gutterX, y: layout.sync.y },
-                                layout.sync,
-                            ], COLORS.neutral));
-                        }
+                            { x: layout.split.x + 46, y: layout.split.y },
+                            { x: layout.split.x + 46, y: cardLeft.y },
+                            cardLeft,
+                        ], COLORS.neutral, ids.neutralArrow));
+                        connectors.push(drawConnector([
+                            cardRight,
+                            { x: layout.sync.x - 46, y: cardRight.y },
+                            { x: layout.sync.x - 46, y: layout.sync.y },
+                            layout.sync,
+                        ], COLORS.neutral));
                     });
-                    connectors.push(drawConnector([layout.sync, anchor(layout.decision, 'top')], COLORS.neutral, 'workflow-arrow-neutral'));
+                    connectors.push(drawConnector([layout.sync, anchor(layout.decision, 'left')], COLORS.neutral, ids.neutralArrow));
                     connectors.push(drawConnector([anchor(layout.decision, 'right'), anchor(layout.approvedBadge, 'left')], COLORS.green));
-                    connectors.push(drawConnector([anchor(layout.approvedBadge, 'right'), anchor(layout.approvedEnd, 'left')], COLORS.green, 'workflow-arrow-approved'));
+                    connectors.push(drawConnector([anchor(layout.approvedBadge, 'right'), anchor(layout.approvedEnd, 'left')], COLORS.green, ids.approvedArrow));
                     connectors.push(drawConnector([
                         anchor(layout.decision, 'bottom'),
                         { x: anchor(layout.decision, 'bottom').x, y: anchor(layout.rejectedBadge, 'top').y - 18 },
                         anchor(layout.rejectedBadge, 'top'),
                     ], COLORS.red));
-                    connectors.push(drawConnector([anchor(layout.rejectedBadge, 'bottom'), anchor(layout.rejectedEnd, 'top')], COLORS.red, 'workflow-arrow-rejected'));
+                    connectors.push(drawConnector([anchor(layout.rejectedBadge, 'bottom'), anchor(layout.rejectedEnd, 'top')], COLORS.red, ids.rejectedArrow));
 
-                    shapes.push(`<circle cx="${layout.start.cx}" cy="${layout.start.cy}" r="${layout.start.r}" fill="${COLORS.slate}" filter="url(#workflow-node-shadow)"></circle>`);
+                    shapes.push(`<circle cx="${layout.start.cx}" cy="${layout.start.cy}" r="${layout.start.r}" fill="${COLORS.slate}" filter="url(#${ids.nodeShadow})"></circle>`);
                     layout.cards.forEach((card) => {
-                        shapes.push(`<rect x="${card.x}" y="${card.y}" width="${card.width}" height="${card.height}" rx="8" fill="#ffffff" stroke="#cbd5e1" filter="url(#workflow-card-shadow)"></rect>`);
-                        labels.push(`<text x="${card.x + 16}" y="${card.y + 18}" fill="#475569" font-size="11" font-weight="800">APROVAÇÃO</text>`);
-                        labels.push(this.renderWorkflowSvgTextLines(card.lines, card.x + 16, card.y + 44, 20, `fill="${COLORS.dark}" font-size="15" font-weight="800"`));
+                        shapes.push(`<rect x="${card.x}" y="${card.y}" width="${card.width}" height="${card.height}" rx="8" fill="#ffffff" stroke="#cbd5e1" filter="url(#${ids.cardShadow})"></rect>`);
+                        labels.push(`<text x="${card.x + 16}" y="${card.y + 30}" fill="#475569" font-size="12" font-weight="800">ETAPA ${escapeSvgText(card.nivel || card.index + 1)}</text>`);
+                        labels.push(this.renderWorkflowSvgTextLines(card.lines.map((line) => String(line).toUpperCase()), card.x + 16, card.y + 62, 22, `fill="${COLORS.dark}" font-size="17" font-weight="800"`));
                     });
-                    shapes.push(`<polygon points="${layout.decision.cx},${layout.decision.cy - layout.decision.half} ${layout.decision.cx + layout.decision.half},${layout.decision.cy} ${layout.decision.cx},${layout.decision.cy + layout.decision.half} ${layout.decision.cx - layout.decision.half},${layout.decision.cy}" fill="${COLORS.slate}" filter="url(#workflow-node-shadow)"></polygon>`);
+                    shapes.push(`<polygon points="${layout.decision.cx},${layout.decision.cy - layout.decision.half} ${layout.decision.cx + layout.decision.half},${layout.decision.cy} ${layout.decision.cx},${layout.decision.cy + layout.decision.half} ${layout.decision.cx - layout.decision.half},${layout.decision.cy}" fill="${COLORS.slate}" filter="url(#${ids.nodeShadow})"></polygon>`);
                     shapes.push(`<circle cx="${layout.approvedEnd.cx}" cy="${layout.approvedEnd.cy}" r="${layout.approvedEnd.r}" fill="#16a34a"></circle>`);
                     shapes.push(`<circle cx="${layout.rejectedEnd.cx}" cy="${layout.rejectedEnd.cy}" r="${layout.rejectedEnd.r}" fill="${COLORS.red}"></circle>`);
                     labels.push(`<text x="${layout.start.cx}" y="${layout.start.cy + 4}" fill="#ffffff" text-anchor="middle" font-size="12" font-weight="800">Início</text>`);
-                    labels.push(`<text x="${layout.decision.cx}" y="${layout.decision.cy - 8}" fill="#ffffff" text-anchor="middle" font-size="10" font-weight="800">Todos</text>`);
-                    labels.push(`<text x="${layout.decision.cx}" y="${layout.decision.cy + 10}" fill="#ffffff" text-anchor="middle" font-size="10" font-weight="800">${rule === 'PRIMEIRO' ? 'responderam?' : 'aprovaram?'}</text>`);
-                    labels.push(this.renderWorkflowSvgBadge('Sim', layout.approvedBadge.x, layout.approvedBadge.y, layout.approvedBadge.width, layout.approvedBadge.height, COLORS.green));
-                    labels.push(this.renderWorkflowSvgBadge('Não', layout.rejectedBadge.x, layout.rejectedBadge.y, layout.rejectedBadge.width, layout.rejectedBadge.height, COLORS.red));
+                    labels.push(`<text x="${layout.decision.cx}" y="${layout.decision.cy + 4}" fill="#ffffff" text-anchor="middle" font-size="11" font-weight="800">Decisão</text>`);
+                    labels.push(this.renderWorkflowSvgBadge('Aprovado', layout.approvedBadge.x, layout.approvedBadge.y, layout.approvedBadge.width, layout.approvedBadge.height, COLORS.green));
+                    labels.push(this.renderWorkflowSvgBadge('Recusado', layout.rejectedBadge.x, layout.rejectedBadge.y, layout.rejectedBadge.width, layout.rejectedBadge.height, COLORS.red));
                     labels.push(`<path d="M ${layout.approvedEnd.cx - 8} ${layout.approvedEnd.cy} L ${layout.approvedEnd.cx - 2} ${layout.approvedEnd.cy + 6} L ${layout.approvedEnd.cx + 9} ${layout.approvedEnd.cy - 7}" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>`);
-                    labels.push(`<path d="M ${layout.rejectedEnd.cx - 6} ${layout.rejectedEnd.cy - 6} L ${layout.rejectedEnd.cx + 6} ${layout.rejectedEnd.cy + 6} M ${layout.rejectedEnd.cx + 6} ${layout.rejectedEnd.cy - 6} L ${layout.rejectedEnd.cx - 6} ${layout.rejectedEnd.cy + 6}" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round"></path>`);
-                    labels.push(`<text x="${layout.approvedEnd.cx + 28}" y="${layout.approvedEnd.cy + 6}" fill="${COLORS.green}" font-size="17" font-weight="800">Aprovado</text>`);
-                    labels.push(`<text x="${layout.rejectedEnd.cx + 28}" y="${layout.rejectedEnd.cy + 6}" fill="${COLORS.red}" font-size="17" font-weight="800">Recusado</text>`);
+                    labels.push(`<text x="${layout.rejectedEnd.cx}" y="${layout.rejectedEnd.cy + 4}" fill="#ffffff" text-anchor="middle" font-size="12" font-weight="800">Fim</text>`);
+                    labels.push(`<text x="${layout.approvedEnd.cx + 28}" y="${layout.approvedEnd.cy + 6}" fill="${COLORS.green}" font-size="17" font-weight="800">Fim aprovado</text>`);
 
                     return `
-                        <svg class="workflow-board-svg" width="100%" height="auto" viewBox="0 0 ${layout.width} ${layout.height}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Diagrama de aprovação paralela" xmlns="http://www.w3.org/2000/svg">
+                        <svg class="workflow-board-svg" width="${layout.width}" height="${layout.height}" viewBox="0 0 ${layout.width} ${layout.height}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Diagrama de aprovação paralela" xmlns="http://www.w3.org/2000/svg">
                             <defs>
-                                <marker id="workflow-arrow-neutral" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+                                <marker id="${ids.neutralArrow}" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
                                     <path d="M 0 0 L 8 4 L 0 8 z" fill="${COLORS.neutral}"></path>
                                 </marker>
-                                <marker id="workflow-arrow-approved" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+                                <marker id="${ids.approvedArrow}" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
                                     <path d="M 0 0 L 8 4 L 0 8 z" fill="${COLORS.green}"></path>
                                 </marker>
-                                <marker id="workflow-arrow-rejected" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+                                <marker id="${ids.rejectedArrow}" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
                                     <path d="M 0 0 L 8 4 L 0 8 z" fill="${COLORS.red}"></path>
                                 </marker>
-                                <filter id="workflow-card-shadow" x="-10%" y="-10%" width="120%" height="130%">
+                                <filter id="${ids.cardShadow}" x="-10%" y="-10%" width="120%" height="130%">
                                     <feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#0f172a" flood-opacity="0.10"></feDropShadow>
                                 </filter>
-                                <filter id="workflow-node-shadow" x="-20%" y="-20%" width="140%" height="140%">
+                                <filter id="${ids.nodeShadow}" x="-20%" y="-20%" width="140%" height="140%">
                                     <feDropShadow dx="0" dy="1" stdDeviation="1.2" flood-color="#0f172a" flood-opacity="0.16"></feDropShadow>
                                 </filter>
                             </defs>
@@ -1387,13 +1521,21 @@
                     const connectors = [];
                     const shapes = [];
                     const labels = [];
+                    const svgId = `workflow-sequential-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+                    const ids = {
+                        neutralArrow: `${svgId}-arrow-neutral`,
+                        approvedArrow: `${svgId}-arrow-approved`,
+                        rejectedArrow: `${svgId}-arrow-rejected`,
+                        cardShadow: `${svgId}-card-shadow`,
+                        nodeShadow: `${svgId}-node-shadow`,
+                    };
 
                     connectors.push(this.renderWorkflowSvgPath(
                         `M ${layout.startCx + layout.startR} ${layout.firstRowY} H ${stagePositions[0].cardX}`,
                         neutral,
-                        'workflow-arrow-neutral',
+                        ids.neutralArrow,
                     ));
-                    shapes.push(`<circle cx="${layout.startCx}" cy="${layout.firstRowY}" r="${layout.startR}" fill="${slate}" filter="url(#workflow-node-shadow)"></circle>`);
+                    shapes.push(`<circle cx="${layout.startCx}" cy="${layout.firstRowY}" r="${layout.startR}" fill="${slate}" filter="url(#${ids.nodeShadow})"></circle>`);
                     labels.push(`<text x="${layout.startCx}" y="${layout.firstRowY + 4}" fill="#ffffff" text-anchor="middle" font-size="12" font-weight="800">Início</text>`);
 
                     etapas.forEach((etapa, index) => {
@@ -1409,29 +1551,29 @@
                         const rejectedCircleY = rejectedBadgeY + layout.badgeH + 54;
                         const stageName = normalizeWorkflowStageDisplay(etapa.papel || etapa.nome || 'Responsável');
 
-                        connectors.push(this.renderWorkflowSvgPath(`M ${cardRight} ${stage.rowY} H ${decisionLeft}`, neutral, 'workflow-arrow-neutral'));
+                        connectors.push(this.renderWorkflowSvgPath(`M ${cardRight} ${stage.rowY} H ${decisionLeft}`, neutral, ids.neutralArrow));
                         connectors.push(this.renderWorkflowSvgPath(`M ${decisionRight} ${stage.rowY} H ${stage.approvedBadgeX}`, green));
                         connectors.push(this.renderWorkflowSvgPath(`M ${stage.decisionCx} ${decisionBottom} V ${rejectedBadgeY}`, red));
-                        connectors.push(this.renderWorkflowSvgPath(`M ${stage.decisionCx} ${rejectedBadgeY + layout.badgeH} V ${rejectedCircleY - 22}`, red, 'workflow-arrow-rejected'));
+                        connectors.push(this.renderWorkflowSvgPath(`M ${stage.decisionCx} ${rejectedBadgeY + layout.badgeH} V ${rejectedCircleY - 22}`, red, ids.rejectedArrow));
 
                         if (!isLast) {
                             const nextStage = stagePositions[index + 1];
                             connectors.push(this.renderWorkflowSvgPath(
                                 this.getWorkflowApprovedConnectorPath(stage, nextStage, layout),
                                 green,
-                                'workflow-arrow-approved',
+                                ids.approvedArrow,
                             ));
                         } else {
                             const finalCircleX = approvedBadgeRight + 76;
                             const finalCircleY = stage.rowY;
-                            connectors.push(this.renderWorkflowSvgPath(`M ${approvedBadgeRight} ${stage.rowY} H ${finalCircleX - 24}`, green, 'workflow-arrow-approved'));
+                            connectors.push(this.renderWorkflowSvgPath(`M ${approvedBadgeRight} ${stage.rowY} H ${finalCircleX - 24}`, green, ids.approvedArrow));
                             shapes.push(`<circle cx="${finalCircleX}" cy="${finalCircleY}" r="18" fill="#16a34a"></circle>`);
                             labels.push(`<path d="M ${finalCircleX - 8} ${finalCircleY} L ${finalCircleX - 2} ${finalCircleY + 6} L ${finalCircleX + 9} ${finalCircleY - 7}" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>`);
                             labels.push(`<text x="${finalCircleX + 28}" y="${finalCircleY + 6}" fill="${green}" font-size="17" font-weight="800">Fim aprovado</text>`);
                         }
 
-                        shapes.push(`<rect x="${stage.cardX}" y="${stage.cardY}" width="${layout.cardW}" height="${layout.cardH}" rx="8" fill="#ffffff" stroke="#cbd5e1" filter="url(#workflow-card-shadow)"></rect>`);
-                        shapes.push(`<polygon points="${stage.decisionCx},${stage.decisionCy - layout.diamondHalf} ${stage.decisionCx + layout.diamondHalf},${stage.decisionCy} ${stage.decisionCx},${stage.decisionCy + layout.diamondHalf} ${stage.decisionCx - layout.diamondHalf},${stage.decisionCy}" fill="${slate}" filter="url(#workflow-node-shadow)"></polygon>`);
+                        shapes.push(`<rect x="${stage.cardX}" y="${stage.cardY}" width="${layout.cardW}" height="${layout.cardH}" rx="8" fill="#ffffff" stroke="#cbd5e1" filter="url(#${ids.cardShadow})"></rect>`);
+                        shapes.push(`<polygon points="${stage.decisionCx},${stage.decisionCy - layout.diamondHalf} ${stage.decisionCx + layout.diamondHalf},${stage.decisionCy} ${stage.decisionCx},${stage.decisionCy + layout.diamondHalf} ${stage.decisionCx - layout.diamondHalf},${stage.decisionCy}" fill="${slate}" filter="url(#${ids.nodeShadow})"></polygon>`);
                         shapes.push(`<circle cx="${stage.decisionCx}" cy="${rejectedCircleY}" r="21" fill="${red}"></circle>`);
                         labels.push(`<text x="${stage.cardX + 16}" y="${stage.cardY + 30}" fill="#475569" font-size="12" font-weight="800">ETAPA ${escapeSvgText(etapa.nivel || index + 1)}</text>`);
                         labels.push(this.renderWorkflowSvgTextLines(
@@ -1448,21 +1590,21 @@
                     });
 
                     return `
-                        <svg class="workflow-board-svg" viewBox="0 0 ${layout.width} ${layout.height}" role="img" aria-label="Diagrama de aprovação" xmlns="http://www.w3.org/2000/svg">
+                        <svg class="workflow-board-svg" width="${layout.width}" height="${layout.height}" viewBox="0 0 ${layout.width} ${layout.height}" role="img" aria-label="Diagrama de aprovação" xmlns="http://www.w3.org/2000/svg">
                             <defs>
-                                <marker id="workflow-arrow-neutral" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+                                <marker id="${ids.neutralArrow}" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
                                     <path d="M 0 0 L 8 4 L 0 8 z" fill="${neutral}"></path>
                                 </marker>
-                                <marker id="workflow-arrow-approved" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+                                <marker id="${ids.approvedArrow}" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
                                     <path d="M 0 0 L 8 4 L 0 8 z" fill="${green}"></path>
                                 </marker>
-                                <marker id="workflow-arrow-rejected" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+                                <marker id="${ids.rejectedArrow}" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
                                     <path d="M 0 0 L 8 4 L 0 8 z" fill="${red}"></path>
                                 </marker>
-                                <filter id="workflow-card-shadow" x="-10%" y="-10%" width="120%" height="130%">
+                                <filter id="${ids.cardShadow}" x="-10%" y="-10%" width="120%" height="130%">
                                     <feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#0f172a" flood-opacity="0.10"></feDropShadow>
                                 </filter>
-                                <filter id="workflow-node-shadow" x="-20%" y="-20%" width="140%" height="140%">
+                                <filter id="${ids.nodeShadow}" x="-20%" y="-20%" width="140%" height="140%">
                                     <feDropShadow dx="0" dy="1" stdDeviation="1.2" flood-color="#0f172a" flood-opacity="0.16"></feDropShadow>
                                 </filter>
                             </defs>
@@ -1496,10 +1638,132 @@
             globalRule: 'TODOS',
             dirty: false,
             collapsedGroups: {},
+            diagramZoom: 1,
+            diagramDragging: null,
         };
 
         function workflowEl(id) {
             return document.getElementById(id);
+        }
+
+        function getEmpresaWorkflowDiagramPayload() {
+            const rules = getEmpresaWorkflowRules();
+            return {
+                workflow_etapas: getEmpresaWorkflowDiagramEtapas(),
+                workflow_diagram_variant: rules.isParallel ? 'parallel' : 'default',
+                aprovacao_paralela: rules.isParallel,
+                regra_etapa: 'TODOS',
+            };
+        }
+
+        function getEmpresaWorkflowDiagramBaseSize() {
+            const payload = getEmpresaWorkflowDiagramPayload();
+            try {
+                return window.empresaApp().getWorkflowDiagramBaseSize(payload);
+            } catch (_) {
+                return { width: 960, height: 420 };
+            }
+        }
+
+        function syncEmpresaWorkflowDiagramViewport() {
+            const diagramEl = workflowEl('workflowCompanyDiagram');
+            const labelEl = workflowEl('workflowCompanyDiagramZoomReset');
+            const zoom = Math.min(2, Math.max(0.5, Number(empresaWorkflowState.diagramZoom || 1)));
+            empresaWorkflowState.diagramZoom = Math.round(zoom * 10) / 10;
+
+            if (labelEl) {
+                labelEl.textContent = `${Math.round(empresaWorkflowState.diagramZoom * 100)}%`;
+            }
+
+            if (!diagramEl) return;
+            const baseSize = getEmpresaWorkflowDiagramBaseSize();
+            const width = Math.round(baseSize.width * empresaWorkflowState.diagramZoom);
+            const height = Math.round(baseSize.height * empresaWorkflowState.diagramZoom);
+            diagramEl.style.width = `${width}px`;
+            diagramEl.style.minWidth = `${width}px`;
+            diagramEl.style.height = `${height}px`;
+            diagramEl.style.minHeight = `${height}px`;
+        }
+
+        function setEmpresaWorkflowDiagramZoom(value) {
+            empresaWorkflowState.diagramZoom = Math.min(2, Math.max(0.5, Math.round(Number(value || 1) * 10) / 10));
+            syncEmpresaWorkflowDiagramViewport();
+            return empresaWorkflowState.diagramZoom;
+        }
+
+        function alterarEmpresaWorkflowDiagramZoom(delta) {
+            return setEmpresaWorkflowDiagramZoom(Number(empresaWorkflowState.diagramZoom || 1) + Number(delta || 0));
+        }
+
+        function resetEmpresaWorkflowDiagramZoom() {
+            setEmpresaWorkflowDiagramZoom(1);
+        }
+
+        function zoomEmpresaWorkflowDiagramPorWheel(event) {
+            if (!event || !event.currentTarget || !event.ctrlKey) return;
+            event.preventDefault();
+            event.stopPropagation();
+
+            const canvas = event.currentTarget;
+            const currentZoom = Math.min(2, Math.max(0.5, Number(empresaWorkflowState.diagramZoom || 1)));
+            const rect = canvas.getBoundingClientRect();
+            const offsetX = event.clientX - rect.left;
+            const offsetY = event.clientY - rect.top;
+            const anchorX = canvas.scrollLeft + offsetX;
+            const anchorY = canvas.scrollTop + offsetY;
+            const nextZoom = alterarEmpresaWorkflowDiagramZoom(event.deltaY < 0 ? 0.1 : -0.1);
+
+            if (nextZoom === currentZoom) return;
+
+            window.requestAnimationFrame(() => {
+                const ratio = nextZoom / currentZoom;
+                canvas.scrollLeft = (anchorX * ratio) - offsetX;
+                canvas.scrollTop = (anchorY * ratio) - offsetY;
+            });
+        }
+
+        function iniciarArrasteEmpresaWorkflowDiagram(event) {
+            if (!event || !event.currentTarget || event.button !== 0) return;
+
+            event.preventDefault();
+            const canvas = event.currentTarget;
+            if (typeof canvas.setPointerCapture === 'function' && event.pointerId != null) {
+                canvas.setPointerCapture(event.pointerId);
+            }
+            empresaWorkflowState.diagramDragging = {
+                canvas,
+                pointerId: event.pointerId,
+                startX: event.clientX,
+                startY: event.clientY,
+                scrollLeft: canvas.scrollLeft,
+                scrollTop: canvas.scrollTop,
+            };
+            canvas.classList.add('workflow-canvas--dragging');
+        }
+
+        function arrastarEmpresaWorkflowDiagram(event) {
+            const drag = empresaWorkflowState.diagramDragging;
+            if (!drag || !drag.canvas || !event) return;
+            if (event.buttons !== 1) {
+                encerrarArrasteEmpresaWorkflowDiagram();
+                return;
+            }
+
+            event.preventDefault();
+            drag.canvas.scrollLeft = drag.scrollLeft - (event.clientX - drag.startX);
+            drag.canvas.scrollTop = drag.scrollTop - (event.clientY - drag.startY);
+        }
+
+        function encerrarArrasteEmpresaWorkflowDiagram() {
+            const drag = empresaWorkflowState.diagramDragging;
+            if (drag?.canvas) {
+                const { canvas, pointerId } = drag;
+                if (typeof canvas.releasePointerCapture === 'function' && pointerId != null && canvas.hasPointerCapture?.(pointerId)) {
+                    canvas.releasePointerCapture(pointerId);
+                }
+                canvas.classList.remove('workflow-canvas--dragging');
+            }
+            empresaWorkflowState.diagramDragging = null;
         }
 
         function getEmpresaRoot() {
@@ -1693,6 +1957,21 @@
             return empresaWorkflowRoleOptions.find((papel) => Number(papel.id) === Number(papelId)) || null;
         }
 
+        function getEmpresaWorkflowStageKey(stage, index = 0) {
+            return String(stage?.local_id || stage?.etapa_id || `empresa-stage-${index}`);
+        }
+
+        function findEmpresaWorkflowStageIndex(stageKey, fallbackIndex = null) {
+            const stages = empresaWorkflowState.customStages || [];
+            const normalizedKey = String(stageKey || '');
+            if (normalizedKey) {
+                const stableIndex = stages.findIndex((stage, index) => getEmpresaWorkflowStageKey(stage, index) === normalizedKey);
+                if (stableIndex >= 0) return stableIndex;
+            }
+            const numericIndex = Number(fallbackIndex);
+            return Number.isInteger(numericIndex) && numericIndex >= 0 && numericIndex < stages.length ? numericIndex : -1;
+        }
+
         function getEmpresaWorkflowModelKind(preview) {
             const tipo = String(preview?.tipo_fluxo || '').toUpperCase();
             const nome = String(preview?.workflow_nome || '').toLowerCase();
@@ -1723,7 +2002,13 @@
                 papel_id: stage.papel_id || '',
                 workflow_group: String(stage.workflow_group || stage.grupo_visual || stage.grupo_paralelo || stage.nivel || index + 1),
                 grupo_paralelo: stage.grupo_paralelo || null,
+                regra_aprovacao: normalizeEmpresaWorkflowGroupRule(stage.regra_aprovacao || stage.regra_etapa || 'TODOS'),
             };
+        }
+
+        function normalizeEmpresaWorkflowGroupRule(value) {
+            const normalized = String(value || 'TODOS').trim().toUpperCase();
+            return ['QUALQUER', 'PRIMEIRO', 'OU'].includes(normalized) ? 'QUALQUER' : 'TODOS';
         }
 
         function getEmpresaWorkflowStageGroupKey(stage, index) {
@@ -1741,6 +2026,21 @@
             return Array.from(groupsMap.values()).sort((a, b) => Number(a.key) - Number(b.key));
         }
 
+        function getEmpresaWorkflowGroupRule(group) {
+            const firstStage = group?.items?.[0]?.stage || null;
+            return normalizeEmpresaWorkflowGroupRule(firstStage?.regra_aprovacao || firstStage?.regra_etapa || 'TODOS');
+        }
+
+        function setEmpresaWorkflowGroupRule(groupKey, value) {
+            const normalizedRule = normalizeEmpresaWorkflowGroupRule(value);
+            (empresaWorkflowState.customStages || []).forEach((stage, index) => {
+                if (getEmpresaWorkflowStageGroupKey(stage, index) === String(groupKey)) {
+                    stage.regra_aprovacao = normalizedRule;
+                    stage.regra_etapa = normalizedRule;
+                }
+            });
+        }
+
         function getEmpresaWorkflowTypeLabel() {
             const rules = getEmpresaWorkflowRules();
             if (rules.isParallel) return 'Aprovação paralela';
@@ -1749,9 +2049,7 @@
         }
 
         function getEmpresaWorkflowRuleLabel() {
-            return empresaWorkflowState.globalRule === 'PRIMEIRO'
-                ? 'Primeiro a responder'
-                : 'Todos devem aprovar';
+            return 'Entre grupos/etapas: E';
         }
 
         function getEmpresaWorkflowDiagramEtapas() {
@@ -1763,10 +2061,13 @@
                 const nome = rules.isParallel
                     ? papeis.join(', ')
                     : (papeis[0] || `Etapa ${groupIndex + 1}`);
+                const regra = getEmpresaWorkflowGroupRule(group);
                 return {
                     nivel: groupIndex + 1,
                     nome,
                     papel: nome,
+                    regra_aprovacao: regra,
+                    regra_etapa: regra,
                 };
             });
         }
@@ -1864,15 +2165,15 @@
 
             if (!etapas.length) {
                 diagramEl.innerHTML = '';
+                diagramEl.removeAttribute('style');
                 emptyEl.classList.remove('hidden');
+                syncEmpresaWorkflowDiagramViewport();
                 return;
             }
 
             emptyEl.classList.add('hidden');
-            diagramEl.innerHTML = window.empresaApp().getWorkflowDiagramSvg({
-                workflow_etapas: etapas,
-                workflow_diagram_variant: rules.isParallel ? 'parallel' : 'default',
-            });
+            diagramEl.innerHTML = window.empresaApp().getWorkflowDiagramSvg(getEmpresaWorkflowDiagramPayload());
+            syncEmpresaWorkflowDiagramViewport();
         }
 
         function isEmpresaWorkflowGroupCollapsed(groupKey) {
@@ -1907,16 +2208,28 @@
                     tipo_aprovador: 'PAPEL',
                     workflow_group: groupKey,
                     grupo_paralelo: rules.isSimple ? null : Number(groupKey),
+                    regra_aprovacao: normalizeEmpresaWorkflowGroupRule(stage.regra_aprovacao || stage.regra_etapa || 'TODOS'),
                 };
             });
         }
 
         function hydrateEmpresaWorkflowStages(preview) {
             const etapas = Array.isArray(preview?.etapas) ? preview.etapas : [];
-            empresaWorkflowState.customStages = etapas.map((stage, index) => cloneEmpresaWorkflowStage(stage, index));
+            const grupos = Array.isArray(preview?.grupos) ? preview.grupos : [];
+            const regrasPorGrupo = new Map(grupos.map((grupo) => [
+                String(grupo.ordem || grupo.workflow_group || grupo.grupo_paralelo || grupo.id),
+                normalizeEmpresaWorkflowGroupRule(grupo.regra_aprovacao || grupo.regra_etapa),
+            ]));
+            empresaWorkflowState.customStages = etapas.map((stage, index) => {
+                const cloned = cloneEmpresaWorkflowStage(stage, index);
+                const groupKey = String(cloned.workflow_group || cloned.grupo_paralelo || cloned.nivel || index + 1);
+                cloned.regra_aprovacao = regrasPorGrupo.get(groupKey) || normalizeEmpresaWorkflowGroupRule(stage.regra_aprovacao || stage.regra_etapa);
+                cloned.regra_etapa = cloned.regra_aprovacao;
+                return cloned;
+            });
             if (!empresaWorkflowState.customStages.length) empresaWorkflowState.customStages = [createEmpresaWorkflowApprover('1')];
             empresaWorkflowState.globalSignature = Boolean(preview?.assinatura_obrigatoria);
-            empresaWorkflowState.globalRule = String((etapas[0]?.regra_etapa) || (preview?.aprovacao_paralela ? 'TODOS' : 'PRIMEIRO')).toUpperCase() === 'PRIMEIRO' ? 'PRIMEIRO' : 'TODOS';
+            empresaWorkflowState.globalRule = 'TODOS';
             empresaWorkflowState.collapsedGroups = {};
             normalizeEmpresaWorkflowStagesOrder();
             empresaWorkflowState.dirty = false;
@@ -1937,6 +2250,8 @@
                 papel_id: empresaWorkflowRoleOptions[0]?.id || '',
                 workflow_group: String(groupKey || 1),
                 grupo_paralelo: getEmpresaWorkflowRules().isSimple ? null : Number(groupKey || 1),
+                regra_aprovacao: 'TODOS',
+                regra_etapa: 'TODOS',
             };
         }
 
@@ -1951,30 +2266,27 @@
             const title = workflowEl('workflowCompanyStagesTitle');
             const addButton = workflowEl('workflowCompanyAddStageButton');
             if (!summary) return;
-            const preview = empresaWorkflowState.preview || {};
             const groups = getEmpresaWorkflowVisualGroups();
             const total = groups.length;
-            const origem = preview.workflow_origem || 'Workflow da Empresa';
+            const totalApprovers = groups.reduce((sum, group) => sum + group.items.length, 0);
             const rules = getEmpresaWorkflowRules();
             if (title) {
-                title.textContent = rules.isParallel ? 'Grupos e Papeis' : 'Etapas e Papeis';
+                title.textContent = rules.isParallel ? 'Grupos e papéis' : 'Etapas e papéis';
             }
             if (addButton) {
                 addButton.classList.toggle('hidden', rules.isSimple || !isEmpresaWorkflowEditing());
                 const icon = addButton.querySelector('i');
                 if (icon) icon.className = 'fas fa-plus';
+                const actionLabel = rules.isParallel ? 'Adicionar grupo' : 'Adicionar etapa';
+                addButton.setAttribute('aria-label', actionLabel);
+                addButton.setAttribute('title', actionLabel);
                 const label = addButton.querySelector('.workflow-add-label');
                 if (label) {
-                    label.textContent = rules.isParallel ? 'Adicionar grupo' : 'Adicionar etapa';
+                    label.textContent = actionLabel;
                 }
             }
             const estruturaLabel = rules.isParallel ? 'grupo' : 'etapa';
-            const definicaoLabel = rules.isSequential
-                ? 'com aprovacao em ordem hierarquica'
-                : rules.isParallel
-                    ? 'com aprovacao paralela por papel'
-                    : 'com definicao por papel';
-            summary.textContent = `${origem} com ${total} ${estruturaLabel}${total === 1 ? '' : 's'} ${definicaoLabel}.`;
+            summary.textContent = `${total} ${estruturaLabel}${total === 1 ? '' : 's'} · ${totalApprovers} ${totalApprovers === 1 ? 'papel' : 'papéis'}`;
         }
 
         function addEmpresaWorkflowApproverToGroup(groupKey) {
@@ -1985,12 +2297,14 @@
             renderEmpresaWorkflowCards();
         }
 
-        function removeEmpresaWorkflowApprover(index) {
+        function removeEmpresaWorkflowApprover(stageKey, fallbackIndex = null) {
             if (!isEmpresaWorkflowEditing()) return;
+            const index = findEmpresaWorkflowStageIndex(stageKey, fallbackIndex);
+            if (index < 0) return;
             const groups = getEmpresaWorkflowVisualGroups();
             const group = groups.find((item) => item.items.some((row) => row.index === index));
             if (!group || group.items.length <= 1) {
-                showWarning('Grupo minimo', 'Cada etapa ou grupo deve ter ao menos um papel.');
+                showWarning('Grupo mínimo', 'Cada etapa ou grupo deve ter ao menos um papel.');
                 return;
             }
             empresaWorkflowState.customStages.splice(index, 1);
@@ -2003,7 +2317,7 @@
             if (!isEmpresaWorkflowEditing()) return;
             const groups = getEmpresaWorkflowVisualGroups();
             if (groups.length <= 1) {
-                showWarning('Workflow minimo', 'O workflow deve ter pelo menos uma etapa ou grupo.');
+                showWarning('Workflow mínimo', 'O workflow deve ter pelo menos uma etapa ou grupo.');
                 return;
             }
             empresaWorkflowState.customStages = (empresaWorkflowState.customStages || []).filter((stage, index) => getEmpresaWorkflowStageGroupKey(stage, index) !== String(groupKey));
@@ -2016,9 +2330,18 @@
             const container = workflowEl('workflowCompanyStagesContainer');
             if (!container || container.dataset.workflowBound === 'true') return;
             container.addEventListener('change', (event) => {
+                const groupRuleSelect = event.target.closest('.empresa-workflow-group-rule');
+                if (groupRuleSelect) {
+                    if (!isEmpresaWorkflowEditing()) return;
+                    setEmpresaWorkflowGroupRule(groupRuleSelect.dataset.groupKey, groupRuleSelect.value);
+                    markEmpresaWorkflowDirty();
+                    renderEmpresaWorkflowCards();
+                    return;
+                }
+
                 const select = event.target.closest('.empresa-workflow-stage-role');
                 if (!select) return;
-                const index = Number(select.dataset.stageIndex);
+                const index = findEmpresaWorkflowStageIndex(select.dataset.stageKey, select.dataset.stageIndex);
                 const stage = empresaWorkflowState.customStages[index];
                 if (!stage || !isEmpresaWorkflowEditing()) return;
                 stage.papel_id = select.value || '';
@@ -2031,7 +2354,7 @@
                 if (!actionButton) return;
                 const action = actionButton.dataset.workflowAction;
                 if (action === 'remove-approver') {
-                    removeEmpresaWorkflowApprover(Number(actionButton.dataset.stageIndex));
+                    removeEmpresaWorkflowApprover(actionButton.dataset.stageKey, Number(actionButton.dataset.stageIndex));
                     return;
                 }
                 if (action === 'add-approver') {
@@ -2088,35 +2411,55 @@
             });
         }
 
+        function formatWorkflowRoleLabel(label) {
+            const raw = String(label || '').trim();
+            return raw;
+            const normalized = raw.toUpperCase();
+            const knownLabels = {
+                FISCAL: 'Fiscal',
+                COORDENADOR: 'Coordenador',
+                CLIENTE_OBRA: 'Cliente da obra',
+                GESTOR_CONTRATO: 'Gestor de contrato',
+                RESPONSAVEL_OBRA: 'Responsável pela obra',
+            };
+            if (knownLabels[normalized]) return knownLabels[normalized];
+            if (!raw.includes('_')) return raw;
+            const readable = raw.toLowerCase().replace(/_/g, ' ');
+            return readable.charAt(0).toUpperCase() + readable.slice(1);
+        }
+
+        const formatEmpresaWorkflowRoleLabel = formatWorkflowRoleLabel;
+
         function renderEmpresaWorkflowRoleSelect(stage, stageIndex, disabled) {
-            const baseClasses = 'form-control-std h-9 text-sm block w-full rounded-2xl appearance-none';
-            const editClasses = 'bg-white border-slate-300 text-slate-600 shadow-sm placeholder:text-slate-400';
-            const viewClasses = 'bg-slate-100 border-slate-300 text-slate-800 font-semibold shadow-none cursor-not-allowed pointer-events-none select-none opacity-95';
+            const stageKey = getEmpresaWorkflowStageKey(stage, stageIndex);
+            const editClasses = 'bg-white border-slate-200 text-slate-700 shadow-sm placeholder:text-slate-400';
+            const viewClasses = 'bg-transparent border-transparent text-slate-800 font-bold shadow-none cursor-default pointer-events-none select-none';
             const selectedRole = getEmpresaWorkflowRoleById(stage.papel_id);
-            const selectedLabel = selectedRole?.nome || 'Selecione o papel';
-            const buttonClasses = `${baseClasses} flex h-11 w-full items-center gap-2 rounded-2xl border px-4 pr-12 text-left font-semibold ${disabled ? viewClasses : editClasses}`;
+            const selectedLabel = formatEmpresaWorkflowRoleLabel(selectedRole?.nome || 'Selecione o papel');
+            const buttonClasses = `flex h-9 min-w-0 w-full items-center gap-2 rounded-xl border px-3 pr-9 text-left text-xs font-semibold ${disabled ? viewClasses : editClasses}`;
+            const optionClasses = 'flex h-9 w-full items-center gap-2 px-3 text-left text-xs font-semibold text-slate-700 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none';
             const optionHtml = [
-                '<button type="button" class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50" data-workflow-dropdown-option data-value=""><span class="min-w-0 flex-1 truncate">Selecione o papel</span><i class="fas fa-check hidden text-blue-600" data-workflow-dropdown-check></i></button>',
+                `<button type="button" class="${optionClasses}" data-workflow-dropdown-option data-value=""><span class="min-w-0 flex-1 truncate">Selecione o papel</span><i class="fas fa-check hidden text-blue-600" data-workflow-dropdown-check></i></button>`,
                 ...empresaWorkflowRoleOptions.map((papel) => `
-                    <button type="button" class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50" data-workflow-dropdown-option data-value="${escapeEmpresaWorkflowHtml(papel.id)}">
-                        <span class="min-w-0 flex-1 truncate">${escapeEmpresaWorkflowHtml(papel.nome)}</span>
+                    <button type="button" class="${optionClasses}" data-workflow-dropdown-option data-value="${escapeEmpresaWorkflowHtml(papel.id)}">
+                        <span class="min-w-0 flex-1 truncate">${escapeEmpresaWorkflowHtml(formatEmpresaWorkflowRoleLabel(papel.nome))}</span>
                         <i class="fas fa-check hidden text-blue-600" data-workflow-dropdown-check></i>
                     </button>
                 `),
             ].join('');
             return `
                 <div class="relative" data-workflow-custom-dropdown data-workflow-dropdown-mode="edit">
-                    <select class="empresa-workflow-stage-role hidden" data-no-tom-select="true" data-stage-index="${stageIndex}" tabindex="${disabled ? '-1' : '0'}" aria-disabled="${disabled ? 'true' : 'false'}">
+                    <select id="workflow-stage-role-${stageIndex}" class="empresa-workflow-stage-role hidden" data-no-tom-select="true" data-stage-index="${stageIndex}" data-stage-key="${escapeEmpresaWorkflowHtml(stageKey)}" tabindex="${disabled ? '-1' : '0'}" aria-disabled="${disabled ? 'true' : 'false'}">
                         <option value="">Selecione o papel</option>
                         ${empresaWorkflowRoleOptions.map((papel) => `
-                            <option value="${escapeEmpresaWorkflowHtml(papel.id)}" ${Number(papel.id) === Number(stage.papel_id) ? 'selected' : ''}>${escapeEmpresaWorkflowHtml(papel.nome)}</option>
+                            <option value="${escapeEmpresaWorkflowHtml(papel.id)}" ${Number(papel.id) === Number(stage.papel_id) ? 'selected' : ''}>${escapeEmpresaWorkflowHtml(formatEmpresaWorkflowRoleLabel(papel.nome))}</option>
                         `).join('')}
                     </select>
                     <button type="button" class="${buttonClasses}" data-workflow-dropdown-button tabindex="${disabled ? '-1' : '0'}" aria-disabled="${disabled ? 'true' : 'false'}">
                         <span class="min-w-0 flex-1 truncate" data-workflow-dropdown-label>${escapeEmpresaWorkflowHtml(selectedLabel)}</span>
                     </button>
-                    ${disabled ? '' : '<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4 text-slate-400"><i class="fas fa-chevron-down text-xs"></i></div>'}
-                    <div class="absolute left-0 right-0 top-[calc(100%+6px)] z-50 hidden max-h-72 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl" data-workflow-dropdown-menu>
+                    ${disabled ? '' : '<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400"><i class="fas fa-chevron-down text-[10px]"></i></div>'}
+                    <div class="absolute left-0 right-0 top-[calc(100%+6px)] z-50 hidden max-h-64 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-xl" data-workflow-dropdown-menu>
                         ${optionHtml}
                     </div>
                 </div>
@@ -2125,16 +2468,25 @@
 
         function renderEmpresaWorkflowApproverCard(stage, stageIndex, groupSize, rules) {
             const editing = isEmpresaWorkflowEditing();
+            const stageKey = getEmpresaWorkflowStageKey(stage, stageIndex);
+            const selectedRole = getEmpresaWorkflowRoleById(stage.papel_id);
+            const roleLabel = formatEmpresaWorkflowRoleLabel(selectedRole?.nome || `papel ${stageIndex + 1}`);
+            const removeDisabled = groupSize <= 1;
+            const showStageHandle = editing && !rules.isSimple;
             return `
-                <div class="empresa-workflow-stage-card min-w-0 flex-1 rounded-2xl border ${editing ? 'border-slate-200 bg-white' : 'border-slate-300 bg-slate-50/90'} p-3 shadow-none" data-stage-index="${stageIndex}" data-etapa-id="${String(stage.etapa_id || '')}">
-                    <div class="space-y-2.5">
-                        <div>
-                            <label class="mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Papel</label>
-                            ${renderEmpresaWorkflowRoleSelect(stage, stageIndex, !editing)}
-                        </div>
-                        ${editing ? '' : '<div class="rounded-xl border border-slate-200 bg-slate-100 px-3 py-1.5 text-[11px] font-semibold text-slate-500">Somente leitura</div>'}
-                        ${rules.isSimple || !editing ? '' : `<button type="button" data-workflow-action="remove-approver" data-stage-index="${stageIndex}" ${groupSize <= 1 ? 'disabled' : ''} class="h-8 w-full rounded-xl border border-rose-300 bg-white text-[11px] font-bold text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40">Excluir</button>`}
+                <div class="empresa-workflow-stage-card flex min-w-0 items-center gap-2 border-t border-slate-100 px-2 py-1.5" data-stage-index="${stageIndex}" data-stage-key="${escapeEmpresaWorkflowHtml(stageKey)}" data-etapa-id="${String(stage.etapa_id || '')}">
+                    ${showStageHandle ? `<span class="inline-flex h-8 w-5 shrink-0 cursor-grab items-center justify-center text-slate-300" aria-label="Arrastar papel" role="img">
+                        <i class="fas fa-grip-vertical text-xs"></i>
+                    </span>` : ''}
+                    <label class="sr-only" for="workflow-stage-role-${stageIndex}">Papel ${stageIndex + 1}</label>
+                    <div class="min-w-0 flex-1">
+                        ${renderEmpresaWorkflowRoleSelect(stage, stageIndex, !editing)}
                     </div>
+                    ${rules.isSimple || !editing ? '' : `
+                        <button type="button" data-workflow-action="remove-approver" data-stage-index="${stageIndex}" data-stage-key="${escapeEmpresaWorkflowHtml(stageKey)}" ${removeDisabled ? 'disabled' : ''} aria-label="Excluir papel ${escapeEmpresaWorkflowHtml(roleLabel)}" title="Excluir papel" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 focus:outline-none focus:ring-2 focus:ring-rose-200 disabled:cursor-not-allowed disabled:opacity-35">
+                            <i class="fas fa-times text-xs"></i>
+                        </button>
+                    `}
                 </div>
             `;
         }
@@ -2142,9 +2494,9 @@
         function renderEmpresaWorkflowAddApproverButton(groupKey, rules) {
             if (rules.isSimple || !isEmpresaWorkflowEditing()) return '';
             return `
-                <button type="button" data-workflow-action="add-approver" data-group-key="${String(groupKey)}" class="my-1 flex min-h-[88px] w-full shrink-0 items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/60 px-3 py-3 text-xs font-black text-slate-500 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-500">
-                    <i class="fas fa-plus"></i>
-                        <span class="ml-2">Adicionar papel</span>
+                <button type="button" data-workflow-action="add-approver" data-group-key="${String(groupKey)}" class="flex h-9 w-full items-center justify-center gap-2 border-t border-dashed border-slate-200 px-2 text-xs font-bold text-slate-500 transition hover:bg-blue-50 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-200">
+                    <i class="fas fa-plus text-[10px]"></i>
+                    <span>Adicionar papel</span>
                 </button>
             `;
         }
@@ -2152,8 +2504,8 @@
         function renderEmpresaWorkflowCollapsedState(rules) {
             const entityLabel = rules.isParallel ? 'Grupo' : 'Etapa';
             return `
-                <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-3 py-2.5 text-[11px] font-semibold text-slate-500">
-                    ${entityLabel} recolhido. Arraste pelo icone para alterar a ordem.
+                <div class="border-t border-slate-100 px-2.5 py-2 text-[11px] font-semibold text-slate-500">
+                    ${entityLabel} recolhido.
                 </div>
             `;
         }
@@ -2162,13 +2514,45 @@
             if (isEmpresaWorkflowGroupCollapsed(group.key)) {
                 return renderEmpresaWorkflowCollapsedState(rules);
             }
-            const separator = empresaWorkflowState.globalRule === 'PRIMEIRO'
-                ? '<span class="text-xs font-black text-slate-400">OU</span>'
-                : '<span class="text-xs font-black text-slate-400">E</span>';
             return `
-                <div class="space-y-2.5">
-                    ${group.items.map((item) => renderEmpresaWorkflowApproverCard(item.stage, item.index, group.items.length, rules)).join(separator)}
+                <div>
+                    ${group.items.map((item) => renderEmpresaWorkflowApproverCard(item.stage, item.index, group.items.length, rules)).join('')}
                     ${renderEmpresaWorkflowAddApproverButton(group.key, rules)}
+                </div>
+            `;
+        }
+
+        function renderEmpresaWorkflowGroupRuleControl(group, rules) {
+            if (rules.isSimple) return '';
+            const editing = isEmpresaWorkflowEditing();
+            const value = getEmpresaWorkflowGroupRule(group);
+            const label = value === 'QUALQUER' ? 'Qualquer um aprova' : 'Todos devem aprovar';
+            const groupKey = escapeEmpresaWorkflowHtml(String(group.key));
+            const buttonClasses = editing
+                ? 'flex h-9 min-w-0 w-full items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 pr-9 text-left text-xs font-semibold text-slate-700 shadow-sm placeholder:text-slate-400'
+                : 'flex h-9 min-w-0 w-full items-center gap-2 rounded-xl border border-transparent bg-transparent px-3 pr-9 text-left text-xs font-bold text-slate-800 shadow-none cursor-default pointer-events-none select-none';
+            const optionClasses = 'flex h-9 w-full items-center gap-2 px-3 text-left text-xs font-semibold text-slate-700 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none';
+            return `
+                <div class="relative" data-workflow-custom-dropdown data-workflow-dropdown-mode="edit">
+                    <label class="sr-only" for="workflow-group-rule-${groupKey}">Regra do grupo</label>
+                    <select id="workflow-group-rule-${groupKey}" data-no-tom-select="true" data-group-key="${groupKey}" class="empresa-workflow-group-rule hidden" tabindex="${editing ? '0' : '-1'}" aria-disabled="${editing ? 'false' : 'true'}">
+                        <option value="TODOS" ${value === 'TODOS' ? 'selected' : ''}>Todos devem aprovar</option>
+                        <option value="QUALQUER" ${value === 'QUALQUER' ? 'selected' : ''}>Qualquer um aprova</option>
+                    </select>
+                    <button type="button" class="${buttonClasses}" data-workflow-dropdown-button tabindex="${editing ? '0' : '-1'}" aria-disabled="${editing ? 'false' : 'true'}">
+                        <span class="min-w-0 flex-1 truncate" data-workflow-dropdown-label>${escapeEmpresaWorkflowHtml(label)}</span>
+                    </button>
+                    ${editing ? '<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400"><i class="fas fa-chevron-down text-[10px]"></i></div>' : ''}
+                    <div class="absolute left-0 right-0 top-[calc(100%+6px)] z-50 hidden overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl" data-workflow-dropdown-menu>
+                        <button type="button" class="${optionClasses}" data-workflow-dropdown-option data-value="TODOS">
+                            <span class="min-w-0 flex-1 truncate">Todos devem aprovar</span>
+                            <i class="fas fa-check hidden text-blue-600" data-workflow-dropdown-check></i>
+                        </button>
+                        <button type="button" class="${optionClasses}" data-workflow-dropdown-option data-value="QUALQUER">
+                            <span class="min-w-0 flex-1 truncate">Qualquer um aprova</span>
+                            <i class="fas fa-check hidden text-blue-600" data-workflow-dropdown-check></i>
+                        </button>
+                    </div>
                 </div>
             `;
         }
@@ -2179,22 +2563,35 @@
             const removeLabel = rules.isParallel ? 'Excluir grupo' : 'Excluir etapa';
             const title = rules.isSimple ? 'Etapa 1' : `${entityLabel} ${groupIndex + 1}`;
             const editing = isEmpresaWorkflowEditing();
-            const dragClasses = rules.isSimple || !editing ? 'cursor-default' : 'cursor-grab';
+            const showGroupHandle = !rules.isSimple && editing;
             const canRemoveGroup = !rules.isSimple && groupsLength > 1 && editing;
+            const collapsed = isEmpresaWorkflowGroupCollapsed(group.key);
+            const ruleBadge = rules.isParallel
+                ? (empresaWorkflowState.globalRule === 'PRIMEIRO' ? 'Primeiro' : 'Todos')
+                : (rules.isSequential ? 'Sequencial' : 'Única');
+            const toggleLabel = collapsed ? `Expandir ${title}` : `Recolher ${title}`;
+            const headerMinHeight = rules.isSimple ? 'min-h-[44px]' : 'min-h-[76px]';
 
             return `
-                <div class="mb-2.5 flex items-center justify-between gap-2">
-                    <div class="flex items-center gap-2">
-                        <button type="button" class="inline-flex h-6 w-6 ${dragClasses} items-center justify-center rounded-lg bg-slate-100 text-slate-500 active:cursor-grabbing" aria-label="${dragLabel}">
-                            <i class="fas fa-grip-vertical"></i>
-                        </button>
-                        <h5 class="text-xs font-black text-slate-900">${title}</h5>
-                        <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">${group.items.length} papel${group.items.length === 1 ? '' : 's'}</span>
+                <div class="flex ${headerMinHeight} flex-col gap-2 px-3 py-2.5">
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="flex min-w-0 items-center gap-2">
+                            ${showGroupHandle ? `<button type="button" class="inline-flex h-7 w-6 cursor-grab items-center justify-center rounded-lg text-slate-400 active:cursor-grabbing" aria-label="${dragLabel}">
+                                <i class="fas fa-grip-vertical text-xs"></i>
+                            </button>` : ''}
+                            <h5 class="min-w-0 truncate text-xs font-black text-slate-900">${title}</h5>
+                            <span class="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">${group.items.length} papel${group.items.length === 1 ? '' : 's'}</span>
+                        </div>
+                        <div class="flex shrink-0 items-center gap-1">
+                            <button type="button" data-workflow-action="toggle-group" data-group-key="${String(group.key)}" aria-label="${toggleLabel}" aria-expanded="${collapsed ? 'false' : 'true'}" title="${toggleLabel}" class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-200">
+                                <i class="fas ${collapsed ? 'fa-chevron-down' : 'fa-chevron-up'} text-[10px]"></i>
+                            </button>
+                            ${canRemoveGroup ? `<button type="button" data-workflow-action="remove-group" data-group-key="${String(group.key)}" aria-label="${removeLabel}" title="${removeLabel}" class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 focus:outline-none focus:ring-2 focus:ring-rose-200"><i class="fas fa-trash-alt text-xs"></i></button>` : ''}
+                        </div>
                     </div>
-                    <div class="flex items-center gap-2.5">
-                        <button type="button" data-workflow-action="toggle-group" data-group-key="${String(group.key)}" class="text-[11px] font-bold text-slate-500 hover:text-slate-700">${isEmpresaWorkflowGroupCollapsed(group.key) ? 'Expandir' : 'Encolher'}</button>
-                        ${canRemoveGroup ? `<button type="button" data-workflow-action="remove-group" data-group-key="${String(group.key)}" class="text-[11px] font-bold text-rose-600 hover:text-rose-700">${removeLabel}</button>` : ''}
-                    </div>
+                    ${rules.isSimple ? '' : `<div class="${showGroupHandle ? 'pl-8' : ''}">
+                        ${renderEmpresaWorkflowGroupRuleControl(group, rules)}
+                    </div>`}
                 </div>
             `;
         }
@@ -2202,7 +2599,7 @@
         function renderEmpresaWorkflowGroupCard(group, groupIndex, groupsLength, rules) {
             const draggable = rules.isSimple || !isEmpresaWorkflowEditing() ? 'false' : 'true';
             return `
-                <div class="empresa-workflow-group-card rounded-2xl border border-slate-200 bg-white p-3 shadow-none" data-workflow-group-key="${String(group.key)}" draggable="${draggable}">
+                <div class="empresa-workflow-group-card overflow-visible rounded-xl border border-slate-200 bg-white shadow-none" data-workflow-group-key="${String(group.key)}" draggable="${draggable}">
                     ${renderEmpresaWorkflowGroupHeader(group, groupIndex, groupsLength, rules)}
                     ${renderEmpresaWorkflowGroupContent(group, rules)}
                 </div>
@@ -2217,17 +2614,17 @@
             const groups = getEmpresaWorkflowVisualGroups();
 
             if (rules.isParallel) {
-                container.className = 'space-y-3';
+                container.className = 'space-y-2';
                 container.innerHTML = `
-                    <div class="space-y-3">
+                    <div class="space-y-2">
                         ${groups.map((group, groupIndex) => renderEmpresaWorkflowGroupCard(group, groupIndex, groups.length, rules)).join('')}
                     </div>
                 `;
             } else {
-                container.className = 'space-y-3';
+                container.className = 'space-y-2';
                 container.innerHTML = groups
                     .map((group, groupIndex) => renderEmpresaWorkflowGroupCard(group, groupIndex, groups.length, rules))
-                    .join(rules.isSequential ? '<div class="flex justify-center text-xs text-slate-300"><i class="fas fa-arrow-down"></i></div>' : '');
+                    .join(rules.isSequential ? '<div class="flex justify-center text-[10px] text-slate-300"><i class="fas fa-arrow-down"></i></div>' : '');
             }
 
             renderEmpresaWorkflowSummary();
@@ -2243,8 +2640,6 @@
             const dropdownLabel = workflowEl('workflowCompanyTypeDropdownLabel');
             const signature = workflowEl('workflowCompanySignature');
             const signaturePreviewInput = workflowEl('workflowCompanySignaturePreview');
-            const rule = workflowEl('workflowCompanyRule');
-            const rulePreviewInput = workflowEl('workflowCompanyRulePreview');
             if (select) {
                 select.value = String(empresaWorkflowState.selectedWorkflowModel || 'simples');
                 const selectedOption = select.options[select.selectedIndex];
@@ -2259,12 +2654,8 @@
                 });
             }
             setEmpresaWorkflowSelectValue(signature, empresaWorkflowState.globalSignature ? '1' : '0');
-            setEmpresaWorkflowSelectValue(rule, empresaWorkflowState.globalRule);
             if (signature && signaturePreviewInput) {
                 signaturePreviewInput.value = getEmpresaWorkflowDropdownLabel(signature);
-            }
-            if (rule && rulePreviewInput) {
-                rulePreviewInput.value = getEmpresaWorkflowDropdownLabel(rule);
             }
             syncEmpresaWorkflowDropdowns(workflowEl('empresa-panel-workflow') || document);
         }
@@ -2306,14 +2697,23 @@
             const payload = {
                 assinatura_obrigatoria: empresaWorkflowState.globalSignature,
                 aprovacao_paralela: rules.isParallel,
-                regra_etapa: empresaWorkflowState.globalRule,
+                regra_etapa: 'TODOS',
                 tipo_fluxo: tipoFluxo,
+                grupos: groups.map((group, groupIndex) => ({
+                    key: String(group.key),
+                    nome: rules.isSimple ? 'Etapa 1' : (rules.isParallel ? `Grupo ${groupIndex + 1}` : `Etapa ${groupIndex + 1}`),
+                    ordem: groupIndex + 1,
+                    regra_aprovacao: getEmpresaWorkflowGroupRule(group),
+                })),
                 etapas: groups.flatMap((group, groupIndex) => group.items.map((item, itemIndex) => ({
                     nome: rules.isParallel ? `Grupo ${groupIndex + 1}` : `Etapa ${groupIndex + 1}`,
                     tipo_aprovador: 'PAPEL',
                     papel_id: item.stage.papel_id || null,
                     usuario_aprovador_id: null,
+                    workflow_group: String(group.key),
                     grupo_paralelo: rules.isSimple ? null : (groupIndex + 1),
+                    regra_aprovacao: getEmpresaWorkflowGroupRule(group),
+                    regra_etapa: getEmpresaWorkflowGroupRule(group),
                     ordem_visual: itemIndex + 1,
                 }))),
             };
@@ -2324,12 +2724,12 @@
                     body: JSON.stringify(payload),
                 });
                 if (!response.ok || !data.ok) {
-                    throw new Error(data.error || 'Nao foi possivel salvar o workflow.');
+                    throw new Error(data.error || 'Não foi possível salvar o workflow.');
                 }
                 location.reload();
             } catch (error) {
                 console.error(error);
-                await showError('Erro ao salvar workflow', error.message || 'Nao foi possivel salvar o workflow.');
+                await showError('Erro ao salvar workflow', error.message || 'Não foi possível salvar o workflow.');
             }
         }
 
@@ -2356,7 +2756,7 @@
                     return;
                 }
                 if (empresaWorkflowState.dirty) {
-                    const confirmed = await showConfirm('Alterar workflow', 'As alteracoes nao salvas serao descartadas. Deseja continuar?');
+                    const confirmed = await showConfirm('Alterar workflow', 'As alterações não salvas serão descartadas. Deseja continuar?');
                     if (!confirmed) {
                         syncEmpresaWorkflowControls();
                         closeEmpresaWorkflowTypeDropdown();
@@ -2410,12 +2810,6 @@
                 markEmpresaWorkflowDirty();
             });
 
-            workflowEl('workflowCompanyRule')?.addEventListener('change', (event) => {
-                empresaWorkflowState.globalRule = event.target.value === 'PRIMEIRO' ? 'PRIMEIRO' : 'TODOS';
-                markEmpresaWorkflowDirty();
-                renderEmpresaWorkflowCards();
-            });
-
             workflowEl('workflowCompanyAddStageButton')?.addEventListener('click', () => {
                 if (!isEmpresaWorkflowEditing()) return;
                 const nextGroupKey = String(getEmpresaWorkflowVisualGroups().length + 1);
@@ -2425,7 +2819,28 @@
                 renderEmpresaWorkflowCards();
             });
 
+            workflowEl('workflowCompanyDiagramZoomOut')?.addEventListener('click', () => {
+                alterarEmpresaWorkflowDiagramZoom(-0.1);
+            });
+            workflowEl('workflowCompanyDiagramZoomReset')?.addEventListener('click', () => {
+                resetEmpresaWorkflowDiagramZoom();
+            });
+            workflowEl('workflowCompanyDiagramZoomIn')?.addEventListener('click', () => {
+                alterarEmpresaWorkflowDiagramZoom(0.1);
+            });
+
+            const diagramCanvas = workflowEl('workflowCompanyDiagramCanvas');
+            if (diagramCanvas) {
+                diagramCanvas.addEventListener('wheel', zoomEmpresaWorkflowDiagramPorWheel, { passive: false });
+                diagramCanvas.addEventListener('pointerdown', iniciarArrasteEmpresaWorkflowDiagram);
+                window.addEventListener('pointermove', arrastarEmpresaWorkflowDiagram);
+                window.addEventListener('pointerup', encerrarArrasteEmpresaWorkflowDiagram);
+                window.addEventListener('pointercancel', encerrarArrasteEmpresaWorkflowDiagram);
+                diagramCanvas.addEventListener('dragstart', (event) => event.preventDefault());
+            }
+
             loadEmpresaWorkflowPreview(select.value || 'simples');
+            syncEmpresaWorkflowDiagramViewport();
             syncEmpresaWorkflowDropdowns(workflowEl('empresa-panel-workflow') || document);
         }
 

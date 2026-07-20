@@ -19,6 +19,7 @@ DROP TABLE IF EXISTS sessoes_usuario;
 DROP TABLE IF EXISTS arquivos;
 DROP TABLE IF EXISTS notificacoes;
 DROP TABLE IF EXISTS workflow_etapas;
+DROP TABLE IF EXISTS workflow_grupos;
 DROP TABLE IF EXISTS workflow_definicoes;
 DROP TABLE IF EXISTS workflow_execucao_etapas;
 DROP TABLE IF EXISTS workflow_execucoes;
@@ -962,7 +963,7 @@ CREATE TABLE rdo_aprovacoes (
     rdo_id INT NOT NULL,
     aprovador_id INT NOT NULL,
     nivel INT,
-    status ENUM('PENDENTE','APROVADO','REJEITADO') DEFAULT 'PENDENTE',
+    status ENUM('PENDENTE','APROVADO','REJEITADO','CANCELADO') DEFAULT 'PENDENTE',
     data_aprovacao DATETIME,
     comentario TEXT,
     endereco_ip VARCHAR(45),
@@ -975,7 +976,7 @@ CREATE TABLE rdo_aprovacoes (
     criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
     modificado_em DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
-    UNIQUE KEY uk_rdo_nivel (rdo_id, nivel),
+    UNIQUE KEY uk_rdo_nivel_aprovador (rdo_id, nivel, aprovador_id),
 
     INDEX idx_ra_empresa (empresa_id),
     INDEX idx_ra_status_nivel (status, nivel),
@@ -1494,6 +1495,30 @@ CREATE TABLE workflow_definicoes (
     CONSTRAINT fk_workflow_modificado_por FOREIGN KEY (modificado_por) REFERENCES usuarios(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE workflow_grupos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    empresa_id INT NOT NULL,
+    workflow_id INT NOT NULL,
+    nome VARCHAR(100) NOT NULL,
+    ordem INT NOT NULL DEFAULT 1,
+    regra_aprovacao ENUM('TODOS','QUALQUER') NOT NULL DEFAULT 'TODOS',
+    ativo BOOLEAN NOT NULL DEFAULT TRUE,
+
+    criado_por INT NULL,
+    modificado_por INT NULL,
+    criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+    modificado_em DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    UNIQUE KEY uk_workflow_grupo_ordem (workflow_id, ordem),
+    INDEX idx_workflow_grupo_empresa (empresa_id),
+    INDEX idx_workflow_grupo_workflow (workflow_id),
+
+    CONSTRAINT fk_workflow_grupo_empresa FOREIGN KEY (empresa_id) REFERENCES empresa(id),
+    CONSTRAINT fk_workflow_grupo_workflow FOREIGN KEY (workflow_id) REFERENCES workflow_definicoes(id),
+    CONSTRAINT fk_workflow_grupo_criado_por FOREIGN KEY (criado_por) REFERENCES usuarios(id),
+    CONSTRAINT fk_workflow_grupo_modificado_por FOREIGN KEY (modificado_por) REFERENCES usuarios(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE workflow_etapas (
     id INT AUTO_INCREMENT PRIMARY KEY,
     empresa_id INT NOT NULL,
@@ -1506,6 +1531,7 @@ CREATE TABLE workflow_etapas (
     papel_id INT NULL,
     papel_codigo VARCHAR(100) NULL,
     usuario_aprovador_id INT NULL,
+    grupo_id INT NULL,
     grupo_paralelo INT NULL,
     obrigatorio BOOLEAN NOT NULL DEFAULT TRUE,
     obrigatoria BOOLEAN NOT NULL DEFAULT TRUE,
@@ -1523,11 +1549,13 @@ CREATE TABLE workflow_etapas (
     UNIQUE KEY uk_workflow_etapa_nivel (workflow_id, nivel),
     UNIQUE KEY uk_workflow_etapa_codigo (workflow_id, codigo),
     INDEX idx_workflow_etapa_empresa (empresa_id),
+    INDEX idx_workflow_etapa_grupo (grupo_id),
     INDEX idx_workflow_etapa_papel (papel_id),
     INDEX idx_workflow_etapa_usuario (usuario_aprovador_id),
 
     CONSTRAINT fk_workflow_etapa_empresa FOREIGN KEY (empresa_id) REFERENCES empresa(id),
     CONSTRAINT fk_workflow_etapa_workflow FOREIGN KEY (workflow_id) REFERENCES workflow_definicoes(id),
+    CONSTRAINT fk_workflow_etapa_grupo FOREIGN KEY (grupo_id) REFERENCES workflow_grupos(id),
     CONSTRAINT fk_workflow_etapa_papel FOREIGN KEY (papel_id) REFERENCES papeis(id),
     CONSTRAINT fk_workflow_etapa_usuario FOREIGN KEY (usuario_aprovador_id) REFERENCES usuarios(id),
     CONSTRAINT fk_workflow_etapa_criado_por FOREIGN KEY (criado_por) REFERENCES usuarios(id),
@@ -1579,7 +1607,9 @@ CREATE TABLE workflow_execucao_etapas (
     tipo_aprovador ENUM('USUARIO','PAPEL','CLIENTE','RESPONSAVEL_OBRA') NULL,
     papel_id INT NULL,
     usuario_resolvido_id INT NULL,
+    grupo_id INT NULL,
     grupo_paralelo INT NULL,
+    regra_aprovacao ENUM('TODOS','QUALQUER') NOT NULL DEFAULT 'TODOS',
     obrigatorio BOOLEAN NOT NULL DEFAULT TRUE,
     assinatura_obrigatoria BOOLEAN NOT NULL DEFAULT FALSE,
     sla_horas INT NULL,
@@ -1598,11 +1628,13 @@ CREATE TABLE workflow_execucao_etapas (
     INDEX idx_workflow_exec_etapa_empresa (empresa_id),
     INDEX idx_workflow_exec_etapa_execucao (execucao_id),
     INDEX idx_workflow_exec_etapa_def (etapa_definicao_id),
+    INDEX idx_workflow_exec_etapa_grupo (grupo_id),
     INDEX idx_workflow_exec_etapa_usuario (usuario_resolvido_id),
 
     CONSTRAINT fk_workflow_exec_etapa_empresa FOREIGN KEY (empresa_id) REFERENCES empresa(id),
     CONSTRAINT fk_workflow_exec_etapa_execucao FOREIGN KEY (execucao_id) REFERENCES workflow_execucoes(id),
     CONSTRAINT fk_workflow_exec_etapa_def FOREIGN KEY (etapa_definicao_id) REFERENCES workflow_etapas(id),
+    CONSTRAINT fk_workflow_exec_etapa_grupo FOREIGN KEY (grupo_id) REFERENCES workflow_grupos(id),
     CONSTRAINT fk_workflow_exec_etapa_papel FOREIGN KEY (papel_id) REFERENCES papeis(id),
     CONSTRAINT fk_workflow_exec_etapa_usuario FOREIGN KEY (usuario_resolvido_id) REFERENCES usuarios(id),
     CONSTRAINT fk_workflow_exec_etapa_criado_por FOREIGN KEY (criado_por) REFERENCES usuarios(id),
@@ -2272,60 +2304,93 @@ SELECT e.id, NULL, 'CONFIGURAVEL', 'Workflow Configurável', 'Modelo livre para 
 FROM empresa e
 ON DUPLICATE KEY UPDATE descricao = VALUES(descricao), tipo_fluxo = VALUES(tipo_fluxo), sla_horas = VALUES(sla_horas), sla_global_horas = VALUES(sla_global_horas), ativo = VALUES(ativo);
 
+-- Grupos dos templates. A regra entre grupos/etapas é sempre E; regra_aprovacao controla apenas os papéis dentro do grupo.
+INSERT INTO workflow_grupos
+(empresa_id, workflow_id, nome, ordem, regra_aprovacao, ativo)
+SELECT wd.empresa_id, wd.id, v.nome, v.ordem, v.regra_aprovacao, TRUE
+FROM workflow_definicoes wd
+JOIN (
+    SELECT 'SIMPLES' codigo, 1 ordem, 'Etapa 1' nome, 'TODOS' regra_aprovacao
+    UNION ALL SELECT 'SEQUENCIAL', 1, 'Etapa 1', 'TODOS'
+    UNION ALL SELECT 'SEQUENCIAL', 2, 'Etapa 2', 'TODOS'
+    UNION ALL SELECT 'SEQUENCIAL', 3, 'Etapa 3', 'TODOS'
+    UNION ALL SELECT 'PARALELO', 1, 'Grupo 1', 'TODOS'
+    UNION ALL SELECT 'MATRIZ', 1, 'Etapa 1', 'TODOS'
+    UNION ALL SELECT 'CLIENTE_INTERNA', 1, 'Etapa 1', 'TODOS'
+    UNION ALL SELECT 'CLIENTE_INTERNA', 2, 'Etapa 2', 'TODOS'
+    UNION ALL SELECT 'CLIENTE_INTERNA', 3, 'Etapa 3', 'TODOS'
+    UNION ALL SELECT 'CLIENTE_INTERNA', 4, 'Etapa 4', 'TODOS'
+    UNION ALL SELECT 'CONFIGURAVEL', 1, 'Etapa 1', 'TODOS'
+) v ON v.codigo = wd.codigo
+WHERE wd.obra_id IS NULL
+ON DUPLICATE KEY UPDATE nome = VALUES(nome), regra_aprovacao = VALUES(regra_aprovacao), ativo = VALUES(ativo);
+
 -- Etapas dos templates. Usa nivel/ordem, codigo, tipo_aprovador e papel_codigo de forma consistente.
 INSERT INTO workflow_etapas
-(empresa_id, workflow_id, nivel, ordem, codigo, nome, tipo_aprovador, papel_id, papel_codigo, obrigatorio, obrigatoria, assinatura_obrigatoria, sla_horas, ativo)
-SELECT wd.empresa_id, wd.id, 1, 1, 'APR_UNICO', 'Aprovador', 'PAPEL', p.id, 'GESTOR', TRUE, TRUE, FALSE, 24, TRUE
+(empresa_id, workflow_id, nivel, ordem, codigo, nome, tipo_aprovador, papel_id, papel_codigo, grupo_id, obrigatorio, obrigatoria, assinatura_obrigatoria, sla_horas, ativo)
+SELECT wd.empresa_id, wd.id, 1, 1, 'APR_UNICO', 'Aprovador', 'PAPEL', p.id, 'GESTOR', wg.id, TRUE, TRUE, FALSE, 24, TRUE
 FROM workflow_definicoes wd
+LEFT JOIN workflow_grupos wg
+  ON wg.workflow_id = wd.id
+ AND wg.ordem = 1
 LEFT JOIN papeis p
   ON p.empresa_id IS NULL
  AND p.nome = 'GESTOR'
 WHERE wd.codigo = 'SIMPLES' AND wd.obra_id IS NULL
-ON DUPLICATE KEY UPDATE nome = VALUES(nome), tipo_aprovador = VALUES(tipo_aprovador), papel_id = VALUES(papel_id), papel_codigo = VALUES(papel_codigo), sla_horas = VALUES(sla_horas), ativo = VALUES(ativo);
+ON DUPLICATE KEY UPDATE nome = VALUES(nome), tipo_aprovador = VALUES(tipo_aprovador), papel_id = VALUES(papel_id), papel_codigo = VALUES(papel_codigo), grupo_id = VALUES(grupo_id), sla_horas = VALUES(sla_horas), ativo = VALUES(ativo);
 
 INSERT INTO workflow_etapas
-(empresa_id, workflow_id, nivel, ordem, codigo, nome, tipo_aprovador, papel_id, papel_codigo, obrigatorio, obrigatoria, assinatura_obrigatoria, sla_horas, ativo)
-SELECT wd.empresa_id, wd.id, v.nivel, v.nivel, v.codigo, v.nome, 'PAPEL', p.id, v.papel_codigo, TRUE, TRUE, FALSE, v.sla_horas, TRUE
+(empresa_id, workflow_id, nivel, ordem, codigo, nome, tipo_aprovador, papel_id, papel_codigo, grupo_id, obrigatorio, obrigatoria, assinatura_obrigatoria, sla_horas, ativo)
+SELECT wd.empresa_id, wd.id, v.nivel, v.nivel, v.codigo, v.nome, 'PAPEL', p.id, v.papel_codigo, wg.id, TRUE, TRUE, FALSE, v.sla_horas, TRUE
 FROM workflow_definicoes wd
 JOIN (
     SELECT 1 nivel, 'ENG' codigo, 'Engenheiro' nome, 'ENGENHEIRO' papel_codigo, 8 sla_horas
     UNION ALL SELECT 2, 'COORD', 'Coordenador', 'COORDENADOR', 12
     UNION ALL SELECT 3, 'GER', 'Gerente', 'GERENTE', 24
 ) v
+LEFT JOIN workflow_grupos wg
+  ON wg.workflow_id = wd.id
+ AND wg.ordem = v.nivel
 LEFT JOIN papeis p
   ON p.empresa_id IS NULL
  AND p.nome = v.papel_codigo
 WHERE wd.codigo = 'SEQUENCIAL' AND wd.obra_id IS NULL
-ON DUPLICATE KEY UPDATE nome = VALUES(nome), papel_id = VALUES(papel_id), papel_codigo = VALUES(papel_codigo), sla_horas = VALUES(sla_horas), ativo = VALUES(ativo);
+ON DUPLICATE KEY UPDATE nome = VALUES(nome), papel_id = VALUES(papel_id), papel_codigo = VALUES(papel_codigo), grupo_id = VALUES(grupo_id), sla_horas = VALUES(sla_horas), ativo = VALUES(ativo);
 
 INSERT INTO workflow_etapas
-(empresa_id, workflow_id, nivel, ordem, codigo, nome, tipo_aprovador, papel_id, papel_codigo, grupo_paralelo, obrigatorio, obrigatoria, assinatura_obrigatoria, sla_horas, ativo)
-SELECT wd.empresa_id, wd.id, v.nivel, 1, v.codigo, v.nome, 'PAPEL', p.id, v.papel_codigo, 1, TRUE, TRUE, v.assinatura_obrigatoria, v.sla_horas, TRUE
+(empresa_id, workflow_id, nivel, ordem, codigo, nome, tipo_aprovador, papel_id, papel_codigo, grupo_id, grupo_paralelo, obrigatorio, obrigatoria, assinatura_obrigatoria, sla_horas, ativo)
+SELECT wd.empresa_id, wd.id, v.nivel, 1, v.codigo, v.nome, 'PAPEL', p.id, v.papel_codigo, wg.id, 1, TRUE, TRUE, v.assinatura_obrigatoria, v.sla_horas, TRUE
 FROM workflow_definicoes wd
 JOIN (
     SELECT 1 nivel, 'FISCAL' codigo, 'Fiscal' nome, 'FISCAL' papel_codigo, FALSE assinatura_obrigatoria, 24 sla_horas
     UNION ALL SELECT 2, 'CLIENTE', 'Cliente', 'CLIENTE_OBRA', TRUE, 48
     UNION ALL SELECT 3, 'COORD', 'Coordenador', 'COORDENADOR', FALSE, 24
 ) v
+LEFT JOIN workflow_grupos wg
+  ON wg.workflow_id = wd.id
+ AND wg.ordem = 1
 LEFT JOIN papeis p
   ON p.empresa_id IS NULL
  AND p.nome = v.papel_codigo
 WHERE wd.codigo = 'PARALELO' AND wd.obra_id IS NULL
-ON DUPLICATE KEY UPDATE nome = VALUES(nome), tipo_aprovador = VALUES(tipo_aprovador), papel_id = VALUES(papel_id), papel_codigo = VALUES(papel_codigo), grupo_paralelo = VALUES(grupo_paralelo), sla_horas = VALUES(sla_horas), ativo = VALUES(ativo);
+ON DUPLICATE KEY UPDATE nome = VALUES(nome), tipo_aprovador = VALUES(tipo_aprovador), papel_id = VALUES(papel_id), papel_codigo = VALUES(papel_codigo), grupo_id = VALUES(grupo_id), grupo_paralelo = VALUES(grupo_paralelo), sla_horas = VALUES(sla_horas), ativo = VALUES(ativo);
 
 INSERT INTO workflow_etapas
-(empresa_id, workflow_id, nivel, ordem, codigo, nome, tipo_aprovador, papel_id, papel_codigo, obrigatorio, obrigatoria, assinatura_obrigatoria, sla_horas, ativo)
-SELECT wd.empresa_id, wd.id, 1, 1, 'RESP_MATRIZ', 'Aprovador conforme papel da obra', 'PAPEL', p.id, 'RESPONSAVEL_OBRA', TRUE, TRUE, FALSE, 24, TRUE
+(empresa_id, workflow_id, nivel, ordem, codigo, nome, tipo_aprovador, papel_id, papel_codigo, grupo_id, obrigatorio, obrigatoria, assinatura_obrigatoria, sla_horas, ativo)
+SELECT wd.empresa_id, wd.id, 1, 1, 'RESP_MATRIZ', 'Aprovador conforme papel da obra', 'PAPEL', p.id, 'RESPONSAVEL_OBRA', wg.id, TRUE, TRUE, FALSE, 24, TRUE
 FROM workflow_definicoes wd
+LEFT JOIN workflow_grupos wg
+  ON wg.workflow_id = wd.id
+ AND wg.ordem = 1
 LEFT JOIN papeis p
   ON p.empresa_id IS NULL
  AND p.nome = 'RESPONSAVEL_OBRA'
 WHERE wd.codigo = 'MATRIZ' AND wd.obra_id IS NULL
-ON DUPLICATE KEY UPDATE nome = VALUES(nome), tipo_aprovador = VALUES(tipo_aprovador), papel_id = VALUES(papel_id), papel_codigo = VALUES(papel_codigo), sla_horas = VALUES(sla_horas), ativo = VALUES(ativo);
+ON DUPLICATE KEY UPDATE nome = VALUES(nome), tipo_aprovador = VALUES(tipo_aprovador), papel_id = VALUES(papel_id), papel_codigo = VALUES(papel_codigo), grupo_id = VALUES(grupo_id), sla_horas = VALUES(sla_horas), ativo = VALUES(ativo);
 
 INSERT INTO workflow_etapas
-(empresa_id, workflow_id, nivel, ordem, codigo, nome, tipo_aprovador, papel_id, papel_codigo, obrigatorio, obrigatoria, assinatura_obrigatoria, sla_horas, ativo)
-SELECT wd.empresa_id, wd.id, v.nivel, v.nivel, v.codigo, v.nome, v.tipo_aprovador, p.id, v.papel_codigo, TRUE, TRUE, v.assinatura_obrigatoria, v.sla_horas, TRUE
+(empresa_id, workflow_id, nivel, ordem, codigo, nome, tipo_aprovador, papel_id, papel_codigo, grupo_id, obrigatorio, obrigatoria, assinatura_obrigatoria, sla_horas, ativo)
+SELECT wd.empresa_id, wd.id, v.nivel, v.nivel, v.codigo, v.nome, v.tipo_aprovador, p.id, v.papel_codigo, wg.id, TRUE, TRUE, v.assinatura_obrigatoria, v.sla_horas, TRUE
 FROM workflow_definicoes wd
 JOIN (
     SELECT 1 nivel, 'RESP_OBRA' codigo, 'Responsável da Obra' nome, 'PAPEL' tipo_aprovador, 'RESPONSAVEL_OBRA' papel_codigo, FALSE assinatura_obrigatoria, 12 sla_horas
@@ -2333,11 +2398,14 @@ JOIN (
     UNION ALL SELECT 3, 'COORD', 'Coordenador', 'PAPEL', 'COORDENADOR', FALSE, 24
     UNION ALL SELECT 4, 'CLIENTE', 'Cliente', 'PAPEL', 'CLIENTE_OBRA', TRUE, 48
 ) v
+LEFT JOIN workflow_grupos wg
+  ON wg.workflow_id = wd.id
+ AND wg.ordem = v.nivel
 LEFT JOIN papeis p
   ON p.empresa_id IS NULL
  AND p.nome = v.papel_codigo
 WHERE wd.codigo = 'CLIENTE_INTERNA' AND wd.obra_id IS NULL
-ON DUPLICATE KEY UPDATE nome = VALUES(nome), tipo_aprovador = VALUES(tipo_aprovador), papel_id = VALUES(papel_id), papel_codigo = VALUES(papel_codigo), assinatura_obrigatoria = VALUES(assinatura_obrigatoria), sla_horas = VALUES(sla_horas), ativo = VALUES(ativo);
+ON DUPLICATE KEY UPDATE nome = VALUES(nome), tipo_aprovador = VALUES(tipo_aprovador), papel_id = VALUES(papel_id), papel_codigo = VALUES(papel_codigo), grupo_id = VALUES(grupo_id), assinatura_obrigatoria = VALUES(assinatura_obrigatoria), sla_horas = VALUES(sla_horas), ativo = VALUES(ativo);
 
 -- Ajusta a etapa do cliente como opcional no template Cliente + Interna.
 UPDATE workflow_etapas we

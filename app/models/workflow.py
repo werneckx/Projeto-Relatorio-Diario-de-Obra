@@ -47,6 +47,42 @@ class WorkflowDefinicao(db.Model):
         return f'<WorkflowDefinicao {self.nome}>'
 
 
+class WorkflowGrupo(db.Model):
+    __tablename__ = "workflow_grupos"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    empresa_id = db.Column(db.Integer, db.ForeignKey('empresa.id'), nullable=False, index=True)
+    workflow_id = db.Column(db.Integer, db.ForeignKey('workflow_definicoes.id'), nullable=False, index=True)
+    nome = db.Column(db.String(100), nullable=False)
+    ordem = db.Column(db.Integer, nullable=False, default=1)
+    regra_aprovacao = db.Column(
+        db.Enum('TODOS', 'QUALQUER'),
+        nullable=False,
+        default='TODOS',
+    )
+    ativo = db.Column(db.Boolean, nullable=False, default=True)
+
+    criado_por = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=True)
+    modificado_por = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=True)
+    criado_em = db.Column(db.DateTime, default=utcnow_naive)
+    modificado_em = db.Column(db.DateTime, default=utcnow_naive, onupdate=utcnow_naive)
+
+    empresa = db.relationship('Empresa')
+    workflow = db.relationship(
+        'WorkflowDefinicao',
+        backref=db.backref('grupos', cascade='all, delete-orphan', lazy='dynamic'),
+    )
+    criador = db.relationship('Usuario', foreign_keys=[criado_por])
+    modificador = db.relationship('Usuario', foreign_keys=[modificado_por])
+
+    __table_args__ = (
+        db.UniqueConstraint('workflow_id', 'ordem', name='uk_workflow_grupo_ordem'),
+    )
+
+    def __repr__(self):
+        return f'<WorkflowGrupo Workflow:{self.workflow_id} Ordem:{self.ordem}>'
+
+
 class WorkflowEtapa(db.Model):
     __tablename__ = "workflow_etapas"
 
@@ -65,6 +101,7 @@ class WorkflowEtapa(db.Model):
     papel_id = db.Column(db.Integer, db.ForeignKey('papeis.id'), nullable=True, index=True)
     papel_codigo = db.Column(db.String(100), nullable=True)
     usuario_aprovador_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=True, index=True)
+    grupo_id = db.Column(db.Integer, db.ForeignKey('workflow_grupos.id'), nullable=True, index=True)
     grupo_paralelo = db.Column(db.Integer, nullable=True)
     obrigatorio = db.Column(db.Boolean, nullable=False, default=True)
     obrigatoria = db.Column(db.Boolean, nullable=False, default=True)
@@ -86,6 +123,7 @@ class WorkflowEtapa(db.Model):
     )
     papel = db.relationship('Papel')
     usuario_aprovador = db.relationship('Usuario', foreign_keys=[usuario_aprovador_id])
+    grupo = db.relationship('WorkflowGrupo')
     criador = db.relationship('Usuario', foreign_keys=[criado_por])
     modificador = db.relationship('Usuario', foreign_keys=[modificado_por])
 
@@ -153,7 +191,13 @@ class WorkflowExecucaoEtapa(db.Model):
     )
     papel_id = db.Column(db.Integer, db.ForeignKey('papeis.id'), nullable=True, index=True)
     usuario_resolvido_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=True, index=True)
+    grupo_id = db.Column(db.Integer, db.ForeignKey('workflow_grupos.id'), nullable=True, index=True)
     grupo_paralelo = db.Column(db.Integer, nullable=True)
+    regra_aprovacao = db.Column(
+        db.Enum('TODOS', 'QUALQUER'),
+        nullable=False,
+        default='TODOS',
+    )
     obrigatorio = db.Column(db.Boolean, nullable=False, default=True)
     assinatura_obrigatoria = db.Column(db.Boolean, nullable=False, default=False)
     sla_horas = db.Column(db.Integer, nullable=True)
@@ -180,6 +224,7 @@ class WorkflowExecucaoEtapa(db.Model):
     etapa_definicao = db.relationship('WorkflowEtapa')
     papel = db.relationship('Papel')
     usuario_resolvido = db.relationship('Usuario', foreign_keys=[usuario_resolvido_id])
+    grupo = db.relationship('WorkflowGrupo')
     criador = db.relationship('Usuario', foreign_keys=[criado_por])
     modificador = db.relationship('Usuario', foreign_keys=[modificado_por])
 

@@ -1,5 +1,5 @@
 {% import "components/form/macros.html" as ui_form %}
-{% set workflow_input_base_css = "form-control-std h-9 text-sm block w-full rounded-2xl appearance-none" %}
+{% set workflow_input_base_css = "form-control-std block h-10 w-full appearance-none rounded-xl text-sm" %}
 {% set workflow_input_edit_css = "bg-white border-slate-300 text-slate-600 shadow-sm placeholder:text-slate-400" %}
 {% set workflow_input_view_css = "bg-slate-100 border-slate-300 text-slate-800 font-semibold shadow-none cursor-not-allowed opacity-95" %}
 
@@ -60,7 +60,7 @@
                     </p>
                 </div>
 
-                <div class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-[minmax(260px,1.15fr),180px,minmax(280px,1.2fr)]">
+                <div class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-[minmax(260px,1fr),180px]">
                     <div class="min-w-0">
                         <label for="workflowCompanySelect" class="mb-2 block text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">
                             Modelo de workflow
@@ -93,22 +93,22 @@
                                 type="button"
                                 id="workflowCompanyTypeDropdownButton"
                                 data-workflow-dropdown-button
-                                class="{{ workflow_input_base_css }} {{ workflow_input_edit_css }} flex h-11 w-full items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 pr-24 text-left text-sm font-semibold text-slate-800"
+                                class="{{ workflow_input_base_css }} {{ workflow_input_edit_css }} flex items-center gap-2 border border-slate-200 bg-white px-3 pr-10 text-left font-semibold text-slate-800"
                             >
-                                <i class="fas fa-search text-slate-400"></i>
+                                <i class="fas fa-chevron-down text-xs text-slate-400"></i>
                                 <span id="workflowCompanyTypeDropdownLabel" data-workflow-dropdown-label class="min-w-0 flex-1 truncate">Selecione</span>
                             </button>
 
-                            <div id="workflowCompanyTypeDropdownMenu" class="absolute left-0 right-0 top-[calc(100%+6px)] z-50 hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
-                                <button type="button" class="workflow-company-type-option flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50" data-workflow-dropdown-option data-value="simples">
+                            <div id="workflowCompanyTypeDropdownMenu" class="absolute left-0 right-0 top-[calc(100%+6px)] z-50 hidden overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+                                <button type="button" class="workflow-company-type-option flex h-10 w-full items-center gap-3 px-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none" data-workflow-dropdown-option data-value="simples">
                                     <span class="min-w-0 flex-1 truncate">Aprovação simples</span>
                                     <i class="workflow-company-type-check fas fa-check hidden text-blue-600"></i>
                                 </button>
-                                <button type="button" class="workflow-company-type-option flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50" data-workflow-dropdown-option data-value="paralelo">
+                                <button type="button" class="workflow-company-type-option flex h-10 w-full items-center gap-3 px-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none" data-workflow-dropdown-option data-value="paralelo">
                                     <span class="min-w-0 flex-1 truncate">Aprovação paralela</span>
                                     <i class="workflow-company-type-check fas fa-check hidden text-blue-600"></i>
                                 </button>
-                                <button type="button" class="workflow-company-type-option flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50" data-workflow-dropdown-option data-value="hierarquico">
+                                <button type="button" class="workflow-company-type-option flex h-10 w-full items-center gap-3 px-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none" data-workflow-dropdown-option data-value="hierarquico">
                                     <span class="min-w-0 flex-1 truncate">Aprovação hierárquica</span>
                                     <i class="workflow-company-type-check fas fa-check hidden text-blue-600"></i>
                                 </button>
@@ -138,19 +138,19 @@
                             <button
                                 type="button"
                                 data-workflow-dropdown-button
-                                class="{{ workflow_input_base_css }} {{ workflow_input_edit_css }} flex h-11 w-full items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 pr-12 text-left text-sm font-semibold text-slate-800"
+                                class="{{ workflow_input_base_css }} {{ workflow_input_edit_css }} flex items-center gap-2 border border-slate-200 bg-white px-3 pr-10 text-left font-semibold text-slate-800"
                             >
                                 <span data-workflow-dropdown-label class="min-w-0 flex-1 truncate">Sim</span>
                             </button>
-                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4 text-slate-400">
+                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400">
                                 <i class="fas fa-chevron-down text-xs"></i>
                             </div>
-                            <div class="absolute left-0 right-0 top-[calc(100%+6px)] z-50 hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl" data-workflow-dropdown-menu>
-                                <button type="button" class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50" data-workflow-dropdown-option data-value="1">
+                            <div class="absolute left-0 right-0 top-[calc(100%+6px)] z-50 hidden overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl" data-workflow-dropdown-menu>
+                                <button type="button" class="flex h-10 w-full items-center gap-3 px-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none" data-workflow-dropdown-option data-value="1">
                                     <span class="min-w-0 flex-1 truncate">Sim</span>
                                     <i class="fas fa-check hidden text-blue-600" data-workflow-dropdown-check></i>
                                 </button>
-                                <button type="button" class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50" data-workflow-dropdown-option data-value="0">
+                                <button type="button" class="flex h-10 w-full items-center gap-3 px-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none" data-workflow-dropdown-option data-value="0">
                                     <span class="min-w-0 flex-1 truncate">Não</span>
                                     <i class="fas fa-check hidden text-blue-600" data-workflow-dropdown-check></i>
                                 </button>
@@ -158,47 +158,6 @@
                         </div>
                     </div>
 
-                    <div class="min-w-0">
-                        <label for="workflowCompanyRule" class="mb-2 block text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">
-                            Regra
-                        </label>
-                        <div x-show="!empresaEditing" x-cloak>
-                            <input
-                                id="workflowCompanyRulePreview"
-                                type="text"
-                                value=""
-                                class="{{ workflow_input_base_css }} {{ workflow_input_view_css }}"
-                                readonly
-                                disabled
-                            >
-                        </div>
-                        <div x-show="empresaEditing" x-cloak class="relative" data-workflow-custom-dropdown data-workflow-dropdown-mode="edit">
-                            <select id="workflowCompanyRule" data-no-tom-select="true" class="hidden">
-                                <option value="TODOS">Todos devem aprovar</option>
-                                <option value="PRIMEIRO">Primeiro a responder</option>
-                            </select>
-                            <button
-                                type="button"
-                                data-workflow-dropdown-button
-                                class="{{ workflow_input_base_css }} {{ workflow_input_edit_css }} flex h-11 w-full items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 pr-12 text-left text-sm font-semibold text-slate-800"
-                            >
-                                <span data-workflow-dropdown-label class="min-w-0 flex-1 truncate">Todos devem aprovar</span>
-                            </button>
-                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4 text-slate-400">
-                                <i class="fas fa-chevron-down text-xs"></i>
-                            </div>
-                            <div class="absolute left-0 right-0 top-[calc(100%+6px)] z-50 hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl" data-workflow-dropdown-menu>
-                                <button type="button" class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50" data-workflow-dropdown-option data-value="TODOS">
-                                    <span class="min-w-0 flex-1 truncate">Todos devem aprovar</span>
-                                    <i class="fas fa-check hidden text-blue-600" data-workflow-dropdown-check></i>
-                                </button>
-                                <button type="button" class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50" data-workflow-dropdown-option data-value="PRIMEIRO">
-                                    <span class="min-w-0 flex-1 truncate">Primeiro a responder</span>
-                                    <i class="fas fa-check hidden text-blue-600" data-workflow-dropdown-check></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
                 </div>
 
                 <div id="workflowCompanyOwnConfigNotice" class="mt-4 hidden rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
@@ -210,14 +169,14 @@
                     Clique em <strong>Editar</strong> na barra de ações para habilitar alterações neste workflow padrão.
                 </div>
 
-                <div class="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-[320px,minmax(0,1fr)]">
-                    <aside class="rounded-3xl border border-slate-200 bg-slate-50/70 p-4 xl:sticky xl:top-24 xl:self-start">
-                        <div class="flex flex-col gap-2.5">
-                            <div>
+                <div class="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-[430px,minmax(0,1fr)]">
+                    <aside class="overflow-visible rounded-2xl border border-slate-200 bg-slate-50/70 p-4 xl:sticky xl:top-24 xl:self-start">
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="min-w-0">
                                 <h4 id="workflowCompanyStagesTitle" class="text-sm font-semibold uppercase tracking-wide text-slate-800">
-                                    Etapas e papéis
+                                    Grupos e papéis
                                 </h4>
-                                <p id="workflowCompanySummary" class="mt-1 text-xs leading-5 text-slate-500">
+                                <p id="workflowCompanySummary" class="mt-0.5 truncate text-xs leading-5 text-slate-500">
                                     Carregando estrutura do workflow...
                                 </p>
                             </div>
@@ -226,34 +185,71 @@
                                 type="button"
                                 id="workflowCompanyAddStageButton"
                                 x-show="empresaEditing"
-                                class="inline-flex h-9 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3.5 text-xs font-bold text-slate-700 transition-colors hover:bg-slate-100"
+                                aria-label="Adicionar grupo"
+                                title="Adicionar grupo"
+                                class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-700 transition-colors hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-200"
                             >
                                 <i class="fas fa-plus"></i>
-                                <span class="workflow-add-label">Adicionar etapa</span>
+                                <span class="workflow-add-label sr-only">Adicionar grupo</span>
                             </button>
                         </div>
 
-                        <div id="workflowCompanyStagesErrors" class="mt-3 hidden rounded-2xl border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-xs text-rose-700"></div>
-                        <div id="workflowCompanyStagesContainer" class="mt-3 space-y-2.5"></div>
+                        <div id="workflowCompanyStagesErrors" class="mt-2 hidden rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700"></div>
+                        <div id="workflowCompanyStagesContainer" class="mt-2 space-y-2"></div>
                     </aside>
 
                     <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
                         <style>
                             .workflow-canvas {
-                                overflow: hidden;
-                                padding: 18px 0 0;
+                                background: #ffffff;
+                                border: 1px solid #e2e8f0;
+                                border-radius: 12px;
+                                cursor: grab;
+                                max-height: min(70vh, 720px);
+                                overflow: auto;
+                                padding: 18px;
+                                scrollbar-color: #cbd5e1 #f8fafc;
+                            }
+
+                            #workflowCompanyDiagramCanvas {
+                                height: 520px;
+                                max-height: 520px;
+                            }
+
+                            .workflow-canvas.workflow-canvas--dragging,
+                            .workflow-canvas.workflow-canvas--dragging * {
+                                cursor: grabbing !important;
+                                user-select: none;
                             }
 
                             .workflow-board {
-                                width: 100%;
-                                max-width: 100%;
+                                transition: height 160ms ease, width 160ms ease;
+                                user-select: none;
                             }
 
                             .workflow-board svg {
                                 display: block;
-                                height: auto;
-                                max-width: 100%;
+                                height: 100%;
+                                max-width: none;
+                                pointer-events: none;
                                 width: 100%;
+                            }
+
+                            .workflow-zoom-button {
+                                align-items: center;
+                                border: 1px solid #e2e8f0;
+                                border-radius: 10px;
+                                color: #475569;
+                                display: inline-flex;
+                                height: 34px;
+                                justify-content: center;
+                                width: 34px;
+                            }
+
+                            .workflow-zoom-button:hover {
+                                background: #f8fafc;
+                                border-color: #cbd5e1;
+                                color: #0f172a;
                             }
                         </style>
 
@@ -265,14 +261,25 @@
                                         A prévia é atualizada automaticamente conforme você ajusta etapas e papéis no painel lateral.
                                     </p>
                                 </div>
-                                <span class="inline-flex w-fit items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-bold text-slate-600">
-                                    <i class="fas fa-project-diagram text-slate-400"></i>
-                                    <span id="workflowCompanyOverviewCount">0 etapas</span>
-                                </span>
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span class="inline-flex w-fit items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-bold text-slate-600">
+                                        <i class="fas fa-project-diagram text-slate-400"></i>
+                                        <span id="workflowCompanyOverviewCount">0 etapas</span>
+                                    </span>
+                                    <div class="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1">
+                                        <button type="button" id="workflowCompanyDiagramZoomOut" class="workflow-zoom-button" title="Reduzir zoom" aria-label="Reduzir zoom">
+                                            <i class="fas fa-minus text-xs"></i>
+                                        </button>
+                                        <button type="button" id="workflowCompanyDiagramZoomReset" class="h-8 min-w-14 rounded-lg px-2 text-xs font-bold tabular-nums text-slate-700 hover:bg-slate-50" title="Restaurar zoom">100%</button>
+                                        <button type="button" id="workflowCompanyDiagramZoomIn" class="workflow-zoom-button" title="Aumentar zoom" aria-label="Aumentar zoom">
+                                            <i class="fas fa-plus text-xs"></i>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="workflow-canvas mt-4" role="region" tabindex="0" aria-label="Diagrama do fluxo padrão de aprovação da empresa">
+                        <div id="workflowCompanyDiagramCanvas" class="workflow-canvas mt-4" role="region" tabindex="0" aria-label="Diagrama do fluxo padrão de aprovação da empresa" title="Use Ctrl + rolagem para ampliar ou reduzir">
                             <div id="workflowCompanyDiagram" class="workflow-board"></div>
                         </div>
 
@@ -318,38 +325,38 @@
                             <option value="Cancelado">Cancelado</option>
                             <option value="Erro">Erro</option>
                         </select>
-                        <button type="button" data-workflow-dropdown-button class="{{ workflow_input_base_css }} {{ workflow_input_edit_css }} flex h-11 w-full items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 pr-12 text-left text-sm font-semibold text-slate-800">
+                        <button type="button" data-workflow-dropdown-button class="{{ workflow_input_base_css }} {{ workflow_input_edit_css }} flex items-center gap-2 border border-slate-200 bg-white px-3 pr-10 text-left font-semibold text-slate-800">
                             <span data-workflow-dropdown-label class="min-w-0 flex-1 truncate">Todos os status</span>
                         </button>
-                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4 text-slate-400">
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400">
                             <i class="fas fa-chevron-down text-xs"></i>
                         </div>
-                        <div class="absolute left-0 right-0 top-[calc(100%+6px)] z-50 hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl" data-workflow-dropdown-menu>
-                            <button type="button" class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50" data-workflow-dropdown-option data-value="">
+                        <div class="absolute left-0 right-0 top-[calc(100%+6px)] z-50 hidden overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl" data-workflow-dropdown-menu>
+                            <button type="button" class="flex h-10 w-full items-center gap-3 px-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none" data-workflow-dropdown-option data-value="">
                                 <span class="min-w-0 flex-1 truncate">Todos os status</span>
                                 <i class="fas fa-check hidden text-blue-600" data-workflow-dropdown-check></i>
                             </button>
-                            <button type="button" class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50" data-workflow-dropdown-option data-value="Pendente">
+                            <button type="button" class="flex h-10 w-full items-center gap-3 px-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none" data-workflow-dropdown-option data-value="Pendente">
                                 <span class="min-w-0 flex-1 truncate">Pendente</span>
                                 <i class="fas fa-check hidden text-blue-600" data-workflow-dropdown-check></i>
                             </button>
-                            <button type="button" class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50" data-workflow-dropdown-option data-value="Em andamento">
+                            <button type="button" class="flex h-10 w-full items-center gap-3 px-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none" data-workflow-dropdown-option data-value="Em andamento">
                                 <span class="min-w-0 flex-1 truncate">Em andamento</span>
                                 <i class="fas fa-check hidden text-blue-600" data-workflow-dropdown-check></i>
                             </button>
-                            <button type="button" class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50" data-workflow-dropdown-option data-value="Concluido">
+                            <button type="button" class="flex h-10 w-full items-center gap-3 px-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none" data-workflow-dropdown-option data-value="Concluido">
                                 <span class="min-w-0 flex-1 truncate">Concluído</span>
                                 <i class="fas fa-check hidden text-blue-600" data-workflow-dropdown-check></i>
                             </button>
-                            <button type="button" class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50" data-workflow-dropdown-option data-value="Rejeitado">
+                            <button type="button" class="flex h-10 w-full items-center gap-3 px-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none" data-workflow-dropdown-option data-value="Rejeitado">
                                 <span class="min-w-0 flex-1 truncate">Rejeitado</span>
                                 <i class="fas fa-check hidden text-blue-600" data-workflow-dropdown-check></i>
                             </button>
-                            <button type="button" class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50" data-workflow-dropdown-option data-value="Cancelado">
+                            <button type="button" class="flex h-10 w-full items-center gap-3 px-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none" data-workflow-dropdown-option data-value="Cancelado">
                                 <span class="min-w-0 flex-1 truncate">Cancelado</span>
                                 <i class="fas fa-check hidden text-blue-600" data-workflow-dropdown-check></i>
                             </button>
-                            <button type="button" class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50" data-workflow-dropdown-option data-value="Erro">
+                            <button type="button" class="flex h-10 w-full items-center gap-3 px-3 text-left text-sm font-semibold text-slate-700 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none" data-workflow-dropdown-option data-value="Erro">
                                 <span class="min-w-0 flex-1 truncate">Erro</span>
                                 <i class="fas fa-check hidden text-blue-600" data-workflow-dropdown-check></i>
                             </button>
