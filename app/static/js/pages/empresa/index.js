@@ -429,6 +429,8 @@
                 workflowDiagramDragging: null,
                 workflowDiagramZoom: 1,
                 workflowStagesPanelOpen: false,
+                workflowStagesPanelPosition: null,
+                workflowStagesPanelDrag: null,
                 workflowSubtab: localStorage.getItem('empresa_workflow_subtab') || 'configuracao',
                 filtroObras: '',
                 filtroWorkflow: '',
@@ -490,9 +492,11 @@
                 openWorkflowStagesPanel() {
                     if (!this.empresaEditing || this.abaAtiva !== 'workflow' || this.workflowSubtab !== 'configuracao') return;
                     this.workflowStagesPanelOpen = true;
+                    this.$nextTick?.(() => this.ensureWorkflowStagesPanelPosition());
                 },
                 closeWorkflowStagesPanel() {
                     this.workflowStagesPanelOpen = false;
+                    this.workflowStagesPanelDrag = null;
                     if (typeof closeEmpresaWorkflowTypeDropdown === 'function') closeEmpresaWorkflowTypeDropdown();
                 },
                 toggleWorkflowStagesPanel() {
@@ -501,6 +505,78 @@
                         return;
                     }
                     this.openWorkflowStagesPanel();
+                },
+                getWorkflowStagesPanelMetrics() {
+                    const margin = 12;
+                    const viewportWidth = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
+                    const viewportHeight = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
+                    const panel = document.getElementById('workflowCompanyStagesPanel');
+                    const panelWidth = Math.min(440, Math.max(280, viewportWidth - (margin * 2)));
+                    const rect = panel?.getBoundingClientRect();
+                    const width = rect?.width || panelWidth;
+                    const height = Math.min(rect?.height || 520, viewportHeight - (margin * 2));
+                    return { margin, viewportWidth, viewportHeight, panelWidth, width, height };
+                },
+                clampWorkflowStagesPanelPosition(position) {
+                    const metrics = this.getWorkflowStagesPanelMetrics();
+                    const maxX = Math.max(metrics.margin, metrics.viewportWidth - metrics.width - metrics.margin);
+                    const maxY = Math.max(metrics.margin, metrics.viewportHeight - metrics.height - metrics.margin);
+                    return {
+                        x: Math.min(Math.max(position.x, metrics.margin), maxX),
+                        y: Math.min(Math.max(position.y, metrics.margin), maxY),
+                        width: metrics.panelWidth,
+                    };
+                },
+                ensureWorkflowStagesPanelPosition() {
+                    const metrics = this.getWorkflowStagesPanelMetrics();
+                    const fallback = {
+                        x: metrics.viewportWidth - metrics.panelWidth - 24,
+                        y: 96,
+                        width: metrics.panelWidth,
+                    };
+                    const nextPosition = this.clampWorkflowStagesPanelPosition(this.workflowStagesPanelPosition || fallback);
+                    const current = this.workflowStagesPanelPosition;
+                    if (!current || current.x !== nextPosition.x || current.y !== nextPosition.y || current.width !== nextPosition.width) {
+                        this.workflowStagesPanelPosition = nextPosition;
+                    }
+                },
+                getWorkflowStagesPanelStyle() {
+                    this.ensureWorkflowStagesPanelPosition();
+                    const position = this.workflowStagesPanelPosition;
+                    const metrics = this.getWorkflowStagesPanelMetrics();
+                    const maxHeight = Math.max(240, metrics.viewportHeight - position.y - metrics.margin);
+                    return `left: ${position.x}px; top: ${position.y}px; width: ${position.width}px; max-height: ${maxHeight}px;`;
+                },
+                startWorkflowStagesPanelDrag(event) {
+                    if (event.button !== 0 || event.target?.closest?.('button, a, input, select, textarea, [data-workflow-custom-dropdown]')) return;
+                    this.ensureWorkflowStagesPanelPosition();
+                    const panel = document.getElementById('workflowCompanyStagesPanel');
+                    this.workflowStagesPanelDrag = {
+                        pointerId: event.pointerId,
+                        startClientX: event.clientX,
+                        startClientY: event.clientY,
+                        startX: this.workflowStagesPanelPosition.x,
+                        startY: this.workflowStagesPanelPosition.y,
+                    };
+                    panel?.setPointerCapture?.(event.pointerId);
+                    event.preventDefault();
+                },
+                moveWorkflowStagesPanelDrag(event) {
+                    const drag = this.workflowStagesPanelDrag;
+                    if (!drag || drag.pointerId !== event.pointerId) return;
+                    this.workflowStagesPanelPosition = this.clampWorkflowStagesPanelPosition({
+                        x: drag.startX + event.clientX - drag.startClientX,
+                        y: drag.startY + event.clientY - drag.startClientY,
+                    });
+                },
+                endWorkflowStagesPanelDrag(event) {
+                    const drag = this.workflowStagesPanelDrag;
+                    if (!drag || drag.pointerId !== event.pointerId) return;
+                    const panel = document.getElementById('workflowCompanyStagesPanel');
+                    if (panel?.hasPointerCapture?.(event.pointerId)) {
+                        panel.releasePointerCapture(event.pointerId);
+                    }
+                    this.workflowStagesPanelDrag = null;
                 },
                 isSectionEditing() {
                     return this.empresaEditing;
