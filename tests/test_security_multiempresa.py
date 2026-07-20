@@ -147,6 +147,48 @@ class TestPermissaoEmpresas:
 class TestAcessoNegadoOutraEmpresa:
     """Testes de negação de acesso a dados de outra empresa."""
 
+    def test_admin_empresa_nao_acessa_empresa_por_url(self, client, usuario_empresa1, empresa1, empresa2):
+        """Admin de uma empresa nao pode abrir outra empresa trocando a URL."""
+        usuario_empresa1.troca_senha_obrigatoria = False
+        db.session.commit()
+        with client.session_transaction() as sess:
+            sess["user_id"] = usuario_empresa1.id
+            sess["empresa_id"] = empresa1.id
+
+        resp = client.get(f"/auth/empresa/{empresa2.id}")
+
+        assert resp.status_code == 403
+
+    def test_admin_empresa_nao_edita_empresa_por_url(self, client, usuario_empresa1, empresa1, empresa2):
+        """Admin de empresa continua restrito ao tenant atual na edicao."""
+        usuario_empresa1.troca_senha_obrigatoria = False
+        db.session.commit()
+        with client.session_transaction() as sess:
+            sess["user_id"] = usuario_empresa1.id
+            sess["empresa_id"] = empresa1.id
+
+        resp = client.get(f"/auth/empresa/{empresa2.id}/editar")
+
+        assert resp.status_code == 403
+
+    def test_admin_empresa_nao_salva_empresa_por_url(self, client, app, usuario_empresa1, empresa1, empresa2):
+        """POST direto para salvar outra empresa deve ser bloqueado."""
+        nome_original = empresa2.nome
+        usuario_empresa1.troca_senha_obrigatoria = False
+        db.session.commit()
+        with client.session_transaction() as sess:
+            sess["user_id"] = usuario_empresa1.id
+            sess["empresa_id"] = empresa1.id
+
+        resp = client.post(
+            f"/auth/empresa/{empresa2.id}/salvar",
+            data={"nome_empresa": "Empresa 2 invadida"},
+        )
+
+        assert resp.status_code == 403
+        with app.app_context():
+            assert db.session.get(Empresa, empresa2.id).nome == nome_original
+
     def test_endpoint_filtra_por_empresa_atual(self, client, app, usuario_empresa1, rdo_empresa1):
         """Endpoints devem filtrar resultados por empresa atual do usuário."""
         with app.app_context():

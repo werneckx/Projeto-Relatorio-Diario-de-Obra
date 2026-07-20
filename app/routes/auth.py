@@ -21,6 +21,7 @@ def setup():
 
     # Verifica se já existe algum admin no banco
     admin_exists = Usuario.query.join(Usuario.papeis).filter(
+        Usuario._is_system.is_(True),
         Papel.nome == ROLE_ADMIN,
         Papel.is_system == True
     ).first()
@@ -66,6 +67,7 @@ def setup():
                 ativo=True,
                 troca_senha_obrigatoria=False,
             )
+            novo_user.is_system_record = True
             novo_user.set_senha(admin_senha)
             db.session.add(novo_user)
             db.session.flush()

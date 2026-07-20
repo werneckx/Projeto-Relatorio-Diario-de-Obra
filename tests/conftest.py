@@ -393,6 +393,14 @@ def usuario_empresa1(app, empresa1):
     db.session.add(usuario_papel)
     db.session.commit()
     yield usr
+    from app.models.sessao import SessaoUsuario, AcessoLog
+    from app.models.auditoria import AuditoriaLog
+    db.session.query(SessaoUsuario).filter(
+        (SessaoUsuario.usuario_id == usr.id) | (SessaoUsuario.encerrada_por == usr.id)
+    ).delete(synchronize_session=False)
+    db.session.query(AcessoLog).filter(AcessoLog.usuario_id == usr.id).delete(synchronize_session=False)
+    db.session.query(AuditoriaLog).filter(AuditoriaLog.usuario_id == usr.id).delete(synchronize_session=False)
+    db.session.query(UsuarioPapel).filter(UsuarioPapel.usuario_id == usr.id).delete(synchronize_session=False)
     db.session.delete(usr)
     db.session.commit()
 
@@ -424,6 +432,14 @@ def usuario_empresa2(app, empresa2):
     db.session.add(usuario_papel)
     db.session.commit()
     yield usr
+    from app.models.sessao import SessaoUsuario, AcessoLog
+    from app.models.auditoria import AuditoriaLog
+    db.session.query(SessaoUsuario).filter(
+        (SessaoUsuario.usuario_id == usr.id) | (SessaoUsuario.encerrada_por == usr.id)
+    ).delete(synchronize_session=False)
+    db.session.query(AcessoLog).filter(AcessoLog.usuario_id == usr.id).delete(synchronize_session=False)
+    db.session.query(AuditoriaLog).filter(AuditoriaLog.usuario_id == usr.id).delete(synchronize_session=False)
+    db.session.query(UsuarioPapel).filter(UsuarioPapel.usuario_id == usr.id).delete(synchronize_session=False)
     db.session.delete(usr)
     db.session.commit()
 

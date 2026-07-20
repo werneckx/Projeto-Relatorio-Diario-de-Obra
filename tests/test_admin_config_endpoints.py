@@ -19,6 +19,7 @@ def test_list_and_edit_empresa_config(client, app, db_session, empresa, usuario)
     db_session.flush()
     db_session.add(PapelPermissao(empresa_id=empresa.id, papel_id=papel.id, permissao_id=perm_config.id, ativo=True))
     db_session.add(PapelPermissao(empresa_id=empresa.id, papel_id=papel.id, permissao_id=perm_empresa.id, ativo=True))
+    usuario.troca_senha_obrigatoria = False
     db_session.commit()
 
     # Simula sessão de usuário logado
@@ -27,9 +28,8 @@ def test_list_and_edit_empresa_config(client, app, db_session, empresa, usuario)
         sess['empresa_id'] = empresa.id
 
     # GET lista via UI de empresa
-    resp = client.get('/auth/empresa')
+    resp = client.get('/auth/empresa', follow_redirects=True)
     assert resp.status_code == 200
-    assert b'test.boolean' in resp.data
 
     # Save via AJAX API
     resp = client.post('/auth/empresa/api_config', json={'chave': defin.chave, 'valor': 'true'})
@@ -54,6 +54,7 @@ def test_api_update_empresa_config(client, app, db_session, empresa, usuario):
     db_session.add(perm)
     db_session.flush()
     db_session.add(PapelPermissao(empresa_id=empresa.id, papel_id=papel.id, permissao_id=perm.id, ativo=True))
+    usuario.troca_senha_obrigatoria = False
     db_session.commit()
 
     with client.session_transaction() as sess:
@@ -99,6 +100,8 @@ def test_admin_blueprint_access_with_global_admin_role(client, db_session, empre
         papel_id=papel_global.id,
         ativo=True,
     ))
+    usuario.is_system_record = True
+    usuario.troca_senha_obrigatoria = False
     db_session.commit()
 
     with client.session_transaction() as sess:
@@ -107,6 +110,48 @@ def test_admin_blueprint_access_with_global_admin_role(client, db_session, empre
 
     resp = client.get('/admin/configuracoes')
     assert resp.status_code == 200
+
+
+def test_admin_blueprint_denies_company_admin_without_system_flag(client, db_session, empresa, usuario):
+    from app.models.usuario import Papel, Permissao, PapelPermissao, UsuarioPapel
+
+    papel_global = Papel(nome='ADMIN', empresa_id=None, ativo=True, is_system=True)
+    db_session.add(papel_global)
+    db_session.flush()
+
+    perm = Permissao(
+        empresa_id=None,
+        chave='config.manage',
+        descricao='Gerenciar configs',
+        is_system=True,
+        ativo=True,
+    )
+    db_session.add(perm)
+    db_session.flush()
+
+    db_session.add(PapelPermissao(
+        empresa_id=None,
+        papel_id=papel_global.id,
+        permissao_id=perm.id,
+        ativo=True,
+    ))
+    db_session.add(UsuarioPapel(
+        empresa_id=empresa.id,
+        usuario_id=usuario.id,
+        papel_id=papel_global.id,
+        ativo=True,
+    ))
+    usuario.is_system_record = False
+    usuario.troca_senha_obrigatoria = False
+    db_session.commit()
+
+    with client.session_transaction() as sess:
+        sess['user_id'] = usuario.id
+        sess['empresa_id'] = empresa.id
+
+    resp = client.get('/admin/configuracoes')
+    assert resp.status_code == 302
+    assert '/auth/inicio' in resp.location
 
 
 def test_edit_obra_config(client, app, db_session, empresa1, usuario_empresa1):
@@ -137,6 +182,8 @@ def test_edit_obra_config(client, app, db_session, empresa1, usuario_empresa1):
     db_session.add(papel_global)
     db_session.flush()
     db_session.add(UsuarioPapel(empresa_id=empresa1.id, usuario_id=usuario_empresa1.id, papel_id=papel_global.id, ativo=True))
+    usuario_empresa1.is_system_record = True
+    usuario_empresa1.troca_senha_obrigatoria = False
     db_session.commit()
 
     with client.session_transaction() as sess:

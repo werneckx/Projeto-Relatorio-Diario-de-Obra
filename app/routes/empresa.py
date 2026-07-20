@@ -813,6 +813,31 @@ def _user_can_manage_empresa():
     except Exception:
         return False
 
+def _normalize_empresa_id(value):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _enforce_empresa_url_scope(requested_empresa_id):
+    requested_empresa_id = _normalize_empresa_id(requested_empresa_id)
+    current_empresa_id = _normalize_empresa_id(session.get('empresa_id'))
+    user = get_current_user()
+
+    if not user or requested_empresa_id is None:
+        abort(403)
+
+    if is_platform_admin(user):
+        if not Empresa.query.filter_by(id=requested_empresa_id).first():
+            abort(404)
+        return requested_empresa_id
+
+    if requested_empresa_id != current_empresa_id:
+        abort(403)
+
+    return requested_empresa_id
+
 
 @auth_bp.get("/empresa")
 @login_required
@@ -826,16 +851,10 @@ def empresa():
 @auth_bp.get("/empresa/<int:id>")
 @login_required
 def visualizar_empresa(id):
-    empresa_id = session.get('empresa_id')
-    user = get_current_user()
-    if not user:
-        abort(403)
-
-    if not getattr(user, "is_admin", False) and id != empresa_id:
-        abort(403)
+    empresa_id = _enforce_empresa_url_scope(id)
 
     return _render_empresa_page(
-        id,
+        empresa_id,
         can_edit=_user_can_manage_empresa(),
         start_in_edit_mode=False,
     )
@@ -845,16 +864,10 @@ def visualizar_empresa(id):
 @login_required
 @permission_required('empresa.manage')
 def editar_empresa(id):
-    empresa_id = session.get('empresa_id')
-    user = get_current_user()
-    if not user:
-        abort(403)
-
-    if not getattr(user, "is_admin", False) and id != empresa_id:
-        abort(403)
+    empresa_id = _enforce_empresa_url_scope(id)
 
     return _render_empresa_page(
-        id,
+        empresa_id,
         can_edit=True,
         start_in_edit_mode=True,
     )
@@ -868,21 +881,14 @@ def salvar_empresa(id=None):
     logo_file = request.files.get('logo_empresa')
     icone_file = request.files.get('icone_empresa')
     empresa_id = id or session.get('empresa_id')
-
-    user = get_current_user()
-    if not user:
-        abort(403)
-    if not getattr(user, "is_admin", False) and empresa_id != session.get('empresa_id'):
-        abort(403)
+    empresa_id = _enforce_empresa_url_scope(empresa_id)
 
     try:
         empresa_db = Empresa.query.get(empresa_id)
         if not empresa_db:
-            empresa_db = Empresa(nome=nome_empresa)
-            db.session.add(empresa_db)
-            db.session.flush()
-        else:
-            empresa_db.nome = nome_empresa
+            abort(404)
+
+        empresa_db.nome = nome_empresa
         
         upload_folder = os.path.join(current_app.root_path, 'static', 'uploads', 'logos')
         if not os.path.exists(upload_folder):

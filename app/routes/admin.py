@@ -21,7 +21,7 @@ from app.services.config_service import ConfigService
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
 # Import helper to get current user for blueprint-level checks
-from app.routes.auth_common import get_current_user
+from app.routes.auth_common import get_current_user, is_platform_admin
 
 
 # ---------------------------------------------------------------------------
@@ -34,7 +34,7 @@ from app.routes.auth_common import get_current_user
 def _admin_bp_system_only():
     # get_current_user returns Usuario or None
     user = get_current_user()
-    if not user or not getattr(user, 'is_system', False):
+    if not is_platform_admin(user):
         flash('Acesso restrito ao Admin Master.', 'danger')
         return redirect(url_for('auth.inicio'))
 
@@ -98,7 +98,7 @@ def allowed_file(filename):
 
 
 # Reuse shared security decorators (tenant-aware) from auth_common
-from app.routes.auth_common import login_required, permission_required, get_current_user
+from app.routes.auth_common import login_required, permission_required
 
 
 # ---------------------------------------------------------------------------

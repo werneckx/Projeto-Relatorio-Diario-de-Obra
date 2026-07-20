@@ -141,6 +141,18 @@ def get_current_empresa_id():
     return getattr(user, "empresa_id", None) if user else None
 
 
+def is_platform_admin(user=None):
+    """
+    Retorna True apenas para usuários de administração da plataforma.
+
+    Não use `is_admin` para liberar acesso entre empresas: esse property indica
+    administrador dentro da própria empresa e, portanto, continua preso ao tenant.
+    """
+    if user is None:
+        user = get_current_user()
+    return bool(user and getattr(user, "ativo", False) and getattr(user, "is_system_record", False))
+
+
 def get_current_user_id():
     user_id = session.get("user_id")
     if user_id in (None, ""):

@@ -341,11 +341,8 @@ class Usuario(db.Model, UserMixin):
 
     @property
     def is_system(self):
-        """Usuário é considerado system quando possui ao menos um papel global ativo."""
-        return any(
-            papel is not None and papel.ativo and papel.empresa_id is None
-            for papel in (self.papeis or [])
-        )
+        """Usuário de plataforma/Admin Master, independente do papel RBAC do tenant."""
+        return self.is_system_record
 
     @property
     def is_system_record(self):
