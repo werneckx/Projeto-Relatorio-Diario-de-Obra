@@ -428,6 +428,7 @@
                 timelineTooltip: null,
                 workflowDiagramDragging: null,
                 workflowDiagramZoom: 1,
+                workflowStagesPanelOpen: false,
                 workflowSubtab: localStorage.getItem('empresa_workflow_subtab') || 'configuracao',
                 filtroObras: '',
                 filtroWorkflow: '',
@@ -445,12 +446,24 @@
                     window.applyRequiredMarkers?.(document);
                     if (typeof this.$watch === 'function') {
                         this.$watch('filtroStatus', syncEmpresaStatusFilterPickers);
+                        this.$watch('empresaEditing', (editing) => {
+                            if (!editing) this.closeWorkflowStagesPanel();
+                        });
+                        this.$watch('abaAtiva', (aba) => {
+                            if (aba !== 'workflow') this.closeWorkflowStagesPanel();
+                        });
+                        this.$watch('workflowSubtab', (subtab) => {
+                            if (subtab !== 'configuracao') this.closeWorkflowStagesPanel();
+                        });
                     }
                 },
                 mudarAba(aba) {
                     this.abaAtiva = aba;
                     localStorage.setItem('empresa_aba_ativa', aba);
-                    if (aba !== 'workflow') closeEmpresaWorkflowTypeDropdown();
+                    if (aba !== 'workflow') {
+                        this.closeWorkflowStagesPanel();
+                        closeEmpresaWorkflowTypeDropdown();
+                    }
                 },
                 focarAba(aba) {
                     document.querySelector(`[data-empresa-tab="${aba}"]`)?.focus();
@@ -472,6 +485,22 @@
                 mudarWorkflowSubtab(subtab) {
                     this.workflowSubtab = subtab === 'obras' ? 'obras' : 'configuracao';
                     localStorage.setItem('empresa_workflow_subtab', this.workflowSubtab);
+                    if (this.workflowSubtab !== 'configuracao') this.closeWorkflowStagesPanel();
+                },
+                openWorkflowStagesPanel() {
+                    if (!this.empresaEditing || this.abaAtiva !== 'workflow' || this.workflowSubtab !== 'configuracao') return;
+                    this.workflowStagesPanelOpen = true;
+                },
+                closeWorkflowStagesPanel() {
+                    this.workflowStagesPanelOpen = false;
+                    if (typeof closeEmpresaWorkflowTypeDropdown === 'function') closeEmpresaWorkflowTypeDropdown();
+                },
+                toggleWorkflowStagesPanel() {
+                    if (this.workflowStagesPanelOpen) {
+                        this.closeWorkflowStagesPanel();
+                        return;
+                    }
+                    this.openWorkflowStagesPanel();
                 },
                 isSectionEditing() {
                     return this.empresaEditing;
