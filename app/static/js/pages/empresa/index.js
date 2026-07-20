@@ -1,5 +1,17 @@
 (function () {
-    const pageData = window.__empresaPageData || {};
+    function readEmpresaPageData() {
+        const dataScript = document.getElementById('empresa-page-data');
+        if (dataScript?.textContent) {
+            try {
+                return JSON.parse(dataScript.textContent);
+            } catch (error) {
+                console.error('Nao foi possivel interpretar os dados da pagina da empresa.', error);
+            }
+        }
+        return window.__empresaPageData || {};
+    }
+
+    const pageData = readEmpresaPageData();
     const empresaUrls = pageData.urls || {};
     const empresaWorkflowData = pageData.workflow || {};
     const empresaWorkflowRoleOptions = empresaWorkflowData.roleOptions || [];
@@ -10,6 +22,26 @@
     const empresaGeneralFormState = {
         initialized: false,
         previewMarkup: {},
+    };
+    const empresaImageConfig = {
+        logo: {
+            inputId: 'logo_empresa',
+            imgId: 'img-logo',
+            allowedTypes: ['image/png', 'image/webp'],
+            maxBytes: 2 * 1024 * 1024,
+            maxWidth: 2000,
+            maxHeight: 2000,
+            message: 'Use PNG ou WebP com até 2 MB e dimensões de até 2000x2000.',
+        },
+        icon: {
+            inputId: 'icone_empresa',
+            imgId: 'img-icon',
+            allowedTypes: ['image/png', 'image/x-icon', 'image/vnd.microsoft.icon'],
+            maxBytes: 512 * 1024,
+            maxWidth: 512,
+            maxHeight: 512,
+            message: 'Use PNG ou ICO com até 512 KB e dimensões de até 512x512.',
+        },
     };
 
     function getCsrfToken() {
@@ -63,27 +95,106 @@
         });
         restoreEmpresaPreviewContainer('logo');
         restoreEmpresaPreviewContainer('icon');
+        Object.keys(empresaImageConfig).forEach((key) => {
+            setEmpresaImageError(key);
+            setEmpresaImageResetVisible(key, false);
+        });
     }
 
-    function previewImage(input, imgId) {
-        const [file] = input.files;
-        if (file) {
-            const preview = document.getElementById(imgId);
-            const previewContainer = preview?.parentElement || document.getElementById(`preview-${String(imgId).replace(/^img-/, '')}`);
-            const objectUrl = URL.createObjectURL(file);
-            if (previewObjectUrls[imgId]) {
-                URL.revokeObjectURL(previewObjectUrls[imgId]);
-            }
-            previewObjectUrls[imgId] = objectUrl;
-            if (!previewContainer) return;
-            if (!preview || preview.tagName !== 'IMG') {
-                previewContainer.innerHTML = `<img src="${objectUrl}" id="${imgId}" class="max-w-full max-h-full object-contain p-4 animate-fade-in">`;
-            } else if (preview) {
-                preview.src = objectUrl;
-            }
-        }
+    function setEmpresaImageError(key, message = '') {
+        const errorEl = document.querySelector(`[data-image-error="${key}"]`);
+        if (!errorEl) return;
+        errorEl.textContent = message;
+        errorEl.classList.toggle('hidden', !message);
     }
-    window.previewImage = previewImage;
+
+    function setEmpresaImageResetVisible(key, visible) {
+        document.querySelector(`[data-image-reset="${key}"]`)?.classList.toggle('hidden', !visible);
+    }
+
+    function clearEmpresaImageObjectUrl(imgId) {
+        if (!previewObjectUrls[imgId]) return;
+        try {
+            URL.revokeObjectURL(previewObjectUrls[imgId]);
+        } catch (_) {
+            // no-op
+        }
+        delete previewObjectUrls[imgId];
+    }
+
+    function validateEmpresaImageFile(file, config) {
+        if (!file) return Promise.resolve(null);
+        if (!config.allowedTypes.includes(file.type)) {
+            return Promise.resolve(config.message);
+        }
+        if (file.size > config.maxBytes) {
+            return Promise.resolve(config.message);
+        }
+        if (file.type === 'image/x-icon' || file.type === 'image/vnd.microsoft.icon') {
+            return Promise.resolve(null);
+        }
+
+        return new Promise((resolve) => {
+            const objectUrl = URL.createObjectURL(file);
+            const image = new Image();
+            image.onload = () => {
+                const invalid = image.naturalWidth > config.maxWidth || image.naturalHeight > config.maxHeight;
+                URL.revokeObjectURL(objectUrl);
+                resolve(invalid ? config.message : null);
+            };
+            image.onerror = () => {
+                URL.revokeObjectURL(objectUrl);
+                resolve('Nao foi possivel ler a imagem selecionada.');
+            };
+            image.src = objectUrl;
+        });
+    }
+
+    async function previewEmpresaImage(input, key) {
+        const config = empresaImageConfig[key];
+        if (!config) return false;
+        const [file] = input.files || [];
+        setEmpresaImageError(key);
+
+        if (!file) {
+            resetEmpresaImageSelection(key);
+            return true;
+        }
+
+        const validationMessage = await validateEmpresaImageFile(file, config);
+        if (validationMessage) {
+            input.value = '';
+            setEmpresaImageError(key, validationMessage);
+            setEmpresaImageResetVisible(key, false);
+            return false;
+        }
+
+        const imgId = config.imgId;
+        const preview = document.getElementById(imgId);
+        const previewContainer = preview?.parentElement || document.getElementById(`preview-${key}`);
+        const objectUrl = URL.createObjectURL(file);
+        clearEmpresaImageObjectUrl(imgId);
+        previewObjectUrls[imgId] = objectUrl;
+        if (!previewContainer) return true;
+        if (!preview || preview.tagName !== 'IMG') {
+            previewContainer.innerHTML = `<img src="${objectUrl}" id="${imgId}" alt="" class="max-w-full max-h-full object-contain p-4 animate-fade-in">`;
+        } else {
+            preview.src = objectUrl;
+        }
+        setEmpresaImageResetVisible(key, true);
+        return true;
+    }
+
+    function resetEmpresaImageSelection(key) {
+        const config = empresaImageConfig[key];
+        if (!config) return;
+        const input = document.getElementById(config.inputId);
+        if (input) input.value = '';
+        clearEmpresaImageObjectUrl(config.imgId);
+        restoreEmpresaPreviewContainer(key);
+        setEmpresaImageError(key);
+        setEmpresaImageResetVisible(key, false);
+    }
 
     function normalizeSearchText(value) {
         return String(value || '')
@@ -100,6 +211,47 @@
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#39;');
+    }
+
+    function sanitizeSvgMarkup(markup) {
+        const rawMarkup = String(markup || '').trim();
+        if (!rawMarkup) return '';
+        const allowedElements = new Set([
+            'svg', 'defs', 'g', 'path', 'circle', 'rect', 'polygon', 'polyline',
+            'text', 'tspan', 'marker', 'filter', 'fedropshadow',
+        ]);
+        const allowedAttributes = new Set([
+            'aria-label', 'class', 'cx', 'cy', 'd', 'dx', 'dy', 'fill', 'filter',
+            'flood-color', 'flood-opacity', 'font-family', 'font-size', 'font-weight',
+            'height', 'id', 'marker-end', 'markerheight', 'markerunits', 'markerwidth',
+            'orient', 'points', 'preserveaspectratio', 'refx', 'refy', 'role', 'rx',
+            'ry', 'r', 'stddeviation', 'stroke', 'stroke-linecap', 'stroke-linejoin',
+            'stroke-width', 'text-anchor', 'viewbox', 'width', 'x', 'xmlns', 'y',
+        ]);
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(rawMarkup, 'image/svg+xml');
+        if (doc.querySelector('parsererror') || doc.documentElement?.tagName?.toLowerCase() !== 'svg') {
+            return '';
+        }
+
+        Array.from(doc.querySelectorAll('*')).forEach((node) => {
+            const tagName = node.tagName.toLowerCase();
+            if (!allowedElements.has(tagName)) {
+                node.remove();
+                return;
+            }
+            Array.from(node.attributes || []).forEach((attribute) => {
+                const name = attribute.name.toLowerCase();
+                const value = String(attribute.value || '');
+                const isAllowedUrl = /^url\(#[-_a-zA-Z0-9:.]+\)$/.test(value);
+                const hasUnsafeValue = /javascript:|data:|<|>/i.test(value) && !isAllowedUrl;
+                if (name.startsWith('on') || !allowedAttributes.has(name) || hasUnsafeValue) {
+                    node.removeAttribute(attribute.name);
+                }
+            });
+        });
+
+        return new XMLSerializer().serializeToString(doc.documentElement);
     }
 
     function normalizeWorkflowStageDisplay(value) {
@@ -289,6 +441,19 @@
             .filter((item) => item.total > 0);
     }
 
+    function normalizeWorkflowStatusCode(value) {
+        const normalized = normalizeSearchText(value).replace(/\s+/g, '_');
+        return {
+            pendente: 'PENDENTE',
+            em_andamento: 'EM_ANDAMENTO',
+            concluido: 'APROVADO',
+            aprovado: 'APROVADO',
+            rejeitado: 'REJEITADO',
+            cancelado: 'CANCELADO',
+            erro: 'ERRO',
+        }[normalized] || String(value || '').trim().toUpperCase();
+    }
+
     function normalizeWorkflowHistorico(series) {
         if (!Array.isArray(series)) return [];
         return series
@@ -413,7 +578,7 @@
         function empresaApp() {
             return {
                 abaAtiva: localStorage.getItem('empresa_aba_ativa') || 'geral',
-                tabOrder: ['geral', 'definicoes', 'papeis', 'workflow'],
+                tabOrder: ['geral', 'workflow'],
                 novaDefinicaoVisible: false,
                 novoDefinicao: { chave: '', descricao: '', valor: '', tipo: 'STRING' },
                 novoPapelVisible: false,
@@ -441,9 +606,14 @@
                 obrasWorkflowData: pageData.obrasWorkflowData || [],
                 workflowDefaultCodigo: pageData.workflowDefaultCodigo || 'SIMPLES',
                 empresaEditing: Boolean(pageData.startInEditMode),
+                saving: false,
 
                 init() {
                     this.abaAtiva = localStorage.getItem('empresa_aba_ativa') || this.abaAtiva || 'geral';
+                    if (!this.tabOrder.includes(this.abaAtiva)) {
+                        this.abaAtiva = 'geral';
+                        localStorage.setItem('empresa_aba_ativa', this.abaAtiva);
+                    }
                     prepareEmpresaRouteTransition();
                     initializeEmpresaGeneralFormState();
                     setEmpresaEditingDataset(this.empresaEditing);
@@ -462,6 +632,7 @@
                     }
                 },
                 mudarAba(aba) {
+                    if (!this.tabOrder.includes(aba)) return;
                     this.abaAtiva = aba;
                     localStorage.setItem('empresa_aba_ativa', aba);
                     if (aba !== 'workflow') {
@@ -485,6 +656,16 @@
                     const previousTab = this.tabOrder[previousIndex];
                     this.mudarAba(previousTab);
                     this.focarAba(previousTab);
+                },
+                focarPrimeiraAba() {
+                    const firstTab = this.tabOrder[0] || 'geral';
+                    this.mudarAba(firstTab);
+                    this.focarAba(firstTab);
+                },
+                focarUltimaAba() {
+                    const lastTab = this.tabOrder[this.tabOrder.length - 1] || 'geral';
+                    this.mudarAba(lastTab);
+                    this.focarAba(lastTab);
                 },
                 mudarWorkflowSubtab(subtab) {
                     this.workflowSubtab = subtab === 'obras' ? 'obras' : 'configuracao';
@@ -659,6 +840,12 @@
                     if (!this.empresaEditing) return true;
                     return false;
                 },
+                async handleEmpresaImageChange(event, key) {
+                    await previewEmpresaImage(event.target, key);
+                },
+                resetEmpresaImageSelection(key) {
+                    resetEmpresaImageSelection(key);
+                },
                 startSectionEdit() {
                     if (this.empresaEditing) return;
                     this.empresaEditing = true;
@@ -681,12 +868,19 @@
                     renderEmpresaWorkflowCards();
                 },
                 saveSection() {
+                    if (this.saving || this.isSaveDisabled()) return;
                     if (this.abaAtiva === 'geral') {
-                        document.getElementById('empresaForm')?.requestSubmit();
+                        const form = document.getElementById('empresaForm');
+                        if (form && typeof form.reportValidity === 'function' && !form.reportValidity()) return;
+                        this.saving = true;
+                        form?.requestSubmit();
                         return;
                     }
                     if (this.abaAtiva === 'workflow') {
-                        window.saveEmpresaWorkflowAction?.();
+                        this.saving = true;
+                        Promise.resolve(window.saveEmpresaWorkflowAction?.()).finally(() => {
+                            this.saving = false;
+                        });
                         return;
                     }
                     this.empresaEditing = false;
@@ -792,12 +986,13 @@
                     const termoObra = normalizeSearchText(this.filtroObras);
                     const termoWorkflow = normalizeSearchText(this.filtroWorkflow);
                     const termoResponsavel = normalizeSearchText(this.filtroResponsavel);
-                    const termoStatus = normalizeSearchText(this.filtroStatus);
+                    const statusFilter = normalizeWorkflowStatusCode(this.filtroStatus);
                     return this.obrasWorkflowData.filter((obra) => {
                         const matchObra = !termoObra || normalizeSearchText(obra.obra_nome).includes(termoObra);
                         const matchWorkflow = !termoWorkflow || normalizeSearchText(obra.workflow_nome).includes(termoWorkflow);
                         const matchResponsavel = !termoResponsavel || normalizeSearchText(obra.responsavel).includes(termoResponsavel);
-                        const matchStatus = !termoStatus || normalizeSearchText(obra.status) === termoStatus;
+                        const obraStatus = normalizeWorkflowStatusCode(obra.status_code || obra.status);
+                        const matchStatus = !statusFilter || obraStatus === statusFilter;
                         return matchObra && matchWorkflow && matchResponsavel && matchStatus;
                     });
                 },
@@ -1852,6 +2047,9 @@
                         </svg>
                     `;
                 },
+                getSafeWorkflowDiagramSvg(obra) {
+                    return sanitizeSvgMarkup(this.getWorkflowDiagramSvg(obra));
+                },
                 formatWorkflowStageName(value) {
                     return normalizeWorkflowStageDisplay(value);
                 },
@@ -2047,6 +2245,54 @@
         }
 
         let activeEmpresaWorkflowDropdown = null;
+        let empresaWorkflowDropdownIdCounter = 0;
+
+        function getEmpresaWorkflowDropdownParts(wrapper) {
+            return {
+                select: wrapper?.querySelector?.('select') || null,
+                button: wrapper?.querySelector?.('[data-workflow-dropdown-button]') || null,
+                menu: wrapper?.querySelector?.('[data-workflow-dropdown-menu], #workflowCompanyTypeDropdownMenu') || null,
+                options: Array.from(wrapper?.querySelectorAll?.('[data-workflow-dropdown-option]') || []),
+            };
+        }
+
+        function ensureEmpresaWorkflowDropdownA11y(wrapper) {
+            if (!wrapper) return;
+            const { button, menu, options } = getEmpresaWorkflowDropdownParts(wrapper);
+            if (!button || !menu) return;
+            if (!menu.id) {
+                empresaWorkflowDropdownIdCounter += 1;
+                menu.id = `empresa-workflow-dropdown-menu-${empresaWorkflowDropdownIdCounter}`;
+            }
+            button.setAttribute('aria-haspopup', 'listbox');
+            button.setAttribute('aria-controls', menu.id);
+            button.setAttribute('aria-expanded', menu.classList.contains('hidden') ? 'false' : 'true');
+            menu.setAttribute('role', 'listbox');
+            options.forEach((option) => {
+                option.setAttribute('role', 'option');
+                option.setAttribute('tabindex', '-1');
+            });
+        }
+
+        function setEmpresaWorkflowDropdownExpanded(wrapper, expanded) {
+            const { button } = getEmpresaWorkflowDropdownParts(wrapper);
+            button?.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        }
+
+        function focusEmpresaWorkflowDropdownOption(wrapper, direction) {
+            const { select, options } = getEmpresaWorkflowDropdownParts(wrapper);
+            if (!options.length) return;
+            const activeElement = document.activeElement;
+            const currentIndex = options.includes(activeElement)
+                ? options.indexOf(activeElement)
+                : Math.max(0, options.findIndex((option) => String(option.dataset.value ?? '') === String(select?.value ?? '')));
+            let nextIndex = currentIndex;
+            if (direction === 'first') nextIndex = 0;
+            else if (direction === 'last') nextIndex = options.length - 1;
+            else if (direction === 'previous') nextIndex = (currentIndex - 1 + options.length) % options.length;
+            else if (direction === 'next') nextIndex = (currentIndex + 1) % options.length;
+            options[nextIndex]?.focus({ preventScroll: true });
+        }
 
         function resetEmpresaWorkflowDropdownMenu(menu) {
             if (!menu) return;
@@ -2057,6 +2303,7 @@
             menu.style.width = '';
             menu.style.maxHeight = '';
             menu.style.zIndex = '';
+            setEmpresaWorkflowDropdownExpanded(getEmpresaWorkflowDropdownWrapper(menu), false);
         }
 
         function restoreEmpresaWorkflowDropdownMenu() {
@@ -2066,6 +2313,7 @@
             if (wrapper && menu && !wrapper.contains(menu)) {
                 wrapper.appendChild(menu);
             }
+            setEmpresaWorkflowDropdownExpanded(wrapper, false);
             activeEmpresaWorkflowDropdown = null;
         }
 
@@ -2088,6 +2336,7 @@
             menu.style.zIndex = '99999';
             menu.classList.add('overflow-y-auto');
             menu.classList.remove('hidden');
+            setEmpresaWorkflowDropdownExpanded(wrapper, true);
         }
 
         function closeEmpresaWorkflowDropdowns(exceptWrapper = null) {
@@ -2119,11 +2368,13 @@
             const value = String(select.value ?? '');
             const label = wrapper.querySelector('[data-workflow-dropdown-label], #workflowCompanyTypeDropdownLabel');
             if (label) label.textContent = getEmpresaWorkflowDropdownLabel(select);
+            ensureEmpresaWorkflowDropdownA11y(wrapper);
 
             wrapper.querySelectorAll('[data-workflow-dropdown-option]').forEach((option) => {
                 const isActive = String(option.dataset.value ?? '') === value;
                 option.classList.toggle('bg-blue-50', isActive);
                 option.classList.toggle('text-blue-700', isActive);
+                option.setAttribute('aria-selected', isActive ? 'true' : 'false');
                 option.querySelector('[data-workflow-dropdown-check], .workflow-company-type-check')?.classList.toggle('hidden', !isActive);
             });
         }
@@ -2152,6 +2403,8 @@
             activeEmpresaWorkflowDropdown = { wrapper, menu };
             document.body.appendChild(menu);
             positionEmpresaWorkflowDropdownMenu(wrapper, menu);
+            ensureEmpresaWorkflowDropdownA11y(wrapper);
+            focusEmpresaWorkflowDropdownOption(wrapper, 'current');
         }
 
         function selectEmpresaWorkflowDropdownOption(option) {
@@ -2418,7 +2671,7 @@
             }
 
             emptyEl.classList.add('hidden');
-            diagramEl.innerHTML = window.empresaApp().getWorkflowDiagramSvg(getEmpresaWorkflowDiagramPayload());
+            diagramEl.innerHTML = window.empresaApp().getSafeWorkflowDiagramSvg(getEmpresaWorkflowDiagramPayload());
             syncEmpresaWorkflowDiagramViewport();
         }
 
@@ -2685,11 +2938,11 @@
             const buttonClasses = `flex h-9 min-w-0 w-full items-center gap-2 rounded-xl border px-3 pr-9 text-left text-xs font-semibold ${disabled ? viewClasses : editClasses}`;
             const optionClasses = 'flex h-9 w-full items-center gap-2 px-3 text-left text-xs font-semibold text-slate-700 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none';
             const optionHtml = [
-                `<button type="button" class="${optionClasses}" data-workflow-dropdown-option data-value=""><span class="min-w-0 flex-1 truncate">Selecione o papel</span><i class="fas fa-check hidden text-blue-600" data-workflow-dropdown-check></i></button>`,
+                `<button type="button" class="${optionClasses}" data-workflow-dropdown-option data-value=""><span class="min-w-0 flex-1 truncate">Selecione o papel</span><i class="fas fa-check hidden text-blue-600" data-workflow-dropdown-check aria-hidden="true"></i></button>`,
                 ...empresaWorkflowRoleOptions.map((papel) => `
                     <button type="button" class="${optionClasses}" data-workflow-dropdown-option data-value="${escapeEmpresaWorkflowHtml(papel.id)}">
                         <span class="min-w-0 flex-1 truncate">${escapeEmpresaWorkflowHtml(formatEmpresaWorkflowRoleLabel(papel.nome))}</span>
-                        <i class="fas fa-check hidden text-blue-600" data-workflow-dropdown-check></i>
+                        <i class="fas fa-check hidden text-blue-600" data-workflow-dropdown-check aria-hidden="true"></i>
                     </button>
                 `),
             ].join('');
@@ -2701,11 +2954,11 @@
                             <option value="${escapeEmpresaWorkflowHtml(papel.id)}" ${Number(papel.id) === Number(stage.papel_id) ? 'selected' : ''}>${escapeEmpresaWorkflowHtml(formatEmpresaWorkflowRoleLabel(papel.nome))}</option>
                         `).join('')}
                     </select>
-                    <button type="button" class="${buttonClasses}" data-workflow-dropdown-button tabindex="${disabled ? '-1' : '0'}" aria-disabled="${disabled ? 'true' : 'false'}">
+                    <button type="button" class="${buttonClasses}" data-workflow-dropdown-button tabindex="${disabled ? '-1' : '0'}" aria-haspopup="listbox" aria-expanded="false" aria-disabled="${disabled ? 'true' : 'false'}">
                         <span class="min-w-0 flex-1 truncate" data-workflow-dropdown-label>${escapeEmpresaWorkflowHtml(selectedLabel)}</span>
                     </button>
-                    ${disabled ? '' : '<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400"><i class="fas fa-chevron-down text-[10px]"></i></div>'}
-                    <div class="absolute left-0 right-0 top-[calc(100%+6px)] z-50 hidden max-h-64 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-xl" data-workflow-dropdown-menu>
+                    ${disabled ? '' : '<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400"><i class="fas fa-chevron-down text-[10px]" aria-hidden="true"></i></div>'}
+                    <div class="absolute left-0 right-0 top-[calc(100%+6px)] z-50 hidden max-h-64 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-xl" data-workflow-dropdown-menu role="listbox">
                         ${optionHtml}
                     </div>
                 </div>
@@ -2722,7 +2975,7 @@
             return `
                 <div class="empresa-workflow-stage-card flex min-w-0 items-center gap-2 border-t border-slate-100 px-2 py-1.5" data-stage-index="${stageIndex}" data-stage-key="${escapeEmpresaWorkflowHtml(stageKey)}" data-etapa-id="${String(stage.etapa_id || '')}">
                     ${showStageHandle ? `<span class="inline-flex h-8 w-5 shrink-0 cursor-grab items-center justify-center text-slate-300" aria-label="Arrastar papel" role="img">
-                        <i class="fas fa-grip-vertical text-xs"></i>
+                        <i class="fas fa-grip-vertical text-xs" aria-hidden="true"></i>
                     </span>` : ''}
                     <label class="sr-only" for="workflow-stage-role-${stageIndex}">Papel ${stageIndex + 1}</label>
                     <div class="min-w-0 flex-1">
@@ -2730,7 +2983,7 @@
                     </div>
                     ${rules.isSimple || !editing ? '' : `
                         <button type="button" data-workflow-action="remove-approver" data-stage-index="${stageIndex}" data-stage-key="${escapeEmpresaWorkflowHtml(stageKey)}" ${removeDisabled ? 'disabled' : ''} aria-label="Excluir papel ${escapeEmpresaWorkflowHtml(roleLabel)}" title="Excluir papel" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 focus:outline-none focus:ring-2 focus:ring-rose-200 disabled:cursor-not-allowed disabled:opacity-35">
-                            <i class="fas fa-times text-xs"></i>
+                            <i class="fas fa-times text-xs" aria-hidden="true"></i>
                         </button>
                     `}
                 </div>
@@ -2741,7 +2994,7 @@
             if (rules.isSimple || !isEmpresaWorkflowEditing()) return '';
             return `
                 <button type="button" data-workflow-action="add-approver" data-group-key="${String(groupKey)}" class="flex h-9 w-full items-center justify-center gap-2 border-t border-dashed border-slate-200 px-2 text-xs font-bold text-slate-500 transition hover:bg-blue-50 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-200">
-                    <i class="fas fa-plus text-[10px]"></i>
+                    <i class="fas fa-plus text-[10px]" aria-hidden="true"></i>
                     <span>Adicionar papel</span>
                 </button>
             `;
@@ -2785,18 +3038,18 @@
                         <option value="TODOS" ${value === 'TODOS' ? 'selected' : ''}>Todos devem aprovar</option>
                         <option value="QUALQUER" ${value === 'QUALQUER' ? 'selected' : ''}>Qualquer um aprova</option>
                     </select>
-                    <button type="button" class="${buttonClasses}" data-workflow-dropdown-button tabindex="${editing ? '0' : '-1'}" aria-disabled="${editing ? 'false' : 'true'}">
+                    <button type="button" class="${buttonClasses}" data-workflow-dropdown-button tabindex="${editing ? '0' : '-1'}" aria-haspopup="listbox" aria-expanded="false" aria-disabled="${editing ? 'false' : 'true'}">
                         <span class="min-w-0 flex-1 truncate" data-workflow-dropdown-label>${escapeEmpresaWorkflowHtml(label)}</span>
                     </button>
-                    ${editing ? '<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400"><i class="fas fa-chevron-down text-[10px]"></i></div>' : ''}
-                    <div class="absolute left-0 right-0 top-[calc(100%+6px)] z-50 hidden overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl" data-workflow-dropdown-menu>
+                    ${editing ? '<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400"><i class="fas fa-chevron-down text-[10px]" aria-hidden="true"></i></div>' : ''}
+                    <div class="absolute left-0 right-0 top-[calc(100%+6px)] z-50 hidden overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl" data-workflow-dropdown-menu role="listbox">
                         <button type="button" class="${optionClasses}" data-workflow-dropdown-option data-value="TODOS">
                             <span class="min-w-0 flex-1 truncate">Todos devem aprovar</span>
-                            <i class="fas fa-check hidden text-blue-600" data-workflow-dropdown-check></i>
+                            <i class="fas fa-check hidden text-blue-600" data-workflow-dropdown-check aria-hidden="true"></i>
                         </button>
                         <button type="button" class="${optionClasses}" data-workflow-dropdown-option data-value="QUALQUER">
                             <span class="min-w-0 flex-1 truncate">Qualquer um aprova</span>
-                            <i class="fas fa-check hidden text-blue-600" data-workflow-dropdown-check></i>
+                            <i class="fas fa-check hidden text-blue-600" data-workflow-dropdown-check aria-hidden="true"></i>
                         </button>
                     </div>
                 </div>
@@ -2823,16 +3076,16 @@
                     <div class="flex items-center justify-between gap-2">
                         <div class="flex min-w-0 items-center gap-2">
                             ${showGroupHandle ? `<button type="button" class="inline-flex h-7 w-6 cursor-grab items-center justify-center rounded-lg text-slate-400 active:cursor-grabbing" aria-label="${dragLabel}">
-                                <i class="fas fa-grip-vertical text-xs"></i>
+                                <i class="fas fa-grip-vertical text-xs" aria-hidden="true"></i>
                             </button>` : ''}
                             <h5 class="min-w-0 truncate text-xs font-black text-slate-900">${title}</h5>
                             <span class="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">${group.items.length} papel${group.items.length === 1 ? '' : 's'}</span>
                         </div>
                         <div class="flex shrink-0 items-center gap-1">
                             <button type="button" data-workflow-action="toggle-group" data-group-key="${String(group.key)}" aria-label="${toggleLabel}" aria-expanded="${collapsed ? 'false' : 'true'}" title="${toggleLabel}" class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-200">
-                                <i class="fas ${collapsed ? 'fa-chevron-down' : 'fa-chevron-up'} text-[10px]"></i>
+                                <i class="fas ${collapsed ? 'fa-chevron-down' : 'fa-chevron-up'} text-[10px]" aria-hidden="true"></i>
                             </button>
-                            ${canRemoveGroup ? `<button type="button" data-workflow-action="remove-group" data-group-key="${String(group.key)}" aria-label="${removeLabel}" title="${removeLabel}" class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 focus:outline-none focus:ring-2 focus:ring-rose-200"><i class="fas fa-trash-alt text-xs"></i></button>` : ''}
+                            ${canRemoveGroup ? `<button type="button" data-workflow-action="remove-group" data-group-key="${String(group.key)}" aria-label="${removeLabel}" title="${removeLabel}" class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 focus:outline-none focus:ring-2 focus:ring-rose-200"><i class="fas fa-trash-alt text-xs" aria-hidden="true"></i></button>` : ''}
                         </div>
                     </div>
                     ${rules.isSimple ? '' : `<div class="${showGroupHandle ? 'pl-8' : ''}">
@@ -2870,7 +3123,7 @@
                 container.className = 'space-y-2';
                 container.innerHTML = groups
                     .map((group, groupIndex) => renderEmpresaWorkflowGroupCard(group, groupIndex, groups.length, rules))
-                    .join(rules.isSequential ? '<div class="flex justify-center text-[10px] text-slate-300"><i class="fas fa-arrow-down"></i></div>' : '');
+                    .join(rules.isSequential ? '<div class="flex justify-center text-[10px] text-slate-300"><i class="fas fa-arrow-down" aria-hidden="true"></i></div>' : '');
             }
 
             renderEmpresaWorkflowSummary();
@@ -3039,6 +3292,41 @@
                 }
             });
 
+            document.addEventListener('keydown', (event) => {
+                const dropdownTarget = event.target.closest?.('[data-workflow-dropdown-button], [data-workflow-dropdown-option]');
+                if (!dropdownTarget) return;
+                const wrapper = getEmpresaWorkflowDropdownWrapper(dropdownTarget) || activeEmpresaWorkflowDropdown?.wrapper;
+                if (!wrapper || !canOpenEmpresaWorkflowDropdown(wrapper)) return;
+
+                if (dropdownTarget.matches('[data-workflow-dropdown-button]') && ['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+                    event.preventDefault();
+                    const menu = getEmpresaWorkflowDropdownParts(wrapper).menu;
+                    if (menu?.classList.contains('hidden')) {
+                        toggleEmpresaWorkflowDropdown(wrapper);
+                    }
+                    focusEmpresaWorkflowDropdownOption(wrapper, event.key === 'ArrowUp' ? 'previous' : event.key === 'Home' ? 'first' : event.key === 'End' ? 'last' : 'current');
+                    return;
+                }
+
+                if (!dropdownTarget.matches('[data-workflow-dropdown-option]')) return;
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    const button = getEmpresaWorkflowDropdownParts(wrapper).button;
+                    closeEmpresaWorkflowDropdowns();
+                    button?.focus({ preventScroll: true });
+                    return;
+                }
+                if (event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Home' || event.key === 'End') {
+                    event.preventDefault();
+                    focusEmpresaWorkflowDropdownOption(wrapper, event.key === 'ArrowUp' ? 'previous' : event.key === 'Home' ? 'first' : event.key === 'End' ? 'last' : 'next');
+                    return;
+                }
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    selectEmpresaWorkflowDropdownOption(dropdownTarget);
+                }
+            });
+
             window.addEventListener('scroll', () => {
                 if (activeEmpresaWorkflowDropdown) {
                     positionEmpresaWorkflowDropdownMenu(activeEmpresaWorkflowDropdown.wrapper, activeEmpresaWorkflowDropdown.menu);
@@ -3152,12 +3440,12 @@
                     input.style.maxWidth = '200px';
 
                     const save = document.createElement('button');
-                    save.innerHTML = '<i class="fas fa-check text-[10px]"></i>';
-                    save.className = 'w-7 h-7 bg-blue-600 text-white rounded-lg flex items-center justify-center hover:bg-blue-700 ml-2 shadow-xs shrink-0';
+                    save.innerHTML = '<i class="fas fa-check text-[10px]" aria-hidden="true"></i>';
+                    save.className = 'w-7 h-7 bg-blue-600 text-white rounded-lg flex items-center justify-center hover:bg-blue-700 ml-2 shadow-sm shrink-0';
 
                     const cancel = document.createElement('button');
-                    cancel.innerHTML = '<i class="fas fa-times text-[10px]"></i>';
-                    cancel.className = 'w-7 h-7 bg-white border border-slate-200 text-slate-500 rounded-lg flex items-center justify-center hover:bg-slate-50 ml-1 shadow-xs shrink-0';
+                    cancel.innerHTML = '<i class="fas fa-times text-[10px]" aria-hidden="true"></i>';
+                    cancel.className = 'w-7 h-7 bg-white border border-slate-200 text-slate-500 rounded-lg flex items-center justify-center hover:bg-slate-50 ml-1 shadow-sm shrink-0';
 
                     const container = valEl.parentElement;
                     container.insertBefore(input, valEl);

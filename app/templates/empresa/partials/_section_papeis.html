@@ -3,7 +3,7 @@
 <section
     id="empresa-panel-papeis"
     role="tabpanel"
-    aria-labelledby="empresa-tab-papeis"
+    aria-label="Papéis e perfis de acesso"
     x-show="abaAtiva === 'papeis'"
     x-transition
     x-cloak
@@ -12,7 +12,7 @@
     {% call ui_form.section('Papéis e perfis de acesso', icon='fa-shield-alt', icon_box_class='bg-blue-100 text-blue-600', variant='form') %}
     <div class="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-6 py-12 text-center">
         <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-white text-blue-600 shadow-sm">
-            <i class="fas fa-user-shield"></i>
+            <i class="fas fa-user-shield" aria-hidden="true"></i>
         </div>
         <h4 class="mt-4 text-base font-bold text-slate-900">Seção em desenvolvimento</h4>
         <p class="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-500">

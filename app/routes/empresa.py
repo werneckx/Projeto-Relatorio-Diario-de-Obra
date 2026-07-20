@@ -833,6 +833,111 @@ def _enforce_empresa_url_scope(requested_empresa_id):
     return requested_empresa_id
 
 
+EMPRESA_UPLOAD_RULES = {
+    'logo': {
+        'mimes': {'image/png', 'image/webp'},
+        'extensions': {'png', 'webp'},
+        'max_bytes': 2 * 1024 * 1024,
+        'max_width': 2000,
+        'max_height': 2000,
+        'error': 'O logotipo deve ser PNG ou WebP, ter ate 2 MB e no maximo 2000x2000.',
+    },
+    'icone': {
+        'mimes': {'image/png', 'image/x-icon'},
+        'extensions': {'png', 'ico'},
+        'max_bytes': 512 * 1024,
+        'max_width': 512,
+        'max_height': 512,
+        'error': 'O favicon deve ser PNG ou ICO, ter ate 512 KB e no maximo 512x512.',
+    },
+}
+
+
+def _sniff_empresa_image_mime(header):
+    if header.startswith(b'\x89PNG\r\n\x1a\n'):
+        return 'image/png'
+    if header[:4] == b'RIFF' and header[8:12] == b'WEBP':
+        return 'image/webp'
+    if header.startswith(b'\x00\x00\x01\x00'):
+        return 'image/x-icon'
+    return None
+
+
+def _parse_empresa_image_dimensions(header, mime):
+    if mime == 'image/png' and len(header) >= 24:
+        return int.from_bytes(header[16:20], 'big'), int.from_bytes(header[20:24], 'big')
+    if mime == 'image/x-icon' and len(header) >= 8:
+        width = header[6] or 256
+        height = header[7] or 256
+        return width, height
+    if mime == 'image/webp' and len(header) >= 30:
+        chunk = header[12:16]
+        if chunk == b'VP8X':
+            width = 1 + int.from_bytes(header[24:27], 'little')
+            height = 1 + int.from_bytes(header[27:30], 'little')
+            return width, height
+        if chunk == b'VP8 ' and len(header) >= 30:
+            width = int.from_bytes(header[26:28], 'little') & 0x3fff
+            height = int.from_bytes(header[28:30], 'little') & 0x3fff
+            return width, height
+        if chunk == b'VP8L' and len(header) >= 25:
+            b0, b1, b2, b3 = header[21], header[22], header[23], header[24]
+            width = 1 + (((b1 & 0x3F) << 8) | b0)
+            height = 1 + (((b3 & 0x0F) << 10) | (b2 << 2) | ((b1 & 0xC0) >> 6))
+            return width, height
+    return None, None
+
+
+def _validate_empresa_upload(file_storage, kind):
+    rules = EMPRESA_UPLOAD_RULES[kind]
+    filename = file_storage.filename or ''
+    ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+    if ext not in rules['extensions']:
+        raise ValueError(rules['error'])
+
+    stream = file_storage.stream
+    stream.seek(0, os.SEEK_END)
+    size = stream.tell()
+    stream.seek(0)
+    if size <= 0 or size > rules['max_bytes']:
+        raise ValueError(rules['error'])
+
+    header = stream.read(512)
+    stream.seek(0)
+    mime = _sniff_empresa_image_mime(header)
+    if mime not in rules['mimes']:
+        raise ValueError(rules['error'])
+
+    width, height = _parse_empresa_image_dimensions(header, mime)
+    if width and height and (width > rules['max_width'] or height > rules['max_height']):
+        raise ValueError(rules['error'])
+
+    try:
+        with Image.open(stream) as image:
+            image.verify()
+    except Exception:
+        raise ValueError(rules['error'])
+    finally:
+        stream.seek(0)
+
+    return 'ico' if mime == 'image/x-icon' else mime.rsplit('/', 1)[1]
+
+
+def _save_empresa_upload(file_storage, destination, ext):
+    file_storage.stream.seek(0)
+    if ext in {'png', 'webp'}:
+        with Image.open(file_storage.stream) as image:
+            image.load()
+            if ext == 'png':
+                image.save(destination, format='PNG', optimize=True)
+            else:
+                image.save(destination, format='WEBP', lossless=True, method=6)
+        file_storage.stream.seek(0)
+        return
+
+    file_storage.save(destination)
+
+
 @auth_bp.get("/empresa")
 @login_required
 def empresa():
@@ -889,22 +994,25 @@ def salvar_empresa(id=None):
             os.makedirs(upload_folder)
 
         if logo_file and logo_file.filename != '':
-            if allowed_file(logo_file.filename):
-                ext = logo_file.filename.rsplit('.', 1)[1].lower()
-                logo_filename = f"logo_empresa_{empresa_db.id}.{ext}"
-                logo_file.save(os.path.join(upload_folder, logo_filename))
-                empresa_db.logo_empresa = f"uploads/logos/{logo_filename}"
+            ext = _validate_empresa_upload(logo_file, 'logo')
+            logo_filename = f"logo_empresa_{empresa_db.id}.{ext}"
+            _save_empresa_upload(logo_file, os.path.join(upload_folder, logo_filename), ext)
+            empresa_db.logo_empresa = f"uploads/logos/{logo_filename}"
 
         if icone_file and icone_file.filename != '':
-            if allowed_file(icone_file.filename):
-                ext = icone_file.filename.rsplit('.', 1)[1].lower()
-                icone_filename = f"icone_empresa_{empresa_db.id}.{ext}"
-                icone_file.save(os.path.join(upload_folder, icone_filename))
-                empresa_db.icone_empresa = f"uploads/logos/{icone_filename}"
+            ext = _validate_empresa_upload(icone_file, 'icone')
+            icone_filename = f"icone_empresa_{empresa_db.id}.{ext}"
+            _save_empresa_upload(icone_file, os.path.join(upload_folder, icone_filename), ext)
+            empresa_db.icone_empresa = f"uploads/logos/{icone_filename}"
 
         db.session.commit()
         flash('Configurações da empresa atualizadas com sucesso!', 'success')
         return redirect(url_for('auth.visualizar_empresa', id=empresa_id))
+
+    except ValueError as e:
+        db.session.rollback()
+        flash(str(e), 'danger')
+        return redirect(url_for('auth.editar_empresa', id=empresa_id))
 
     except Exception as e:
         db.session.rollback()

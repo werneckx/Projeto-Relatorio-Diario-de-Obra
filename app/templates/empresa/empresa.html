@@ -97,8 +97,6 @@
 
     <main id="empresa-tab-content" class="space-y-6">
         {% include "empresa/partials/_section_geral.html" %}
-        {% include "empresa/partials/_section_definicoes.html" %}
-        {% include "empresa/partials/_section_papeis.html" %}
         {% include "empresa/partials/_section_workflow_v2.html" %}
     </main>
 
@@ -106,30 +104,32 @@
     {% include "empresa/partials/_modals.html" %}
 </div>
 
-<script>
-    window.__empresaPageData = {
-        startInEditMode: {{ start_in_edit_mode|tojson }},
-        urls: {
-            empresaView: {{ empresa_view_url|tojson }},
-            empresaEdit: {{ empresa_edit_url|tojson }},
-            createDefinicao: {{ url_for('auth.api_create_definicao')|tojson }},
-            createPapel: {{ url_for('auth.api_create_papel')|tojson }},
-            createWorkflow: {{ url_for('auth.api_create_workflow')|tojson }},
-            updateWorkflowDefault: {{ url_for('auth.api_update_workflow_default')|tojson }},
-            updateWorkflowEmpresa: {{ url_for('auth.api_update_workflow_empresa', workflow_id=0)|tojson }},
-            updateEmpresaConfig: {{ url_for('auth.api_update_empresa_config')|tojson }}
-        },
-        obrasWorkflowData: {{ obras_modal_payload|tojson }},
-        workflowDefaultCodigo: {{ (workflow_default_codigo or 'SIMPLES')|tojson }},
-        workflow: {
-            roleOptions: {{ workflow_role_options|tojson|safe }},
-            userOptions: {{ workflow_user_options|tojson|safe }},
-            previewById: {{ workflow_preview_by_id|tojson|safe }},
-            defaultId: {{ workflow_default_id|tojson|safe }}
-        }
-    };
+<script type="application/json" id="empresa-page-data">
+    {{
+        {
+            "startInEditMode": start_in_edit_mode,
+            "urls": {
+                "empresaView": empresa_view_url,
+                "empresaEdit": empresa_edit_url,
+                "createDefinicao": url_for('auth.api_create_definicao'),
+                "createPapel": url_for('auth.api_create_papel'),
+                "createWorkflow": url_for('auth.api_create_workflow'),
+                "updateWorkflowDefault": url_for('auth.api_update_workflow_default'),
+                "updateWorkflowEmpresa": url_for('auth.api_update_workflow_empresa', workflow_id=0),
+                "updateEmpresaConfig": url_for('auth.api_update_empresa_config'),
+            },
+            "obrasWorkflowData": obras_modal_payload,
+            "workflowDefaultCodigo": workflow_default_codigo or "SIMPLES",
+            "workflow": {
+                "roleOptions": workflow_role_options,
+                "userOptions": workflow_user_options,
+                "previewById": workflow_preview_by_id,
+                "defaultId": workflow_default_id,
+            },
+        } | tojson
+    }}
 </script>
-<script src="{{ url_for('static', filename='js/pages/empresa/index.js') }}?v=20260714-workflow-dropdown-portal" defer></script>
-<script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+<script src="{{ url_for('static', filename='js/pages/empresa/index.js') }}?v=20260720-security-a11y" defer></script>
+<script src="{{ url_for('static', filename='vendor/alpinejs/alpine-3.14.9.min.js') }}" defer></script>
 {% endcall %}
 {% endblock %}

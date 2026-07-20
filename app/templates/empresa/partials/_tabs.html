@@ -12,42 +12,12 @@
                 @click="mudarAba('geral')"
                 @keydown.right.prevent="focarProximaAba()"
                 @keydown.left.prevent="focarAbaAnterior()"
+                @keydown.home.prevent="focarPrimeiraAba()"
+                @keydown.end.prevent="focarUltimaAba()"
                 :class="abaAtiva === 'geral' ? 'bg-slate-900 text-white shadow-sm' : 'border-transparent bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-900'"
                 class="inline-flex shrink-0 items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-all"
             >
-                <i class="fas fa-building text-xs opacity-80"></i> Geral
-            </button>
-            <button
-                type="button"
-                id="empresa-tab-definicoes"
-                role="tab"
-                data-empresa-tab="definicoes"
-                aria-controls="empresa-panel-definicoes"
-                :aria-selected="abaAtiva === 'definicoes'"
-                :tabindex="abaAtiva === 'definicoes' ? 0 : -1"
-                @click="mudarAba('definicoes')"
-                @keydown.right.prevent="focarProximaAba()"
-                @keydown.left.prevent="focarAbaAnterior()"
-                :class="abaAtiva === 'definicoes' ? 'bg-slate-900 text-white shadow-sm' : 'border-transparent bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-900'"
-                class="inline-flex shrink-0 items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-all"
-            >
-                <i class="fas fa-sliders-h text-xs opacity-80"></i> Definições
-            </button>
-            <button
-                type="button"
-                id="empresa-tab-papeis"
-                role="tab"
-                data-empresa-tab="papeis"
-                aria-controls="empresa-panel-papeis"
-                :aria-selected="abaAtiva === 'papeis'"
-                :tabindex="abaAtiva === 'papeis' ? 0 : -1"
-                @click="mudarAba('papeis')"
-                @keydown.right.prevent="focarProximaAba()"
-                @keydown.left.prevent="focarAbaAnterior()"
-                :class="abaAtiva === 'papeis' ? 'bg-slate-900 text-white shadow-sm' : 'border-transparent bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-900'"
-                class="inline-flex shrink-0 items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-all"
-            >
-                <i class="fas fa-shield-alt text-xs opacity-80"></i> Papéis
+                <i class="fas fa-building text-xs opacity-80" aria-hidden="true"></i> Geral
             </button>
             <button
                 type="button"
@@ -60,10 +30,12 @@
                 @click="mudarAba('workflow')"
                 @keydown.right.prevent="focarProximaAba()"
                 @keydown.left.prevent="focarAbaAnterior()"
+                @keydown.home.prevent="focarPrimeiraAba()"
+                @keydown.end.prevent="focarUltimaAba()"
                 :class="abaAtiva === 'workflow' ? 'bg-slate-900 text-white shadow-sm' : 'border-transparent bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-900'"
                 class="inline-flex shrink-0 items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-all"
             >
-                <i class="fas fa-project-diagram text-xs opacity-80"></i> Workflows
+                <i class="fas fa-project-diagram text-xs opacity-80" aria-hidden="true"></i> Workflows
             </button>
         </div>
     </div>

@@ -1,10 +1,10 @@
 {% import "components/form/macros.html" as ui_form %}
 
-<section id="empresa-panel-definicoes" role="tabpanel" aria-labelledby="empresa-tab-definicoes" x-show="abaAtiva === 'definicoes'" x-transition x-cloak class="scroll-mt-24">
+<section id="empresa-panel-definicoes" role="tabpanel" aria-label="Definições e parâmetros" x-show="abaAtiva === 'definicoes'" x-transition x-cloak class="scroll-mt-24">
     {% call ui_form.section('Definições e parâmetros', icon='fa-sliders-h', icon_box_class='bg-blue-100 text-blue-600', variant='form') %}
     <div class="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-6 py-12 text-center">
         <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-white text-blue-600 shadow-sm">
-            <i class="fas fa-screwdriver-wrench"></i>
+            <i class="fas fa-screwdriver-wrench" aria-hidden="true"></i>
         </div>
         <h4 class="mt-4 text-base font-bold text-slate-900">Seção em desenvolvimento</h4>
         <p class="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-500">
