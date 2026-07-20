@@ -2815,7 +2815,7 @@
                 if (!response.ok || !data.ok) {
                     throw new Error(data.error || 'Não foi possível salvar o workflow.');
                 }
-                location.reload();
+                window.location.assign(empresaUrls.empresaView || window.location.href);
             } catch (error) {
                 console.error(error);
                 await showError('Erro ao salvar workflow', error.message || 'Não foi possível salvar o workflow.');

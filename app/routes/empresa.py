@@ -904,12 +904,12 @@ def salvar_empresa(id=None):
 
         db.session.commit()
         flash('Configurações da empresa atualizadas com sucesso!', 'success')
+        return redirect(url_for('auth.visualizar_empresa', id=empresa_id))
 
     except Exception as e:
         db.session.rollback()
         flash(f'Erro ao salvar configurações: {str(e)}', 'danger')
-
-    return redirect(url_for('auth.editar_empresa', id=empresa_id))
+        return redirect(url_for('auth.editar_empresa', id=empresa_id))
 
 
 # ---------------------------------------------------------------------------
