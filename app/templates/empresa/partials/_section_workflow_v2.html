@@ -277,9 +277,9 @@
                             x-transition:leave="transition ease-in duration-150"
                             x-transition:leave-start="opacity-100 translate-y-0 scale-100"
                             x-transition:leave-end="opacity-0 translate-y-2 scale-[0.98]"
-                            @pointermove.window="moveWorkflowStagesPanelDrag($event)"
-                            @pointerup.window="endWorkflowStagesPanelDrag($event)"
-                            @pointercancel.window="endWorkflowStagesPanelDrag($event)"
+                            @pointermove.window="moveWorkflowStagesPanelDrag($event); moveWorkflowStagesPanelResize($event)"
+                            @pointerup.window="endWorkflowStagesPanelDrag($event); endWorkflowStagesPanelResize($event)"
+                            @pointercancel.window="endWorkflowStagesPanelDrag($event); endWorkflowStagesPanelResize($event)"
                             @resize.window="ensureWorkflowStagesPanelPosition()"
                             :aria-hidden="(!workflowStagesPanelOpen || !empresaEditing).toString()"
                             :style="getWorkflowStagesPanelStyle()"
@@ -327,6 +327,18 @@
                                 <div id="workflowCompanyStagesErrors" class="mb-3 hidden rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700"></div>
                                 <div id="workflowCompanyStagesContainer" class="space-y-2"></div>
                             </div>
+
+                            <button
+                                type="button"
+                                aria-label="Redimensionar altura do painel"
+                                title="Arraste para ajustar a altura"
+                                class="flex h-4 shrink-0 cursor-ns-resize touch-none items-center justify-center border-t border-slate-100 bg-slate-50 text-slate-300 transition hover:bg-slate-100 hover:text-slate-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-300"
+                                @pointerdown="startWorkflowStagesPanelResize($event)"
+                                @keydown.up.prevent="adjustWorkflowStagesPanelHeight(-24)"
+                                @keydown.down.prevent="adjustWorkflowStagesPanelHeight(24)"
+                            >
+                                <span class="h-1 w-10 rounded-full bg-current"></span>
+                            </button>
                         </aside>
 
                         <div id="workflowCompanyDiagramEmpty" class="mt-4 hidden rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-8 text-center text-sm text-slate-500">

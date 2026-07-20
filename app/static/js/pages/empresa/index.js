@@ -431,6 +431,8 @@
                 workflowStagesPanelOpen: false,
                 workflowStagesPanelPosition: null,
                 workflowStagesPanelDrag: null,
+                workflowStagesPanelHeight: null,
+                workflowStagesPanelResize: null,
                 workflowSubtab: localStorage.getItem('empresa_workflow_subtab') || 'configuracao',
                 filtroObras: '',
                 filtroWorkflow: '',
@@ -497,6 +499,7 @@
                 closeWorkflowStagesPanel() {
                     this.workflowStagesPanelOpen = false;
                     this.workflowStagesPanelDrag = null;
+                    this.workflowStagesPanelResize = null;
                     if (typeof closeEmpresaWorkflowTypeDropdown === 'function') closeEmpresaWorkflowTypeDropdown();
                 },
                 toggleWorkflowStagesPanel() {
@@ -514,8 +517,15 @@
                     const panelWidth = Math.min(440, Math.max(280, viewportWidth - (margin * 2)));
                     const rect = panel?.getBoundingClientRect();
                     const width = rect?.width || panelWidth;
-                    const height = Math.min(rect?.height || 520, viewportHeight - (margin * 2));
-                    return { margin, viewportWidth, viewportHeight, panelWidth, width, height };
+                    const minHeight = Math.min(280, Math.max(180, viewportHeight - (margin * 2)));
+                    const height = Math.min(this.workflowStagesPanelHeight || rect?.height || 520, viewportHeight - (margin * 2));
+                    return { margin, viewportWidth, viewportHeight, panelWidth, width, height, minHeight };
+                },
+                clampWorkflowStagesPanelHeight(height, y = null) {
+                    const metrics = this.getWorkflowStagesPanelMetrics();
+                    const top = Number.isFinite(y) ? y : (this.workflowStagesPanelPosition?.y || metrics.margin);
+                    const maxHeight = Math.max(metrics.minHeight, metrics.viewportHeight - top - metrics.margin);
+                    return Math.min(Math.max(height, metrics.minHeight), maxHeight);
                 },
                 clampWorkflowStagesPanelPosition(position) {
                     const metrics = this.getWorkflowStagesPanelMetrics();
@@ -539,13 +549,19 @@
                     if (!current || current.x !== nextPosition.x || current.y !== nextPosition.y || current.width !== nextPosition.width) {
                         this.workflowStagesPanelPosition = nextPosition;
                     }
+                    const fallbackHeight = Math.min(560, metrics.viewportHeight - nextPosition.y - metrics.margin);
+                    const nextHeight = this.clampWorkflowStagesPanelHeight(this.workflowStagesPanelHeight || fallbackHeight, nextPosition.y);
+                    if (this.workflowStagesPanelHeight !== nextHeight) {
+                        this.workflowStagesPanelHeight = nextHeight;
+                    }
                 },
                 getWorkflowStagesPanelStyle() {
                     this.ensureWorkflowStagesPanelPosition();
                     const position = this.workflowStagesPanelPosition;
                     const metrics = this.getWorkflowStagesPanelMetrics();
                     const maxHeight = Math.max(240, metrics.viewportHeight - position.y - metrics.margin);
-                    return `left: ${position.x}px; top: ${position.y}px; width: ${position.width}px; max-height: ${maxHeight}px;`;
+                    const height = this.clampWorkflowStagesPanelHeight(this.workflowStagesPanelHeight || maxHeight, position.y);
+                    return `left: ${position.x}px; top: ${position.y}px; width: ${position.width}px; height: ${height}px; max-height: ${maxHeight}px;`;
                 },
                 startWorkflowStagesPanelDrag(event) {
                     if (event.button !== 0 || event.target?.closest?.('button, a, input, select, textarea, [data-workflow-custom-dropdown]')) return;
@@ -577,6 +593,42 @@
                         panel.releasePointerCapture(event.pointerId);
                     }
                     this.workflowStagesPanelDrag = null;
+                },
+                startWorkflowStagesPanelResize(event) {
+                    if (event.button !== 0) return;
+                    this.ensureWorkflowStagesPanelPosition();
+                    const panel = document.getElementById('workflowCompanyStagesPanel');
+                    this.workflowStagesPanelResize = {
+                        pointerId: event.pointerId,
+                        startClientY: event.clientY,
+                        startHeight: this.workflowStagesPanelHeight || panel?.getBoundingClientRect?.().height || 520,
+                    };
+                    panel?.setPointerCapture?.(event.pointerId);
+                    event.preventDefault();
+                },
+                moveWorkflowStagesPanelResize(event) {
+                    const resize = this.workflowStagesPanelResize;
+                    if (!resize || resize.pointerId !== event.pointerId) return;
+                    this.workflowStagesPanelHeight = this.clampWorkflowStagesPanelHeight(
+                        resize.startHeight + event.clientY - resize.startClientY,
+                        this.workflowStagesPanelPosition?.y,
+                    );
+                },
+                endWorkflowStagesPanelResize(event) {
+                    const resize = this.workflowStagesPanelResize;
+                    if (!resize || resize.pointerId !== event.pointerId) return;
+                    const panel = document.getElementById('workflowCompanyStagesPanel');
+                    if (panel?.hasPointerCapture?.(event.pointerId)) {
+                        panel.releasePointerCapture(event.pointerId);
+                    }
+                    this.workflowStagesPanelResize = null;
+                },
+                adjustWorkflowStagesPanelHeight(delta) {
+                    this.ensureWorkflowStagesPanelPosition();
+                    this.workflowStagesPanelHeight = this.clampWorkflowStagesPanelHeight(
+                        (this.workflowStagesPanelHeight || 520) + delta,
+                        this.workflowStagesPanelPosition?.y,
+                    );
                 },
                 isSectionEditing() {
                     return this.empresaEditing;
