@@ -810,6 +810,30 @@ def _build_workflow_execution_history(empresa_id, obra_id):
                 "erro": error,
             })
 
+        total_steps = len(serialized_steps)
+        approved_steps = sum(1 for step in serialized_steps if step["status"] == "APROVADO")
+        waiting_steps = sum(1 for step in serialized_steps if step["status"] in {"AGUARDANDO", "EM_EXECUCAO"})
+        failed_steps = sum(1 for step in serialized_steps if step["status"] in {"REJEITADO", "CANCELADA", "ERRO"})
+        idle_steps = max(total_steps - approved_steps - waiting_steps - failed_steps, 0)
+        progress_percent = int(round((approved_steps / total_steps) * 100)) if total_steps else 0
+        rdo = execucao.rdo
+        rdo_number_value = getattr(rdo, "numero_sequencial", None) or getattr(rdo, "id", None) or execucao.rdo_id
+        rdo_label = f"RDO #{rdo_number_value}" if rdo_number_value else "RDO nao identificado"
+        rdo_date = getattr(rdo, "data_rdo", None)
+        rdo_date_label = rdo_date.strftime("%d/%m/%Y") if rdo_date else "-"
+        rdo_status = (getattr(rdo, "status", None) or "-").replace("_", " ").title()
+        finished_at_label = _format_datetime_br(execucao.finalizado_em)
+        current_stage_label = (
+            current_stage.nome if current_stage
+            else (
+                "Concluida" if status_code == "APROVADO"
+                else "Rejeitada" if status_code == "REJEITADO"
+                else "Cancelada" if status_code == "CANCELADO"
+                else "Sem etapa atual"
+            )
+        )
+        origem_label = (execucao.origem or "AUTO").replace("_", " ").title()
+
         if status_code == "APROVADO":
             summary_title = "Workflow concluído com sucesso"
             summary_lines = [
@@ -849,15 +873,32 @@ def _build_workflow_execution_history(empresa_id, obra_id):
             "status_dot_class": status_meta["dot_class"],
             "status_icon": status_meta["icon"],
             "started_at_label": _format_datetime_br(execucao.iniciado_em),
+            "finished_at_label": finished_at_label,
             "duration_label": _humanize_duration(
                 execucao.iniciado_em,
                 execucao.finalizado_em or now,
                 prefix="Em execução há " if status_code in {"PENDENTE", "EM_ANDAMENTO", "REABERTO"} else None,
             ),
+            "duration_plain_label": _humanize_duration(execucao.iniciado_em, execucao.finalizado_em or now),
             "requester_name": requester_name,
             "workflow_name": workflow_snapshot.get("nome") or getattr(execucao.workflow, "nome", None) or "Workflow não identificado",
+            "rdo_id": execucao.rdo_id,
+            "rdo_label": rdo_label,
+            "rdo_date_label": rdo_date_label,
+            "rdo_status_label": rdo_status,
+            "origin_label": origem_label,
+            "current_stage_label": current_stage_label,
+            "active_label": "Ativa" if execucao.ativo else "Encerrada",
+            "progress_percent": progress_percent,
+            "steps_total": total_steps,
+            "steps_approved": approved_steps,
+            "steps_waiting": waiting_steps,
+            "steps_failed": failed_steps,
+            "steps_idle": idle_steps,
             "started_at_iso": execucao.iniciado_em.isoformat() if execucao.iniciado_em else None,
             "finished_at_iso": execucao.finalizado_em.isoformat() if execucao.finalizado_em else None,
+            "created_at_label": _format_datetime_br(execucao.criado_em),
+            "updated_at_label": _format_datetime_br(execucao.modificado_em),
             "summary_title": summary_title,
             "summary_lines": summary_lines,
             "solicitante": requester_name,
@@ -1840,7 +1881,7 @@ def testar_workflow_obra(id):
 
     workflow_id = None
     payload = request.get_json(silent=True) or {}
-    workflow_id_raw = (payload.get('workflow_id') or request.form.get('workflow_id') or '').strip()
+    workflow_id_raw = str(payload.get('workflow_id') or request.form.get('workflow_id') or '').strip()
     if workflow_id_raw:
         try:
             workflow_id = int(workflow_id_raw)
@@ -1852,6 +1893,39 @@ def testar_workflow_obra(id):
         return jsonify({"ok": False, "error": "Nenhum workflow ativo encontrado para esta obra."}), 400
     if not _is_workflow_obra_mvp(workflow):
         return jsonify({"ok": False, "error": "Use apenas os workflows Simples, Sequencial ou Paralelo nesta tela."}), 400
+
+    preview = WorkflowService.construir_preview_workflow_obra(
+        empresa_id=empresa_id,
+        obra_id=obra.id,
+        workflow_id=workflow.id,
+    )
+    validation_errors = [str(error) for error in (preview.get('errors') or []) if error]
+    if not preview.get('etapas'):
+        validation_errors.append("O workflow selecionado nao possui etapas ativas para testar.")
+    for etapa in preview.get('etapas') or []:
+        etapa_nome = etapa.get('nome') or f"Etapa {etapa.get('nivel') or etapa.get('etapa_id') or ''}".strip()
+        if etapa.get('fallback_empresa'):
+            if etapa.get('tipo_aprovador') == 'PAPEL' and etapa.get('papel_nome'):
+                validation_errors.append(
+                    f'A etapa "{etapa_nome}" usa o papel "{etapa.get("papel_nome")}", mas nenhum usuario com este papel esta vinculado a obra.'
+                )
+            else:
+                validation_errors.append(
+                    f'A etapa "{etapa_nome}" nao possui usuario definido na obra para executar o teste.'
+                )
+        elif not etapa.get('usuario_id'):
+            validation_errors.append(
+                f'A etapa "{etapa_nome}" nao possui aprovador definido para executar o teste.'
+            )
+
+    if validation_errors:
+        history_html = _render_workflow_historico_execucoes_html(empresa_id, obra.id, view_mode=False)
+        return jsonify({
+            "ok": False,
+            "error": "Nao foi possivel testar o workflow: " + " ".join(dict.fromkeys(validation_errors)),
+            "preview": preview,
+            "history_html": history_html,
+        }), 400
 
     frente = (
         FrenteTrabalho.query

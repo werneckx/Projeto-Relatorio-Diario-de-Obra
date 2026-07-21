@@ -893,7 +893,7 @@
 
     </div>
 
-    {% if obra_governanca.workflow_setup.available_workflows %}
+    {% if item and item.id %}
     <div class="px-5 pt-5">
         <div class="inline-flex rounded-2xl border border-slate-200 bg-slate-50 p-1 gap-1">
         <button type="button" class="obra-governanca-tab-trigger h-10 px-4 rounded-xl text-sm font-bold transition bg-white text-slate-800 shadow-sm" data-tab-trigger="workflow-definicoes" onclick="switchObraGovernancaTab('workflow-definicoes')">
@@ -1130,7 +1130,7 @@
                         </div>
                         <div>
                             <div class="mb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Papel</div>
-                            <div class="h-10 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-600">{{ etapa.papel_nome or 'Papel não definido' }}</div>
+                            <div class="h-10 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-600">{{ etapa.papel_nome or 'Papel não definido' }}{% if etapa_tipo == 'PAPEL' %} - {{ etapa.usuario_nome or 'sem usuario na obra' }}{% endif %}</div>
                         </div>
                         <div>
                             <div class="mb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Usuário</div>
@@ -1155,6 +1155,7 @@
                 <span class="h-1 w-10 rounded-full bg-current"></span>
             </button>
         </aside>
+    </div>
     </div>
 
     <div class="obra-governanca-tab-panel hidden" data-tab-panel="definicoes">
@@ -4068,6 +4069,20 @@
             return getWorkflowUsersForRole(papelId)[0] || null;
         }
 
+        function getWorkflowRoleUserLabel(papelId, fallbackLabel = 'Papel nao definido') {
+            const role = getWorkflowRoleById(papelId);
+            const roleName = formatObraWorkflowRoleLabel(role?.nome || fallbackLabel);
+            if (!role) return roleName;
+
+            const users = getWorkflowUsersForRole(papelId);
+            if (!users.length) return `${roleName} - sem usuario na obra`;
+
+            const firstUser = users[0];
+            const userName = firstUser.nome || firstUser.email || 'usuario sem nome';
+            const extraUsers = users.length > 1 ? ` +${users.length - 1}` : '';
+            return `${roleName} - ${userName}${extraUsers}`;
+        }
+
         function getWorkflowStageDisplayRole(stage) {
             const tipo = normalizeWorkflowStageType(stage.tipo_aprovador);
             if (tipo === 'USUARIO') return getWorkflowPrimaryRoleForUser(stage.usuario_aprovador_id);
@@ -5679,6 +5694,7 @@
                 const displayRole = getWorkflowStageDisplayRole(stage);
                 const displayUser = getWorkflowStageDisplayUser(stage);
                 const roleLabel = formatObraWorkflowRoleLabel(displayRole?.nome || `papel ${stageIndex + 1}`);
+                const roleUserLabel = getWorkflowRoleUserLabel(stage.papel_id, roleLabel);
                 const userLabel = displayUser?.nome || 'Selecione o usuario';
                 const roleMissingObraUser = isWorkflowRoleMissingObraUser(stage);
                 const userMissingRole = approverType === 'USUARIO' && stage.usuario_aprovador_id && !getWorkflowPrimaryRoleForUser(stage.usuario_aprovador_id);
@@ -5694,9 +5710,9 @@
                     ? (!readOnly
                     ? `<select class="${editableSelectClass} obra-workflow-stage-role" data-stage-index="${stageIndex}">
                             <option value="">Selecione o papel</option>
-                            ${obraWorkflowRoleOptions.map((papel) => `<option value="${escapeHtml(String(papel.id))}" ${Number(papel.id) === Number(stage.papel_id) ? 'selected' : ''}>${escapeHtml(papel.nome || '')}</option>`).join('')}
+                            ${obraWorkflowRoleOptions.map((papel) => `<option value="${escapeHtml(String(papel.id))}" ${Number(papel.id) === Number(stage.papel_id) ? 'selected' : ''}>${escapeHtml(getWorkflowRoleUserLabel(papel.id, papel.nome || 'Papel nao definido'))}</option>`).join('')}
                         </select>`
-                    : `<input type="text" class="${fixedInputClass}" value="${escapeHtml(roleLabel)}" readonly disabled>`)
+                    : `<input type="text" class="${fixedInputClass}" value="${escapeHtml(roleUserLabel)}" readonly disabled>`)
                     : (!readOnly
                     ? `<select class="${editableSelectClass} obra-workflow-stage-fixed-user" data-stage-index="${stageIndex}">
                             <option value="">Selecione o usuario</option>
@@ -6002,10 +6018,15 @@
                     body: JSON.stringify({ workflow_id: workflowId }),
                 });
                 const data = await response.json().catch(() => ({}));
-                if (!response.ok || !data.ok) throw new Error(data.error || 'Nao foi possivel iniciar o workflow de teste.');
                 if (data.history_html) {
                     refreshWorkflowExecutionHistory(data.history_html);
                 }
+                if (data.preview) {
+                    obraWorkflowState.preview = data.preview;
+                    hydrateWorkflowCustomStages(obraWorkflowState.preview, true);
+                    renderObraWorkflowPreview(obraWorkflowState.preview);
+                }
+                if (!response.ok || !data.ok) throw new Error(data.error || 'Nao foi possivel iniciar o workflow de teste.');
                 switchObraGovernancaTab('workflow-historico');
                 showToast(data.message || 'Workflow de teste iniciado com sucesso.', 'success');
             } catch (error) {
