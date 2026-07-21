@@ -912,10 +912,10 @@
             <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
                 <div class="w-full min-w-0">
                         <div class="text-sm font-black text-slate-900">Workflow da Obra</div>
-                        <div class="mt-1 text-sm text-slate-500">Configure o tipo de fluxo e, em seguida, defina apenas os aprovadores das etapas.</div>
+                        <div class="mt-1 text-sm text-slate-500">Configure o modelo do fluxo e defina como cada aprovador sera acionado.</div>
                         <div class="mt-4 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between xl:gap-4">
                             <div class="min-w-0 flex-1">
-                                <div class="grid grid-cols-1 gap-3 md:grid-cols-[minmax(260px,1.15fr),180px,minmax(280px,1.2fr)] xl:grid-cols-[minmax(280px,1.15fr),180px,minmax(280px,1.2fr)]">
+                                <div class="grid grid-cols-1 gap-3 md:grid-cols-[minmax(260px,1fr),180px]">
                                     <div class="min-w-0">
                                 <label class="block text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400 mb-2">Modelo de Workflow</label>
                                 {% if view_mode %}
@@ -953,13 +953,6 @@
                                     <option value="0">Não</option>
                                 </select>
                                     </div>
-                                    <div class="min-w-0">
-                                <label class="block text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400 mb-2">Regra</label>
-                                <select id="workflowGlobalRule" class="{{ final_input_css }} {{ select_view_css }}" {% if view_mode %}disabled{% endif %} onchange="handleWorkflowGlobalConfigChange()">
-                                    <option value="TODOS">Todos devem aprovar</option>
-                                    <option value="PRIMEIRO">Primeiro a responder</option>
-                                </select>
-                                    </div>
                                 </div>
                             </div>
                             {% if not view_mode and obra_governanca.workflow_tem_config_propria %}
@@ -987,20 +980,122 @@
 
 
         <div class="p-5">
-            <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <h4 id="workflowResponsaveisTitle" class="text-sm font-bold uppercase tracking-wide text-slate-800">Etapas e Responsaveis</h4>
-                <div class="flex flex-wrap items-center gap-2">
-                    <button type="button" id="toggleAllWorkflowGroupsButton" onclick="toggleAllWorkflowGroups()" class="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100">
-                        <i class="fas fa-chevron-up"></i> Recolher todos
-                    </button>
-                    {% if not view_mode %}
-                    <button type="button" id="addWorkflowStageButton" onclick="addWorkflowStageRow()" class="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100">
-                        <i class="fas fa-plus"></i> Adicionar Etapa
-                    </button>
-                    {% endif %}
+            <div class="relative rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                <style>
+                    .workflow-canvas {
+                        background: #ffffff;
+                        border: 1px solid #e2e8f0;
+                        border-radius: 12px;
+                        cursor: grab;
+                        max-height: min(70vh, 720px);
+                        overflow: auto;
+                        padding: 18px;
+                        scrollbar-color: #cbd5e1 #f8fafc;
+                    }
+
+                    #workflowObraDiagramCanvas {
+                        height: 520px;
+                        max-height: 520px;
+                    }
+
+                    .workflow-canvas.workflow-canvas--dragging,
+                    .workflow-canvas.workflow-canvas--dragging * {
+                        cursor: grabbing !important;
+                        user-select: none;
+                    }
+
+                    .workflow-board {
+                        transition: height 160ms ease, width 160ms ease;
+                        user-select: none;
+                    }
+
+                    .workflow-board svg {
+                        display: block;
+                        height: 100%;
+                        max-width: none;
+                        pointer-events: none;
+                        width: 100%;
+                    }
+
+                    .workflow-zoom-button {
+                        align-items: center;
+                        border: 1px solid #e2e8f0;
+                        border-radius: 10px;
+                        color: #475569;
+                        display: inline-flex;
+                        height: 34px;
+                        justify-content: center;
+                        width: 34px;
+                    }
+
+                    .workflow-zoom-button:hover {
+                        background: #f8fafc;
+                        border-color: #cbd5e1;
+                        color: #0f172a;
+                    }
+                </style>
+
+                <div class="flex flex-col gap-4 border-b border-slate-100 pb-5">
+                    <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                        <div>
+                            <h5 class="text-lg font-bold text-slate-900">Diagrama do fluxo da obra</h5>
+                            <p class="mt-1 text-sm text-slate-500">
+                                A previa e atualizada automaticamente conforme voce ajusta etapas e aprovadores no painel lateral.
+                            </p>
+                        </div>
+                        <div class="flex w-full flex-wrap items-center justify-end gap-2 lg:ml-auto lg:w-auto">
+                            <button type="button" id="workflowObraStagesPanelToggle" aria-expanded="false" aria-controls="workflowObraStagesPanel" class="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 text-sm font-bold text-blue-700 transition hover:bg-blue-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300">
+                                <i class="fas fa-layer-group text-xs" aria-hidden="true"></i>
+                                Etapas e aprovadores
+                            </button>
+                            <span class="inline-flex w-fit items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-bold text-slate-600">
+                                <i class="fas fa-project-diagram text-slate-400" aria-hidden="true"></i>
+                                <span id="workflowObraOverviewCount">0 etapas</span>
+                            </span>
+                            <div class="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1">
+                                <button type="button" id="workflowObraDiagramZoomOut" class="workflow-zoom-button" title="Reduzir zoom" aria-label="Reduzir zoom">
+                                    <i class="fas fa-minus text-xs" aria-hidden="true"></i>
+                                </button>
+                                <button type="button" id="workflowObraDiagramZoomReset" class="h-8 min-w-14 rounded-lg px-2 text-xs font-bold tabular-nums text-slate-700 hover:bg-slate-50" title="Restaurar zoom">100%</button>
+                                <button type="button" id="workflowObraDiagramZoomIn" class="workflow-zoom-button" title="Aumentar zoom" aria-label="Aumentar zoom">
+                                    <i class="fas fa-plus text-xs" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="workflowObraDiagramCanvas" class="workflow-canvas mt-4" role="region" tabindex="0" aria-label="Diagrama do fluxo de aprovacao da obra" title="Use Ctrl + rolagem para ampliar ou reduzir">
+                    <div id="workflowObraDiagram" class="workflow-board"></div>
+                </div>
+
+                <div id="workflowObraDiagramEmpty" class="mt-4 hidden rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-8 text-center text-sm text-slate-500">
+                    Nenhuma etapa configurada para este workflow da obra.
                 </div>
             </div>
 
+            <aside id="workflowObraStagesPanel" aria-hidden="true" role="dialog" aria-modal="false" aria-labelledby="workflowResponsaveisTitle" class="fixed z-[180] hidden flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/20">
+            <div id="workflowObraStagesPanelHeader" class="flex cursor-move touch-none select-none flex-col gap-3 border-b border-slate-100 px-4 py-4 sm:flex-row sm:items-start sm:justify-between">
+                <div class="min-w-0">
+                    <h4 id="workflowResponsaveisTitle" class="text-sm font-bold uppercase tracking-wide text-slate-800">Grupos e aprovadores</h4>
+                    <p id="workflowObraStagesSummary" class="mt-1 truncate text-xs leading-5 text-slate-500">Carregando estrutura do workflow...</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button type="button" id="toggleAllWorkflowGroupsButton" onclick="toggleAllWorkflowGroups()" aria-label="Recolher todos" title="Recolher todos" class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 hover:text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300">
+                        <i class="fas fa-chevron-up"></i>
+                    </button>
+                    {% if not view_mode %}
+                    <button type="button" id="addWorkflowStageButton" onclick="addWorkflowStageRow()" aria-label="Adicionar grupo" title="Adicionar grupo" class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-xs font-bold text-blue-700 transition-colors hover:bg-blue-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                    {% endif %}
+                    <button type="button" onclick="closeWorkflowStagesPanel()" aria-label="Fechar painel de etapas e aprovadores" title="Fechar painel" class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 hover:text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300">
+                        <i class="fas fa-times" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="min-h-0 flex-1 overflow-y-auto p-4 overscroll-contain">
             <div id="workflowEtapasContainer" class="space-y-3">
                 {% if workflow_setup.preview.etapas %}
                 {% for etapa in workflow_setup.preview.etapas %}
@@ -1055,7 +1150,11 @@
                 </div>
                 {% endif %}
             </div>
-        </div>
+            </div>
+            <button type="button" id="workflowObraStagesPanelResize" aria-label="Redimensionar altura do painel" title="Arraste para ajustar a altura" class="flex h-4 shrink-0 cursor-ns-resize touch-none items-center justify-center border-t border-slate-100 bg-slate-50 text-slate-300 transition hover:bg-slate-100 hover:text-slate-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-300">
+                <span class="h-1 w-10 rounded-full bg-current"></span>
+            </button>
+        </aside>
     </div>
 
     <div class="obra-governanca-tab-panel hidden" data-tab-panel="definicoes">
@@ -1443,6 +1542,46 @@
                 '"': '&quot;',
                 "'": '&#39;'
             })[char]);
+        }
+
+        function escapeSvgText(value) {
+            return escapeHtml(value);
+        }
+
+        function normalizeWorkflowStageDisplay(value) {
+            return String(value || 'Responsavel').replace(/_/g, ' ').trim() || 'Responsavel';
+        }
+
+        function wrapWorkflowSvgText(value, maxChars = 18, maxLines = 3) {
+            const chunks = normalizeWorkflowStageDisplay(value)
+                .split(/\s+/)
+                .flatMap((word) => {
+                    if (word.length <= maxChars) return [word];
+                    const parts = [];
+                    for (let index = 0; index < word.length; index += maxChars) {
+                        parts.push(word.slice(index, index + maxChars));
+                    }
+                    return parts;
+                });
+            const lines = [];
+            let currentLine = '';
+
+            chunks.forEach((word) => {
+                const nextLine = currentLine ? `${currentLine} ${word}` : word;
+                if (nextLine.length <= maxChars) {
+                    currentLine = nextLine;
+                    return;
+                }
+                if (currentLine) lines.push(currentLine);
+                currentLine = word;
+            });
+
+            if (currentLine) lines.push(currentLine);
+            if (lines.length <= maxLines) return lines;
+
+            const visibleLines = lines.slice(0, maxLines);
+            visibleLines[maxLines - 1] = `${visibleLines[maxLines - 1].slice(0, Math.max(maxChars - 3, 1))}...`;
+            return visibleLines;
         }
 
         function cssEscape(value) {
@@ -3593,6 +3732,13 @@
             globalSignature: undefined,
             globalRule: undefined,
             collapsedGroups: {},
+            diagramZoom: 1,
+            diagramDragging: null,
+            stagesPanelOpen: false,
+            stagesPanelPosition: null,
+            stagesPanelDrag: null,
+            stagesPanelHeight: null,
+            stagesPanelResize: null,
         };
 
         function getSelectedWorkflowOption() {
@@ -3759,7 +3905,6 @@
         function getSerializedCustomWorkflowStages() {
             normalizeWorkflowStagesOrder();
             const globalSignature = getWorkflowGlobalSignature();
-            const globalRule = getWorkflowGlobalRule();
             return (obraWorkflowState.customStages || [])
                 .map((stage, index) => {
                     const tipo = normalizeWorkflowStageType(stage.tipo_aprovador);
@@ -3772,7 +3917,7 @@
                         usuario_aprovador_id: usuarioId,
                         responsavel_usuario_id: tipo === 'USUARIO' ?usuarioId : null,
                         assinatura_obrigatoria: globalSignature,
-                        regra_etapa: globalRule,
+                        regra_etapa: normalizeWorkflowStageRule(stage.regra_etapa || getWorkflowGlobalRule()),
                         ordem: index + 1,
                     };
                 })
@@ -4150,10 +4295,17 @@
                 select.addEventListener('change', () => {
                     const index = Number(select.dataset.stageIndex);
                     if (!Number.isInteger(index) || !obraWorkflowState.customStages[index]) return;
-                    obraWorkflowState.customStages[index].regra_etapa = normalizeWorkflowStageRule(select.value);
+                    const rule = normalizeWorkflowStageRule(select.value);
+                    const groupKey = getWorkflowStageGroupKey(obraWorkflowState.customStages[index], index);
+                    (obraWorkflowState.customStages || []).forEach((stage, stageIndex) => {
+                        if (getWorkflowStageGroupKey(stage, stageIndex) === groupKey) {
+                            stage.regra_etapa = rule;
+                        }
+                    });
+                    obraWorkflowState.globalRule = rule;
                     obraWorkflowState.dirtyCustomStages = true;
                     showWorkflowOwnConfigNotice();
-                    syncObraWorkflowConfigField();
+                    renderObraWorkflowPreview(obraWorkflowState.preview);
                     saveDraft();
                 });
             });
@@ -4285,6 +4437,14 @@
         window.addWorkflowStageRow = addWorkflowStageRow;
         window.removeWorkflowStageRow = removeWorkflowStageRow;
 
+        function formatObraWorkflowRoleLabel(label) {
+            return String(label || '').trim() || 'Selecione o papel';
+        }
+
+        function getWorkflowStageKey(stage, index = 0) {
+            return String(stage?.local_id || stage?.etapa_id || `obra-stage-${index}`);
+        }
+
         function renderObraWorkflowPreview(preview) {
             const container = el('workflowEtapasContainer');
             const errorBox = el('workflowPreviewErrors');
@@ -4404,25 +4564,23 @@
         }
 
         function getWorkflowGlobalRule() {
-            if (obraWorkflowState.globalRule) return normalizeWorkflowStageRule(obraWorkflowState.globalRule);
-            return normalizeWorkflowStageRule((obraWorkflowState.customStages || [])[0]?.regra_etapa || 'TODOS');
+            return normalizeWorkflowStageRule(
+                obraWorkflowState.globalRule ||
+                obraWorkflowState.customStages?.[0]?.regra_etapa ||
+                'TODOS'
+            );
         }
 
         function syncWorkflowGlobalControls() {
             const signature = el('workflowGlobalSignature');
-            const rule = el('workflowGlobalRule');
             if (signature) signature.value = getWorkflowGlobalSignature() ? '1' : '0';
-            if (rule) rule.value = getWorkflowGlobalRule();
         }
 
         function handleWorkflowGlobalConfigChange() {
             const signature = el('workflowGlobalSignature')?.value === '1';
-            const rule = normalizeWorkflowStageRule(el('workflowGlobalRule')?.value || 'TODOS');
             obraWorkflowState.globalSignature = signature;
-            obraWorkflowState.globalRule = rule;
             (obraWorkflowState.customStages || []).forEach((stage) => {
                 stage.assinatura_obrigatoria = signature;
-                stage.regra_etapa = rule;
             });
             obraWorkflowState.dirtyCustomStages = true;
             showWorkflowOwnConfigNotice();
@@ -4513,8 +4671,11 @@
             if (!button) return;
             const allCollapsed = areAllWorkflowGroupsCollapsed();
             button.innerHTML = allCollapsed
-                ? '<i class="fas fa-chevron-down"></i> Expandir todos'
-                : '<i class="fas fa-chevron-up"></i> Recolher todos';
+                ? '<i class="fas fa-chevron-down" aria-hidden="true"></i>'
+                : '<i class="fas fa-chevron-up" aria-hidden="true"></i>';
+            const label = allCollapsed ? 'Expandir todos' : 'Recolher todos';
+            button.setAttribute('aria-label', label);
+            button.setAttribute('title', label);
         }
 
         function updateWorkflowResponsaveisTitle() {
@@ -4591,6 +4752,550 @@
         window.toggleAllWorkflowGroups = toggleAllWorkflowGroups;
         window.restoreWorkflowCompanyDefault = restoreWorkflowCompanyDefault;
 
+        function joinWorkflowDiagramApprovers(labels, rule) {
+            const values = (Array.isArray(labels) ? labels : [])
+                .map((label) => normalizeWorkflowStageDisplay(label))
+                .filter(Boolean);
+            if (!values.length) return 'Papel nao definido';
+            if (values.length === 1) return values[0];
+            const connector = normalizeWorkflowStageRule(rule) === 'PRIMEIRO' ? ' ou ' : ' e ';
+            return `${values.slice(0, -1).join(connector)}${connector}${values[values.length - 1]}`;
+        }
+
+        function getWorkflowDiagramEtapas() {
+            const rules = getWorkflowRules();
+            return getWorkflowVisualGroups().map((group, groupIndex) => {
+                const rule = normalizeWorkflowStageRule(group.items[0]?.stage?.regra_etapa || getWorkflowGlobalRule());
+                const labels = group.items.map(({ stage }) => getWorkflowStageTargetLabel(stage));
+                const nome = joinWorkflowDiagramApprovers(labels, rule);
+                return {
+                    nivel: groupIndex + 1,
+                    nome,
+                    papel: nome,
+                    rotulo: `${rules.isParallel ? 'Grupo' : 'Etapa'} ${groupIndex + 1}`,
+                    regra_etapa: rule,
+                };
+            });
+        }
+
+        function getWorkflowDiagramBaseSize() {
+            const etapas = getWorkflowDiagramEtapas();
+            if (!etapas.length) return { width: 960, height: 420 };
+            if (getWorkflowRules().isParallel) {
+                return { width: 980, height: Math.max(260, 96 + (etapas.length * 96) + ((etapas.length - 1) * 44)) };
+            }
+            return { width: 960, height: Math.max(420, 126 + (etapas.length * 176)) };
+        }
+
+        function renderWorkflowSvgTextLines(lines, x, y, lineHeight, attrs) {
+            return lines
+                .map((line, index) => `<text x="${x}" y="${y + (index * lineHeight)}" ${attrs}>${escapeSvgText(line)}</text>`)
+                .join('');
+        }
+
+        function renderWorkflowSvgPath(d, color, markerId = '') {
+            const marker = markerId ? ` marker-end="url(#${markerId})"` : '';
+            return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"${marker}></path>`;
+        }
+
+        function renderWorkflowSvgBadge(label, x, y, width, height, color) {
+            return [
+                `<rect x="${x}" y="${y}" width="${width}" height="${height}" rx="${height / 2}" fill="#ffffff" stroke="${color}" stroke-width="1.4"></rect>`,
+                `<text x="${x + (width / 2)}" y="${y + (height / 2) + 4}" fill="${color}" text-anchor="middle" font-size="10" font-weight="800">${escapeSvgText(label.toUpperCase())}</text>`,
+            ].join('');
+        }
+
+        function renderWorkflowObraParallelSvg(etapas) {
+            const cardWidth = 240;
+            const cardHeight = 96;
+            const laneGap = 44;
+            const startRadius = 26;
+            const topPadding = 48;
+            const leftPadding = 84;
+            const width = 980;
+            const height = Math.max(260, topPadding * 2 + (etapas.length * cardHeight) + ((etapas.length - 1) * laneGap));
+            const startX = leftPadding;
+            const firstCardX = 170;
+            const decisionCx = firstCardX + cardWidth + 84;
+            const endX = decisionCx + 302;
+            const centerY = height / 2;
+            const neutral = '#475569';
+            const green = '#15803d';
+            const slate = '#64748b';
+            const dark = '#0f172a';
+            const svgId = `workflow-obra-parallel-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+            const arrow = `${svgId}-arrow`;
+            const approvedArrow = `${svgId}-approved`;
+            const connectors = [];
+            const shapes = [];
+            const labels = [];
+
+            connectors.push(renderWorkflowSvgPath(`M ${startX + startRadius} ${centerY} H ${firstCardX - 24}`, neutral, arrow));
+            shapes.push(`<circle cx="${startX}" cy="${centerY}" r="${startRadius}" fill="${slate}"></circle>`);
+            labels.push(`<text x="${startX}" y="${centerY + 4}" fill="#ffffff" text-anchor="middle" font-size="12" font-weight="800">Inicio</text>`);
+
+            etapas.forEach((etapa, index) => {
+                const cardY = topPadding + (index * (cardHeight + laneGap));
+                const rowCenterY = cardY + (cardHeight / 2);
+                const badgeX = decisionCx + 28;
+                const badgeY = rowCenterY - 11;
+                const stageName = normalizeWorkflowStageDisplay(etapa.papel || etapa.nome || `Grupo ${index + 1}`);
+
+                connectors.push(renderWorkflowSvgPath(`M ${firstCardX - 24} ${centerY} V ${rowCenterY} H ${firstCardX}`, neutral));
+                connectors.push(renderWorkflowSvgPath(`M ${firstCardX + cardWidth} ${rowCenterY} H ${decisionCx - 42}`, neutral, arrow));
+                connectors.push(renderWorkflowSvgPath(`M ${decisionCx + 42} ${rowCenterY} H ${badgeX}`, green));
+                connectors.push(renderWorkflowSvgPath(`M ${badgeX + 94} ${rowCenterY} H ${endX - 18}`, green, approvedArrow));
+                shapes.push(`<rect x="${firstCardX}" y="${cardY}" width="${cardWidth}" height="${cardHeight}" rx="10" fill="#ffffff" stroke="#cbd5e1"></rect>`);
+                shapes.push(`<polygon points="${decisionCx},${rowCenterY - 32} ${decisionCx + 32},${rowCenterY} ${decisionCx},${rowCenterY + 32} ${decisionCx - 32},${rowCenterY}" fill="${slate}"></polygon>`);
+                shapes.push(`<rect x="${badgeX}" y="${badgeY}" width="94" height="22" rx="11" fill="#ffffff" stroke="${green}" stroke-width="1.4"></rect>`);
+                labels.push(`<text x="${firstCardX + 16}" y="${cardY + 28}" fill="#475569" font-size="12" font-weight="800">GRUPO ${index + 1}</text>`);
+                labels.push(renderWorkflowSvgTextLines(wrapWorkflowSvgText(stageName, 22, 2), firstCardX + 16, cardY + 56, 20, `fill="${dark}" font-size="15" font-weight="800"`));
+                labels.push(`<text x="${decisionCx}" y="${rowCenterY + 4}" fill="#ffffff" text-anchor="middle" font-size="11" font-weight="800">Decisao</text>`);
+                labels.push(`<text x="${badgeX + 47}" y="${rowCenterY + 4}" fill="${green}" text-anchor="middle" font-size="10" font-weight="800">APROVADO</text>`);
+            });
+
+            shapes.push(`<circle cx="${endX}" cy="${centerY}" r="18" fill="#16a34a"></circle>`);
+            labels.push(`<path d="M ${endX - 8} ${centerY} L ${endX - 2} ${centerY + 6} L ${endX + 9} ${centerY - 7}" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>`);
+            labels.push(`<text x="${endX + 28}" y="${centerY + 6}" fill="${green}" font-size="17" font-weight="800">Fim aprovado</text>`);
+
+            return `
+                <svg class="workflow-board-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Diagrama de aprovacao paralela" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <marker id="${arrow}" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth"><path d="M 0 0 L 8 4 L 0 8 z" fill="${neutral}"></path></marker>
+                        <marker id="${approvedArrow}" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth"><path d="M 0 0 L 8 4 L 0 8 z" fill="${green}"></path></marker>
+                    </defs>
+                    <g font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+                        ${shapes.join('')}
+                        ${connectors.join('')}
+                        ${labels.join('')}
+                    </g>
+                </svg>
+            `;
+        }
+
+        function renderWorkflowObraSequentialSvg(etapas) {
+            const width = 960;
+            const rowHeight = 176;
+            const height = Math.max(420, 126 + (etapas.length * rowHeight));
+            const neutral = '#475569';
+            const green = '#15803d';
+            const red = '#dc2626';
+            const slate = '#64748b';
+            const dark = '#0f172a';
+            const cardX = 155;
+            const cardW = 240;
+            const cardH = 106;
+            const decisionCx = 520;
+            const decisionHalf = 38;
+            const badgeW = 94;
+            const startCx = 70;
+            const startCy = 88;
+            const svgId = `workflow-obra-seq-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+            const ids = {
+                neutralArrow: `${svgId}-arrow-neutral`,
+                approvedArrow: `${svgId}-arrow-approved`,
+                rejectedArrow: `${svgId}-arrow-rejected`,
+                cardShadow: `${svgId}-card-shadow`,
+                nodeShadow: `${svgId}-node-shadow`,
+            };
+            const connectors = [];
+            const shapes = [`<circle cx="${startCx}" cy="${startCy}" r="28" fill="${slate}" filter="url(#${ids.nodeShadow})"></circle>`];
+            const labels = [`<text x="${startCx}" y="${startCy + 4}" fill="#ffffff" text-anchor="middle" font-size="12" font-weight="800">Inicio</text>`];
+
+            etapas.forEach((etapa, index) => {
+                const rowY = 88 + (index * rowHeight);
+                const cardY = rowY - (cardH / 2);
+                const approvedBadgeX = decisionCx + decisionHalf + 22;
+                const rejectedBadgeX = decisionCx - (badgeW / 2);
+                const rejectedBadgeY = rowY + decisionHalf + 16;
+                const rejectedCircleY = rejectedBadgeY + 74;
+                const stageName = normalizeWorkflowStageDisplay(etapa.papel || etapa.nome || `Etapa ${index + 1}`);
+
+                if (index === 0) {
+                    connectors.push(renderWorkflowSvgPath(`M ${startCx + 28} ${startCy} H ${cardX}`, neutral, ids.neutralArrow));
+                }
+                connectors.push(renderWorkflowSvgPath(`M ${cardX + cardW} ${rowY} H ${decisionCx - decisionHalf}`, neutral, ids.neutralArrow));
+                connectors.push(renderWorkflowSvgPath(`M ${decisionCx + decisionHalf} ${rowY} H ${approvedBadgeX}`, green));
+                connectors.push(renderWorkflowSvgPath(`M ${decisionCx} ${rowY + decisionHalf} V ${rejectedBadgeY}`, red));
+                connectors.push(renderWorkflowSvgPath(`M ${decisionCx} ${rejectedBadgeY + 22} V ${rejectedCircleY - 22}`, red, ids.rejectedArrow));
+                if (index < etapas.length - 1) {
+                    const nextRowY = 88 + ((index + 1) * rowHeight);
+                    connectors.push(renderWorkflowSvgPath(`M ${approvedBadgeX + badgeW} ${rowY} H 810 V ${nextRowY} H ${cardX}`, green, ids.approvedArrow));
+                } else {
+                    connectors.push(renderWorkflowSvgPath(`M ${approvedBadgeX + badgeW} ${rowY} H 804`, green, ids.approvedArrow));
+                    shapes.push(`<circle cx="828" cy="${rowY}" r="18" fill="#16a34a"></circle>`);
+                    labels.push(`<path d="M 820 ${rowY} L 826 ${rowY + 6} L 837 ${rowY - 7}" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>`);
+                    labels.push(`<text x="858" y="${rowY + 6}" fill="${green}" font-size="17" font-weight="800">Fim aprovado</text>`);
+                }
+
+                shapes.push(`<rect x="${cardX}" y="${cardY}" width="${cardW}" height="${cardH}" rx="8" fill="#ffffff" stroke="#cbd5e1" filter="url(#${ids.cardShadow})"></rect>`);
+                shapes.push(`<polygon points="${decisionCx},${rowY - decisionHalf} ${decisionCx + decisionHalf},${rowY} ${decisionCx},${rowY + decisionHalf} ${decisionCx - decisionHalf},${rowY}" fill="${slate}" filter="url(#${ids.nodeShadow})"></polygon>`);
+                shapes.push(`<circle cx="${decisionCx}" cy="${rejectedCircleY}" r="21" fill="${red}"></circle>`);
+                labels.push(`<text x="${cardX + 16}" y="${cardY + 28}" fill="#475569" font-size="12" font-weight="800">${escapeSvgText(etapa.rotulo || `Etapa ${index + 1}`).toUpperCase()}</text>`);
+                labels.push(renderWorkflowSvgTextLines(wrapWorkflowSvgText(stageName, 22, 3), cardX + 16, cardY + 58, 20, `fill="${dark}" font-size="15" font-weight="800"`));
+                labels.push(`<text x="${decisionCx}" y="${rowY + 4}" fill="#ffffff" text-anchor="middle" font-size="11" font-weight="800">Decisao</text>`);
+                labels.push(renderWorkflowSvgBadge('Aprovado', approvedBadgeX, rowY - 11, badgeW, 22, green));
+                labels.push(renderWorkflowSvgBadge('Recusado', rejectedBadgeX, rejectedBadgeY, 96, 22, red));
+                labels.push(`<text x="${decisionCx}" y="${rejectedCircleY + 4}" fill="#ffffff" text-anchor="middle" font-size="12" font-weight="800">Fim</text>`);
+            });
+
+            return `
+                <svg class="workflow-board-svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Diagrama de aprovacao" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <marker id="${ids.neutralArrow}" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth"><path d="M 0 0 L 8 4 L 0 8 z" fill="${neutral}"></path></marker>
+                        <marker id="${ids.approvedArrow}" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth"><path d="M 0 0 L 8 4 L 0 8 z" fill="${green}"></path></marker>
+                        <marker id="${ids.rejectedArrow}" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth"><path d="M 0 0 L 8 4 L 0 8 z" fill="${red}"></path></marker>
+                        <filter id="${ids.cardShadow}" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#0f172a" flood-opacity="0.10"></feDropShadow></filter>
+                        <filter id="${ids.nodeShadow}" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="1" stdDeviation="1.2" flood-color="#0f172a" flood-opacity="0.16"></feDropShadow></filter>
+                    </defs>
+                    <g font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+                        ${shapes.join('')}
+                        ${connectors.join('')}
+                        ${labels.join('')}
+                    </g>
+                </svg>
+            `;
+        }
+
+        function syncWorkflowDiagramViewport() {
+            const diagramEl = el('workflowObraDiagram');
+            const labelEl = el('workflowObraDiagramZoomReset');
+            const zoom = Math.min(2, Math.max(0.5, Number(obraWorkflowState.diagramZoom || 1)));
+            obraWorkflowState.diagramZoom = Math.round(zoom * 10) / 10;
+            if (labelEl) labelEl.textContent = `${Math.round(obraWorkflowState.diagramZoom * 100)}%`;
+            if (!diagramEl) return;
+            const baseSize = getWorkflowDiagramBaseSize();
+            const width = Math.round(baseSize.width * obraWorkflowState.diagramZoom);
+            const height = Math.round(baseSize.height * obraWorkflowState.diagramZoom);
+            diagramEl.style.width = `${width}px`;
+            diagramEl.style.minWidth = `${width}px`;
+            diagramEl.style.height = `${height}px`;
+            diagramEl.style.minHeight = `${height}px`;
+        }
+
+        function setWorkflowDiagramZoom(value) {
+            obraWorkflowState.diagramZoom = Math.min(2, Math.max(0.5, Math.round(Number(value || 1) * 10) / 10));
+            syncWorkflowDiagramViewport();
+            return obraWorkflowState.diagramZoom;
+        }
+
+        function alterarWorkflowDiagramZoom(delta) {
+            return setWorkflowDiagramZoom(Number(obraWorkflowState.diagramZoom || 1) + Number(delta || 0));
+        }
+
+        function resetWorkflowDiagramZoom() {
+            setWorkflowDiagramZoom(1);
+        }
+
+        function zoomWorkflowDiagramPorWheel(event) {
+            if (!event || !event.currentTarget || !event.ctrlKey) return;
+            event.preventDefault();
+            event.stopPropagation();
+            const canvas = event.currentTarget;
+            const currentZoom = Math.min(2, Math.max(0.5, Number(obraWorkflowState.diagramZoom || 1)));
+            const rect = canvas.getBoundingClientRect();
+            const offsetX = event.clientX - rect.left;
+            const offsetY = event.clientY - rect.top;
+            const anchorX = canvas.scrollLeft + offsetX;
+            const anchorY = canvas.scrollTop + offsetY;
+            const nextZoom = alterarWorkflowDiagramZoom(event.deltaY < 0 ? 0.1 : -0.1);
+            if (nextZoom === currentZoom) return;
+            window.requestAnimationFrame(() => {
+                const ratio = nextZoom / currentZoom;
+                canvas.scrollLeft = (anchorX * ratio) - offsetX;
+                canvas.scrollTop = (anchorY * ratio) - offsetY;
+            });
+        }
+
+        function iniciarArrasteWorkflowDiagram(event) {
+            if (!event || !event.currentTarget || event.button !== 0) return;
+            event.preventDefault();
+            const canvas = event.currentTarget;
+            canvas.setPointerCapture?.(event.pointerId);
+            obraWorkflowState.diagramDragging = {
+                canvas,
+                pointerId: event.pointerId,
+                startX: event.clientX,
+                startY: event.clientY,
+                scrollLeft: canvas.scrollLeft,
+                scrollTop: canvas.scrollTop,
+            };
+            canvas.classList.add('workflow-canvas--dragging');
+        }
+
+        function arrastarWorkflowDiagram(event) {
+            const drag = obraWorkflowState.diagramDragging;
+            if (!drag || !drag.canvas || !event) return;
+            if (event.buttons !== 1) {
+                encerrarArrasteWorkflowDiagram();
+                return;
+            }
+            event.preventDefault();
+            drag.canvas.scrollLeft = drag.scrollLeft - (event.clientX - drag.startX);
+            drag.canvas.scrollTop = drag.scrollTop - (event.clientY - drag.startY);
+        }
+
+        function encerrarArrasteWorkflowDiagram() {
+            const drag = obraWorkflowState.diagramDragging;
+            if (drag?.canvas) {
+                drag.canvas.releasePointerCapture?.(drag.pointerId);
+                drag.canvas.classList.remove('workflow-canvas--dragging');
+            }
+            obraWorkflowState.diagramDragging = null;
+        }
+
+        function renderWorkflowDiagramPreview() {
+            const countEl = el('workflowObraOverviewCount');
+            const summaryEl = el('workflowObraStagesSummary');
+            const diagramEl = el('workflowObraDiagram');
+            const emptyEl = el('workflowObraDiagramEmpty');
+            const etapas = getWorkflowDiagramEtapas();
+            if (countEl) countEl.textContent = `${etapas.length} ${etapas.length === 1 ? 'etapa' : 'etapas'}`;
+            if (summaryEl) {
+                const rules = getWorkflowRules();
+                summaryEl.textContent = `${etapas.length} ${etapas.length === 1 ? 'etapa' : 'etapas'} no fluxo ${rules.isParallel ? 'paralelo' : rules.isSequential ? 'sequencial' : 'simples'}.`;
+            }
+            if (!diagramEl || !emptyEl) return;
+            if (!etapas.length) {
+                diagramEl.innerHTML = '';
+                diagramEl.removeAttribute('style');
+                emptyEl.classList.remove('hidden');
+                syncWorkflowDiagramViewport();
+                return;
+            }
+            emptyEl.classList.add('hidden');
+            diagramEl.innerHTML = getWorkflowRules().isParallel
+                ? renderWorkflowObraParallelSvg(etapas)
+                : renderWorkflowObraSequentialSvg(etapas);
+            syncWorkflowDiagramViewport();
+        }
+
+        function getWorkflowStagesPanelMetrics() {
+            const margin = 12;
+            const viewportWidth = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
+            const viewportHeight = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
+            const panel = el('workflowObraStagesPanel');
+            const panelWidth = Math.min(440, Math.max(280, viewportWidth - (margin * 2)));
+            const rect = panel?.getBoundingClientRect();
+            const width = rect?.width || panelWidth;
+            const minHeight = Math.min(280, Math.max(180, viewportHeight - (margin * 2)));
+            const height = Math.min(obraWorkflowState.stagesPanelHeight || rect?.height || 520, viewportHeight - (margin * 2));
+            return { margin, viewportWidth, viewportHeight, panelWidth, width, height, minHeight };
+        }
+
+        function clampWorkflowStagesPanelHeight(height, y = null) {
+            const metrics = getWorkflowStagesPanelMetrics();
+            const top = Number.isFinite(y) ? y : (obraWorkflowState.stagesPanelPosition?.y || metrics.margin);
+            const maxHeight = Math.max(metrics.minHeight, metrics.viewportHeight - top - metrics.margin);
+            return Math.min(Math.max(height, metrics.minHeight), maxHeight);
+        }
+
+        function clampWorkflowStagesPanelPosition(position) {
+            const metrics = getWorkflowStagesPanelMetrics();
+            const maxX = Math.max(metrics.margin, metrics.viewportWidth - metrics.width - metrics.margin);
+            const maxY = Math.max(metrics.margin, metrics.viewportHeight - metrics.height - metrics.margin);
+            return {
+                x: Math.min(Math.max(position.x, metrics.margin), maxX),
+                y: Math.min(Math.max(position.y, metrics.margin), maxY),
+                width: metrics.panelWidth,
+            };
+        }
+
+        function ensureWorkflowStagesPanelPosition() {
+            const metrics = getWorkflowStagesPanelMetrics();
+            const fallback = {
+                x: metrics.viewportWidth - metrics.panelWidth - 24,
+                y: 96,
+                width: metrics.panelWidth,
+            };
+            const nextPosition = clampWorkflowStagesPanelPosition(obraWorkflowState.stagesPanelPosition || fallback);
+            obraWorkflowState.stagesPanelPosition = nextPosition;
+            const fallbackHeight = Math.min(560, metrics.viewportHeight - nextPosition.y - metrics.margin);
+            obraWorkflowState.stagesPanelHeight = clampWorkflowStagesPanelHeight(obraWorkflowState.stagesPanelHeight || fallbackHeight, nextPosition.y);
+        }
+
+        function applyWorkflowStagesPanelStyle() {
+            const panel = el('workflowObraStagesPanel');
+            if (!panel) return;
+            ensureWorkflowStagesPanelPosition();
+            const position = obraWorkflowState.stagesPanelPosition;
+            const metrics = getWorkflowStagesPanelMetrics();
+            const maxHeight = Math.max(240, metrics.viewportHeight - position.y - metrics.margin);
+            const height = clampWorkflowStagesPanelHeight(obraWorkflowState.stagesPanelHeight || maxHeight, position.y);
+            panel.style.left = `${position.x}px`;
+            panel.style.top = `${position.y}px`;
+            panel.style.width = `${position.width}px`;
+            panel.style.height = `${height}px`;
+            panel.style.maxHeight = `${maxHeight}px`;
+        }
+
+        function openWorkflowStagesPanel() {
+            const panel = el('workflowObraStagesPanel');
+            const toggle = el('workflowObraStagesPanelToggle');
+            if (!panel) return;
+            if (panel.parentElement !== document.body) {
+                document.body.appendChild(panel);
+            }
+            obraWorkflowState.stagesPanelOpen = true;
+            applyWorkflowStagesPanelStyle();
+            panel.classList.remove('hidden');
+            panel.classList.add('flex');
+            panel.style.display = 'flex';
+            panel.setAttribute('aria-hidden', 'false');
+            toggle?.setAttribute('aria-expanded', 'true');
+        }
+
+        function closeWorkflowStagesPanel() {
+            const panel = el('workflowObraStagesPanel');
+            const toggle = el('workflowObraStagesPanelToggle');
+            obraWorkflowState.stagesPanelOpen = false;
+            obraWorkflowState.stagesPanelDrag = null;
+            obraWorkflowState.stagesPanelResize = null;
+            panel?.classList.add('hidden');
+            panel?.classList.remove('flex');
+            if (panel) panel.style.display = 'none';
+            panel?.setAttribute('aria-hidden', 'true');
+            toggle?.setAttribute('aria-expanded', 'false');
+        }
+
+        function toggleWorkflowStagesPanel() {
+            if (obraWorkflowState.stagesPanelOpen) {
+                closeWorkflowStagesPanel();
+                return;
+            }
+            openWorkflowStagesPanel();
+        }
+
+        function startWorkflowStagesPanelDrag(event) {
+            if (event.button !== 0 || event.target?.closest?.('button, a, input, select, textarea')) return;
+            ensureWorkflowStagesPanelPosition();
+            const panel = el('workflowObraStagesPanel');
+            obraWorkflowState.stagesPanelDrag = {
+                pointerId: event.pointerId,
+                startClientX: event.clientX,
+                startClientY: event.clientY,
+                startX: obraWorkflowState.stagesPanelPosition.x,
+                startY: obraWorkflowState.stagesPanelPosition.y,
+            };
+            panel?.setPointerCapture?.(event.pointerId);
+            event.preventDefault();
+        }
+
+        function moveWorkflowStagesPanelDrag(event) {
+            const drag = obraWorkflowState.stagesPanelDrag;
+            if (!drag || drag.pointerId !== event.pointerId) return;
+            obraWorkflowState.stagesPanelPosition = clampWorkflowStagesPanelPosition({
+                x: drag.startX + event.clientX - drag.startClientX,
+                y: drag.startY + event.clientY - drag.startClientY,
+            });
+            applyWorkflowStagesPanelStyle();
+        }
+
+        function endWorkflowStagesPanelDrag(event) {
+            const drag = obraWorkflowState.stagesPanelDrag;
+            if (!drag || drag.pointerId !== event.pointerId) return;
+            el('workflowObraStagesPanel')?.releasePointerCapture?.(event.pointerId);
+            obraWorkflowState.stagesPanelDrag = null;
+        }
+
+        function startWorkflowStagesPanelResize(event) {
+            if (event.button !== 0) return;
+            ensureWorkflowStagesPanelPosition();
+            const panel = el('workflowObraStagesPanel');
+            obraWorkflowState.stagesPanelResize = {
+                pointerId: event.pointerId,
+                startClientY: event.clientY,
+                startHeight: obraWorkflowState.stagesPanelHeight || panel?.getBoundingClientRect?.().height || 520,
+            };
+            panel?.setPointerCapture?.(event.pointerId);
+            event.preventDefault();
+        }
+
+        function moveWorkflowStagesPanelResize(event) {
+            const resize = obraWorkflowState.stagesPanelResize;
+            if (!resize || resize.pointerId !== event.pointerId) return;
+            obraWorkflowState.stagesPanelHeight = clampWorkflowStagesPanelHeight(
+                resize.startHeight + event.clientY - resize.startClientY,
+                obraWorkflowState.stagesPanelPosition?.y,
+            );
+            applyWorkflowStagesPanelStyle();
+        }
+
+        function endWorkflowStagesPanelResize(event) {
+            const resize = obraWorkflowState.stagesPanelResize;
+            if (!resize || resize.pointerId !== event.pointerId) return;
+            el('workflowObraStagesPanel')?.releasePointerCapture?.(event.pointerId);
+            obraWorkflowState.stagesPanelResize = null;
+        }
+
+        function bindWorkflowFloatingControls() {
+            const canvas = el('workflowObraDiagramCanvas');
+            if (canvas && canvas.dataset.boundWorkflowDiagram !== '1') {
+                canvas.dataset.boundWorkflowDiagram = '1';
+                canvas.addEventListener('wheel', zoomWorkflowDiagramPorWheel, { passive: false });
+                canvas.addEventListener('pointerdown', iniciarArrasteWorkflowDiagram);
+                window.addEventListener('pointermove', arrastarWorkflowDiagram);
+                window.addEventListener('pointerup', encerrarArrasteWorkflowDiagram);
+                window.addEventListener('pointercancel', encerrarArrasteWorkflowDiagram);
+                canvas.addEventListener('dragstart', (event) => event.preventDefault());
+            }
+            const toggleButton = el('workflowObraStagesPanelToggle');
+            if (toggleButton && toggleButton.dataset.boundWorkflowPanelToggle !== '1') {
+                toggleButton.dataset.boundWorkflowPanelToggle = '1';
+                toggleButton.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    toggleWorkflowStagesPanel();
+                });
+            }
+            const zoomOut = el('workflowObraDiagramZoomOut');
+            if (zoomOut && zoomOut.dataset.boundWorkflowZoom !== '1') {
+                zoomOut.dataset.boundWorkflowZoom = '1';
+                zoomOut.addEventListener('click', () => alterarWorkflowDiagramZoom(-0.1));
+            }
+            const zoomReset = el('workflowObraDiagramZoomReset');
+            if (zoomReset && zoomReset.dataset.boundWorkflowZoom !== '1') {
+                zoomReset.dataset.boundWorkflowZoom = '1';
+                zoomReset.addEventListener('click', resetWorkflowDiagramZoom);
+            }
+            const zoomIn = el('workflowObraDiagramZoomIn');
+            if (zoomIn && zoomIn.dataset.boundWorkflowZoom !== '1') {
+                zoomIn.dataset.boundWorkflowZoom = '1';
+                zoomIn.addEventListener('click', () => alterarWorkflowDiagramZoom(0.1));
+            }
+            const panelHeader = el('workflowObraStagesPanelHeader');
+            if (panelHeader && panelHeader.dataset.boundWorkflowPanelDrag !== '1') {
+                panelHeader.dataset.boundWorkflowPanelDrag = '1';
+                panelHeader.addEventListener('pointerdown', startWorkflowStagesPanelDrag);
+            }
+            const panelResize = el('workflowObraStagesPanelResize');
+            if (panelResize && panelResize.dataset.boundWorkflowPanelResize !== '1') {
+                panelResize.dataset.boundWorkflowPanelResize = '1';
+                panelResize.addEventListener('pointerdown', startWorkflowStagesPanelResize);
+            }
+            if (window.__obraWorkflowFloatingWindowBound !== true) {
+                window.__obraWorkflowFloatingWindowBound = true;
+            window.addEventListener('pointermove', (event) => {
+                moveWorkflowStagesPanelDrag(event);
+                moveWorkflowStagesPanelResize(event);
+            });
+            window.addEventListener('pointerup', (event) => {
+                endWorkflowStagesPanelDrag(event);
+                endWorkflowStagesPanelResize(event);
+            });
+            window.addEventListener('pointercancel', (event) => {
+                endWorkflowStagesPanelDrag(event);
+                endWorkflowStagesPanelResize(event);
+            });
+            window.addEventListener('resize', () => {
+                if (obraWorkflowState.stagesPanelOpen) applyWorkflowStagesPanelStyle();
+                syncWorkflowDiagramViewport();
+            });
+            }
+        }
+
+        window.toggleWorkflowStagesPanel = toggleWorkflowStagesPanel;
+        window.closeWorkflowStagesPanel = closeWorkflowStagesPanel;
+
         function renderObraWorkflowPreview(preview) {
             const container = el('workflowEtapasContainer');
             const errorBox = el('workflowPreviewErrors');
@@ -4602,7 +5307,6 @@
 
             const readOnly = {{ 'true' if view_mode else 'false' }};
             const rules = getWorkflowRules();
-            const globalRule = getWorkflowGlobalRule();
 
             updateWorkflowSummary(obraWorkflowState.preview);
             updateWorkflowDefaultBadge();
@@ -4620,126 +5324,166 @@
             const addButton = el('addWorkflowStageButton');
             if (addButton) {
                 addButton.classList.toggle('hidden', readOnly || rules.isSimple);
-                addButton.innerHTML = rules.isParallel ? '<i class="fas fa-plus"></i> Adicionar Grupo' : '<i class="fas fa-plus"></i> Adicionar Etapa';
+                const label = rules.isParallel ? 'Adicionar grupo' : 'Adicionar etapa';
+                addButton.innerHTML = '<i class="fas fa-plus" aria-hidden="true"></i>';
+                addButton.setAttribute('aria-label', label);
+                addButton.setAttribute('title', label);
             }
 
-            const fixedInputClass = 'form-control-std h-9 w-full rounded-xl bg-slate-100 border-slate-200 text-xs font-semibold text-slate-600 cursor-not-allowed';
-            const editableSelectClass = 'form-control-std h-9 w-full rounded-xl bg-white text-xs';
+            const fixedInputClass = 'form-control-std h-9 w-full min-w-0 rounded-xl border-transparent bg-transparent text-xs font-bold text-slate-800 shadow-none cursor-default pointer-events-none select-none';
+            const editableSelectClass = 'form-control-std h-9 w-full min-w-0 rounded-xl border-slate-200 bg-white text-xs font-semibold text-slate-700 shadow-sm';
+            const fieldLabelClass = 'mb-1 block text-[10px] font-black uppercase tracking-[0.12em] text-slate-400';
             const renderApproverCard = (stage, stageIndex, groupSize) => {
-                const tipo = normalizeWorkflowStageType(stage.tipo_aprovador);
+                const approverType = normalizeWorkflowStageType(stage.tipo_aprovador);
+                stage.tipo_aprovador = approverType;
+                const showApproverType = !rules.isSimple;
+                const stageKey = getWorkflowStageKey(stage, stageIndex);
                 const displayRole = getWorkflowStageDisplayRole(stage);
                 const displayUser = getWorkflowStageDisplayUser(stage);
-                const status = getWorkflowStageStatus(stage);
+                const roleLabel = formatObraWorkflowRoleLabel(displayRole?.nome || `papel ${stageIndex + 1}`);
+                const userLabel = displayUser?.nome || 'Selecione o usuario';
                 const roleMissingObraUser = isWorkflowRoleMissingObraUser(stage);
-                const pendingMessage = roleMissingObraUser
-                    ? 'Nenhum usuário com este papel está vinculado à obra. Vincule um usuario a esta obra para habilitar a aprovação.'
-                    : (status.message || '');
-                const roleField = tipo === 'PAPEL' && !readOnly
+                const userMissingRole = approverType === 'USUARIO' && stage.usuario_aprovador_id && !getWorkflowPrimaryRoleForUser(stage.usuario_aprovador_id);
+                const showRemoveApprover = !readOnly && !rules.isSimple && groupSize > 1;
+                const showWarning = roleMissingObraUser || userMissingRole;
+                const typeField = !readOnly
+                    ? `<select class="${editableSelectClass} obra-workflow-stage-type" data-stage-index="${stageIndex}">
+                            <option value="PAPEL" ${approverType === 'PAPEL' ? 'selected' : ''}>Por papel</option>
+                            <option value="USUARIO" ${approverType === 'USUARIO' ? 'selected' : ''}>Por usuario</option>
+                       </select>`
+                    : `<input type="text" class="${fixedInputClass}" value="${approverType === 'USUARIO' ? 'Por usuario' : 'Por papel'}" readonly disabled>`;
+                const targetField = approverType === 'PAPEL'
+                    ? (!readOnly
                     ? `<select class="${editableSelectClass} obra-workflow-stage-role" data-stage-index="${stageIndex}">
                             <option value="">Selecione o papel</option>
                             ${obraWorkflowRoleOptions.map((papel) => `<option value="${escapeHtml(String(papel.id))}" ${Number(papel.id) === Number(stage.papel_id) ? 'selected' : ''}>${escapeHtml(papel.nome || '')}</option>`).join('')}
-                       </select>`
-                    : `<input type="text" class="${fixedInputClass}" value="${escapeHtml(displayRole?.nome || 'Papel nao definido')}" readonly disabled>`;
-                const userField = tipo === 'USUARIO' && !readOnly
+                        </select>`
+                    : `<input type="text" class="${fixedInputClass}" value="${escapeHtml(roleLabel)}" readonly disabled>`)
+                    : (!readOnly
                     ? `<select class="${editableSelectClass} obra-workflow-stage-fixed-user" data-stage-index="${stageIndex}">
                             <option value="">Selecione o usuario</option>
-                            ${obraWorkflowUserOptions.map((usuario) => {
-                                const label = `${escapeHtml(usuario.nome || '')}${usuario.email ? ` (${escapeHtml(usuario.email)})` : ''}`;
-                                return `<option value="${escapeHtml(String(usuario.id))}" ${Number(usuario.id) === Number(stage.usuario_aprovador_id) ? 'selected' : ''}>${label}</option>`;
-                            }).join('')}
+                            ${obraWorkflowUserOptions.map((user) => `<option value="${escapeHtml(String(user.id))}" ${Number(user.id) === Number(stage.usuario_aprovador_id) ? 'selected' : ''}>${escapeHtml(user.nome || user.email || '')}</option>`).join('')}
                        </select>`
-                    : `<input type="text" class="${fixedInputClass}" value="${escapeHtml(displayUser?.nome || (roleMissingObraUser ? 'Nenhum usuário vinculado à obra' : 'Usuário não definido'))}" readonly disabled>`;
+                    : `<input type="text" class="${fixedInputClass}" value="${escapeHtml(userLabel)}" readonly disabled>`);
+                const warning = roleMissingObraUser
+                    ? 'Nenhum usuario com este papel esta vinculado a obra'
+                    : (userMissingRole ? 'Este usuario nao possui papel vinculado' : '');
+                const actionCell = showRemoveApprover ? `
+                    <div class="flex items-end justify-end">
+                        <button type="button" onclick="removeWorkflowApprover(${stageIndex})" aria-label="Excluir aprovador ${escapeHtml(approverType === 'USUARIO' ? userLabel : roleLabel)}" title="Excluir aprovador" class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 focus:outline-none focus:ring-2 focus:ring-rose-200">
+                            <i class="fas fa-times text-xs" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                ` : '';
                 return `
-                    <div class="obra-workflow-etapa min-w-[280px] flex-1 rounded-2xl border border-slate-200 bg-white p-4 shadow-none" style="box-shadow:none" data-stage-index="${stageIndex}" data-etapa-id="${escapeHtml(String(stage.etapa_id || ''))}">
-                        <div class="space-y-3">
-                            <div class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] ${status.badgeClass}"><i class="fas ${status.icon}"></i>${escapeHtml(status.label)}</div>
-                            <div>
-                                <label class="mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Tipo de aprovador</label>
-                                ${readOnly
-                                    ? `<input type="text" class="${fixedInputClass}" value="${tipo === 'USUARIO' ? 'Por usuário' : 'Por papel'}" readonly disabled>`
-                                    : `<select class="${editableSelectClass} obra-workflow-stage-type" data-stage-index="${stageIndex}">
-                                            <option value="PAPEL" ${tipo === 'PAPEL' ? 'selected' : ''}>Por papel</option>
-                                            <option value="USUARIO" ${tipo === 'USUARIO' ? 'selected' : ''}>Por usuário</option>
-                                       </select>`}
-                            </div>
-                            <div>
-                                <label class="mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Papel</label>
-                                ${roleField}
-                            </div>
-                            <div>
-                                <label class="mb-1 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Usuário</label>
-                                ${userField}
-                            </div>
-                            ${pendingMessage ? `<div class="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">${escapeHtml(pendingMessage)}</div>` : ''}
-                            ${readOnly ? '' : `<button type="button" onclick="removeWorkflowApprover(${stageIndex})" ${groupSize <= 1 ? 'disabled' : ''} class="h-9 w-full rounded-xl border border-rose-300 bg-white text-xs font-bold text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40">Excluir</button>`}
+                    <div class="obra-workflow-etapa empresa-workflow-stage-card grid min-w-0 grid-cols-1 gap-2 overflow-hidden border-t border-slate-100 px-2 py-2 ${showApproverType ? (showRemoveApprover ? 'md:grid-cols-[112px_minmax(0,1fr)_auto]' : 'md:grid-cols-[112px_minmax(0,1fr)]') : (showRemoveApprover ? 'md:grid-cols-[minmax(0,1fr)_auto]' : 'md:grid-cols-1')}" data-stage-index="${stageIndex}" data-stage-key="${escapeHtml(stageKey)}" data-etapa-id="${escapeHtml(String(stage.etapa_id || ''))}">
+                        ${showApproverType ? `<div class="min-w-0">
+                            <label class="${fieldLabelClass}" for="obra-workflow-stage-type-${stageIndex}">Tipo</label>
+                            ${typeField}
+                        </div>` : ''}
+                        <div class="min-w-0">
+                            <label class="${fieldLabelClass}" for="obra-workflow-stage-target-${stageIndex}">${approverType === 'USUARIO' ? 'Usuario' : 'Papel'}</label>
+                            ${targetField}
                         </div>
+                        ${actionCell}
+                        ${showWarning ? `<div class="${showApproverType ? (showRemoveApprover ? 'md:col-span-3' : 'md:col-span-2') : (showRemoveApprover ? 'md:col-span-2' : '')} -mt-1 min-w-0 rounded-lg bg-amber-50 px-2 py-1 text-[11px] font-semibold text-amber-700">${escapeHtml(warning)}.</div>` : ''}
                     </div>
                 `;
             };
 
             const renderAddApproverButton = (groupKey) => readOnly || rules.isSimple ? '' : `
-                <button type="button" onclick="addWorkflowApproverToGroup('${escapeHtml(String(groupKey))}')" class="my-1 flex min-h-[242px] w-20 shrink-0 self-stretch items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/60 text-3xl font-black text-slate-400 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-500">
-                    <i class="fas fa-plus"></i>
+                <button type="button" onclick="addWorkflowApproverToGroup('${escapeHtml(String(groupKey))}')" class="flex h-9 w-full items-center justify-center gap-2 border-t border-dashed border-slate-200 px-2 text-xs font-bold text-slate-500 transition hover:bg-blue-50 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-200">
+                    <i class="fas fa-plus text-[10px]" aria-hidden="true"></i>
+                    <span>Adicionar aprovador</span>
                 </button>
+            `;
+
+            const renderWorkflowGroupHeader = (group, groupIndex, title, badgeLabel, dragLabel, canRemove) => {
+                const groupKey = escapeHtml(String(group.key));
+                const collapsed = isWorkflowGroupCollapsed(group.key);
+                const draggable = readOnly || rules.isSimple ? 'false' : 'true';
+                const firstStageIndex = group.items[0]?.index ?? 0;
+                const ruleValue = normalizeWorkflowStageRule(group.items[0]?.stage?.regra_etapa || getWorkflowGlobalRule());
+                const showRuleField = !rules.isSimple;
+                const ruleField = !showRuleField ? '' : (!readOnly
+                    ? `<select class="form-control-std h-9 w-full min-w-0 rounded-xl border-slate-200 bg-white text-xs font-semibold text-slate-700 shadow-sm obra-workflow-stage-rule" data-stage-index="${firstStageIndex}" aria-label="Criterio de aprovacao ${title}">
+                            <option value="TODOS" ${ruleValue === 'TODOS' ? 'selected' : ''}>Todos aprovam</option>
+                            <option value="PRIMEIRO" ${ruleValue === 'PRIMEIRO' ? 'selected' : ''}>Qualquer um aprova</option>
+                       </select>`
+                    : `<span class="inline-flex h-9 w-full min-w-0 items-center rounded-xl border border-slate-100 bg-slate-50 px-3 text-xs font-bold text-slate-600">${ruleValue === 'PRIMEIRO' ? 'Qualquer um aprova' : 'Todos aprovam'}</span>`);
+                return `
+                    <div class="px-3 py-2.5">
+                        <div class="flex min-w-0 items-start justify-between gap-2">
+                            <div class="flex min-w-0 items-start gap-2">
+                                ${readOnly || rules.isSimple ? '' : `<button type="button" class="workflow-drag-handle mt-0.5 inline-flex h-7 w-6 shrink-0 cursor-grab items-center justify-center rounded-lg text-slate-300 transition hover:bg-slate-50 hover:text-slate-500 active:cursor-grabbing" draggable="${draggable}" aria-label="${dragLabel}" title="${dragLabel}">
+                                    <i class="fas fa-grip-vertical text-xs" aria-hidden="true"></i>
+                                </button>`}
+                                <div class="min-w-0">
+                                    <h5 class="truncate text-xs font-black text-slate-900">${title}</h5>
+                                    <div class="mt-0.5 text-[11px] font-bold text-slate-500">${badgeLabel}</div>
+                                </div>
+                            </div>
+                            <div class="flex shrink-0 items-center gap-1">
+                                <button type="button" onclick="toggleWorkflowGroupCollapsed('${groupKey}')" aria-label="${collapsed ? 'Expandir' : 'Recolher'} ${title}" title="${collapsed ? 'Expandir' : 'Recolher'}" class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-50 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-200">
+                                    <i class="fas ${collapsed ? 'fa-chevron-down' : 'fa-chevron-up'} text-xs" aria-hidden="true"></i>
+                                </button>
+                                ${readOnly || rules.isSimple || !canRemove ? '' : `<button type="button" onclick="removeWorkflowGroup('${groupKey}')" aria-label="Excluir ${title}" title="Excluir" class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 focus:outline-none focus:ring-2 focus:ring-rose-200">
+                                    <i class="fas fa-times text-xs" aria-hidden="true"></i>
+                                </button>`}
+                            </div>
+                        </div>
+                        ${showRuleField ? `<div class="${readOnly || rules.isSimple ? '' : 'pl-8'} mt-2">${ruleField}</div>` : ''}
+                    </div>
+                `;
+            };
+
+            const renderWorkflowGroupContent = (group) => isWorkflowGroupCollapsed(group.key) ? `
+                <div class="border-t border-slate-100 px-2.5 py-2 text-[11px] font-semibold text-slate-500">
+                    Etapa recolhida. Use o icone de arrastar para alterar a ordem.
+                </div>
+            ` : `
+                <div>
+                    ${group.items.map((item) => renderApproverCard(item.stage, item.index, group.items.length)).join('')}
+                    ${renderAddApproverButton(group.key)}
+                </div>
             `;
 
             const groups = getWorkflowVisualGroups();
             if (rules.isParallel) {
-                container.className = 'overflow-x-auto px-4 py-5';
+                container.className = 'space-y-2 p-3';
                 container.innerHTML = `
-                    <div class="flex min-w-full items-start gap-5">
-                        ${groups.map((group, groupIndex) => `
-                            <div class="workflow-group-card min-w-[520px] rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_12px_28px_rgba(15,23,42,0.06)]" data-workflow-group-key="${escapeHtml(String(group.key))}">
-                                <div class="mb-3 flex items-center justify-between gap-3">
-                                    <div class="flex items-center gap-2">
-                                        <button type="button" class="workflow-drag-handle inline-flex h-7 w-7 cursor-grab items-center justify-center rounded-lg bg-slate-100 text-slate-500 active:cursor-grabbing" draggable="${readOnly ? 'false' : 'true'}" aria-label="Arrastar grupo"><i class="fas fa-grip-vertical"></i></button>
-                                        <h5 class="text-sm font-black text-slate-900">Grupo ${groupIndex + 1}</h5>
-                                        <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">${group.items.length} aprovador${group.items.length === 1 ? '' : 'es'}</span>
-                                    </div>
-                                    <div class="flex items-center gap-3">
-                                        <button type="button" onclick="toggleWorkflowGroupCollapsed('${escapeHtml(String(group.key))}')" class="text-xs font-bold text-slate-500 hover:text-slate-700">${isWorkflowGroupCollapsed(group.key) ? 'Expandir' : 'Encolher'}</button>
-                                        ${readOnly || groups.length <= 1 ? '' : `<button type="button" onclick="removeWorkflowGroup('${escapeHtml(String(group.key))}')" class="text-xs font-bold text-rose-600 hover:text-rose-700">Excluir grupo</button>`}
-                                    </div>
-                                </div>
-                                ${isWorkflowGroupCollapsed(group.key) ? `
-                                    <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-500">
-                                        Etapa recolhida. Arraste pelo icone para alterar a ordem.
-                                    </div>
-                                ` : `<div class="flex items-stretch gap-4 overflow-x-auto px-2 py-4">
-                                    ${group.items.map((item) => renderApproverCard(item.stage, item.index, group.items.length)).join(globalRule === 'PRIMEIRO' ? '<span class="text-xs font-black text-slate-400">OU</span>' : '<span class="text-xs font-black text-slate-400">E</span>')}
-                                    ${renderAddApproverButton(group.key)}
-                                </div>`}
-                            </div>
-                        `).join('')}
-                    </div>
+                    ${groups.map((group, groupIndex) => `
+                        <div class="workflow-group-card empresa-workflow-group-card overflow-visible rounded-xl border border-slate-200 bg-white shadow-none" data-workflow-group-key="${escapeHtml(String(group.key))}">
+                            ${renderWorkflowGroupHeader(
+                                group,
+                                groupIndex,
+                                `Grupo ${groupIndex + 1}`,
+                                `${group.items.length} ${group.items.length === 1 ? 'aprovador' : 'aprovadores'}`,
+                                'Arrastar grupo',
+                                groups.length > 1
+                            )}
+                            ${renderWorkflowGroupContent(group)}
+                        </div>
+                    `).join('')}
                 `;
             } else {
-                container.className = 'space-y-5 p-4';
+                container.className = 'space-y-2 p-3';
                 container.innerHTML = groups.map((group, groupIndex) => `
-                    <div class="workflow-group-card rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_12px_28px_rgba(15,23,42,0.06)]" data-workflow-group-key="${escapeHtml(String(group.key))}">
-                        <div class="mb-3 flex items-center justify-between gap-3">
-                            <div class="flex items-center gap-2">
-                                <button type="button" class="workflow-drag-handle inline-flex h-7 w-7 cursor-grab items-center justify-center rounded-lg bg-slate-100 text-slate-500 active:cursor-grabbing" draggable="${readOnly || !rules.canDragStages ? 'false' : 'true'}" aria-label="Arrastar etapa"><i class="fas fa-grip-vertical"></i></button>
-                                <h5 class="text-sm font-black text-slate-900">${rules.isSimple ? 'Etapa 1' : `Etapa ${groupIndex + 1}`}</h5>
-                                <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">${group.items.length} aprovador${group.items.length === 1 ? '' : 'es'}</span>
-                            </div>
-                            <div class="flex items-center gap-3">
-                                <button type="button" onclick="toggleWorkflowGroupCollapsed('${escapeHtml(String(group.key))}')" class="text-xs font-bold text-slate-500 hover:text-slate-700">${isWorkflowGroupCollapsed(group.key) ? 'Expandir' : 'Encolher'}</button>
-                                ${readOnly || rules.isSimple || groups.length <= 1 ? '' : `<button type="button" onclick="removeWorkflowGroup('${escapeHtml(String(group.key))}')" class="text-xs font-bold text-rose-600 hover:text-rose-700">Excluir etapa</button>`}
-                            </div>
-                        </div>
-                        ${isWorkflowGroupCollapsed(group.key) ? `
-                            <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-500">
-                                Etapa recolhida. Arraste pelo icone para alterar a ordem.
-                            </div>
-                        ` : `<div class="flex items-stretch gap-4 overflow-x-auto px-2 py-4">
-                            ${group.items.map((item) => renderApproverCard(item.stage, item.index, group.items.length)).join(globalRule === 'PRIMEIRO' ? '<span class="text-xs font-black text-slate-400">OU</span>' : '<span class="text-xs font-black text-slate-400">E</span>')}
-                            ${renderAddApproverButton(group.key)}
-                        </div>`}
+                    <div class="workflow-group-card empresa-workflow-group-card overflow-visible rounded-xl border border-slate-200 bg-white shadow-none" data-workflow-group-key="${escapeHtml(String(group.key))}">
+                        ${renderWorkflowGroupHeader(
+                            group,
+                            groupIndex,
+                            rules.isSimple ? 'Etapa 1' : `Etapa ${groupIndex + 1}`,
+                            `${group.items.length} ${group.items.length === 1 ? 'aprovador' : 'aprovadores'}`,
+                            'Arrastar etapa',
+                            groups.length > 1
+                        )}
+                        ${renderWorkflowGroupContent(group)}
                     </div>
-                `).join(rules.isSequential ? '<div class="flex justify-center text-slate-300"><i class="fas fa-arrow-down"></i></div>' : '');
+                `).join(rules.isSequential ? '<div class="flex h-5 items-center justify-center text-slate-300"><i class="fas fa-arrow-down text-xs" aria-hidden="true"></i></div>' : '');
             }
 
+            renderWorkflowDiagramPreview();
             bindWorkflowStageEditorListeners();
             bindWorkflowStageDragSorting();
             syncObraWorkflowConfigField();
@@ -4979,6 +5723,7 @@
             switchObraGovernancaTab(getInitialObraGovernancaTab());
             syncWorkflowExecutionModalRoot(document);
             hydrateWorkflowCustomStages(obraWorkflowState.preview, true);
+            bindWorkflowFloatingControls();
             bindWorkflowStageEditorListeners();
             
             renderObraWorkflowPreview(obraWorkflowState.preview);
