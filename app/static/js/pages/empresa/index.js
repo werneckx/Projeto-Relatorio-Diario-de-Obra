@@ -3171,6 +3171,19 @@
             renderEmpresaWorkflowCards();
         }
 
+        function loadEmpresaWorkflowPreviewById(workflowId) {
+            const preview = getEmpresaWorkflowPreview(workflowId);
+            if (!preview) return false;
+            empresaWorkflowState.selectedWorkflowId = Number(preview.workflow_id || 0);
+            empresaWorkflowState.selectedWorkflowModel = getEmpresaWorkflowModelKind(preview);
+            empresaWorkflowState.preview = preview;
+            hydrateEmpresaWorkflowStages(preview);
+            syncEmpresaWorkflowControls();
+            markEmpresaWorkflowDirty(false);
+            renderEmpresaWorkflowCards();
+            return true;
+        }
+
         async function saveEmpresaWorkflow() {
             const workflowId = empresaWorkflowState.selectedWorkflowId;
             if (!workflowId) {
@@ -3225,6 +3238,15 @@
                 if (!response.ok || !data.ok) {
                     throw new Error(data.error || 'Não foi possível salvar o workflow.');
                 }
+
+                const defaultResult = await fetchJson(empresaUrls.updateWorkflowDefault, {
+                    method: 'POST',
+                    body: JSON.stringify({ workflow_id: workflowId }),
+                });
+                if (!defaultResult.response.ok || !defaultResult.data.ok) {
+                    throw new Error(defaultResult.data.error || 'Não foi possível definir este workflow como padrão.');
+                }
+
                 window.location.assign(empresaUrls.empresaView || window.location.href);
             } catch (error) {
                 console.error(error);
@@ -3373,7 +3395,9 @@
                 diagramCanvas.addEventListener('dragstart', (event) => event.preventDefault());
             }
 
-            loadEmpresaWorkflowPreview(select.value || 'simples');
+            if (!loadEmpresaWorkflowPreviewById(empresaWorkflowDefaultId)) {
+                loadEmpresaWorkflowPreview(select.value || 'simples');
+            }
             syncEmpresaWorkflowDiagramViewport();
             syncEmpresaWorkflowDropdowns(workflowEl('empresa-panel-workflow') || document);
         }

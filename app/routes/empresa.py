@@ -1230,20 +1230,33 @@ def api_create_workflow():
 def api_update_workflow_default():
     empresa_id = session.get('empresa_id')
     data = request.get_json() or {}
+    workflow_id_raw = data.get('workflow_id')
     codigo = (data.get('codigo') or '').strip()
 
-    if not codigo:
-        return jsonify({'ok': False, 'error': 'Código do workflow é obrigatório.'}), 400
+    workflow_id = None
+    if workflow_id_raw not in (None, ''):
+        try:
+            workflow_id = int(workflow_id_raw)
+        except (TypeError, ValueError):
+            return jsonify({'ok': False, 'error': 'Workflow padrão inválido para esta empresa.'}), 400
 
-    workflow = WorkflowDefinicao.query.filter(
+    if not codigo and not workflow_id:
+        return jsonify({'ok': False, 'error': 'Código ou ID do workflow é obrigatório.'}), 400
+
+    filters = [
         WorkflowDefinicao.empresa_id == empresa_id,
         WorkflowDefinicao.obra_id.is_(None),
         WorkflowDefinicao.ativo.is_(True),
-        or_(
+    ]
+    if workflow_id:
+        filters.append(WorkflowDefinicao.id == workflow_id)
+    else:
+        filters.append(or_(
             WorkflowDefinicao.codigo == codigo,
             WorkflowDefinicao.nome == codigo,
-        ),
-    ).order_by(WorkflowDefinicao.id.asc()).first()
+        ))
+
+    workflow = WorkflowDefinicao.query.filter(*filters).order_by(WorkflowDefinicao.id.asc()).first()
     if not workflow:
         return jsonify({'ok': False, 'error': 'Workflow padrão inválido para esta empresa.'}), 404
 
@@ -1254,11 +1267,11 @@ def api_update_workflow_default():
             config = EmpresaConfig(
                 empresa_id=empresa_id,
                 chave='workflow.default',
-                valor=workflow.codigo or workflow.nome,
+                valor=f'id:{workflow.id}',
             )
             db.session.add(config)
         else:
-            config.valor = workflow.codigo or workflow.nome
+            config.valor = f'id:{workflow.id}'
         db.session.commit()
         try:
             ConfigService.clear_cache(empresa_id)

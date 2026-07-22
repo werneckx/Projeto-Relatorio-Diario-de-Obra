@@ -1639,6 +1639,10 @@ def gerar_obra():
 
         # Legacy equipe de obra não possui modelo compatível com o schema atual.
         # O payload é preservado no formulário, mas não é gravado enquanto a tabela de suporte não estiver disponível.
+        if not obra_id:
+            workflow_selected_raw = ""
+            workflow_config_data = {}
+
         _ensure_obra_workflow_config_definitions()
         workflow_assignments = workflow_config_data.get("assignments") if isinstance(workflow_config_data.get("assignments"), dict) else {}
         workflow_custom_stages = workflow_config_data.get("custom_stages") if isinstance(workflow_config_data.get("custom_stages"), list) else []

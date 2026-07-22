@@ -3978,6 +3978,8 @@
         }
 
         function validateWorkflowConfig() {
+            if (!hasBackendItem) return true;
+
             const container = el('workflowEtapasContainer');
             const stages = obraWorkflowState.customStages || [];
             if (!stages.length) {
@@ -4010,6 +4012,10 @@
         function syncObraWorkflowConfigField() {
             const hidden = el('workflow_config_json');
             if (!hidden) return;
+            if (!hasBackendItem) {
+                hidden.value = '';
+                return;
+            }
             hidden.value = JSON.stringify({
                 workflow_id: Number(el('workflow_selecionado_id')?.value || 0) || null,
                 aprovacao_paralela: getWorkflowRules().isParallel,
