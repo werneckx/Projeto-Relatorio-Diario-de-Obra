@@ -641,9 +641,15 @@
         }
     }
 
+    function getInitialEmpresaTab() {
+        const params = new URLSearchParams(window.location.search || '');
+        const requested = String(params.get('tab') || params.get('aba') || window.location.hash.replace(/^#/, '') || '').toLowerCase();
+        return ['workflow', 'workflows'].includes(requested) ? 'workflow' : 'geral';
+    }
+
         function empresaApp() {
             return {
-                abaAtiva: localStorage.getItem('empresa_aba_ativa') || 'geral',
+                abaAtiva: getInitialEmpresaTab(),
                 tabOrder: ['geral', 'workflow'],
                 novaDefinicaoVisible: false,
                 novoDefinicao: { chave: '', descricao: '', valor: '', tipo: 'STRING' },
@@ -675,11 +681,11 @@
                 saving: false,
 
                 init() {
-                    this.abaAtiva = localStorage.getItem('empresa_aba_ativa') || this.abaAtiva || 'geral';
+                    this.abaAtiva = getInitialEmpresaTab();
                     if (!this.tabOrder.includes(this.abaAtiva)) {
                         this.abaAtiva = 'geral';
-                        localStorage.setItem('empresa_aba_ativa', this.abaAtiva);
                     }
+                    localStorage.removeItem('empresa_aba_ativa');
                     prepareEmpresaRouteTransition();
                     initializeEmpresaGeneralFormState();
                     setEmpresaEditingDataset(this.empresaEditing);
@@ -700,7 +706,6 @@
                 mudarAba(aba) {
                     if (!this.tabOrder.includes(aba)) return;
                     this.abaAtiva = aba;
-                    localStorage.setItem('empresa_aba_ativa', aba);
                     if (aba !== 'workflow') {
                         this.closeWorkflowStagesPanel();
                         closeEmpresaWorkflowTypeDropdown();
