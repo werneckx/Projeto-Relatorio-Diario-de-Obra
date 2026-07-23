@@ -1,6 +1,7 @@
 from app import db
 from app.models.configuracao import ConfigDefinicao, EmpresaConfig
-from app.models.workflow import WorkflowDefinicao
+from app.models.workflow import WorkflowDefinicao, WorkflowEtapa, WorkflowGrupo
+from app.routes.empresa import _workflow_etapa_template_payload
 
 
 def test_api_workflow_default_aceita_workflow_id(client, empresa, usuario):
@@ -62,3 +63,58 @@ def test_api_workflow_default_aceita_workflow_id(client, empresa, usuario):
 
     config = EmpresaConfig.query.filter_by(empresa_id=empresa.id, chave="workflow.default").first()
     assert config.valor == f"id:{workflow_novo.id}"
+
+
+def test_payload_etapa_usa_ordem_do_grupo_para_diagrama(empresa):
+    workflow = WorkflowDefinicao(
+        empresa_id=empresa.id,
+        obra_id=None,
+        codigo="WF_GRUPO_DIAGRAMA",
+        nome="Workflow Grupo Diagrama",
+        tipo_fluxo="SIMPLES",
+        ativo=True,
+    )
+    db.session.add(workflow)
+    db.session.flush()
+
+    grupo = WorkflowGrupo(
+        empresa_id=empresa.id,
+        workflow_id=workflow.id,
+        nome="Etapa 1",
+        ordem=1,
+        regra_aprovacao="TODOS",
+        ativo=True,
+    )
+    db.session.add(grupo)
+    db.session.flush()
+
+    etapa_engenheiro = WorkflowEtapa(
+        empresa_id=empresa.id,
+        workflow_id=workflow.id,
+        nivel=1,
+        ordem=1,
+        nome="ENGENHEIRO",
+        tipo_aprovador="PAPEL",
+        grupo_id=grupo.id,
+        ativo=True,
+    )
+    etapa_gestor = WorkflowEtapa(
+        empresa_id=empresa.id,
+        workflow_id=workflow.id,
+        nivel=2,
+        ordem=2,
+        nome="GESTOR",
+        tipo_aprovador="PAPEL",
+        grupo_id=grupo.id,
+        ativo=True,
+    )
+    db.session.add_all([etapa_engenheiro, etapa_gestor])
+    db.session.flush()
+
+    payload_engenheiro = _workflow_etapa_template_payload(etapa_engenheiro, workflow=workflow, index=0)
+    payload_gestor = _workflow_etapa_template_payload(etapa_gestor, workflow=workflow, index=1)
+
+    assert payload_engenheiro["grupo_ordem"] == 1
+    assert payload_gestor["grupo_ordem"] == 1
+    assert payload_engenheiro["workflow_group"] == 1
+    assert payload_gestor["workflow_group"] == 1

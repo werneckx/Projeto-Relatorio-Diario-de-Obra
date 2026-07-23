@@ -473,9 +473,73 @@
             .filter((item) => item.id || item.execution_number || item.started_at_label !== 'Sem registro');
     }
 
+    function getObraWorkflowDiagramGroupKey(etapa, index) {
+        if (etapa?.grupo_id != null && etapa.grupo_id !== '') return `grupo-id-${etapa.grupo_id}`;
+        if (etapa?.grupo_ordem != null && etapa.grupo_ordem !== '') return `grupo-ordem-${etapa.grupo_ordem}`;
+        if (etapa?.workflow_group != null && etapa.workflow_group !== '') return `workflow-group-${etapa.workflow_group}`;
+        if (etapa?.grupo_paralelo != null && etapa.grupo_paralelo !== '') return `grupo-paralelo-${etapa.grupo_paralelo}`;
+        return `nivel-${etapa?.nivel || index + 1}`;
+    }
+
+    function getObraWorkflowDiagramGroupOrder(etapa, index) {
+        return toNonNegativeNumber(etapa?.grupo_ordem)
+            || toNonNegativeNumber(etapa?.workflow_group)
+            || toNonNegativeNumber(etapa?.grupo_paralelo)
+            || toNonNegativeNumber(etapa?.nivel)
+            || (index + 1);
+    }
+
+    function joinObraWorkflowDiagramApprovers(etapas, regra) {
+        const labels = (Array.isArray(etapas) ? etapas : [])
+            .map((etapa) => normalizeWorkflowStageDisplay(etapa?.papel || etapa?.papel_nome || etapa?.usuario_nome || etapa?.nome))
+            .filter(Boolean);
+        if (!labels.length) return 'Papel nao definido';
+        if (labels.length === 1) return labels[0];
+        const connector = normalizeEmpresaWorkflowGroupRule(regra) === 'QUALQUER' ? ' ou ' : ' e ';
+        return `${labels.slice(0, -1).join(connector)}${connector}${labels[labels.length - 1]}`;
+    }
+
+    function groupObraWorkflowDiagramStages(etapas, obra) {
+        const groups = new Map();
+        (Array.isArray(etapas) ? etapas : []).forEach((etapa, index) => {
+            const key = getObraWorkflowDiagramGroupKey(etapa, index);
+            if (!groups.has(key)) {
+                groups.set(key, {
+                    key,
+                    order: getObraWorkflowDiagramGroupOrder(etapa, index),
+                    items: [],
+                });
+            }
+            groups.get(key).items.push(etapa);
+        });
+
+        const isParallel = String(obra?.workflow_diagram_variant || '').toLowerCase() === 'parallel' || obra?.aprovacao_paralela;
+        const entityLabel = isParallel ? 'Grupo' : 'Etapa';
+
+        return Array.from(groups.values())
+            .sort((a, b) => a.order - b.order)
+            .map((group, groupIndex) => {
+                const first = group.items[0] || {};
+                const regra = normalizeEmpresaWorkflowGroupRule(first.regra_aprovacao || first.regra_etapa || 'TODOS');
+                const label = joinObraWorkflowDiagramApprovers(group.items, regra);
+                return {
+                    ...first,
+                    nivel: groupIndex + 1,
+                    nome: label,
+                    papel: label,
+                    rotulo: `${entityLabel} ${groupIndex + 1}`,
+                    regra_aprovacao: regra,
+                    regra_etapa: regra,
+                    tempo_medio: String(first.tempo_medio || 'Sem historico'),
+                    workflow_group: groupIndex + 1,
+                    grupo_itens: group.items,
+                };
+            });
+    }
+
     function normalizeObraDetalhe(item) {
         if (!item) return null;
-        const workflowEtapas = Array.isArray(item.workflow_etapas)
+        const workflowEtapasRaw = Array.isArray(item.workflow_etapas)
             ? item.workflow_etapas.map((etapa, index) => ({
                 ...etapa,
                 nivel: toNonNegativeNumber(etapa?.nivel) || (index + 1),
@@ -484,6 +548,7 @@
                 tempo_medio: String(etapa?.tempo_medio || 'Sem histórico'),
             }))
             : [];
+        const workflowEtapas = groupObraWorkflowDiagramStages(workflowEtapasRaw, item);
         const timelineExecucoes = normalizeTimelineSeries(item.timeline_execucoes);
         const timelineErros = normalizeTimelineSeries(item.timeline_erros);
         const duracaoMediaFluxo = normalizeDuracaoMediaFluxo(item.duracao_media_fluxo);
@@ -1007,6 +1072,7 @@
                     this.obraSelecionada = normalizeObraDetalhe(obra);
                     this.resetarZoomDiagrama();
                     this.obraDetalheVisible = !!this.obraSelecionada;
+                    this.$nextTick?.(() => this.syncObraWorkflowDiagramViewport(true));
                 },
                 fecharDetalhesObra() {
                     this.obraDetalheVisible = false;
@@ -1017,6 +1083,7 @@
                 alterarZoomDiagrama(delta) {
                     const nextZoom = Number(this.workflowDiagramZoom || 1) + Number(delta || 0);
                     this.workflowDiagramZoom = Math.min(2, Math.max(0.5, Math.round(nextZoom * 10) / 10));
+                    this.syncObraWorkflowDiagramViewport();
                     return this.workflowDiagramZoom;
                 },
                 zoomDiagramaPorWheel(event) {
@@ -1091,9 +1158,41 @@
                 },
                 resetarZoomDiagrama() {
                     this.workflowDiagramZoom = 1;
+                    this.syncObraWorkflowDiagramViewport(true);
                 },
                 getZoomDiagramaLabel() {
                     return `${Math.round((this.workflowDiagramZoom || 1) * 100)}%`;
+                },
+                syncObraWorkflowDiagramViewport(resetScroll = false) {
+                    const diagramEl = document.getElementById('workflowObraDetailDiagram');
+                    const canvasEl = document.getElementById('workflowObraDetailDiagramCanvas');
+                    if (!diagramEl) return;
+
+                    const etapas = this.getObraFluxoEtapas(this.obraSelecionada);
+                    if (!etapas.length) {
+                        diagramEl.innerHTML = '';
+                        diagramEl.removeAttribute('style');
+                        if (resetScroll && canvasEl) {
+                            canvasEl.scrollLeft = 0;
+                            canvasEl.scrollTop = 0;
+                        }
+                        return;
+                    }
+
+                    const zoom = Math.min(2, Math.max(0.5, Number(this.workflowDiagramZoom || 1)));
+                    this.workflowDiagramZoom = Math.round(zoom * 10) / 10;
+                    const baseSize = this.getWorkflowDiagramBaseSize(this.obraSelecionada);
+                    const width = Math.round(baseSize.width * this.workflowDiagramZoom);
+                    const height = Math.round(baseSize.height * this.workflowDiagramZoom);
+                    diagramEl.style.width = `${width}px`;
+                    diagramEl.style.minWidth = `${width}px`;
+                    diagramEl.style.height = `${height}px`;
+                    diagramEl.style.minHeight = `${height}px`;
+
+                    if (resetScroll && canvasEl) {
+                        canvasEl.scrollLeft = 0;
+                        canvasEl.scrollTop = 0;
+                    }
                 },
                 getWorkflowDiagramBoardStyle(obra) {
                     const zoom = Math.min(2, Math.max(0.5, Number(this.workflowDiagramZoom || 1)));

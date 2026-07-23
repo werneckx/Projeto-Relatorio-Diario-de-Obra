@@ -232,6 +232,7 @@ def _workflow_etapa_template_payload(etapa, *, workflow=None, index=0, tempo_med
     regra_aprovacao = _normalizar_regra_aprovacao_grupo(
         grupo.regra_aprovacao if grupo else None
     )
+    grupo_ordem = grupo.ordem if grupo else None
 
     return {
         'etapa_id': etapa.id,
@@ -250,9 +251,10 @@ def _workflow_etapa_template_payload(etapa, *, workflow=None, index=0, tempo_med
         'usuario_nome': usuario_nome,
         'grupo_id': etapa.grupo_id,
         'grupo_nome': grupo.nome if grupo else None,
+        'grupo_ordem': grupo_ordem,
         'regra_aprovacao': regra_aprovacao,
         'grupo_paralelo': etapa.grupo_paralelo,
-        'workflow_group': etapa.grupo_paralelo or etapa.nivel or index + 1,
+        'workflow_group': grupo_ordem or etapa.grupo_paralelo or etapa.nivel or index + 1,
         'obrigatorio': bool(etapa.obrigatorio),
         'obrigatoria': bool(etapa.obrigatoria),
         'assinatura_obrigatoria': bool(etapa.assinatura_obrigatoria),
