@@ -559,6 +559,7 @@
             obra_nome: String(item.obra_nome || 'Obra sem nome'),
             workflow_nome: String(item.workflow_nome || 'Sem workflow'),
             workflow_etapas: workflowEtapas,
+            workflow_etapas_agrupadas: true,
             execucoes_total: toNonNegativeNumber(item.execucoes_total),
             execucoes_status: execucoesStatus,
             workflow_tipo_resumo: normalizeWorkflowTipoResumoSeguro(item),
@@ -1374,7 +1375,12 @@
                     this.timelineTooltip = null;
                 },
                 getObraFluxoEtapas(obra) {
-                    return Array.isArray(obra?.workflow_etapas) ? obra.workflow_etapas : [];
+                    const etapas = Array.isArray(obra?.workflow_etapas) ? obra.workflow_etapas : [];
+                    if (!etapas.length) return [];
+                    if (obra?.workflow_etapas_agrupadas || etapas.some((etapa) => Array.isArray(etapa?.grupo_itens))) {
+                        return etapas;
+                    }
+                    return groupObraWorkflowDiagramStages(etapas, obra);
                 },
                 getWorkflowDiagramStageCount() {
                     return this.getObraFluxoEtapas(this.obraSelecionada).length;

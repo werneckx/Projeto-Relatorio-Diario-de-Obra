@@ -450,7 +450,7 @@
                             <tr class="group border-b border-slate-100 text-slate-700 transition-colors hover:bg-slate-50">
                                 <td class="px-6 py-4 font-semibold text-slate-900" x-text="obra.obra_nome"></td>
                                 <td class="px-4 py-4" x-text="obra.workflow_nome"></td>
-                                <td class="px-4 py-4" x-text="(obra.workflow_etapas || []).length"></td>
+                                <td class="px-4 py-4" x-text="getObraFluxoEtapas(obra).length"></td>
                                 <td class="px-4 py-4" x-text="obra.execucoes_ativas"></td>
                                 <td class="px-4 py-4" x-text="obra.workflow_origem"></td>
                                 <td class="px-6 py-4">
