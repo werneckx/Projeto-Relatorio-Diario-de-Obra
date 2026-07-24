@@ -50,6 +50,7 @@ def test_criar_obra_salva_workflow_individual_como_rascunho(client, empresa, usu
             "workflow_selecionado_id": str(workflow.id),
             "workflow_config_json": json.dumps({
                 "workflow_id": workflow.id,
+                "customizado": True,
                 "aprovacao_paralela": False,
                 "assignments": {},
                 "custom_stages": [
@@ -101,6 +102,82 @@ def test_criar_obra_salva_workflow_individual_como_rascunho(client, empresa, usu
     db.session.delete(workflow)
     db.session.delete(cliente)
     db.session.delete(papel_aprovador)
+    db.session.commit()
+
+
+def test_criar_obra_com_workflow_padrao_mantem_heranca(client, empresa, usuario):
+    usuario.troca_senha_obrigatoria = False
+    db.session.add(usuario)
+
+    cliente = Cliente(
+        empresa_id=empresa.id,
+        razao_social="Cliente Heranca Workflow",
+        nome_fantasia="Cliente Heranca Workflow",
+        cnpj="22333444000156",
+        ativo=True,
+    )
+    workflow = WorkflowDefinicao(
+        empresa_id=empresa.id,
+        nome="Workflow Herdado",
+        codigo="WF_HERDADO",
+        tipo_fluxo="SEQUENCIAL",
+        ativo=True,
+    )
+    db.session.add_all([cliente, workflow])
+    db.session.flush()
+    db.session.add(
+        WorkflowEtapa(
+            empresa_id=empresa.id,
+            workflow_id=workflow.id,
+            nivel=1,
+            ordem=1,
+            nome="Etapa herdada",
+            tipo_aprovador="USUARIO",
+            usuario_aprovador_id=usuario.id,
+            ativo=True,
+        )
+    )
+    db.session.commit()
+
+    with client.session_transaction() as sess:
+        sess["user_id"] = usuario.id
+        sess["empresa_id"] = empresa.id
+        sess["user_role"] = usuario.papel or "Admin"
+
+    resp = client.post(
+        "/auth/obras/salvar",
+        data={
+            "nome": "Obra Nova Herdando Workflow",
+            "cliente_id": str(cliente.id),
+            "cnpj_obra": "99888777000167",
+            "workflow_selecionado_id": str(workflow.id),
+            "workflow_config_json": json.dumps({
+                "workflow_id": workflow.id,
+                "customizado": False,
+                "aprovacao_paralela": False,
+                "assignments": {},
+                "custom_stages": [],
+            }),
+        },
+        follow_redirects=False,
+    )
+
+    assert resp.status_code == 302
+    obra = Obra.query.filter_by(nome="Obra Nova Herdando Workflow", empresa_id=empresa.id).first()
+    assert obra
+    assert WorkflowDefinicao.query.filter_by(empresa_id=empresa.id, obra_id=obra.id, ativo=True).first() is None
+    assert ObraConfig.query.filter_by(
+        empresa_id=empresa.id,
+        obra_id=obra.id,
+        chave=WorkflowService.WORKFLOW_DEFAULT_CONFIG_KEY,
+    ).first().valor == f"id:{workflow.id}"
+
+    ObraConfig.query.filter_by(empresa_id=empresa.id, obra_id=obra.id).delete(synchronize_session=False)
+    ObraUsuario.query.filter_by(empresa_id=empresa.id, obra_id=obra.id).delete(synchronize_session=False)
+    db.session.delete(obra)
+    WorkflowEtapa.query.filter_by(workflow_id=workflow.id).delete(synchronize_session=False)
+    db.session.delete(workflow)
+    db.session.delete(cliente)
     db.session.commit()
 
 

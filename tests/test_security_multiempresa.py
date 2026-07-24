@@ -5,6 +5,7 @@ Testes para Segurança e Isolamento por Empresa - Branch 11
 import pytest
 from app import db
 from app.models.empresa import Empresa
+from app.models.cliente import Cliente
 from app.models.usuario import Usuario, Papel, UsuarioPapel
 from app.models.obra import Obra, FrenteTrabalho
 from app.models.rdo import RDO
@@ -43,12 +44,22 @@ class TestIsolamentoMultiempresa:
             )
             db.session.add(user_papel2)
 
+            cliente2 = Cliente(
+                empresa_id=empresa2.id,
+                razao_social="Cliente Empresa 2 Isolamento",
+                nome_fantasia="Cliente Empresa 2 Isolamento",
+                cnpj="11222333000145",
+                ativo=True,
+            )
+            db.session.add(cliente2)
+            db.session.flush()
+
             obra2 = Obra(
                 nome="Obra Empresa 2",
                 empresa_id=empresa2.id,
                 status=1,
                 criado_por=usuario2.id,
-                cliente_id=0,
+                cliente_id=cliente2.id,
             )
             db.session.add(obra2)
             db.session.flush()
@@ -73,7 +84,7 @@ class TestIsolamentoMultiempresa:
             # Usuário 1 não deve ver RDO da Empresa 2
             rdos_empresa1 = RDO.query.filter_by(empresa_id=usuario_empresa1.empresa_id, ativo=True).all()
             rdos_ids = [rdo.id for rdo in rdos_empresa1]
-            
+
             assert rdo_empresa1.id in rdos_ids
             assert rdo2.id not in rdos_ids
 
@@ -82,13 +93,13 @@ class TestIsolamentoMultiempresa:
         with app.app_context():
             # Teste que a query sem filtro de empresa retorna múltiplas empresas
             obras_total = Obra.query.filter_by(ativo=True).all()
-            
+
             # Teste que a query COM filtro de empresa retorna apenas da empresa atual
             obras_empresa1 = Obra.query.filter_by(
                 empresa_id=usuario_empresa1.empresa_id,
                 ativo=True
             ).all()
-            
+
             # Deve haver diferença (ou não ter outras, mas o teste prova a obrigatoriedade)
             assert len(obras_empresa1) >= 0  # Pelo menos 0 resultado
 
@@ -99,9 +110,9 @@ class TestIsolamentoMultiempresa:
             resp = client.post(
                 "/auth/login",
                 data={"email": usuario_empresa1.email, "senha": "senha123"},
-                follow_redirects=True,
+                follow_redirects=False,
             )
-            assert resp.status_code == 200
+            assert resp.status_code == 302
 
         # Tentar alterar obra da empresa2 deve ser negado
         # (Varia conforme endpoint implementado)
@@ -118,9 +129,9 @@ class TestPermissaoEmpresas:
                 empresa_id=usuario_empresa1.empresa_id,
                 ativo=True
             ).all()
-            
+
             usuarios_ids = [u.id for u in usuarios_empresa1]
-            
+
             # Usuário 1 deve aparecer em sua empresa
             assert usuario_empresa1.id in usuarios_ids
             # Usuário 2 não deve aparecer na empresa1
@@ -138,7 +149,7 @@ class TestPermissaoEmpresas:
                 empresa_id=empresa1.id,
                 ativo=True
             ).all()
-            
+
             papeis_ids = [p.id for p in papeis_empresa1]
             assert papel1.id in papeis_ids
             assert papel2.id not in papeis_ids
@@ -245,9 +256,9 @@ class TestAcessoNegadoOutraEmpresa:
             resp = client.post(
                 "/auth/login",
                 data={"email": usuario_empresa1.email, "senha": "senha123"},
-                follow_redirects=True,
+                follow_redirects=False,
             )
-            assert resp.status_code == 200
+            assert resp.status_code == 302
 
         # Tentar acessar lista de RDOs deve retornar apenas da empresa atual
         # (Implementação dependente de cada rota)
@@ -265,6 +276,6 @@ class TestAcessoNegadoOutraEmpresa:
                 empresa_id=usuario_empresa1.empresa_id,
                 ativo=True
             ).all()
-            
+
             rdo_ids = [r.id for r in rdos]
             assert rdo_empresa1.id not in rdo_ids

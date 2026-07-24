@@ -170,6 +170,7 @@ def usuario(app, empresa, papel):
         email="usuario1@teste.com",
         empresa_id=empresa.id,
         ativo=True,
+        troca_senha_obrigatoria=False,
     )
     usr.set_senha("senha123")
     db.session.add(usr)
@@ -188,9 +189,11 @@ def usuario(app, empresa, papel):
     yield usr
     from app.models.usuario import UsuarioPapel
     from app.models.arquivo import Arquivo
+    from app.models.notificacao import Notificacao
     from app.models.sessao import SessaoUsuario, AcessoLog
     from app.models.auditoria import AuditoriaLog
     from app.models.obra import ObraUsuario
+    from app.models.notificacao import Notificacao
     from app.models.rdo import RDOAprovacao, RDOAssinatura
     from app.models.workflow import WorkflowEtapa, WorkflowExecucaoEtapa
 
@@ -207,6 +210,9 @@ def usuario(app, empresa, papel):
     db.session.query(Arquivo).filter(
         (Arquivo.criado_por == usr.id) | (Arquivo.modificado_por == usr.id)
     ).delete(synchronize_session=False)
+    db.session.query(Notificacao).filter(
+        (Notificacao.usuario_id == usr.id) | (Notificacao.criado_por == usr.id)
+    ).delete(synchronize_session=False)
     db.session.query(SessaoUsuario).filter(
         (SessaoUsuario.usuario_id == usr.id) | (SessaoUsuario.encerrada_por == usr.id)
     ).delete(synchronize_session=False)
@@ -214,7 +220,7 @@ def usuario(app, empresa, papel):
     db.session.query(AuditoriaLog).filter(AuditoriaLog.usuario_id == usr.id).delete(synchronize_session=False)
     db.session.flush()
     db.session.expire_all()
-    db.session.delete(usr)
+    db.session.query(Usuario).filter_by(id=usr.id).delete(synchronize_session=False)
     db.session.commit()
 
 
@@ -226,6 +232,7 @@ def usuario2(app, empresa, papel):
         email="usuario2@teste.com",
         empresa_id=empresa.id,
         ativo=True,
+        troca_senha_obrigatoria=False,
     )
     usr.set_senha("senha123")
     db.session.add(usr)
@@ -243,6 +250,7 @@ def usuario2(app, empresa, papel):
     yield usr
     from app.models.usuario import UsuarioPapel
     from app.models.arquivo import Arquivo
+    from app.models.notificacao import Notificacao
     from app.models.sessao import SessaoUsuario, AcessoLog
     from app.models.auditoria import AuditoriaLog
     from app.models.obra import ObraUsuario
@@ -262,12 +270,15 @@ def usuario2(app, empresa, papel):
     db.session.query(Arquivo).filter(
         (Arquivo.criado_por == usr.id) | (Arquivo.modificado_por == usr.id)
     ).delete(synchronize_session=False)
+    db.session.query(Notificacao).filter(
+        (Notificacao.usuario_id == usr.id) | (Notificacao.criado_por == usr.id)
+    ).delete(synchronize_session=False)
     db.session.query(SessaoUsuario).filter(
         (SessaoUsuario.usuario_id == usr.id) | (SessaoUsuario.encerrada_por == usr.id)
     ).delete(synchronize_session=False)
     db.session.query(AcessoLog).filter(AcessoLog.usuario_id == usr.id).delete(synchronize_session=False)
     db.session.query(AuditoriaLog).filter(AuditoriaLog.usuario_id == usr.id).delete(synchronize_session=False)
-    db.session.delete(usr)
+    db.session.query(Usuario).filter_by(id=usr.id).delete(synchronize_session=False)
     db.session.commit()
 
 
@@ -279,6 +290,7 @@ def usuario3(app, empresa, papel):
         email="usuario3@teste.com",
         empresa_id=empresa.id,
         ativo=True,
+        troca_senha_obrigatoria=False,
     )
     usr.set_senha("senha123")
     db.session.add(usr)
@@ -295,6 +307,7 @@ def usuario3(app, empresa, papel):
     db.session.commit()
     yield usr
     from app.models.obra import ObraUsuario
+    from app.models.notificacao import Notificacao
     from app.models.rdo import RDOAprovacao, RDOAssinatura
     from app.models.workflow import WorkflowEtapa, WorkflowExecucaoEtapa
     db.session.query(ObraUsuario).filter(ObraUsuario.usuario_id == usr.id).delete(synchronize_session=False)
@@ -306,7 +319,10 @@ def usuario3(app, empresa, papel):
     db.session.query(WorkflowEtapa).filter(WorkflowEtapa.usuario_aprovador_id == usr.id).delete(
         synchronize_session=False
     )
-    db.session.delete(usr)
+    db.session.query(Notificacao).filter(
+        (Notificacao.usuario_id == usr.id) | (Notificacao.criado_por == usr.id)
+    ).delete(synchronize_session=False)
+    db.session.query(UsuarioPapel).filter(UsuarioPapel.usuario_id == usr.id).delete(synchronize_session=False)
     db.session.commit()
 
 
@@ -344,7 +360,7 @@ def cliente_empresa1(app, empresa1):
     db.session.add(cli)
     db.session.commit()
     yield cli
-    db.session.delete(cli)
+    db.session.query(Cliente).filter_by(id=cli.id).delete(synchronize_session=False)
     db.session.commit()
 
 
@@ -362,7 +378,7 @@ def cliente_empresa2(app, empresa2):
     db.session.add(cli)
     db.session.commit()
     yield cli
-    db.session.delete(cli)
+    db.session.query(Cliente).filter_by(id=cli.id).delete(synchronize_session=False)
     db.session.commit()
 
 
@@ -378,6 +394,7 @@ def usuario_empresa1(app, empresa1):
         email="usuario1@empresa1.com",
         empresa_id=empresa1.id,
         ativo=True,
+        troca_senha_obrigatoria=False,
     )
     usr.set_senha("senha123")
     db.session.add(usr)
@@ -395,13 +412,17 @@ def usuario_empresa1(app, empresa1):
     yield usr
     from app.models.sessao import SessaoUsuario, AcessoLog
     from app.models.auditoria import AuditoriaLog
+    from app.models.notificacao import Notificacao
     db.session.query(SessaoUsuario).filter(
         (SessaoUsuario.usuario_id == usr.id) | (SessaoUsuario.encerrada_por == usr.id)
     ).delete(synchronize_session=False)
     db.session.query(AcessoLog).filter(AcessoLog.usuario_id == usr.id).delete(synchronize_session=False)
     db.session.query(AuditoriaLog).filter(AuditoriaLog.usuario_id == usr.id).delete(synchronize_session=False)
+    db.session.query(Notificacao).filter(
+        (Notificacao.usuario_id == usr.id) | (Notificacao.criado_por == usr.id)
+    ).delete(synchronize_session=False)
     db.session.query(UsuarioPapel).filter(UsuarioPapel.usuario_id == usr.id).delete(synchronize_session=False)
-    db.session.delete(usr)
+    db.session.query(Usuario).filter_by(id=usr.id).delete(synchronize_session=False)
     db.session.commit()
 
 
@@ -417,6 +438,7 @@ def usuario_empresa2(app, empresa2):
         email="usuario2@empresa2.com",
         empresa_id=empresa2.id,
         ativo=True,
+        troca_senha_obrigatoria=False,
     )
     usr.set_senha("senha123")
     db.session.add(usr)
@@ -434,13 +456,17 @@ def usuario_empresa2(app, empresa2):
     yield usr
     from app.models.sessao import SessaoUsuario, AcessoLog
     from app.models.auditoria import AuditoriaLog
+    from app.models.notificacao import Notificacao
     db.session.query(SessaoUsuario).filter(
         (SessaoUsuario.usuario_id == usr.id) | (SessaoUsuario.encerrada_por == usr.id)
     ).delete(synchronize_session=False)
     db.session.query(AcessoLog).filter(AcessoLog.usuario_id == usr.id).delete(synchronize_session=False)
     db.session.query(AuditoriaLog).filter(AuditoriaLog.usuario_id == usr.id).delete(synchronize_session=False)
+    db.session.query(Notificacao).filter(
+        (Notificacao.usuario_id == usr.id) | (Notificacao.criado_por == usr.id)
+    ).delete(synchronize_session=False)
     db.session.query(UsuarioPapel).filter(UsuarioPapel.usuario_id == usr.id).delete(synchronize_session=False)
-    db.session.delete(usr)
+    db.session.query(Usuario).filter_by(id=usr.id).delete(synchronize_session=False)
     db.session.commit()
 
 
@@ -546,7 +572,7 @@ def cliente(app, empresa):
     db.session.add(cli)
     db.session.commit()
     yield cli
-    db.session.delete(cli)
+    db.session.query(Cliente).filter_by(id=cli.id).delete(synchronize_session=False)
     db.session.commit()
 
 
@@ -564,7 +590,18 @@ def obra(app, empresa, usuario, cliente):
     db.session.commit()
     obra_id = obr.id
     yield obr
-    from app.models.rdo import RDOAprovacao, RDOAssinatura, RDOVersao
+    from app.models.rdo import (
+        RDOAprovacao,
+        RDOAssinatura,
+        RDOAtividade,
+        RDOEquipamento,
+        RDOFoto,
+        RDOMaoObra,
+        RDOOcorrencia,
+        RDOVersao,
+    )
+    from app.models.arquivo import Arquivo
+    from app.models.notificacao import Notificacao
     from app.models.workflow import (
         WorkflowDefinicao,
         WorkflowEtapa,
@@ -581,6 +618,13 @@ def obra(app, empresa, usuario, cliente):
         db.session.query(RDOAprovacao).filter(RDOAprovacao.rdo_id.in_(rdo_ids)).delete(synchronize_session=False)
         db.session.query(RDOAssinatura).filter(RDOAssinatura.rdo_id.in_(rdo_ids)).delete(synchronize_session=False)
         db.session.query(RDOVersao).filter(RDOVersao.rdo_id.in_(rdo_ids)).delete(synchronize_session=False)
+        db.session.query(RDOMaoObra).filter(RDOMaoObra.rdo_id.in_(rdo_ids)).delete(synchronize_session=False)
+        db.session.query(RDOEquipamento).filter(RDOEquipamento.rdo_id.in_(rdo_ids)).delete(synchronize_session=False)
+        db.session.query(RDOOcorrencia).filter(RDOOcorrencia.rdo_id.in_(rdo_ids)).delete(synchronize_session=False)
+        db.session.query(RDOAtividade).filter(RDOAtividade.rdo_id.in_(rdo_ids)).delete(synchronize_session=False)
+        db.session.query(RDOFoto).filter(RDOFoto.rdo_id.in_(rdo_ids)).delete(synchronize_session=False)
+        db.session.query(Arquivo).filter(Arquivo.rdo_id.in_(rdo_ids)).delete(synchronize_session=False)
+        db.session.query(Notificacao).filter(Notificacao.rdo_id.in_(rdo_ids)).delete(synchronize_session=False)
         exec_ids = [
             exec_id
             for (exec_id,) in db.session.query(WorkflowExecucao.id).filter(WorkflowExecucao.rdo_id.in_(rdo_ids)).all()
@@ -635,7 +679,18 @@ def frente_trabalho(app, empresa, obra):
     db.session.commit()
     frente_id = frente.id
     yield frente
-    from app.models.rdo import RDOAprovacao, RDOAssinatura, RDOVersao
+    from app.models.rdo import (
+        RDOAprovacao,
+        RDOAssinatura,
+        RDOAtividade,
+        RDOEquipamento,
+        RDOFoto,
+        RDOMaoObra,
+        RDOOcorrencia,
+        RDOVersao,
+    )
+    from app.models.arquivo import Arquivo
+    from app.models.notificacao import Notificacao
     from app.models.workflow import WorkflowExecucao, WorkflowExecucaoEtapa
     from app.models.obra import FrenteColaborador
 
@@ -647,6 +702,13 @@ def frente_trabalho(app, empresa, obra):
         db.session.query(RDOAprovacao).filter(RDOAprovacao.rdo_id.in_(rdo_ids)).delete(synchronize_session=False)
         db.session.query(RDOAssinatura).filter(RDOAssinatura.rdo_id.in_(rdo_ids)).delete(synchronize_session=False)
         db.session.query(RDOVersao).filter(RDOVersao.rdo_id.in_(rdo_ids)).delete(synchronize_session=False)
+        db.session.query(RDOMaoObra).filter(RDOMaoObra.rdo_id.in_(rdo_ids)).delete(synchronize_session=False)
+        db.session.query(RDOEquipamento).filter(RDOEquipamento.rdo_id.in_(rdo_ids)).delete(synchronize_session=False)
+        db.session.query(RDOOcorrencia).filter(RDOOcorrencia.rdo_id.in_(rdo_ids)).delete(synchronize_session=False)
+        db.session.query(RDOAtividade).filter(RDOAtividade.rdo_id.in_(rdo_ids)).delete(synchronize_session=False)
+        db.session.query(RDOFoto).filter(RDOFoto.rdo_id.in_(rdo_ids)).delete(synchronize_session=False)
+        db.session.query(Arquivo).filter(Arquivo.rdo_id.in_(rdo_ids)).delete(synchronize_session=False)
+        db.session.query(Notificacao).filter(Notificacao.rdo_id.in_(rdo_ids)).delete(synchronize_session=False)
         exec_ids = [
             exec_id
             for (exec_id,) in db.session.query(WorkflowExecucao.id).filter(WorkflowExecucao.rdo_id.in_(rdo_ids)).all()
@@ -665,4 +727,3 @@ def frente_trabalho(app, empresa, obra):
     )
     db.session.query(FrenteTrabalho).filter(FrenteTrabalho.id == frente_id).delete(synchronize_session=False)
     db.session.commit()
-

@@ -1313,7 +1313,7 @@ def lista_obras():
 
     query = Obra.query.order_by(Obra.id.asc())
     query = _apply_obras_usuario_scope(query, user, empresa_id)
-        
+
     resultados = query.all()
 
     user_ids = set()
@@ -1353,7 +1353,7 @@ def lista_obras():
             'modificado_por_nome': user_name_by_id.get(obra_obj.modificado_por) if obra_obj.modificado_por else None,
         }
         obras_formatadas.append(obra_dict)
-    
+
     return render_template("cadastros/obras/list_obras.html", opcoes=obras_formatadas, categoria="obra")
 
 
@@ -1432,7 +1432,7 @@ def toggle_user_obras(obraid):
 
     empresa_id = session.get('empresa_id')
     obra = Obra.query.filter_by(id=obraid, empresa_id=empresa_id).first_or_404()
-    obra.status = not obra.status 
+    obra.status = not obra.status
     set_audit_on_update(obra)
     try:
         db.session.commit()
@@ -1440,7 +1440,7 @@ def toggle_user_obras(obraid):
     except Exception as e:
         db.session.rollback()
         return {"message": f"Erro ao atualizar: {str(e)}"}, 500
-    
+
 @auth_bp.route('/gerar-obra', methods=['POST'])
 @auth_bp.post('/obras/salvar')
 @login_required
@@ -1649,7 +1649,7 @@ def gerar_obra():
             )
             set_audit_on_create(obra, user_id=audit_user_id)
             db.session.add(obra)
-            db.session.flush() 
+            db.session.flush()
             flash("Obra cadastrada com sucesso!", "success")
 
             usuarios_com_acesso = {criado_por} if criado_por else set()
@@ -1665,7 +1665,7 @@ def gerar_obra():
                 frente = FrenteTrabalho.query.filter_by(frente_trabalho_id=f_id, obra_id=obra.id, empresa_id=obra.empresa_id).first()
                 if frente:
                     set_audit_on_inactivate(frente, user_id=audit_user_id)
-            
+
             for f_nova in data.get('novas', []):
                 nova_frente = FrenteTrabalho(
                     empresa_id=session.get('empresa_id'),
@@ -1698,7 +1698,12 @@ def gerar_obra():
         # Em obra nova, o workflow do formulario e gravado apos o flush da obra.
         _ensure_obra_workflow_config_definitions()
         workflow_assignments = workflow_config_data.get("assignments") if isinstance(workflow_config_data.get("assignments"), dict) else {}
-        workflow_custom_stages = workflow_config_data.get("custom_stages") if isinstance(workflow_config_data.get("custom_stages"), list) else []
+        workflow_customizado = bool(workflow_config_data.get("customizado"))
+        workflow_custom_stages = (
+            workflow_config_data.get("custom_stages")
+            if workflow_customizado and isinstance(workflow_config_data.get("custom_stages"), list)
+            else []
+        )
         workflow_draft_error = None
         if workflow_selected_raw:
             try:
@@ -1709,13 +1714,15 @@ def gerar_obra():
             workflow_source = db.session.get(WorkflowDefinicao, workflow_selected_id)
             if not _is_workflow_obra_mvp(workflow_source):
                 raise WorkflowResolucaoError("Nesta tela, selecione apenas os workflows Simples, Sequencial ou Paralelo.")
-            custom_workflow = _upsert_obra_workflow_customizado(
-                empresa_id=obra.empresa_id,
-                obra=obra,
-                source_workflow=workflow_source,
-                workflow_config_data=workflow_config_data,
-                actor_id=audit_user_id,
-            )
+            custom_workflow = None
+            if workflow_customizado:
+                custom_workflow = _upsert_obra_workflow_customizado(
+                    empresa_id=obra.empresa_id,
+                    obra=obra,
+                    source_workflow=workflow_source,
+                    workflow_config_data={**workflow_config_data, "custom_stages": workflow_custom_stages},
+                    actor_id=audit_user_id,
+                )
             workflow_alvo = custom_workflow or workflow_source
             if custom_workflow and workflow_custom_stages:
                 workflow_assignments = {}
@@ -1783,7 +1790,7 @@ def gerar_obra():
         db.session.rollback()
         flash(f"Erro ao processar a solicitação: {str(e)}", "danger")
         return redirect(url_for('auth.lista_obras'))
-    
+
 @auth_bp.get("/editar-obra/<int:id>")
 @auth_bp.get("/obras/<int:id>/editar")
 @login_required
@@ -1852,11 +1859,11 @@ def visualizar_obra(id):
     mao_de_obra_options = AuxFuncoes.query.filter_by(ativo=True).order_by(AuxFuncoes.nome.asc()).all()
     equipe_obra = _get_equipe_obra_payload(id)
     centros_custo = _get_centros_custo_options(session.get('empresa_id'))
-    
+
     return render_template(
-        "cadastros/obras/form_obra.html", 
-        item=item, 
-        view_mode=True, 
+        "cadastros/obras/form_obra.html",
+        item=item,
+        view_mode=True,
         categoria="obra",
         frentes=frentes,
         usuario=usuario,
@@ -2353,7 +2360,7 @@ def toggle_obra_status(id):
     set_audit_on_update(obra)
     try:
         db.session.commit()
-        return '', 200 
+        return '', 200
     except Exception:
         db.session.rollback()
         return '', 500

@@ -1162,7 +1162,7 @@
 
     <div class="obra-governanca-tab-panel hidden" data-tab-panel="definicoes">
         <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1.2fr),minmax(280px,0.8fr)] gap-4 p-5">
-            
+
             <div class="rounded-2xl border border-slate-200 bg-white overflow-hidden">
                 <div class="px-4 py-3 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between gap-3">
                     <div>
@@ -1170,7 +1170,7 @@
                         <p class="text-xs text-slate-500 mt-1">Valores vigentes considerando sistema, empresa e obra.</p>
                     </div>
                 </div>
-                
+
                 <div class="p-4 space-y-3">
                     {% for cfg in obra_governanca.configs_resolvidas %}
                     <div class="rounded-2xl border border-slate-200 bg-slate-50/40 p-4">
@@ -1207,7 +1207,7 @@
                     {% endfor %}
                 </div>
             </div>
-            
+
         </div>
     </div>
 
@@ -4019,11 +4019,13 @@
         function syncObraWorkflowConfigField() {
             const hidden = el('workflow_config_json');
             if (!hidden) return;
+            const customizado = Boolean(obraWorkflowState.dirtyCustomStages);
             hidden.value = JSON.stringify({
                 workflow_id: Number(el('workflow_selecionado_id')?.value || 0) || null,
+                customizado,
                 aprovacao_paralela: getWorkflowRules().isParallel,
                 assignments: getObraWorkflowAssignments(),
-                custom_stages: getSerializedCustomWorkflowStages(),
+                custom_stages: customizado ? getSerializedCustomWorkflowStages() : [],
             });
         }
 
@@ -6093,7 +6095,7 @@
             hydrateWorkflowCustomStages(obraWorkflowState.preview, true);
             bindWorkflowFloatingControls();
             bindWorkflowStageEditorListeners();
-            
+
             renderObraWorkflowPreview(obraWorkflowState.preview);
             syncObraWorkflowConfigField();
         }

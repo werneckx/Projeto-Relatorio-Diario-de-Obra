@@ -1295,7 +1295,7 @@ INSERT INTO aux_tipo_obra (empresa_id, nome, descricao, is_system, ativo) VALUES
 
 /* ==========================================================
    SCRIPT DE SEED PARA DEMONSTRAÇÃO (RDO PLATFORM)
-   Este script assume que as tabelas base e os dados de 
+   Este script assume que as tabelas base e os dados de
    sistema (is_system = TRUE) já foram inseridos.
    ========================================================== */
 
@@ -1783,7 +1783,7 @@ CREATE TABLE empresa_config (
     empresa_id INT NOT NULL,
     chave VARCHAR(100) NOT NULL,
     valor TEXT,
-    
+
     UNIQUE KEY uk_empresa_config (empresa_id, chave),
     CONSTRAINT fk_empresa_config_empresa FOREIGN KEY (empresa_id) REFERENCES empresa(id) ON DELETE CASCADE,
     CONSTRAINT fk_empresa_config_chave FOREIGN KEY (chave) REFERENCES config_definicoes(chave) ON DELETE CASCADE
@@ -2432,4 +2432,3 @@ SELECT e.id, 'workflow.sla_padrao_horas', '24' FROM empresa e
 ON DUPLICATE KEY UPDATE valor = valor;
 
 SET FOREIGN_KEY_CHECKS = 1;
-

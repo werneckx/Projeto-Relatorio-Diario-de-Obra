@@ -8,7 +8,7 @@ from app.models.empresa import Empresa
 
 
 def test_gerar_rdo_preenche_mao_de_obra_por_frente(
-    app, client, empresa, usuario_empresa1, obra_empresa1, frente_trabalho
+    app, client, empresa, usuario, obra, frente_trabalho
 ):
     # Observação:
     # - Este teste exercita apenas o endpoint /gerar-rdo.
@@ -32,7 +32,7 @@ def test_gerar_rdo_preenche_mao_de_obra_por_frente(
     db.session.flush()
 
     payload = {
-        "obra_id": str(obra_empresa1.id),
+        "obra_id": str(obra.id),
         "frente_trabalho_id": str(frente_trabalho.id),
         "data_rdo": "2026-01-01",
         "climas_manha": "",
@@ -45,7 +45,12 @@ def test_gerar_rdo_preenche_mao_de_obra_por_frente(
         # nada adicional de mao obra: o service deve preencher automaticamente
     }
 
-    resp = client.post("/gerar-rdo", data=payload, follow_redirects=False)
+    with client.session_transaction() as sess:
+        sess["user_id"] = usuario.id
+        sess["empresa_id"] = empresa.id
+        sess["user_role"] = usuario.papel or "Admin"
+
+    resp = client.post("/auth/gerar-rdo", data=payload, follow_redirects=False)
     assert resp.status_code in (200, 302)
 
     # Encontrar o RDO criado: o endpoint redireciona para visualizar; mas aqui validamos o banco.

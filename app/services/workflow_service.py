@@ -1808,6 +1808,3 @@ class WorkflowService:
             'vencido': vencido,
             'tempo_restante_horas': (vencimento - agora).total_seconds() / 3600 if not vencido else 0,
         }
-
-
-
