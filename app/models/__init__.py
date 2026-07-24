@@ -8,7 +8,12 @@ from app.models.obra import Obra, FrenteTrabalho, FrenteColaborador, ObraUsuario
 from app.models.rdo import RDO, RDOMaoObra, RDOEquipamento, RDOOcorrencia, RDOAtividade, RDOFoto, RDOAprovacao, RDOAssinatura, RDOVersao
 from app.models.auditoria import AuditoriaLog
 from app.models.configuracao import ConfigDefinicao, EmpresaConfig, ObraConfig
-from app.models.workflow import WorkflowDefinicao, WorkflowEtapa
+from app.models.workflow import (
+    WorkflowDefinicao,
+    WorkflowEtapa,
+    WorkflowExecucao,
+    WorkflowExecucaoEtapa,
+)
 from app.models.notificacao import Notificacao
 from app.models.arquivo import Arquivo
 from app.models.sessao import SessaoUsuario, AcessoLog

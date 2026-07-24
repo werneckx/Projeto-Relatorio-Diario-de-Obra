@@ -170,6 +170,7 @@ def usuario(app, empresa, papel):
         email="usuario1@teste.com",
         empresa_id=empresa.id,
         ativo=True,
+        troca_senha_obrigatoria=False,
     )
     usr.set_senha("senha123")
     db.session.add(usr)
@@ -188,12 +189,29 @@ def usuario(app, empresa, papel):
     yield usr
     from app.models.usuario import UsuarioPapel
     from app.models.arquivo import Arquivo
+    from app.models.notificacao import Notificacao
     from app.models.sessao import SessaoUsuario, AcessoLog
     from app.models.auditoria import AuditoriaLog
+    from app.models.obra import ObraUsuario
+    from app.models.notificacao import Notificacao
+    from app.models.rdo import RDOAprovacao, RDOAssinatura
+    from app.models.workflow import WorkflowEtapa, WorkflowExecucaoEtapa
 
     db.session.query(UsuarioPapel).filter(UsuarioPapel.usuario_id == usr.id).delete(synchronize_session=False)
+    db.session.query(ObraUsuario).filter(ObraUsuario.usuario_id == usr.id).delete(synchronize_session=False)
+    db.session.query(RDOAprovacao).filter(RDOAprovacao.aprovador_id == usr.id).delete(synchronize_session=False)
+    db.session.query(RDOAssinatura).filter(RDOAssinatura.usuario_id == usr.id).delete(synchronize_session=False)
+    db.session.query(WorkflowExecucaoEtapa).filter(
+        WorkflowExecucaoEtapa.usuario_resolvido_id == usr.id
+    ).delete(synchronize_session=False)
+    db.session.query(WorkflowEtapa).filter(WorkflowEtapa.usuario_aprovador_id == usr.id).delete(
+        synchronize_session=False
+    )
     db.session.query(Arquivo).filter(
         (Arquivo.criado_por == usr.id) | (Arquivo.modificado_por == usr.id)
+    ).delete(synchronize_session=False)
+    db.session.query(Notificacao).filter(
+        (Notificacao.usuario_id == usr.id) | (Notificacao.criado_por == usr.id)
     ).delete(synchronize_session=False)
     db.session.query(SessaoUsuario).filter(
         (SessaoUsuario.usuario_id == usr.id) | (SessaoUsuario.encerrada_por == usr.id)
@@ -202,7 +220,7 @@ def usuario(app, empresa, papel):
     db.session.query(AuditoriaLog).filter(AuditoriaLog.usuario_id == usr.id).delete(synchronize_session=False)
     db.session.flush()
     db.session.expire_all()
-    db.session.delete(usr)
+    db.session.query(Usuario).filter_by(id=usr.id).delete(synchronize_session=False)
     db.session.commit()
 
 
@@ -214,6 +232,7 @@ def usuario2(app, empresa, papel):
         email="usuario2@teste.com",
         empresa_id=empresa.id,
         ativo=True,
+        troca_senha_obrigatoria=False,
     )
     usr.set_senha("senha123")
     db.session.add(usr)
@@ -231,19 +250,35 @@ def usuario2(app, empresa, papel):
     yield usr
     from app.models.usuario import UsuarioPapel
     from app.models.arquivo import Arquivo
+    from app.models.notificacao import Notificacao
     from app.models.sessao import SessaoUsuario, AcessoLog
     from app.models.auditoria import AuditoriaLog
+    from app.models.obra import ObraUsuario
+    from app.models.rdo import RDOAprovacao, RDOAssinatura
+    from app.models.workflow import WorkflowEtapa, WorkflowExecucaoEtapa
 
     db.session.query(UsuarioPapel).filter(UsuarioPapel.usuario_id == usr.id).delete(synchronize_session=False)
+    db.session.query(ObraUsuario).filter(ObraUsuario.usuario_id == usr.id).delete(synchronize_session=False)
+    db.session.query(RDOAprovacao).filter(RDOAprovacao.aprovador_id == usr.id).delete(synchronize_session=False)
+    db.session.query(RDOAssinatura).filter(RDOAssinatura.usuario_id == usr.id).delete(synchronize_session=False)
+    db.session.query(WorkflowExecucaoEtapa).filter(
+        WorkflowExecucaoEtapa.usuario_resolvido_id == usr.id
+    ).delete(synchronize_session=False)
+    db.session.query(WorkflowEtapa).filter(WorkflowEtapa.usuario_aprovador_id == usr.id).delete(
+        synchronize_session=False
+    )
     db.session.query(Arquivo).filter(
         (Arquivo.criado_por == usr.id) | (Arquivo.modificado_por == usr.id)
+    ).delete(synchronize_session=False)
+    db.session.query(Notificacao).filter(
+        (Notificacao.usuario_id == usr.id) | (Notificacao.criado_por == usr.id)
     ).delete(synchronize_session=False)
     db.session.query(SessaoUsuario).filter(
         (SessaoUsuario.usuario_id == usr.id) | (SessaoUsuario.encerrada_por == usr.id)
     ).delete(synchronize_session=False)
     db.session.query(AcessoLog).filter(AcessoLog.usuario_id == usr.id).delete(synchronize_session=False)
     db.session.query(AuditoriaLog).filter(AuditoriaLog.usuario_id == usr.id).delete(synchronize_session=False)
-    db.session.delete(usr)
+    db.session.query(Usuario).filter_by(id=usr.id).delete(synchronize_session=False)
     db.session.commit()
 
 
@@ -255,6 +290,7 @@ def usuario3(app, empresa, papel):
         email="usuario3@teste.com",
         empresa_id=empresa.id,
         ativo=True,
+        troca_senha_obrigatoria=False,
     )
     usr.set_senha("senha123")
     db.session.add(usr)
@@ -270,7 +306,23 @@ def usuario3(app, empresa, papel):
     db.session.add(usuario_papel)
     db.session.commit()
     yield usr
-    db.session.delete(usr)
+    from app.models.obra import ObraUsuario
+    from app.models.notificacao import Notificacao
+    from app.models.rdo import RDOAprovacao, RDOAssinatura
+    from app.models.workflow import WorkflowEtapa, WorkflowExecucaoEtapa
+    db.session.query(ObraUsuario).filter(ObraUsuario.usuario_id == usr.id).delete(synchronize_session=False)
+    db.session.query(RDOAprovacao).filter(RDOAprovacao.aprovador_id == usr.id).delete(synchronize_session=False)
+    db.session.query(RDOAssinatura).filter(RDOAssinatura.usuario_id == usr.id).delete(synchronize_session=False)
+    db.session.query(WorkflowExecucaoEtapa).filter(
+        WorkflowExecucaoEtapa.usuario_resolvido_id == usr.id
+    ).delete(synchronize_session=False)
+    db.session.query(WorkflowEtapa).filter(WorkflowEtapa.usuario_aprovador_id == usr.id).delete(
+        synchronize_session=False
+    )
+    db.session.query(Notificacao).filter(
+        (Notificacao.usuario_id == usr.id) | (Notificacao.criado_por == usr.id)
+    ).delete(synchronize_session=False)
+    db.session.query(UsuarioPapel).filter(UsuarioPapel.usuario_id == usr.id).delete(synchronize_session=False)
     db.session.commit()
 
 
@@ -308,7 +360,7 @@ def cliente_empresa1(app, empresa1):
     db.session.add(cli)
     db.session.commit()
     yield cli
-    db.session.delete(cli)
+    db.session.query(Cliente).filter_by(id=cli.id).delete(synchronize_session=False)
     db.session.commit()
 
 
@@ -326,7 +378,7 @@ def cliente_empresa2(app, empresa2):
     db.session.add(cli)
     db.session.commit()
     yield cli
-    db.session.delete(cli)
+    db.session.query(Cliente).filter_by(id=cli.id).delete(synchronize_session=False)
     db.session.commit()
 
 
@@ -342,6 +394,7 @@ def usuario_empresa1(app, empresa1):
         email="usuario1@empresa1.com",
         empresa_id=empresa1.id,
         ativo=True,
+        troca_senha_obrigatoria=False,
     )
     usr.set_senha("senha123")
     db.session.add(usr)
@@ -357,7 +410,19 @@ def usuario_empresa1(app, empresa1):
     db.session.add(usuario_papel)
     db.session.commit()
     yield usr
-    db.session.delete(usr)
+    from app.models.sessao import SessaoUsuario, AcessoLog
+    from app.models.auditoria import AuditoriaLog
+    from app.models.notificacao import Notificacao
+    db.session.query(SessaoUsuario).filter(
+        (SessaoUsuario.usuario_id == usr.id) | (SessaoUsuario.encerrada_por == usr.id)
+    ).delete(synchronize_session=False)
+    db.session.query(AcessoLog).filter(AcessoLog.usuario_id == usr.id).delete(synchronize_session=False)
+    db.session.query(AuditoriaLog).filter(AuditoriaLog.usuario_id == usr.id).delete(synchronize_session=False)
+    db.session.query(Notificacao).filter(
+        (Notificacao.usuario_id == usr.id) | (Notificacao.criado_por == usr.id)
+    ).delete(synchronize_session=False)
+    db.session.query(UsuarioPapel).filter(UsuarioPapel.usuario_id == usr.id).delete(synchronize_session=False)
+    db.session.query(Usuario).filter_by(id=usr.id).delete(synchronize_session=False)
     db.session.commit()
 
 
@@ -373,6 +438,7 @@ def usuario_empresa2(app, empresa2):
         email="usuario2@empresa2.com",
         empresa_id=empresa2.id,
         ativo=True,
+        troca_senha_obrigatoria=False,
     )
     usr.set_senha("senha123")
     db.session.add(usr)
@@ -388,7 +454,19 @@ def usuario_empresa2(app, empresa2):
     db.session.add(usuario_papel)
     db.session.commit()
     yield usr
-    db.session.delete(usr)
+    from app.models.sessao import SessaoUsuario, AcessoLog
+    from app.models.auditoria import AuditoriaLog
+    from app.models.notificacao import Notificacao
+    db.session.query(SessaoUsuario).filter(
+        (SessaoUsuario.usuario_id == usr.id) | (SessaoUsuario.encerrada_por == usr.id)
+    ).delete(synchronize_session=False)
+    db.session.query(AcessoLog).filter(AcessoLog.usuario_id == usr.id).delete(synchronize_session=False)
+    db.session.query(AuditoriaLog).filter(AuditoriaLog.usuario_id == usr.id).delete(synchronize_session=False)
+    db.session.query(Notificacao).filter(
+        (Notificacao.usuario_id == usr.id) | (Notificacao.criado_por == usr.id)
+    ).delete(synchronize_session=False)
+    db.session.query(UsuarioPapel).filter(UsuarioPapel.usuario_id == usr.id).delete(synchronize_session=False)
+    db.session.query(Usuario).filter_by(id=usr.id).delete(synchronize_session=False)
     db.session.commit()
 
 
@@ -494,7 +572,7 @@ def cliente(app, empresa):
     db.session.add(cli)
     db.session.commit()
     yield cli
-    db.session.delete(cli)
+    db.session.query(Cliente).filter_by(id=cli.id).delete(synchronize_session=False)
     db.session.commit()
 
 
@@ -510,11 +588,82 @@ def obra(app, empresa, usuario, cliente):
     )
     db.session.add(obr)
     db.session.commit()
+    obra_id = obr.id
     yield obr
-    # Evita que o SQLAlchemy tente desassociar RDOs (setando FK para NULL),
-    # pois `rdo.obra_id` e `rdo.frente_trabalho_id` são NOT NULL.
-    RDO.query.filter_by(obra_id=obr.id).delete(synchronize_session=False)
-    db.session.delete(obr)
+    from app.models.rdo import (
+        RDOAprovacao,
+        RDOAssinatura,
+        RDOAtividade,
+        RDOEquipamento,
+        RDOFoto,
+        RDOMaoObra,
+        RDOOcorrencia,
+        RDOVersao,
+    )
+    from app.models.arquivo import Arquivo
+    from app.models.notificacao import Notificacao
+    from app.models.workflow import (
+        WorkflowDefinicao,
+        WorkflowEtapa,
+        WorkflowExecucao,
+        WorkflowExecucaoEtapa,
+    )
+    from app.models.obra import ObraUsuario, FrenteColaborador
+
+    rdo_ids = [
+        rdo_id
+        for (rdo_id,) in db.session.query(RDO.id).filter_by(obra_id=obra_id).all()
+    ]
+    if rdo_ids:
+        db.session.query(RDOAprovacao).filter(RDOAprovacao.rdo_id.in_(rdo_ids)).delete(synchronize_session=False)
+        db.session.query(RDOAssinatura).filter(RDOAssinatura.rdo_id.in_(rdo_ids)).delete(synchronize_session=False)
+        db.session.query(RDOVersao).filter(RDOVersao.rdo_id.in_(rdo_ids)).delete(synchronize_session=False)
+        db.session.query(RDOMaoObra).filter(RDOMaoObra.rdo_id.in_(rdo_ids)).delete(synchronize_session=False)
+        db.session.query(RDOEquipamento).filter(RDOEquipamento.rdo_id.in_(rdo_ids)).delete(synchronize_session=False)
+        db.session.query(RDOOcorrencia).filter(RDOOcorrencia.rdo_id.in_(rdo_ids)).delete(synchronize_session=False)
+        db.session.query(RDOAtividade).filter(RDOAtividade.rdo_id.in_(rdo_ids)).delete(synchronize_session=False)
+        db.session.query(RDOFoto).filter(RDOFoto.rdo_id.in_(rdo_ids)).delete(synchronize_session=False)
+        db.session.query(Arquivo).filter(Arquivo.rdo_id.in_(rdo_ids)).delete(synchronize_session=False)
+        db.session.query(Notificacao).filter(Notificacao.rdo_id.in_(rdo_ids)).delete(synchronize_session=False)
+        exec_ids = [
+            exec_id
+            for (exec_id,) in db.session.query(WorkflowExecucao.id).filter(WorkflowExecucao.rdo_id.in_(rdo_ids)).all()
+        ]
+        if exec_ids:
+            db.session.query(WorkflowExecucaoEtapa).filter(
+                WorkflowExecucaoEtapa.execucao_id.in_(exec_ids)
+            ).delete(synchronize_session=False)
+            db.session.query(WorkflowExecucao).filter(WorkflowExecucao.id.in_(exec_ids)).delete(
+                synchronize_session=False
+            )
+        db.session.query(RDO).filter(RDO.id.in_(rdo_ids)).delete(synchronize_session=False)
+
+    workflow_ids = [
+        workflow_id
+        for (workflow_id,) in db.session.query(WorkflowDefinicao.id).filter_by(obra_id=obra_id).all()
+    ]
+    if workflow_ids:
+        db.session.query(WorkflowEtapa).filter(WorkflowEtapa.workflow_id.in_(workflow_ids)).delete(
+            synchronize_session=False
+        )
+        db.session.query(WorkflowDefinicao).filter(WorkflowDefinicao.id.in_(workflow_ids)).delete(
+            synchronize_session=False
+        )
+
+    frente_ids = [
+        frente_id
+        for (frente_id,) in db.session.query(FrenteTrabalho.id).filter_by(obra_id=obra_id).all()
+    ]
+    if frente_ids:
+        db.session.query(FrenteColaborador).filter(FrenteColaborador.frente_id.in_(frente_ids)).delete(
+            synchronize_session=False
+        )
+        db.session.query(FrenteTrabalho).filter(FrenteTrabalho.id.in_(frente_ids)).delete(
+            synchronize_session=False
+        )
+
+    db.session.query(ObraUsuario).filter(ObraUsuario.obra_id == obra_id).delete(synchronize_session=False)
+    db.session.query(Obra).filter(Obra.id == obra_id).delete(synchronize_session=False)
     db.session.commit()
 
 
@@ -528,9 +677,53 @@ def frente_trabalho(app, empresa, obra):
     )
     db.session.add(frente)
     db.session.commit()
+    frente_id = frente.id
     yield frente
-    # Evita FK NOT NULL quando ainda existem RDOs apontando para esta frente.
-    RDO.query.filter_by(frente_trabalho_id=frente.id).delete(synchronize_session=False)
-    db.session.delete(frente)
-    db.session.commit()
+    from app.models.rdo import (
+        RDOAprovacao,
+        RDOAssinatura,
+        RDOAtividade,
+        RDOEquipamento,
+        RDOFoto,
+        RDOMaoObra,
+        RDOOcorrencia,
+        RDOVersao,
+    )
+    from app.models.arquivo import Arquivo
+    from app.models.notificacao import Notificacao
+    from app.models.workflow import WorkflowExecucao, WorkflowExecucaoEtapa
+    from app.models.obra import FrenteColaborador
 
+    rdo_ids = [
+        rdo_id
+        for (rdo_id,) in db.session.query(RDO.id).filter_by(frente_trabalho_id=frente_id).all()
+    ]
+    if rdo_ids:
+        db.session.query(RDOAprovacao).filter(RDOAprovacao.rdo_id.in_(rdo_ids)).delete(synchronize_session=False)
+        db.session.query(RDOAssinatura).filter(RDOAssinatura.rdo_id.in_(rdo_ids)).delete(synchronize_session=False)
+        db.session.query(RDOVersao).filter(RDOVersao.rdo_id.in_(rdo_ids)).delete(synchronize_session=False)
+        db.session.query(RDOMaoObra).filter(RDOMaoObra.rdo_id.in_(rdo_ids)).delete(synchronize_session=False)
+        db.session.query(RDOEquipamento).filter(RDOEquipamento.rdo_id.in_(rdo_ids)).delete(synchronize_session=False)
+        db.session.query(RDOOcorrencia).filter(RDOOcorrencia.rdo_id.in_(rdo_ids)).delete(synchronize_session=False)
+        db.session.query(RDOAtividade).filter(RDOAtividade.rdo_id.in_(rdo_ids)).delete(synchronize_session=False)
+        db.session.query(RDOFoto).filter(RDOFoto.rdo_id.in_(rdo_ids)).delete(synchronize_session=False)
+        db.session.query(Arquivo).filter(Arquivo.rdo_id.in_(rdo_ids)).delete(synchronize_session=False)
+        db.session.query(Notificacao).filter(Notificacao.rdo_id.in_(rdo_ids)).delete(synchronize_session=False)
+        exec_ids = [
+            exec_id
+            for (exec_id,) in db.session.query(WorkflowExecucao.id).filter(WorkflowExecucao.rdo_id.in_(rdo_ids)).all()
+        ]
+        if exec_ids:
+            db.session.query(WorkflowExecucaoEtapa).filter(
+                WorkflowExecucaoEtapa.execucao_id.in_(exec_ids)
+            ).delete(synchronize_session=False)
+            db.session.query(WorkflowExecucao).filter(WorkflowExecucao.id.in_(exec_ids)).delete(
+                synchronize_session=False
+            )
+        db.session.query(RDO).filter(RDO.id.in_(rdo_ids)).delete(synchronize_session=False)
+
+    db.session.query(FrenteColaborador).filter(FrenteColaborador.frente_id == frente_id).delete(
+        synchronize_session=False
+    )
+    db.session.query(FrenteTrabalho).filter(FrenteTrabalho.id == frente_id).delete(synchronize_session=False)
+    db.session.commit()

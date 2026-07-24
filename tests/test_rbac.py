@@ -18,7 +18,7 @@ class TestRBACBasico:
                 usuario_id=usuario_empresa1.id,
                 ativo=True
             ).all()
-            
+
             assert len(usuario_papeis) > 0
 
     def test_usuario_sem_papel_nao_acessa(self, app, empresa1):
@@ -29,17 +29,19 @@ class TestRBACBasico:
                 email="sempapel@test.com",
                 empresa_id=empresa1.id,
                 ativo=True,
+                troca_senha_obrigatoria=False,
             )
             usuario.set_senha("senha123")
             db.session.add(usuario)
             db.session.commit()
+            email = usuario.email
 
             # Usuário sem papéis associados
             usuario_papeis = UsuarioPapel.query.filter_by(
                 usuario_id=usuario.id,
                 ativo=True
             ).all()
-            
+
             assert len(usuario_papeis) == 0
 
     def test_papeis_diferentes_por_empresa(self, app, empresa1, empresa2):
@@ -55,13 +57,13 @@ class TestRBACBasico:
                 empresa_id=empresa1.id,
                 ativo=True,
             )
-            
+
             papel_admin_emp2 = Papel(
                 nome="Admin",
                 empresa_id=empresa2.id,
                 ativo=True,
             )
-            
+
             db.session.add_all([papel_admin_emp1, papel_operador_emp1, papel_admin_emp2])
             db.session.commit()
 
@@ -91,7 +93,7 @@ class TestPermissoesPorRota:
             data={"email": usuario_empresa1.email, "senha": "senha123"},
             follow_redirects=True,
         )
-        
+
         # Se login foi bem-sucedido, usuário tem permissão
         assert resp.status_code == 200
 
@@ -103,18 +105,20 @@ class TestPermissoesPorRota:
                 email="visitante@test.com",
                 empresa_id=empresa1.id,
                 ativo=True,
+                troca_senha_obrigatoria=False,
             )
             usuario.set_senha("senha123")
             db.session.add(usuario)
             db.session.commit()
+            email = usuario.email
 
         # Login com usuário sem papéis
         resp = client.post(
             "/auth/login",
-            data={"email": usuario.email, "senha": "senha123"},
+            data={"email": email, "senha": "senha123"},
             follow_redirects=True,
         )
-        
+
         # Mesmo sem papéis, o login não é negado neste ponto
         # A permissão seria verificada em rota específica
         assert resp.status_code == 200
@@ -126,17 +130,17 @@ class TestPermissoesPorRota:
             usuario_papel = UsuarioPapel.query.filter_by(
                 usuario_id=usuario_empresa1.id
             ).first()
-            
+
             if usuario_papel:
                 usuario_papel.ativo = False
                 db.session.commit()
-                
+
                 # Papéis ativos do usuário deve estar vazio
                 papeis_ativos = UsuarioPapel.query.filter_by(
                     usuario_id=usuario_empresa1.id,
                     ativo=True
                 ).all()
-                
+
                 assert len(papeis_ativos) == 0
 
 
@@ -181,7 +185,7 @@ class TestHierarquiaRoles:
                 usuario_id=usuario.id,
                 ativo=True
             ).all()
-            
+
             assert len(papeis_usuario) == 2
 
     def test_remover_papel_revoga_acesso(self, app, usuario_empresa1):
@@ -200,5 +204,5 @@ class TestHierarquiaRoles:
                 papeis = UsuarioPapel.query.filter_by(
                     usuario_id=usuario_empresa1.id
                 ).all()
-                
+
                 assert len(papeis) == 0

@@ -21,6 +21,7 @@ def setup():
 
     # Verifica se já existe algum admin no banco
     admin_exists = Usuario.query.join(Usuario.papeis).filter(
+        Usuario._is_system.is_(True),
         Papel.nome == ROLE_ADMIN,
         Papel.is_system == True
     ).first()
@@ -66,6 +67,7 @@ def setup():
                 ativo=True,
                 troca_senha_obrigatoria=False,
             )
+            novo_user.is_system_record = True
             novo_user.set_senha(admin_senha)
             db.session.add(novo_user)
             db.session.flush()
@@ -155,6 +157,42 @@ def login_post():
 
     if user.colaborador and not user.colaborador.ativo:
         flash("E-mail, senha ou status de usuÃ¡rio invÃ¡lido.", "error")
+        return redirect(url_for("auth.login"))
+
+    if not user.empresa or not user.empresa.ativo:
+        user_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+        if user_ip and ',' in user_ip:
+            user_ip = user_ip.split(',')[0].strip()
+
+        try:
+            from app.models.sessao import AcessoLog
+            from app.services.auditoria_service import AuditoriaService
+
+            db.session.add(AcessoLog(
+                empresa_id=None,
+                usuario_id=user.id,
+                email=user.email,
+                acao='LOGIN_FALHA',
+                ip=user_ip,
+                user_agent=request.headers.get('User-Agent'),
+                detalhes={"sucesso": False, "motivo": "empresa invalida"},
+            ))
+            AuditoriaService.registrar_login(
+                sucesso=False,
+                motivo="empresa invalida",
+                login_informado=email,
+                ip=user_ip,
+                user_agent=request.headers.get('User-Agent'),
+                endpoint=request.endpoint,
+                metodo_http=request.method,
+                empresa_id=None,
+                usuario_id=user.id,
+            )
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+        flash("E-mail, senha ou status de usuario invalido.", "error")
         return redirect(url_for("auth.login"))
 
     # --- Captura de contexto (sem commit fragmentado) ---

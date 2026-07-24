@@ -3,11 +3,19 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
+from app import db
 from app.utils.datetime_utils import utcnow_naive
 
 
 class CRUDMixin:
     """Mixin de persistência com Soft Delete e suporte a restore (futuro)."""
+
+    def save(self, commit: bool = False):
+        """Mantém compatibilidade com chamadas legadas de persistência."""
+        db.session.add(self)
+        if commit:
+            db.session.commit()
+        return self
 
     def soft_delete(self, usuario=None, motivo: Optional[str] = None):
         """Exclusão lógica padronizada.

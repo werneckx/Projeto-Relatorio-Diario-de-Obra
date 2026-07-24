@@ -5,6 +5,7 @@ from flask_migrate import Migrate
 from flask_wtf import CSRFProtect
 import json
 from sqlalchemy.engine import Engine
+from app.utils.template_loader import FallbackEncodingLoader
 
 # Extensões
 csrf = CSRFProtect()
@@ -82,6 +83,7 @@ def create_app(config_overrides=None):
     init_sessao_middleware(app)
 
     app.jinja_env.filters['from_json'] = json.loads
+    app.jinja_env.loader = FallbackEncodingLoader(app.jinja_env.loader)
 
     # Filtro para converter datetimes UTC (naive) para timezone local da empresa/obra.
     # Import aqui para evitar import circular durante bootstrap do app.

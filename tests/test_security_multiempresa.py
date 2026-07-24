@@ -5,6 +5,7 @@ Testes para Segurança e Isolamento por Empresa - Branch 11
 import pytest
 from app import db
 from app.models.empresa import Empresa
+from app.models.cliente import Cliente
 from app.models.usuario import Usuario, Papel, UsuarioPapel
 from app.models.obra import Obra, FrenteTrabalho
 from app.models.rdo import RDO
@@ -43,12 +44,22 @@ class TestIsolamentoMultiempresa:
             )
             db.session.add(user_papel2)
 
+            cliente2 = Cliente(
+                empresa_id=empresa2.id,
+                razao_social="Cliente Empresa 2 Isolamento",
+                nome_fantasia="Cliente Empresa 2 Isolamento",
+                cnpj="11222333000145",
+                ativo=True,
+            )
+            db.session.add(cliente2)
+            db.session.flush()
+
             obra2 = Obra(
                 nome="Obra Empresa 2",
                 empresa_id=empresa2.id,
                 status=1,
                 criado_por=usuario2.id,
-                cliente_id=0,
+                cliente_id=cliente2.id,
             )
             db.session.add(obra2)
             db.session.flush()
@@ -73,7 +84,7 @@ class TestIsolamentoMultiempresa:
             # Usuário 1 não deve ver RDO da Empresa 2
             rdos_empresa1 = RDO.query.filter_by(empresa_id=usuario_empresa1.empresa_id, ativo=True).all()
             rdos_ids = [rdo.id for rdo in rdos_empresa1]
-            
+
             assert rdo_empresa1.id in rdos_ids
             assert rdo2.id not in rdos_ids
 
@@ -82,13 +93,13 @@ class TestIsolamentoMultiempresa:
         with app.app_context():
             # Teste que a query sem filtro de empresa retorna múltiplas empresas
             obras_total = Obra.query.filter_by(ativo=True).all()
-            
+
             # Teste que a query COM filtro de empresa retorna apenas da empresa atual
             obras_empresa1 = Obra.query.filter_by(
                 empresa_id=usuario_empresa1.empresa_id,
                 ativo=True
             ).all()
-            
+
             # Deve haver diferença (ou não ter outras, mas o teste prova a obrigatoriedade)
             assert len(obras_empresa1) >= 0  # Pelo menos 0 resultado
 
@@ -99,9 +110,9 @@ class TestIsolamentoMultiempresa:
             resp = client.post(
                 "/auth/login",
                 data={"email": usuario_empresa1.email, "senha": "senha123"},
-                follow_redirects=True,
+                follow_redirects=False,
             )
-            assert resp.status_code == 200
+            assert resp.status_code == 302
 
         # Tentar alterar obra da empresa2 deve ser negado
         # (Varia conforme endpoint implementado)
@@ -118,9 +129,9 @@ class TestPermissaoEmpresas:
                 empresa_id=usuario_empresa1.empresa_id,
                 ativo=True
             ).all()
-            
+
             usuarios_ids = [u.id for u in usuarios_empresa1]
-            
+
             # Usuário 1 deve aparecer em sua empresa
             assert usuario_empresa1.id in usuarios_ids
             # Usuário 2 não deve aparecer na empresa1
@@ -138,7 +149,7 @@ class TestPermissaoEmpresas:
                 empresa_id=empresa1.id,
                 ativo=True
             ).all()
-            
+
             papeis_ids = [p.id for p in papeis_empresa1]
             assert papel1.id in papeis_ids
             assert papel2.id not in papeis_ids
@@ -147,6 +158,97 @@ class TestPermissaoEmpresas:
 class TestAcessoNegadoOutraEmpresa:
     """Testes de negação de acesso a dados de outra empresa."""
 
+    def test_sessao_com_empresa_fora_do_usuario_bloqueia_edicao(self, client, usuario_empresa1, empresa1, empresa2):
+        """Sessao adulterada/stale nao permite editar empresa que nao pertence ao usuario."""
+        usuario_empresa1.troca_senha_obrigatoria = False
+        db.session.commit()
+        with client.session_transaction() as sess:
+            sess["user_id"] = usuario_empresa1.id
+            sess["empresa_id"] = empresa2.id
+
+        resp = client.get(f"/auth/empresa/{empresa2.id}/editar")
+
+        assert resp.status_code == 403
+
+    def test_usuario_de_terceira_empresa_nao_edita_empresa_1_ou_2_por_url(self, client, empresa1, empresa2):
+        """Usuario fora das empresas 1 e 2 nao deve acessar nenhuma delas pela URL."""
+        empresa3 = Empresa(nome="Empresa 3", ativo=True)
+        db.session.add(empresa3)
+        db.session.flush()
+
+        papel3 = Papel(nome="Admin", empresa_id=empresa3.id, ativo=True)
+        db.session.add(papel3)
+        db.session.flush()
+
+        usuario3 = Usuario(
+            nome="Usuario Empresa 3",
+            email="usuario3@empresa3.com",
+            empresa_id=empresa3.id,
+            ativo=True,
+            troca_senha_obrigatoria=False,
+        )
+        usuario3.set_senha("senha123")
+        db.session.add(usuario3)
+        db.session.flush()
+        db.session.add(UsuarioPapel(
+            empresa_id=empresa3.id,
+            usuario_id=usuario3.id,
+            papel_id=papel3.id,
+            ativo=True,
+        ))
+        db.session.commit()
+
+        for empresa in (empresa1, empresa2):
+            with client.session_transaction() as sess:
+                sess["user_id"] = usuario3.id
+                sess["empresa_id"] = empresa.id
+
+            resp = client.get(f"/auth/empresa/{empresa.id}/editar")
+
+            assert resp.status_code == 403
+
+    def test_admin_empresa_nao_acessa_empresa_por_url(self, client, usuario_empresa1, empresa1, empresa2):
+        """Admin de uma empresa nao pode abrir outra empresa trocando a URL."""
+        usuario_empresa1.troca_senha_obrigatoria = False
+        db.session.commit()
+        with client.session_transaction() as sess:
+            sess["user_id"] = usuario_empresa1.id
+            sess["empresa_id"] = empresa1.id
+
+        resp = client.get(f"/auth/empresa/{empresa2.id}")
+
+        assert resp.status_code == 403
+
+    def test_admin_empresa_nao_edita_empresa_por_url(self, client, usuario_empresa1, empresa1, empresa2):
+        """Admin de empresa continua restrito ao tenant atual na edicao."""
+        usuario_empresa1.troca_senha_obrigatoria = False
+        db.session.commit()
+        with client.session_transaction() as sess:
+            sess["user_id"] = usuario_empresa1.id
+            sess["empresa_id"] = empresa1.id
+
+        resp = client.get(f"/auth/empresa/{empresa2.id}/editar")
+
+        assert resp.status_code == 403
+
+    def test_admin_empresa_nao_salva_empresa_por_url(self, client, app, usuario_empresa1, empresa1, empresa2):
+        """POST direto para salvar outra empresa deve ser bloqueado."""
+        nome_original = empresa2.nome
+        usuario_empresa1.troca_senha_obrigatoria = False
+        db.session.commit()
+        with client.session_transaction() as sess:
+            sess["user_id"] = usuario_empresa1.id
+            sess["empresa_id"] = empresa1.id
+
+        resp = client.post(
+            f"/auth/empresa/{empresa2.id}/salvar",
+            data={"nome_empresa": "Empresa 2 invadida"},
+        )
+
+        assert resp.status_code == 403
+        with app.app_context():
+            assert db.session.get(Empresa, empresa2.id).nome == nome_original
+
     def test_endpoint_filtra_por_empresa_atual(self, client, app, usuario_empresa1, rdo_empresa1):
         """Endpoints devem filtrar resultados por empresa atual do usuário."""
         with app.app_context():
@@ -154,9 +256,9 @@ class TestAcessoNegadoOutraEmpresa:
             resp = client.post(
                 "/auth/login",
                 data={"email": usuario_empresa1.email, "senha": "senha123"},
-                follow_redirects=True,
+                follow_redirects=False,
             )
-            assert resp.status_code == 200
+            assert resp.status_code == 302
 
         # Tentar acessar lista de RDOs deve retornar apenas da empresa atual
         # (Implementação dependente de cada rota)
@@ -174,6 +276,6 @@ class TestAcessoNegadoOutraEmpresa:
                 empresa_id=usuario_empresa1.empresa_id,
                 ativo=True
             ).all()
-            
+
             rdo_ids = [r.id for r in rdos]
             assert rdo_empresa1.id not in rdo_ids

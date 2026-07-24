@@ -839,7 +839,7 @@
 
                                 <div class="p-2">
 
-                                    <a href="{{ url_for('auth.empresa') }}"
+                                    <a href="{{ url_for('auth.visualizar_empresa', id=session.get('empresa_id')) if session.get('empresa_id') else url_for('auth.empresa') }}"
                                         class="flex items-center gap-3 p-3 rounded-2xl hover:bg-slate-50 transition">
 
                                         <div
@@ -1222,6 +1222,7 @@
     <script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
     <script src="{{ url_for('static', filename='js/select-picker.js') }}"></script>
     <script src="{{ url_for('static', filename='js/system-dialog.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/form-submit-guard.js') }}?v=20260722-submit-guard"></script>
 
     <script>
         function markNotificacaoLidaFromElement(event, el) {

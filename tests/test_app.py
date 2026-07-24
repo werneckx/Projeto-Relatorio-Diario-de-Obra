@@ -1,5 +1,11 @@
 import pytest
+from pathlib import Path
+
+from flask import Flask
+
 from app import create_app
+from app.utils.template_loader import FallbackEncodingLoader
+
 
 @pytest.fixture
 def client():
@@ -27,3 +33,18 @@ def test_config_loaded():
     """Verifica se a configuração da aplicação foi carregada"""
     app = create_app()
     assert "SECRET_KEY" in app.config, "SECRET_KEY não foi carregado."
+
+
+def test_jinja_loader_accepts_cp1252_template(tmp_path: Path):
+    template_dir = tmp_path / "templates"
+    template_dir.mkdir()
+    template_path = template_dir / "legacy.html"
+    template_path.write_bytes("Configuração da empresa".encode("cp1252"))
+
+    app = Flask(__name__, root_path=str(tmp_path), template_folder="templates")
+    app.jinja_env.loader = FallbackEncodingLoader(app.jinja_env.loader)
+
+    with app.app_context():
+        rendered = app.jinja_env.get_template("legacy.html").render()
+
+    assert rendered == "Configuração da empresa"

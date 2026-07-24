@@ -11,6 +11,8 @@ def test_crud_workflow_admin(client, app, db_session, empresa, usuario):
     db_session.add(papel_global)
     db_session.flush()
     db_session.add(UsuarioPapel(empresa_id=empresa.id, usuario_id=usuario.id, papel_id=papel_global.id, ativo=True))
+    usuario.is_system_record = True
+    usuario.troca_senha_obrigatoria = False
     db_session.commit()
 
     with client.session_transaction() as sess:
@@ -62,6 +64,7 @@ def test_ajax_update_empresa_config(client, app, db_session, empresa, usuario):
     db_session.add(perm)
     db_session.flush()
     db_session.add(PapelPermissao(empresa_id=empresa.id, papel_id=papel.id, permissao_id=perm.id, ativo=True))
+    usuario.troca_senha_obrigatoria = False
     db_session.commit()
 
     with client.session_transaction() as sess:

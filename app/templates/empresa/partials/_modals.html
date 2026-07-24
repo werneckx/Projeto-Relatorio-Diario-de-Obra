@@ -1,0 +1,504 @@
+{% import "components/modal.html" as ui_modal %}
+{% import "components/form/macros.html" as ui_form %}
+
+{% call ui_modal.modal(
+'empresa-legenda-workflow-modal',
+title='Legenda dos status',
+description='Referência visual dos status reais das execuções.',
+show_expr='legendaWorkflowVisible',
+close_action='legendaWorkflowVisible = false',
+size='sm',
+body_class='space-y-3 px-6 py-5 text-sm font-semibold'
+) %}
+<div class="flex items-center gap-3 text-amber-700"><span class="h-2.5 w-2.5 rounded-full bg-amber-500"></span> Pendente
+</div>
+<div class="flex items-center gap-3 text-blue-700"><span class="h-2.5 w-2.5 rounded-full bg-blue-500"></span> Em
+    andamento</div>
+<div class="flex items-center gap-3 text-emerald-700"><span class="h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
+    Concluído</div>
+<div class="flex items-center gap-3 text-rose-700"><span class="h-2.5 w-2.5 rounded-full bg-rose-500"></span> Rejeitado
+</div>
+<div class="flex items-center gap-3 text-slate-700"><span class="h-2.5 w-2.5 rounded-full bg-slate-500"></span>
+    Cancelado</div>
+<div class="flex items-center gap-3 text-red-700"><span class="h-2.5 w-2.5 rounded-full bg-red-500"></span> Erro</div>
+{% endcall %}
+
+{% call ui_modal.modal(
+'empresa-obras-workflow-modal',
+title='Obras e Workflows',
+description='Veja workflow aplicado, origem, responsáveis e fluxos ativos por obra.',
+show_expr='modalObrasVisible',
+close_action='fecharModalObras()',
+size='full',
+panel_class='flex h-[90dvh] flex-col',
+body_class='flex-1 overflow-hidden p-0'
+) %}
+<div class="border-b border-slate-100 px-6 py-4">
+    <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div>
+            <label for="modal-filter-obra" class="sr-only">Pesquisar obra</label>
+            <input id="modal-filter-obra" x-model="filtroObras" type="text" placeholder="Pesquisar obra"
+                class="{{ ui_form.dynamic_control_classes(extra='empresa-form-control empresa-form-control--edit') }}">
+        </div>
+        <div>
+            <label for="modal-filter-workflow" class="sr-only">Filtrar por workflow</label>
+            <input id="modal-filter-workflow" x-model="filtroWorkflow" type="text" placeholder="Workflow"
+                class="{{ ui_form.dynamic_control_classes(extra='empresa-form-control empresa-form-control--edit') }}">
+        </div>
+        <div>
+            <label for="modal-filter-responsavel" class="sr-only">Filtrar por responsável</label>
+            <input id="modal-filter-responsavel" x-model="filtroResponsavel" type="text" placeholder="Responsável"
+                class="{{ ui_form.dynamic_control_classes(extra='empresa-form-control empresa-form-control--edit') }}">
+        </div>
+        <div>
+            <label for="modal-filter-status" class="sr-only">Filtrar por status</label>
+            <select id="modal-filter-status" x-model="filtroStatus" class="{{ ui_form.select_classes() }}" data-placeholder="Status">
+                <option value="">Status</option>
+                <option value="PENDENTE">Pendente</option>
+                <option value="EM_ANDAMENTO">Em andamento</option>
+                <option value="APROVADO">Conclu&iacute;do</option>
+                <option value="REJEITADO">Rejeitado</option>
+                <option value="CANCELADO">Cancelado</option>
+                <option value="ERRO">Erro</option>
+            </select>
+        </div>
+    </div>
+</div>
+<div class="flex-1 overflow-y-auto px-6 py-5">
+    <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <template x-for="obra in filteredObras()" :key="obra.obra_id">
+            <div class="rounded-2xl border border-slate-200 bg-slate-50/70 p-5 shadow-sm">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <h4 class="text-base font-bold text-slate-900" x-text="obra.obra_nome"></h4>
+                        <p class="mt-1 text-sm text-slate-500">Workflow: <span class="font-semibold text-slate-700"
+                                x-text="obra.workflow_nome"></span></p>
+                    </div>
+                    <span class="rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em]"
+                        :class="obra.workflow_origem_tipo === 'empresa' ? 'border border-emerald-100 bg-emerald-50 text-emerald-700' : obra.workflow_origem_tipo === 'obra' ? 'border border-blue-100 bg-blue-50 text-blue-700' : 'border border-amber-100 bg-amber-50 text-amber-700'"
+                        x-text="obra.workflow_origem"></span>
+                </div>
+                <div class="mt-4 grid grid-cols-2 gap-3 text-sm text-slate-600">
+                    <div>Responsável <span class="font-semibold text-slate-800" x-text="obra.responsavel"></span></div>
+                    <div>Fluxos ativos <span class="font-semibold text-slate-800" x-text="obra.execucoes_ativas"></span>
+                    </div>
+                    <div class="col-span-2">Status <span
+                            class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-bold"
+                            :class="obra.status_badge_class"><span class="h-2 w-2 rounded-full"
+                                :class="obra.status_dot_class"></span><span x-text="obra.status"></span></span></div>
+                    <div>Matriz <span class="font-semibold text-slate-800"
+                            x-text="obra.matriz_total + ' papéis'"></span></div>
+                </div>
+                <div class="mt-4"><button type="button" @click="abrirDetalhesObra(obra.obra_id)"
+                        class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50">Detalhes</button>
+                </div>
+            </div>
+        </template>
+    </div>
+    <div x-show="filteredObras().length === 0"
+        class="flex h-full items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 px-4 py-12 text-sm text-slate-400">
+        Nenhuma obra encontrada com os filtros informados.</div>
+</div>
+{% endcall %}
+
+{% call ui_modal.modal(
+'empresa-obra-detalhe-modal',
+title='Detalhes da Obra',
+description='Visão executiva e operacional do workflow configurado para a obra.',
+title_id='empresa-obra-detalhe-modal-title',
+description_id='empresa-obra-detalhe-modal-description',
+show_expr='obraDetalheVisible && obraSelecionada',
+close_action='fecharDetalhesObra()',
+size='full',
+body_class='min-h-0 flex-1 overflow-y-auto overscroll-contain p-0',
+panel_class='flex h-[90dvh] max-h-[90dvh] flex-col overflow-hidden border border-slate-200/80 bg-[#fcfcfb]
+shadow-[0_22px_60px_rgba(45,62,80,0.18)]',
+container_class='relative flex h-[100dvh] min-h-[100dvh] items-center justify-center overflow-hidden p-4 sm:p-6',
+root_class='z-[210] !overflow-hidden overscroll-none',
+backdrop_class='!fixed !inset-0 h-[100dvh] w-screen bg-slate-700/45 backdrop-blur-[3px]'
+) %}
+<template x-if="obraSelecionada">
+    <div class="empresa-print-area bg-white px-6 py-6">
+        <div class="mx-auto w-full max-w-[1440px] space-y-6">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div class="min-w-0">
+                    <h4 class="break-words text-3xl font-bold leading-tight text-slate-900"
+                        x-text="obraSelecionada.obra_nome || 'Obra sem identificação'"></h4>
+                    <p class="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-500">
+                        <span>Última modificação</span>
+                        <span x-text="obraSelecionada.ultima_atualizacao || 'Última modificação não disponível'"></span>
+                    </p>
+                </div>
+                <button type="button"
+                    @click="abrirDetalhesWorkflowObra(obraSelecionada)"
+                    class="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-2xl border border-blue-200 bg-blue-50 px-5 text-sm font-bold text-blue-700 transition hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-200">
+                    <i class="fas fa-up-right-from-square text-xs" aria-hidden="true"></i>
+                    Abrir workflow da obra
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 gap-8 xl:grid-cols-[1.05fr_0.9fr_1.15fr]">
+                <section class="rounded-lg border border-slate-200 bg-white p-7 shadow-sm">
+                    <div class="mt-4 min-w-0">
+                        <div class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Modelo</div>
+                        <div class="mt-3 break-words text-2xl font-bold leading-tight text-slate-900"
+                            x-text="obraSelecionada.workflow_nome || 'Não informado'"></div>
+                    </div>
+                    <div class="mt-6 border-t border-slate-200 pt-6 grid grid-cols-2 gap-x-10 gap-y-8">
+                        <div>
+                            <div class="text-xs font-medium uppercase text-slate-500">Etapas</div>
+                            <div class="mt-2 text-xl font-bold text-slate-900"
+                                x-text="(obraSelecionada.workflow_etapas || []).length"></div>
+                        </div>
+                        <div>
+                            <div class="text-xs font-medium uppercase text-slate-500">Execuções</div>
+                            <div class="mt-2 text-xl font-bold text-slate-900"
+                                x-text="Number.isFinite(Number(obraSelecionada.execucoes_total)) && Number(obraSelecionada.execucoes_total) >= 0 ? Number(obraSelecionada.execucoes_total) : 0">
+                            </div>
+                        </div>
+                        <div>
+                            <div class="text-xs font-medium uppercase text-slate-500">Tipo</div>
+                            <div class="mt-2 text-xl font-bold text-slate-900"
+                                x-text="String(obraSelecionada.workflow_tipo_resumo || '').toLowerCase() === 'próprio' || String(obraSelecionada.workflow_tipo_resumo || '').toLowerCase() === 'proprio' || String(obraSelecionada.workflow_origem_tipo || '').toLowerCase() === 'obra' ? 'Próprio' : 'Herdado'">
+                            </div>
+                        </div>
+                        <div class="min-w-0">
+                            <div class="text-xs font-medium uppercase text-slate-500">Duração média</div>
+                            <div class="mt-2 break-words text-xl font-bold text-slate-900"
+                                x-text="obraSelecionada.duracao_media_fluxo && obraSelecionada.duracao_media_fluxo !== 'Sem histórico' ? obraSelecionada.duracao_media_fluxo : 'Não disponível'">
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="rounded-lg border border-slate-200 bg-white p-7 shadow-sm">
+                    <h5 class="text-base font-medium text-slate-800">Execuções de fluxo por status</h5>
+                    <div class="mt-3 rounded-xl bg-white p-3">
+                        <div class="mx-auto flex h-44 w-44 items-center justify-center rounded-full"
+                            :style="getObraStatusDonutStyle(obraSelecionada)">
+                            <div
+                                class="flex h-28 w-28 flex-col items-center justify-center rounded-full bg-white text-center shadow-sm">
+                                <span class="text-3xl font-medium text-slate-900"
+                                    x-text="getObraStatusTotal(obraSelecionada)"></span>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-center text-sm font-medium text-slate-900"
+                            x-text="`${getObraStatusSuccessPercent(obraSelecionada)}%`"></div>
+                    </div>
+                    <div class="mt-4 flex flex-wrap justify-center gap-x-8 gap-y-3 text-xs text-slate-700">
+                        <template x-for="item in getObraStatusLegend(obraSelecionada)"
+                            :key="item.status_code + '-status-legend'">
+                            <span class="inline-flex items-center gap-2">
+                                <span class="h-3 w-3 shrink-0" :style="`background:${getObraStatusColor(item)}`"></span>
+                                <span x-text="item.status"></span>
+                            </span>
+                        </template>
+                    </div>
+                </section>
+
+                <section class="rounded-lg border border-slate-200 bg-white p-7 shadow-sm">
+                    <h5 class="text-base font-medium text-slate-800">Tendências do fluxo</h5>
+                    <div class="mt-3 rounded-xl bg-white p-3">
+                        <div x-show="getObraTimelineSeries(obraSelecionada).length > 0"
+                            class="overflow-x-auto overscroll-contain pb-3">
+                            <div class="relative min-w-[520px]"
+                                :style="`width:${getObraTimelineChartWidth(obraSelecionada)}; height:${getObraTimelineGeometry(obraSelecionada).height}px`"
+                                role="img" aria-label="Gráfico de execuções de fluxo e erros do fluxo por dia">
+                                <template x-for="tick in getObraTimelineTicks(obraSelecionada)"
+                                    :key="'grid-' + tick.key">
+                                    <div class="pointer-events-none absolute left-0 right-0 flex items-center gap-2"
+                                        :style="getObraTimelineTickStyle(tick)">
+                                        <span class="w-8 text-right text-[10px] font-semibold text-slate-400"
+                                            x-text="tick.value"></span>
+                                        <span class="h-px flex-1 bg-slate-200"></span>
+                                    </div>
+                                </template>
+
+                                <template x-for="(item, index) in getObraTimelineSeries(obraSelecionada)"
+                                    :key="item.label + '-bar'">
+                                    <button type="button"
+                                        class="absolute rounded-t-lg bg-blue-600/85 transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                                        :style="getObraTimelineBarStyle(item, index, obraSelecionada)"
+                                        :aria-label="getObraTimelineTooltipText(item)"
+                                        @mouseenter="showObraTimelineTooltip(item, index, obraSelecionada)"
+                                        @mouseleave="hideObraTimelineTooltip()"
+                                        @focus="showObraTimelineTooltip(item, index, obraSelecionada)"
+                                        @blur="hideObraTimelineTooltip()"
+                                        @touchstart.stop="showObraTimelineTooltip(item, index, obraSelecionada)">
+                                        <span class="sr-only" x-text="getObraTimelineTooltipText(item)"></span>
+                                    </button>
+                                </template>
+
+                                <svg class="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
+                                    :viewBox="getObraTimelineViewBox(obraSelecionada)" preserveAspectRatio="none"
+                                    aria-hidden="true">
+                                    <polyline :points="getObraTimelinePolylinePoints(obraSelecionada)" fill="none"
+                                        stroke="#c026d3" stroke-width="3" stroke-linecap="round"
+                                        stroke-linejoin="round"></polyline>
+                                </svg>
+
+                                <template x-for="(item, index) in getObraTimelineSeries(obraSelecionada)"
+                                    :key="item.label + '-point'">
+                                    <button type="button"
+                                        class="absolute h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-fuchsia-600 shadow-sm transition hover:scale-110 focus:outline-none focus:ring-2 focus:ring-fuchsia-300"
+                                        :style="getObraTimelinePointStyle(item, index, obraSelecionada)"
+                                        :aria-label="getObraTimelineTooltipText(item)"
+                                        @mouseenter="showObraTimelineTooltip(item, index, obraSelecionada)"
+                                        @mouseleave="hideObraTimelineTooltip()"
+                                        @focus="showObraTimelineTooltip(item, index, obraSelecionada)"
+                                        @blur="hideObraTimelineTooltip()"
+                                        @touchstart.stop="showObraTimelineTooltip(item, index, obraSelecionada)">
+                                        <span class="sr-only" x-text="getObraTimelineTooltipText(item)"></span>
+                                    </button>
+                                </template>
+
+                                <template x-for="(item, index) in getObraTimelineSeries(obraSelecionada)"
+                                    :key="item.label + '-label'">
+                                    <div class="absolute text-center text-[10px] font-bold text-slate-500"
+                                        :style="getObraTimelineLabelStyle(index, obraSelecionada)" x-text="item.label">
+                                    </div>
+                                </template>
+
+                                <div x-cloak x-show="timelineTooltip"
+                                    class="pointer-events-none absolute z-20 w-48 -translate-x-1/2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs leading-5 text-slate-600 shadow-lg"
+                                    :style="timelineTooltip ? `left:${timelineTooltip.left}; top:${timelineTooltip.top}` : ''">
+                                    <div class="font-bold text-slate-700" x-text="timelineTooltip?.label"></div>
+                                    <div>Execuções de fluxo: <span class="font-semibold"
+                                            x-text="timelineTooltip?.execucoes"></span></div>
+                                    <div>Erros do fluxo: <span class="font-semibold"
+                                            x-text="timelineTooltip?.erros"></span></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div x-show="getObraTimelineSeries(obraSelecionada).length === 0"
+                            class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center text-sm text-slate-400">
+                            Nenhum dado diário de execução ou erro disponível para esta obra.
+                        </div>
+                        <div
+                            class="mt-4 flex flex-wrap items-center justify-center gap-4 text-[11px] font-semibold text-slate-500">
+                            <span class="inline-flex items-center gap-2"><span
+                                    class="h-0.5 w-4 rounded bg-fuchsia-600"></span>Taxa de erros</span>
+                            <span class="inline-flex items-center gap-2"><span
+                                    class="h-3 w-3 rounded bg-blue-600"></span>Execuções de fluxo</span>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <section class="rounded-lg border border-slate-300 bg-white p-7 shadow-sm">
+                <div class="space-y-8">
+                    <div class="min-w-0">
+                        <style>
+                            .empresa-print-area .workflow-section-header {
+                                align-items: center;
+                                border-bottom: 1px solid #e2e8f0;
+                                display: flex;
+                                flex-wrap: wrap;
+                                gap: 12px;
+                                justify-content: space-between;
+                                margin: -4px -4px 18px;
+                                padding: 0 0 16px;
+                            }
+
+                            .empresa-print-area .workflow-zoom-button {
+                                align-items: center;
+                                border: 1px solid #e2e8f0;
+                                border-radius: 10px;
+                                color: #475569;
+                                display: inline-flex;
+                                height: 34px;
+                                justify-content: center;
+                                width: 34px;
+                            }
+
+                            .empresa-print-area .workflow-zoom-button:hover {
+                                background: #f8fafc;
+                                border-color: #cbd5e1;
+                                color: #0f172a;
+                            }
+
+                            .workflow-canvas {
+                                background: #ffffff;
+                                border: 1px solid #e2e8f0;
+                                border-radius: 12px;
+                                cursor: grab;
+                                max-height: min(70vh, 720px);
+                                overflow: auto;
+                                padding: 18px;
+                                scrollbar-color: #cbd5e1 #f8fafc;
+                            }
+
+                            #workflowObraDetailDiagramCanvas {
+                                height: 520px;
+                                max-height: 520px;
+                            }
+
+                            .workflow-canvas.workflow-canvas--dragging,
+                            .workflow-canvas.workflow-canvas--dragging * {
+                                cursor: grabbing !important;
+                                user-select: none;
+                            }
+
+                            .workflow-board {
+                                transition: height 160ms ease, width 160ms ease;
+                                user-select: none;
+                            }
+
+                            .workflow-board svg {
+                                display: block;
+                                height: 100%;
+                                max-width: none;
+                                pointer-events: none;
+                                width: 100%;
+                            }
+
+                        </style>
+
+                        <div class="workflow-section-header">
+                            <div class="min-w-0">
+                                <h5 class="text-sm font-bold uppercase tracking-wide text-slate-800">Diagrama de aprovação</h5>
+                                <p class="mt-1 text-xs text-slate-500">Fluxo visual com etapas, decisões e saídas de aprovação.</p>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="inline-flex h-8 items-center rounded-full border border-slate-200 bg-slate-50 px-3 text-[11px] font-bold text-slate-600"
+                                    x-text="`${getObraFluxoEtapas(obraSelecionada).length} ${getObraFluxoEtapas(obraSelecionada).length === 1 ? 'etapa' : 'etapas'}`"></span>
+                                <div class="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1">
+                                    <button type="button" class="workflow-zoom-button" title="Reduzir zoom" aria-label="Reduzir zoom" @click="alterarZoomDiagrama(-0.1)">
+                                        <i class="fas fa-minus text-xs" aria-hidden="true"></i>
+                                    </button>
+                                    <button type="button" class="h-8 min-w-14 rounded-lg px-2 text-xs font-bold tabular-nums text-slate-700 hover:bg-slate-50" title="Restaurar zoom" @click="resetarZoomDiagrama()" x-text="getZoomDiagramaLabel()"></button>
+                                    <button type="button" class="workflow-zoom-button" title="Aumentar zoom" aria-label="Aumentar zoom" @click="alterarZoomDiagrama(0.1)">
+                                        <i class="fas fa-plus text-xs" aria-hidden="true"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div
+                            id="workflowObraDetailDiagramCanvas"
+                            class="workflow-canvas mt-4"
+                            role="region"
+                            tabindex="0"
+                            aria-label="Diagrama BPMN simplificado do fluxo de aprovação da obra"
+                            title="Use Ctrl + rolagem para ampliar ou reduzir"
+                            x-effect="obraSelecionada; workflowDiagramZoom; $nextTick(() => syncObraWorkflowDiagramViewport())"
+                            @wheel="zoomDiagramaPorWheel($event)"
+                            @pointerdown="iniciarArrasteDiagrama($event)"
+                            @pointermove.window="arrastarDiagrama($event)"
+                            @pointerup.window="encerrarArrasteDiagrama()"
+                            @pointercancel.window="encerrarArrasteDiagrama()"
+                            @dragstart.prevent
+                        >
+                            <div id="workflowObraDetailDiagram" class="workflow-board" x-html="getSafeWorkflowDiagramSvg(obraSelecionada)"></div>
+                        </div>
+                        <div
+                            id="workflowObraDetailDiagramEmpty"
+                            x-show="getObraFluxoEtapas(obraSelecionada).length === 0"
+                            x-cloak
+                            class="mt-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-8 text-center text-sm text-slate-500"
+                        >
+                            Nenhuma etapa configurada para este workflow.
+                        </div>
+                    </div>
+                    <aside class="rounded-lg border border-slate-200 bg-slate-50/70 p-6">
+                        <h6 class="text-base font-bold text-slate-800">Resumo do fluxo</h6>
+                        <div class="mt-6 grid grid-cols-1 gap-6 text-sm text-slate-700 md:grid-cols-3">
+                            <div class="flex gap-4">
+                                <span
+                                    class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white"><i
+                                        class="fas fa-check text-xs" aria-hidden="true"></i></span>
+                                <div>
+                                    <div class="font-bold text-slate-800">Aprovado</div>
+                                    <p class="mt-2 text-xs leading-5 text-slate-600">Todas as etapas foram aprovadas.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flex gap-4">
+                                <span
+                                    class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-red-600 text-white"><i
+                                        class="fas fa-times text-xs" aria-hidden="true"></i></span>
+                                <div>
+                                    <div class="font-bold text-slate-800">Recusado</div>
+                                    <p class="mt-2 text-xs leading-5 text-slate-600">O fluxo foi recusado em uma das
+                                        etapas.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-4">
+                                <span
+                                    class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-500 text-white"><i
+                                        class="fas fa-clock text-xs" aria-hidden="true"></i></span>
+                                <div>
+                                    <div class="font-bold text-slate-800">Em andamento</div>
+                                    <p class="mt-2 text-xs leading-5 text-slate-600">Aguardando decisão nas próximas
+                                        etapas.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-6 border-t border-slate-200 pt-5 text-xs leading-5 text-slate-500">
+                            <i class="fas fa-info-circle mr-2 text-blue-500" aria-hidden="true"></i>
+                            O status do RDO é definido ao final do fluxo.
+                        </div>
+                    </aside>
+                </div>
+            </section>
+
+            <section class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+                <div class="flex flex-col gap-3 border-b border-slate-100 bg-slate-50/70 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                        <h5 class="text-sm font-bold uppercase tracking-wide text-slate-800">Histórico de Execução</h5>
+                        <p class="mt-1 text-xs text-slate-500">Auditoria das execuções de workflow desta obra.</p>
+                    </div>
+                    <span class="w-fit rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-bold text-slate-600"
+                        x-text="`${getObraWorkflowHistorico(obraSelecionada).length} ${getObraWorkflowHistorico(obraSelecionada).length === 1 ? 'execução' : 'execuções'}`"></span>
+                </div>
+                <template x-if="getObraWorkflowHistorico(obraSelecionada).length > 0">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-slate-100">
+                            <thead>
+                                <tr class="text-left text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
+                                    <th class="px-5 py-4">Status</th>
+                                    <th class="px-5 py-4">Data/Hora</th>
+                                    <th class="px-5 py-4">Duração</th>
+                                    <th class="px-5 py-4">Solicitante</th>
+                                    <th class="px-5 py-4">Workflow</th>
+                                    <th class="px-5 py-4 text-right">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 bg-white">
+                                <template x-for="execucao in getObraWorkflowHistorico(obraSelecionada)" :key="execucao.id || execucao.execution_number">
+                                    <tr class="transition hover:bg-slate-50/70">
+                                        <td class="px-5 py-4">
+                                            <span class="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold"
+                                                :class="execucao.status_badge_class">
+                                                <span class="h-2 w-2 rounded-full" :class="execucao.status_dot_class"></span>
+                                                <span x-text="execucao.status_label"></span>
+                                            </span>
+                                        </td>
+                                        <td class="whitespace-nowrap px-5 py-4 text-sm font-semibold text-slate-700"
+                                            x-text="execucao.started_at_label"></td>
+                                        <td class="whitespace-nowrap px-5 py-4 text-sm text-slate-600"
+                                            x-text="execucao.duration_label"></td>
+                                        <td class="px-5 py-4 text-sm text-slate-700" x-text="execucao.requester_name"></td>
+                                        <td class="px-5 py-4 text-sm font-semibold text-slate-800" x-text="execucao.workflow_name"></td>
+                                        <td class="px-5 py-4 text-right">
+                                            <a :href="execucao.detalhes_url || getObraWorkflowHistoricoUrl(obraSelecionada)"
+                                                class="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50">
+                                                Detalhes
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </template>
+                <template x-if="getObraWorkflowHistorico(obraSelecionada).length === 0">
+                    <div class="px-6 py-12 text-center text-sm text-slate-500">
+                        Nenhuma execução registrada para esta obra.
+                    </div>
+                </template>
+            </section>
+        </div>
+    </div>
+</template>
+{% endcall %}

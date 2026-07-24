@@ -4,863 +4,132 @@
 {% block title %}Configurações do Sistema{% endblock %}
 
 {% block content %}
-<div x-data="empresaApp()" class="grid grid-cols-1 lg:grid-cols-4 gap-8 max-w-7xl mx-auto px-4 py-6">
+{% call ui_form.page_shell() %}
+<style>
+    #empresaPageRoot .empresa-form-control {
+        appearance: none !important;
+        background: #ffffff !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 1rem !important;
+        box-shadow: none !important;
+        color: #475569 !important;
+        display: block;
+        font-family: inherit !important;
+        font-size: 0.875rem !important;
+        height: 36px !important;
+        line-height: 1.25rem !important;
+        min-height: 36px !important;
+        outline: none !important;
+        padding: 0 1rem !important;
+        transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease !important;
+        width: 100%;
+    }
 
-    <aside class="lg:col-span-1">
-        <div class="bg-white rounded-2xl border border-slate-100 p-5 sticky top-6 shadow-sm shadow-slate-100/50">
-            <h3 class="text-[11px] font-bold text-slate-400 mb-4 px-3 uppercase tracking-widest">Configurações</h3>
-            <nav class="space-y-1">
-                <button @click="mudarAba('geral')" type="button"
-                    class="w-full text-left font-medium text-sm px-3 py-2.5 rounded-xl transition-all flex items-center gap-3"
-                    :class="abaAtiva==='geral' ? 'bg-blue-50/80 text-blue-600 font-semibold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'">
-                    <i class="fas fa-building text-base w-5 opacity-80"></i> Geral
-                </button>
-                <button @click="mudarAba('definicoes')" type="button"
-                    class="w-full text-left font-medium text-sm px-3 py-2.5 rounded-xl transition-all flex items-center gap-3"
-                    :class="abaAtiva==='definicoes' ? 'bg-blue-50/80 text-blue-600 font-semibold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'">
-                    <i class="fas fa-sliders-h text-base w-5 opacity-80"></i> Definições da Empresa
-                </button>
-                <button @click="mudarAba('papeis')" type="button"
-                    class="w-full text-left font-medium text-sm px-3 py-2.5 rounded-xl transition-all flex items-center gap-3"
-                    :class="abaAtiva==='papeis' ? 'bg-blue-50/80 text-blue-600 font-semibold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'">
-                    <i class="fas fa-shield-alt text-base w-5 opacity-80"></i> Papéis e Permissões
-                </button>
-                <button @click="mudarAba('workflow')" type="button"
-                    class="w-full text-left font-medium text-sm px-3 py-2.5 rounded-xl transition-all flex items-center gap-3"
-                    :class="abaAtiva==='workflow' ? 'bg-blue-50/80 text-blue-600 font-semibold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'">
-                    <i class="fas fa-project-diagram text-base w-5 opacity-80"></i> Workflows
-                </button>
-            </nav>
-        </div>
-    </aside>
+    #empresaPageRoot .empresa-form-control--edit {
+        background: #ffffff !important;
+        border-color: #cbd5e1 !important;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05) !important;
+        color: #475569 !important;
+        cursor: text;
+    }
 
-    <main class="lg:col-span-3 space-y-6">
+    #empresaPageRoot select.empresa-form-control--edit {
+        cursor: pointer;
+    }
 
-        {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-        <div class="space-y-3">
-            {% for category, message in messages %}
-            <div
-                class="p-4 rounded-xl flex items-start gap-3 border shadow-xs transition-all {{ 'bg-rose-50 text-rose-800 border-rose-100/80' if category == 'danger' else 'bg-emerald-50 text-emerald-800 border-emerald-100/80' }}">
-                <i
-                    class="fas {{ 'fa-exclamation-circle text-rose-500' if category == 'danger' else 'fa-check-circle text-emerald-500' }} text-lg mt-0.5"></i>
-                <div class="text-sm font-medium leading-relaxed">{{ message }}</div>
-            </div>
-            {% endfor %}
-        </div>
-        {% endif %}
-        {% endwith %}
+    #empresaPageRoot .empresa-form-control--view {
+        background: rgba(241, 245, 249, 0.6) !important;
+        border-color: #e2e8f0 !important;
+        box-shadow: none !important;
+        color: #1e293b !important;
+        cursor: default;
+        font-weight: 600;
+        opacity: 1 !important;
+    }
 
-        <div class="pb-2">
-            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Configurações Corporativas</h1>
-            <p class="text-sm text-slate-500 mt-1 leading-relaxed">Gerencie a identidade visual, parâmetros nativos,
-                papéis e fluxos operacionais da sua empresa.</p>
-        </div>
+    #empresaPageRoot select.empresa-form-control {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M5 7.5L10 12.5L15 7.5' stroke='%2394A3B8' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+        background-position: right 1rem center !important;
+        background-repeat: no-repeat !important;
+        background-size: 12px 12px !important;
+        padding-right: 2.75rem !important;
+    }
 
-        <div class="space-y-6">
+    #empresaPageRoot .empresa-form-control:focus,
+    #empresaPageRoot .empresa-workflow-model-button:focus {
+        border-color: rgba(37, 99, 235, 0.55) !important;
+        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12) !important;
+    }
 
-            <section x-show="abaAtiva==='geral'" x-transition
-                class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden scroll-mt-6">
-                <div x-data="{ editing:false }">
-                    <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
-                        <h3 class="font-bold text-slate-700 text-xs uppercase tracking-wider flex items-center gap-2">
-                            <i class="fas fa-id-card text-slate-400"></i> Identidade da Empresa
-                        </h3>
-                        {% if can_edit %}
-                        <button @click="editing = !editing"
-                            :class="editing ? 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50' : 'bg-blue-600 border-transparent text-white hover:bg-blue-700'"
-                            class="px-4 py-2 border rounded-xl text-sm font-semibold transition-all flex items-center gap-2 shadow-xs">
-                            <i :class="editing ? 'fas fa-times text-xs' : 'fas fa-pen text-xs'"></i>
-                            <span x-text="editing ? 'Cancelar Edição' : 'Editar Dados'"></span>
-                        </button>
-                        {% endif %}
-                    </div>
+    #empresaPageRoot .empresa-workflow-model-button {
+        align-items: center;
+        appearance: none !important;
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 1rem !important;
+        box-shadow: none !important;
+        color: #1e293b !important;
+        display: flex;
+        font-family: inherit !important;
+        font-size: 0.875rem !important;
+        font-weight: 600;
+        gap: 0.5rem;
+        height: 44px !important;
+        line-height: 1.25rem !important;
+        min-height: 44px !important;
+        outline: none !important;
+        padding: 0 2.75rem 0 1rem !important;
+        text-align: left;
+        width: 100%;
+    }
+</style>
 
-                    {% call ui_form.form_start(action=url_for('auth.salvar_empresa'), form_id='empresaForm', item=None, extra_class='', enctype='multipart/form-data', id_name=None) %}
-                        <div class="p-6 space-y-6">
-                            <div>
-                                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Nome
-                                    da Empresa</label>
-                                <div x-show="!editing"
-                                    class="p-3.5 bg-slate-50/60 text-slate-700 font-medium rounded-xl border border-slate-200/60 text-sm">
-                                    {{ config_data.nome if config_data else 'Não definido' }}
-                                </div>
-                                <div x-show="editing">
-                                    <input type="text" name="nome_empresa"
-                                        value="{{ config_data.nome if config_data else '' }}"
-                                        class="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder-slate-400"
-                                        placeholder="Ex: Construtora Exemplo Ltda" required>
-                                </div>
-                            </div>
+<div
+    id="empresaPageRoot"
+    x-data="empresaApp()"
+    x-init="init()"
+    data-empresa-editing="{{ 'true' if start_in_edit_mode else 'false' }}"
+    :data-empresa-editing="empresaEditing ? 'true' : 'false'"
+    class="animate-fade-in-up w-full space-y-6"
+>
+    {% include "empresa/partials/_hero.html" %}
+    {% include "empresa/partials/_tabs.html" %}
 
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div class="space-y-2">
-                                    <label
-                                        class="block text-xs font-bold text-slate-400 uppercase tracking-wide">Logotipo
-                                        Principal</label>
-                                    <div
-                                        class="flex flex-col p-5 bg-slate-50/40 rounded-2xl border border-slate-200 border-dashed relative items-center">
-                                        <div id="preview-logo"
-                                            class="w-full h-36 flex items-center justify-center bg-white rounded-xl border border-slate-100 overflow-hidden shadow-inner mb-4">
-                                            {% if config_data.logo_path %}
-                                            <img src="{{ url_for('static', filename=config_data.logo_path) }}"
-                                                id="img-logo" class="max-w-full max-h-full object-contain p-4">
-                                            {% else %}
-                                            <div class="text-center text-slate-300">
-                                                <i class="fas fa-image text-4xl mb-2 block text-slate-200"></i>
-                                                <span class="text-xs font-medium text-slate-400">Sem logotipo</span>
-                                            </div>
-                                            {% endif %}
-                                        </div>
-                                        <div x-show="editing" class="w-full">
-                                            <input type="file" name="logo_empresa" id="logo_empresa" accept="image/*"
-                                                class="hidden" onchange="previewImage(this, 'img-logo')">
-                                            <label for="logo_empresa"
-                                                class="block w-full py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl cursor-pointer hover:bg-slate-50 hover:border-slate-300 transition-all text-sm font-semibold text-center shadow-xs">
-                                                <i class="fas fa-cloud-upload-alt mr-2 text-slate-400"></i> Escolher
-                                                Imagem
-                                            </label>
-                                            <p class="text-[10px] text-slate-400 mt-2.5 text-center">Recomendado: PNG
-                                                Transparente</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="space-y-2">
-                                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide">Ícone
-                                        do Navegador (Favicon)</label>
-                                    <div
-                                        class="flex flex-col p-5 bg-slate-50/40 rounded-2xl border border-slate-200 border-dashed relative items-center">
-                                        <div id="preview-icon"
-                                            class="w-full h-36 flex items-center justify-center bg-white rounded-xl border border-slate-100 overflow-hidden shadow-inner mb-4">
-                                            {% if config_data.icone_path %}
-                                            <img src="{{ url_for('static', filename=config_data.icone_path) }}"
-                                                id="img-icon" class="w-12 h-12 object-contain">
-                                            {% else %}
-                                            <div class="text-center text-slate-300">
-                                                <i class="fas fa-icons text-4xl mb-2 block text-slate-200"></i>
-                                                <span class="text-xs font-medium text-slate-400">Sem ícone</span>
-                                            </div>
-                                            {% endif %}
-                                        </div>
-                                        <div x-show="editing" class="w-full">
-                                            <input type="file" name="icone_empresa" id="icone_empresa"
-                                                accept="image/x-icon,image/png" class="hidden"
-                                                onchange="previewImage(this, 'img-icon')">
-                                            <label for="icone_empresa"
-                                                class="block w-full py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl cursor-pointer hover:bg-slate-50 hover:border-slate-300 transition-all text-sm font-semibold text-center shadow-xs">
-                                                <i class="fas fa-cloud-upload-alt mr-2 text-slate-400"></i> Escolher
-                                                Ícone
-                                            </label>
-                                            <p class="text-[10px] text-slate-400 mt-2.5 text-center">Recomendado: .ICO
-                                                ou .PNG (32x32)</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div x-show="editing" class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3"
-                            x-transition>
-                            <button type="button" @click="editing = false"
-                                class="px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 font-semibold text-sm transition-all shadow-xs">Cancelar</button>
-                            <button type="submit"
-                                class="px-6 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 shadow-md shadow-emerald-600/10 transition-all font-bold text-sm flex items-center gap-2">
-                                <i class="fas fa-check text-xs"></i> Salvar Alterações
-                            </button>
-                        </div>
-                    {% endcall %}
-                </div>
-            </section>
-
-            <section x-show="abaAtiva==='definicoes'" x-transition class="scroll-mt-6">
-                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-                    <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                        <div>
-                            <h3 class="text-base font-bold text-slate-800">Definições e Parâmetros</h3>
-                            <p class="text-xs text-slate-400 mt-1">Configurações internas do sistema. Valores nativos de
-                                fábrica não podem ser alterados.</p>
-                        </div>
-                        {% if can_edit %}
-                        <button @click="novaDefinicaoVisible = !novaDefinicaoVisible" type="button"
-                            class="px-4 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 text-sm font-semibold shadow-md shadow-blue-600/10 flex items-center gap-2 self-start sm:self-auto transition-all">
-                            <i class="fas fa-plus text-xs"></i> Nova Definição
-                        </button>
-                        {% endif %}
-                    </div>
-
-                    <div x-show="novaDefinicaoVisible" x-transition
-                        class="mb-6 p-5 bg-slate-50 rounded-2xl border border-slate-200/60">
-                        <form @submit.prevent="criarDefinicao" class="space-y-4">
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div>
-                                    <label
-                                        class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">Chave</label>
-                                    <input x-model="novoDefinicao.chave" type="text"
-                                        class="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all"
-                                        required>
-                                </div>
-                                <div>
-                                    <label
-                                        class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">Tipo</label>
-                                    <select x-model="novoDefinicao.tipo"
-                                        class="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all">
-                                        <option value="STRING">STRING</option>
-                                        <option value="INT">INT</option>
-                                        <option value="BOOLEAN">BOOLEAN</option>
-                                        <option value="JSON">JSON</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label
-                                        class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">Valor
-                                        Inicial</label>
-                                    <input x-model="novoDefinicao.valor" type="text"
-                                        class="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all"
-                                        placeholder="Valor padrão">
-                                </div>
-                            </div>
-                            <div>
-                                <label
-                                    class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">Descrição</label>
-                                <input x-model="novoDefinicao.descricao" type="text"
-                                    class="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all"
-                                    placeholder="Descrição curta da funcionalidade desse parâmetro">
-                            </div>
-                            <div class="flex justify-end gap-2 pt-2">
-                                <button type="button" @click="novaDefinicaoVisible=false"
-                                    class="px-4 py-2 text-sm font-semibold bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition-colors">Cancelar</button>
-                                <button type="submit"
-                                    class="px-5 py-2 text-sm font-semibold bg-blue-600 text-white rounded-xl hover:bg-blue-700 shadow-sm transition-colors">Criar
-                                    Parâmetro</button>
-                            </div>
-                        </form>
-                    </div>
-
-                    <div class="space-y-3">
-                        {% for d in definicoes %}
-                        <div class="flex flex-col md:flex-row md:justify-between md:items-center p-4 border border-slate-100 rounded-2xl bg-white hover:bg-slate-50/40 hover:border-slate-200/80 transition-all gap-4 shadow-2xs"
-                            data-chave="{{ d.chave }}">
-                            <div class="space-y-1.5">
-                                <div class="flex items-center gap-2.5 flex-wrap">
-                                    <strong class="text-slate-800 text-sm font-bold tracking-tight font-mono">{{ d.chave
-                                        }}</strong>
-                                    {% if d.is_system %}
-                                    <span
-                                        class="px-2 py-0.5 bg-slate-100 text-slate-600 text-[9px] font-bold rounded-lg border border-slate-200/60 uppercase tracking-wider flex items-center gap-1"><i
-                                            class="fas fa-lock text-[8px] opacity-70"></i> Sistema</span>
-                                    {% else %}
-                                    <span
-                                        class="px-2 py-0.5 bg-blue-50 text-blue-600 text-[9px] font-bold rounded-lg border border-blue-100/60 uppercase tracking-wider flex items-center gap-1"><i
-                                            class="fas fa-sliders-h text-[8px] opacity-70"></i> Custom</span>
-                                    {% endif %}
-                                </div>
-                                <div class="text-xs text-slate-400 leading-relaxed max-w-xl">{{ d.descricao }}</div>
-                            </div>
-
-                            <div
-                                class="flex items-center justify-between md:justify-end gap-6 border-t md:border-none pt-3 md:pt-0">
-                                <div class="text-sm font-bold text-slate-700 bg-slate-50 px-3 py-1 rounded-lg border border-slate-200/40 min-w-[120px] text-center md:text-right font-mono"
-                                    data-role="valor">
-                                    {{ config_map.get(d.chave) if config_map.get(d.chave) is not none else 'Não
-                                    definido' }}
-                                </div>
-                                <div class="text-xs font-bold text-slate-400" data-role="status" style="min-width:64px">
-                                </div>
-
-                                {% if not d.is_system %}
-                                <button type="button"
-                                    class="px-3 py-1.5 border border-slate-200 text-slate-600 bg-white rounded-xl text-xs font-bold hover:bg-slate-50 hover:text-slate-900 hover:border-slate-300 transition-all shadow-2xs"
-                                    data-action="edit">Editar</button>
-                                {% else %}
-                                <span
-                                    class="text-xs text-slate-400 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-100 italic select-none">Apenas
-                                    Leitura</span>
-                                {% endif %}
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </section>
-
-            <section x-show="abaAtiva==='papeis'" x-transition
-                class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 scroll-mt-6">
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                    <div>
-                        <h3 class="text-base font-bold text-slate-800">Papéis e Perfis de Acesso</h3>
-                        <p class="text-xs text-slate-400 mt-1">Gerencie os níveis de acesso e controle o escopo
-                            operacional de cada colaborador.</p>
-                    </div>
-                    <button @click="novoPapelVisible = !novoPapelVisible"
-                        class="px-4 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 shadow-md shadow-blue-600/10 transition-all inline-flex items-center gap-2 self-start sm:self-auto">
-                        <i class="fas fa-plus text-xs"></i> Novo Papel
-                    </button>
-                </div>
-
-                <div x-show="novoPapelVisible" x-transition
-                    class="mb-6 p-5 bg-slate-50 rounded-2xl border border-slate-200/60">
-                    <form @submit.prevent="criarPapel" class="space-y-4">
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div class="md:col-span-1">
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Nome do
-                                    Papel</label>
-                                <input x-model="formPapel.nome" type="text"
-                                    class="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all"
-                                    required>
-                            </div>
-                            <div class="md:col-span-2">
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Descrição</label>
-                                <input x-model="formPapel.descricao" type="text"
-                                    class="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all">
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Permissões
-                                Vinculadas</label>
-                            <div
-                                class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 p-4 bg-white rounded-xl border border-slate-100">
-                                {% for perm in permissoes_disponiveis %}
-                                <label
-                                    class="flex items-start gap-2.5 text-xs text-slate-600 cursor-pointer select-none py-1 hover:text-slate-900">
-                                    <input type="checkbox" :value="'{{ perm.chave }}'" x-model="formPapel.permissoes"
-                                        class="rounded border-slate-300 text-blue-600 focus:ring-blue-500/20 mt-0.5">
-                                    <span>{{ perm.descricao or perm.chave }}</span>
-                                </label>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        <div class="flex justify-end gap-2 pt-2">
-                            <button type="button" @click="resetFormPapel()"
-                                class="px-4 py-2 text-sm font-semibold bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition-colors">Cancelar</button>
-                            <button type="submit"
-                                class="px-5 py-2 text-sm font-semibold bg-blue-600 text-white rounded-xl hover:bg-blue-700 shadow-sm transition-colors">Criar
-                                Papel</button>
-                        </div>
-                    </form>
-                </div>
-
-                <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                    <div class="bg-slate-50/50 p-5 rounded-2xl border border-slate-100">
-                        <div class="flex items-center justify-between mb-4">
-                            <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Papéis Globais
-                                (Nativos)</h4>
-                            <span
-                                class="px-2 py-0.5 bg-slate-100 text-slate-500 text-[9px] font-bold rounded-md border border-slate-200 uppercase tracking-wide">Leitura</span>
-                        </div>
-                        <div class="space-y-2.5">
-                            {% for p in papeis_globais %}
-                            <div
-                                class="p-4 bg-white border border-slate-100 rounded-xl shadow-2xs flex justify-between items-start gap-4">
-                                <div class="space-y-1">
-                                    <span class="font-bold text-sm text-slate-800 block">{{ p.nome }}</span>
-                                    <p class="text-xs text-slate-400 leading-relaxed">{{ p.descricao or 'Papel base
-                                        nativo da estrutura global do sistema.' }}</p>
-                                </div>
-                                <button type="button"
-                                    class="text-blue-600 hover:text-blue-700 font-bold text-xs whitespace-nowrap flex items-center gap-1 mt-0.5 transition-colors"
-                                    title="Ver Permissões">
-                                    <i class="fas fa-eye text-[11px]"></i> Ver
-                                </button>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-
-                    <div class="bg-blue-50/10 p-5 rounded-2xl border border-blue-50">
-                        <div class="flex items-center justify-between mb-4">
-                            <h4 class="text-xs font-bold text-blue-500 uppercase tracking-wider">Papéis Customizados
-                            </h4>
-                            <span
-                                class="px-2 py-0.5 bg-blue-50 text-blue-600 text-[9px] font-bold rounded-md border border-blue-100/50 uppercase tracking-wide">Gerenciável</span>
-                        </div>
-                        <div class="space-y-2.5">
-                            {% if papeis_empresa %}
-                            {% for p in papeis_empresa %}
-                            <div
-                                class="p-4 bg-white border border-slate-100 rounded-xl shadow-2xs flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
-                                <div class="space-y-1">
-                                    <div class="flex items-center gap-2">
-                                        <span class="font-bold text-sm text-slate-800">{{ p.nome }}</span>
-                                        {% if p.inativo %}
-                                        <span
-                                            class="px-1.5 py-0.5 bg-rose-50 text-rose-600 text-[9px] font-bold rounded uppercase border border-rose-100/50">Inativo</span>
-                                        {% else %}
-                                        <span
-                                            class="px-1.5 py-0.5 bg-emerald-50 text-emerald-600 text-[9px] font-bold rounded uppercase border border-emerald-100/50">Ativo</span>
-                                        {% endif %}
-                                    </div>
-                                    <p class="text-xs text-slate-400 leading-relaxed">{{ p.descricao or 'Papel
-                                        personalizado criado para a operação interna.' }}</p>
-                                </div>
-                                <div
-                                    class="flex items-center gap-3 border-t sm:border-none pt-2 sm:pt-0 justify-end text-xs font-bold shrink-0 mt-0.5">
-                                    <button @click="abrirEditarPapel({{ p.id }})"
-                                        class="text-slate-500 hover:text-slate-900 flex items-center gap-1 transition-colors"><i
-                                            class="fas fa-edit text-[10px]"></i> Editar</button>
-                                    {% if p.inativo %}
-                                    <button
-                                        class="text-emerald-600 hover:text-emerald-700 flex items-center gap-1 transition-colors"><i
-                                            class="fas fa-check text-[10px]"></i> Ativar</button>
-                                    {% else %}
-                                    <button
-                                        class="text-rose-500 hover:text-rose-600 flex items-center gap-1 transition-colors"><i
-                                            class="fas fa-ban text-[10px]"></i> Inativar</button>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            {% endfor %}
-                            {% else %}
-                            <div
-                                class="p-8 bg-white/60 border border-slate-200 border-dashed rounded-xl text-center text-slate-400 text-xs font-medium">
-                                Nenhum papel personalizado criado para esta organização.
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <section x-show="abaAtiva==='workflow'" x-transition class="scroll-mt-6">
-                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-                    <div
-                        class="flex flex-col md:flex-row items-start justify-between gap-4 border-b border-slate-100 pb-5">
-                        <div class="space-y-1">
-                            <h3 class="text-base font-bold text-slate-800">Workflows e Fluxos de Aprovação</h3>
-                            <p class="text-xs text-slate-400 leading-relaxed">Parametrizador nativo de fluxos internos
-                                de validação de demandas estruturado por alçadas dinâmicas e obras específicas.</p>
-                        </div>
-                        <button @click="novoWorkflowVisible = true"
-                            class="px-4 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 text-sm font-semibold shadow-md shadow-blue-600/10 flex items-center justify-center gap-2 transition-all shrink-0">
-                            <i class="fas fa-plus text-xs"></i> Novo Workflow
-                        </button>
-                    </div>
-
-                    <div x-show="novoWorkflowVisible" x-transition
-                        class="mt-6 p-5 bg-slate-50 rounded-2xl border border-slate-200/60">
-                        <form @submit.prevent="criarWorkflow" class="space-y-4">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Nome do
-                                        Workflow</label>
-                                    <input x-model="formWorkflow.nome" type="text"
-                                        class="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all"
-                                        required>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Escopo de
-                                        Obra / Unidade</label>
-                                    <select x-model="formWorkflow.obra_id"
-                                        class="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all">
-                                        <option value="">Padrão Corporativo (Empresa)</option>
-                                        {% for obra in obras %}
-                                        <option value="{{ obra.id }}">{{ obra.nome }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Descrição
-                                    Operacional</label>
-                                <input x-model="formWorkflow.descricao" type="text"
-                                    class="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all">
-                            </div>
-                            <div class="space-y-2">
-                                <label class="block text-xs font-bold text-slate-500 uppercase">Etapas Sequenciais do
-                                    Fluxo</label>
-                                <div class="space-y-2 max-w-xl">
-                                    <template x-for="(etapa, index) in formWorkflow.etapas" :key="index">
-                                        <div
-                                            class="flex items-center gap-2 bg-white p-2 rounded-xl border border-slate-100 shadow-3xs">
-                                            <span
-                                                class="w-6 h-6 rounded-lg bg-slate-50 flex items-center justify-center font-mono text-xs font-bold text-slate-400 border border-slate-200/40"
-                                                x-text="index + 1"></span>
-                                            <input x-model="etapa.nome" type="text"
-                                                class="flex-1 px-3 py-1.5 text-sm rounded-lg border border-slate-200 focus:outline-none focus:border-blue-500"
-                                                placeholder="Ex: Avaliação Técnica, Aprovação de Diretoria" required>
-                                            <button type="button" @click="removerEtapa(index)"
-                                                class="px-2.5 py-1.5 text-xs font-bold border border-slate-200 rounded-lg text-rose-500 hover:bg-rose-50 hover:border-rose-100 transition-colors">Remover</button>
-                                        </div>
-                                    </template>
-                                </div>
-                                <button type="button" @click="adicionarEtapa()"
-                                    class="px-3 py-2 text-xs font-bold bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors inline-flex items-center gap-1.5"><i
-                                        class="fas fa-plus text-[10px]"></i> Inserir Próxima Etapa</button>
-                            </div>
-                            <div class="flex justify-end gap-2 pt-2 border-t border-slate-200/40">
-                                <button type="button" @click="resetFormWorkflow()"
-                                    class="px-4 py-2 text-sm font-semibold bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition-colors">Cancelar</button>
-                                <button type="submit"
-                                    class="px-5 py-2 text-sm font-semibold bg-blue-600 text-white rounded-xl hover:bg-blue-700 shadow-sm transition-colors">Gravar
-                                    Workflow</button>
-                            </div>
-                        </form>
-                    </div>
-
-                    <div
-                        class="mt-6 p-4 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                        <div class="flex items-center gap-3.5">
-                            <div
-                                class="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shrink-0">
-                                <i class="fas fa-shield-halved text-base"></i>
-                            </div>
-                            <div>
-                                <div class="flex items-center gap-2">
-                                    <h4 class="text-sm font-bold text-slate-800">Workflow de Contingência (Sistema)</h4>
-                                    <span
-                                        class="px-1.5 py-0.5 bg-slate-200/60 text-slate-600 text-[9px] font-bold rounded-md uppercase tracking-wider">Ativo</span>
-                                </div>
-                                <p class="text-xs text-slate-400 mt-0.5 leading-relaxed">Fluxo linear de segurança
-                                    acionado automaticamente em cenários sem diretrizes customizadas.</p>
-                            </div>
-                        </div>
-                        <button @click="$dispatch('visualizar-padrao')"
-                            class="text-xs font-bold text-slate-600 hover:text-slate-900 whitespace-nowrap bg-white px-3 py-2 rounded-xl border border-slate-200 shadow-2xs transition-all flex items-center gap-1.5 self-start sm:self-auto">
-                            <i class="fas fa-eye text-[11px] opacity-70"></i> Visualizar Padrão
-                        </button>
-                    </div>
-
-                    <div class="mt-4 space-y-2.5">
-                        {% for wf in workflows %}
-                        <div
-                            class="p-4 bg-white border border-slate-100 rounded-2xl flex items-center justify-between shadow-3xs hover:border-slate-200 transition-all">
-                            <div class="space-y-0.5">
-                                <div class="font-bold text-sm text-slate-800 flex items-center gap-2">
-                                    <i class="fas fa-route text-slate-300 text-xs"></i> {{ wf.nome }}
-                                </div>
-                                <div class="text-xs text-slate-400 leading-relaxed">{{ wf.descricao or 'Sem descrição
-                                    anexada.' }}</div>
-                            </div>
-                            <button @click="abrirEditarWorkflow({{ wf.id }})"
-                                class="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all shadow-3xs">Configurar</button>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </section>
-
-            <div x-show="editarPapelVisible" x-transition
-                class="fixed inset-0 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4 z-50 animate-fade-in"
-                style="display: none;">
-                <div @click.stop
-                    class="w-full max-w-2xl bg-white p-6 rounded-2xl border border-slate-100 shadow-xl max-h-[90vh] overflow-y-auto">
-                    <div class="flex justify-between items-center pb-3 border-b border-slate-100 mb-4">
-                        <h3 class="text-base font-bold text-slate-900 flex items-center gap-2"><i
-                                class="fas fa-shield-alt text-slate-400"></i> Editar Configurações do Papel</h3>
-                        <button type="button" @click="fecharModalEdicao()"
-                            class="w-7 h-7 rounded-lg bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors"><i
-                                class="fas fa-times text-xs"></i></button>
-                    </div>
-                    <p class="text-xs text-slate-400 leading-relaxed mb-4">Gerencie as permissões globais e os metadados
-                        associados a este perfil de privilégios.</p>
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Nome do Papel</label>
-                            <input type="text"
-                                class="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 bg-slate-50 text-slate-500"
-                                disabled placeholder="Carregando nome...">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Descrição</label>
-                            <textarea rows="2"
-                                class="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 bg-slate-50 text-slate-500"
-                                disabled placeholder="Carregando descrição..."></textarea>
-                        </div>
-                        <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
-                            <button type="button" @click="fecharModalEdicao()"
-                                class="px-4 py-2 text-sm font-semibold bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition-colors">Fechar
-                                Janela</button>
-                            <button type="button"
-                                class="px-5 py-2 text-sm font-semibold bg-blue-600 text-white rounded-xl disabled:opacity-50"
-                                disabled>Salvar Alterações</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div x-show="editarWorkflowVisible" x-transition
-                class="fixed inset-0 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4 z-50 animate-fade-in"
-                style="display: none;">
-                <div @click.stop
-                    class="w-full max-w-2xl bg-white p-6 rounded-2xl border border-slate-100 shadow-xl max-h-[90vh] overflow-y-auto">
-                    <div class="flex justify-between items-center pb-3 border-b border-slate-100 mb-4">
-                        <h3 class="text-base font-bold text-slate-900 flex items-center gap-2"><i
-                                class="fas fa-project-diagram text-slate-400"></i> Ajustar Arquitetura do Workflow</h3>
-                        <button type="button" @click="fecharModalEdicao()"
-                            class="w-7 h-7 rounded-lg bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors"><i
-                                class="fas fa-times text-xs"></i></button>
-                    </div>
-                    <p class="text-xs text-slate-400 leading-relaxed mb-4">Modifique a ordem de aprovação e as alçadas
-                        responsáveis conectadas a esta regra de fluxo.</p>
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Nome do
-                                Workflow</label>
-                            <input type="text"
-                                class="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 bg-slate-50 text-slate-500"
-                                disabled placeholder="Carregando nome...">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Descrição</label>
-                            <textarea rows="2"
-                                class="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 bg-slate-50 text-slate-500"
-                                disabled placeholder="Carregando descrição..."></textarea>
-                        </div>
-                        <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
-                            <button type="button" @click="fecharModalEdicao()"
-                                class="px-4 py-2 text-sm font-semibold bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition-colors">Fechar
-                                Janela</button>
-                            <button type="button"
-                                class="px-5 py-2 text-sm font-semibold bg-blue-600 text-white rounded-xl disabled:opacity-50"
-                                disabled>Salvar Alterações</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-
-        <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
-        <script>
-            function previewImage(input, imgId) {
-                const [file] = input.files;
-                if (file) {
-                    const preview = document.getElementById(imgId);
-                    if (preview && preview.tagName !== 'IMG') {
-                        const parent = preview.parentElement;
-                        parent.innerHTML = `<img src="${URL.createObjectURL(file)}" id="${imgId}" class="max-w-full max-h-full object-contain p-4 animate-fade-in">`;
-                    } else if (preview) {
-                        preview.src = URL.createObjectURL(file);
-                    }
-                }
-            }
-
-            function empresaApp() {
-                return {
-                    abaAtiva: localStorage.getItem('empresa_aba_ativa') || 'geral',
-                    novaDefinicaoVisible: false,
-                    novoDefinicao: { chave: '', descricao: '', valor: '', tipo: 'STRING' },
-                    novoPapelVisible: false,
-                    formPapel: { nome: '', descricao: '', permissoes: [] },
-                    novoWorkflowVisible: false,
-                    formWorkflow: { nome: '', descricao: '', obra_id: '', etapas: [{ nome: '' }] },
-                    editarPapelVisible: false,
-                    editarWorkflowVisible: false,
-                    selectedPapelId: null,
-                    selectedWorkflowId: null,
-
-                    mudarAba(aba) {
-                        this.abaAtiva = aba;
-                        localStorage.setItem('empresa_aba_ativa', aba);
-                    },
-                    async criarDefinicao() {
-                        const meta = document.querySelector('meta[name="csrf-token"]');
-                        const csrf = meta ? meta.getAttribute('content') : null;
-                        try {
-                            const res = await fetch('{{ url_for('auth.api_create_definicao') }}', {
-                                method: 'POST',
-                                headers: Object.assign({ 'Content-Type': 'application/json' }, csrf ? { 'X-CSRFToken': csrf } : {}),
-                                body: JSON.stringify(this.novoDefinicao)
-                            });
-                            const j = await res.json();
-                            if (res.ok && j.ok) {
-                                this.novaDefinicaoVisible = false;
-                                this.novoDefinicao = { chave: '', descricao: '', valor: '', tipo: 'STRING' };
-                                location.reload();
-                            } else {
-                                await showError('Erro ao criar definição', j.error || 'Erro ao criar definição.');
-                            }
-                        } catch (err) {
-                            console.error(err);
-                            await showError('Erro de rede', 'Erro de rede ao criar definição.');
-                        }
-                    },
-                    resetFormPapel() {
-                        this.novoPapelVisible = false;
-                        this.formPapel = { nome: '', descricao: '', permissoes: [] };
-                    },
-                    async criarPapel() {
-                        const meta = document.querySelector('meta[name="csrf-token"]');
-                        const csrf = meta ? meta.getAttribute('content') : null;
-                        try {
-                            const res = await fetch('{{ url_for('auth.api_create_papel') }}', {
-                                method: 'POST',
-                                headers: Object.assign({ 'Content-Type': 'application/json' }, csrf ? { 'X-CSRFToken': csrf } : {}),
-                                body: JSON.stringify(this.formPapel)
-                            });
-                            const j = await res.json();
-                            if (res.ok && j.ok) {
-                                this.resetFormPapel();
-                                location.reload();
-                            } else {
-                                await showError('Erro ao criar papel', j.error || 'Erro ao criar papel.');
-                            }
-                        } catch (err) {
-                            console.error(err);
-                            await showError('Erro de rede', 'Erro de rede ao criar papel.');
-                        }
-                    },
-                    resetFormWorkflow() {
-                        this.novoWorkflowVisible = false;
-                        this.formWorkflow = { nome: '', descricao: '', obra_id: '', etapas: [{ nome: '' }] };
-                    },
-                    adicionarEtapa() {
-                        this.formWorkflow.etapas.push({ nome: '' });
-                    },
-                    removerEtapa(index) {
-                        if (this.formWorkflow.etapas.length > 1) {
-                            this.formWorkflow.etapas.splice(index, 1);
-                        }
-                    },
-                    async criarWorkflow() {
-                        const meta = document.querySelector('meta[name="csrf-token"]');
-                        const csrf = meta ? meta.getAttribute('content') : null;
-                        const payload = {
-                            nome: this.formWorkflow.nome,
-                            descricao: this.formWorkflow.descricao,
-                            obra_id: this.formWorkflow.obra_id || null,
-                            etapas: this.formWorkflow.etapas.filter(e => e.nome.trim()).map(e => ({ nome: e.nome.trim() }))
-                        };
-                        if (!payload.nome) return await showWarning('Workflow incompleto', 'Nome do workflow é obrigatório.');
-                        if (!payload.etapas.length) return await showWarning('Workflow incompleto', 'Adicione ao menos uma etapa.');
-                        try {
-                            const res = await fetch('{{ url_for('auth.api_create_workflow') }}', {
-                                method: 'POST',
-                                headers: Object.assign({ 'Content-Type': 'application/json' }, csrf ? { 'X-CSRFToken': csrf } : {}),
-                                body: JSON.stringify(payload)
-                            });
-                            const j = await res.json();
-                            if (res.ok && j.ok) {
-                                this.resetFormWorkflow();
-                                location.reload();
-                            } else {
-                                await showError('Erro ao criar workflow', j.error || 'Erro ao criar workflow.');
-                            }
-                        } catch (err) {
-                            console.error(err);
-                            await showError('Erro de rede', 'Erro de rede ao criar workflow.');
-                        }
-                    },
-                    abrirEditarPapel(id) {
-                        this.selectedPapelId = id;
-                        this.editarPapelVisible = true;
-                    },
-                    abrirEditarWorkflow(id) {
-                        this.selectedWorkflowId = id;
-                        this.editarWorkflowVisible = true;
-                    },
-                    fecharModalEdicao() {
-                        this.editarPapelVisible = false;
-                        this.editarWorkflowVisible = false;
-                        this.selectedPapelId = null;
-                        this.selectedWorkflowId = null;
-                    }
-                };
-            }
-
-            // Módulo de Edição Inline via AJAX
-            (function () {
-                const timers = {};
-                const controllers = {};
-                const meta = document.querySelector('meta[name="csrf-token"]');
-                const csrf = meta ? meta.getAttribute('content') : null;
-
-                function showStatus(container, text, cls) {
-                    const s = container.querySelector('[data-role="status"]');
-                    if (!s) return;
-                    s.textContent = text;
-                    s.className = 'text-xs font-bold ' + (cls || 'text-slate-400');
-                }
-
-                async function saveConfig(chave, valor, container) {
-                    showStatus(container, 'Salvando...', 'text-blue-500');
-                    try {
-                        if (controllers[chave]) {
-                            try { controllers[chave].abort(); } catch (_) { }
-                        }
-                        const controller = new AbortController();
-                        controllers[chave] = controller;
-
-                        const res = await fetch('{{ url_for("auth.api_update_empresa_config") }}', {
-                            method: 'POST',
-                            headers: Object.assign({ 'Content-Type': 'application/json' }, csrf ? { 'X-CSRFToken': csrf } : {}),
-                            body: JSON.stringify({ chave: chave, valor: valor }),
-                            signal: controller.signal
-                        });
-                        const j = await res.json();
-                        delete controllers[chave];
-
-                        if (res.ok && j.ok) {
-                            const valEl = container.querySelector('[data-role="valor"]');
-                            if (valEl) valEl.textContent = j.valor;
-                            showStatus(container, 'Salvo', 'text-emerald-500');
-                            setTimeout(() => showStatus(container, ''), 1500);
-                        } else {
-                            showStatus(container, j.error || 'Erro', 'text-rose-500');
-                        }
-                    } catch (e) {
-                        if (e.name === 'AbortError') return;
-                        showStatus(container, 'Erro', 'text-rose-500');
-                    }
-                }
-
-                function makeEditable(row) {
-                    const chave = row.getAttribute('data-chave');
-                    const valEl = row.querySelector('[data-role="valor"]');
-                    const editBtn = row.querySelector('[data-action="edit"]');
-                    if (!valEl || !editBtn) return;
-
-                    editBtn.addEventListener('click', () => {
-                        if (row.querySelector('input')) return;
-                        const cur = valEl.textContent || '';
-                        const input = document.createElement('input');
-                        input.type = 'text';
-                        input.value = cur.trim() === 'Não definido' ? '' : cur.trim();
-                        input.className = 'border border-slate-200 px-3 py-1 text-sm rounded-xl focus:outline-none focus:border-blue-500 font-mono';
-                        input.style.maxWidth = '200px';
-
-                        const save = document.createElement('button');
-                        save.innerHTML = '<i class="fas fa-check text-[10px]"></i>';
-                        save.className = 'w-7 h-7 bg-blue-600 text-white rounded-lg flex items-center justify-center hover:bg-blue-700 ml-2 shadow-xs shrink-0';
-
-                        const cancel = document.createElement('button');
-                        cancel.innerHTML = '<i class="fas fa-times text-[10px]"></i>';
-                        cancel.className = 'w-7 h-7 bg-white border border-slate-200 text-slate-500 rounded-lg flex items-center justify-center hover:bg-slate-50 ml-1 shadow-xs shrink-0';
-
-                        const container = valEl.parentElement;
-                        container.insertBefore(input, valEl);
-                        container.insertBefore(save, valEl.nextSibling);
-                        container.insertBefore(cancel, save.nextSibling);
-                        valEl.style.display = 'none';
-
-                        input.addEventListener('input', () => {
-                            if (timers[chave]) clearTimeout(timers[chave]);
-                            timers[chave] = setTimeout(() => {
-                                saveConfig(chave, input.value, row);
-                            }, 1000);
-                        });
-
-                        save.addEventListener('click', () => {
-                            if (timers[chave]) clearTimeout(timers[chave]);
-                            saveConfig(chave, input.value, row);
-                            cleanup();
-                        });
-
-                        cancel.addEventListener('click', () => cleanup(true));
-
-                        function cleanup(rollback = false) {
-                            if (rollback) input.value = cur;
-                            input.remove(); save.remove(); cancel.remove();
-                            valEl.style.display = '';
-                        }
-                    });
-                }
-
-                document.querySelectorAll('div[data-chave]').forEach(makeEditable);
-            })();
-        </script>
-
+    <main id="empresa-tab-content" class="space-y-6">
+        {% include "empresa/partials/_section_geral.html" %}
+        {% include "empresa/partials/_section_workflow_v2.html" %}
     </main>
 
+    {% include "empresa/partials/_action_bar.html" %}
+    {% include "empresa/partials/_modals.html" %}
 </div>
+
+<script type="application/json" id="empresa-page-data">
+    {{
+        {
+            "startInEditMode": start_in_edit_mode,
+            "urls": {
+                "empresaView": empresa_view_url,
+                "empresaEdit": empresa_edit_url,
+                "createDefinicao": url_for('auth.api_create_definicao'),
+                "createPapel": url_for('auth.api_create_papel'),
+                "createWorkflow": url_for('auth.api_create_workflow'),
+                "updateWorkflowDefault": url_for('auth.api_update_workflow_default'),
+                "updateWorkflowEmpresa": url_for('auth.api_update_workflow_empresa', workflow_id=0),
+                "updateEmpresaConfig": url_for('auth.api_update_empresa_config'),
+            },
+            "obrasWorkflowData": obras_modal_payload,
+            "workflowDefaultCodigo": workflow_default_codigo or "SIMPLES",
+            "workflow": {
+                "roleOptions": workflow_role_options,
+                "userOptions": workflow_user_options,
+                "previewById": workflow_preview_by_id,
+                "defaultId": workflow_default_id,
+            },
+        } | tojson
+    }}
+</script>
+<script src="{{ url_for('static', filename='js/pages/empresa/index.js') }}?v=20260723-empresa-default-geral" defer></script>
+<script src="{{ url_for('static', filename='vendor/alpinejs/alpine-3.14.9.min.js') }}" defer></script>
+{% endcall %}
 {% endblock %}

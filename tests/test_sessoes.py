@@ -30,6 +30,7 @@ def create_admin_user():
         empresa_id=empresa.id,
         colaborador_id=colaborador.id,
         ativo=True,
+        troca_senha_obrigatoria=False,
     )
     usuario.set_senha("Senha123")
     db.session.add(usuario)
