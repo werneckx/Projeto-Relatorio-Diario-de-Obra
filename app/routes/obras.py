@@ -7,7 +7,7 @@ from app.models.configuracao import ConfigDefinicao, EmpresaConfig, ObraConfig
 from app.models.notificacao import TipoNotificacao
 from app.models.obra import FrenteTrabalho, FrenteColaborador, ObraUsuario
 from app.models.rdo import RDO, RDOAprovacao
-from app.models.workflow import WorkflowDefinicao, WorkflowEtapa, WorkflowExecucao, WorkflowExecucaoEtapa
+from app.models.workflow import WorkflowDefinicao, WorkflowEtapa, WorkflowExecucao, WorkflowExecucaoEtapa, WorkflowGrupo
 from app.services.config_service import ConfigService
 from app.services.notificacao_service import NotificacaoService
 from app.services.workflow_service import WorkflowResolucaoError, WorkflowService
@@ -93,7 +93,7 @@ def _ensure_obra_workflow_config_definitions():
 
 def _build_obra_workflow_setup_context(empresa_id, obra_id=None):
     base = {
-        "enabled": bool(obra_id),
+        "enabled": bool(empresa_id),
         "available_workflows": [],
         "workflow_previews": {},
         "user_options": [],
@@ -106,7 +106,7 @@ def _build_obra_workflow_setup_context(empresa_id, obra_id=None):
             "workflow_origem_tipo": "indefinido",
             "etapas": [],
             "valid": False,
-            "errors": ["Salve a obra primeiro para configurar um workflow individual."] if not obra_id else [],
+            "errors": [],
         },
     }
     if not empresa_id:
@@ -169,9 +169,12 @@ def _build_obra_workflow_setup_context(empresa_id, obra_id=None):
                     "papel_id": etapa.papel_id,
                     "papel_nome": etapa.papel.nome if etapa.papel else None,
                     "usuario_aprovador_id": etapa.usuario_aprovador_id,
+                    "workflow_group": etapa.grupo.ordem if etapa.grupo else (etapa.grupo_paralelo or etapa.nivel),
+                    "grupo_id": etapa.grupo_id,
                     "grupo_paralelo": etapa.grupo_paralelo,
                     "assinatura_obrigatoria": bool(etapa.assinatura_obrigatoria),
-                    "regra_etapa": "TODOS",
+                    "regra_etapa": "PRIMEIRO" if etapa.grupo and etapa.grupo.regra_aprovacao == "QUALQUER" else "TODOS",
+                    "regra_aprovacao": etapa.grupo.regra_aprovacao if etapa.grupo and etapa.grupo.regra_aprovacao else "TODOS",
                 }
                 for etapa in etapas_preview
             ],
@@ -245,9 +248,12 @@ def _build_obra_workflow_setup_context(empresa_id, obra_id=None):
                         "papel_id": etapa.papel_id,
                         "papel_nome": etapa.papel.nome if etapa.papel else None,
                         "usuario_aprovador_id": etapa.usuario_aprovador_id,
+                        "workflow_group": etapa.grupo.ordem if etapa.grupo else (etapa.grupo_paralelo or etapa.nivel),
+                        "grupo_id": etapa.grupo_id,
                         "grupo_paralelo": etapa.grupo_paralelo,
                         "assinatura_obrigatoria": bool(etapa.assinatura_obrigatoria),
-                        "regra_etapa": "TODOS",
+                        "regra_etapa": "PRIMEIRO" if etapa.grupo and etapa.grupo.regra_aprovacao == "QUALQUER" else "TODOS",
+                        "regra_aprovacao": etapa.grupo.regra_aprovacao if etapa.grupo and etapa.grupo.regra_aprovacao else "TODOS",
                     }
                     for etapa in etapas
                 ],
@@ -407,6 +413,11 @@ def _arquivar_workflow_obra(workflow, actor_id):
     db.session.flush()
 
 
+def _normalizar_regra_aprovacao_obra(valor):
+    regra = str(valor or "TODOS").strip().upper()
+    return "QUALQUER" if regra in {"QUALQUER", "PRIMEIRO", "OU"} else "TODOS"
+
+
 def _upsert_obra_workflow_customizado(empresa_id, obra, source_workflow, workflow_config_data, actor_id):
     custom_stages = workflow_config_data.get("custom_stages") if isinstance(workflow_config_data.get("custom_stages"), list) else []
     if not custom_stages:
@@ -488,6 +499,40 @@ def _upsert_obra_workflow_customizado(empresa_id, obra, source_workflow, workflo
         db.session.delete(etapa)
     db.session.flush()
 
+    for grupo in WorkflowGrupo.query.filter_by(workflow_id=workflow.id).all():
+        db.session.delete(grupo)
+    db.session.flush()
+
+    is_simple = (workflow.tipo_fluxo or "").upper() == "SIMPLES"
+    grupos_por_chave = {}
+    for index, stage in enumerate(custom_stages, start=1):
+        if is_simple:
+            group_key = "1"
+        else:
+            group_key = str(
+                stage.get("workflow_group")
+                or stage.get("grupo_visual")
+                or stage.get("grupo_paralelo")
+                or index
+            )
+        if group_key in grupos_por_chave:
+            continue
+        grupo = WorkflowGrupo(
+            empresa_id=empresa_id,
+            workflow_id=workflow.id,
+            nome="Etapa 1" if is_simple else f"Grupo {len(grupos_por_chave) + 1}",
+            ordem=len(grupos_por_chave) + 1,
+            regra_aprovacao=_normalizar_regra_aprovacao_obra(
+                stage.get("regra_aprovacao") or stage.get("regra_etapa")
+            ),
+            ativo=True,
+            criado_por=actor_id,
+            modificado_por=actor_id,
+        )
+        db.session.add(grupo)
+        grupos_por_chave[group_key] = grupo
+    db.session.flush()
+
     for index, stage in enumerate(custom_stages, start=1):
         nome_etapa = (stage.get("nome") or "").strip()
         if not nome_etapa:
@@ -495,7 +540,17 @@ def _upsert_obra_workflow_customizado(empresa_id, obra, source_workflow, workflo
         tipo_aprovador = (stage.get("tipo_aprovador") or "PAPEL").strip().upper()
         papel_id = stage.get("papel_id")
         usuario_aprovador_id = stage.get("usuario_aprovador_id")
-        grupo_paralelo = 1 if workflow.aprovacao_paralela else None
+        if is_simple:
+            group_key = "1"
+        else:
+            group_key = str(
+                stage.get("workflow_group")
+                or stage.get("grupo_visual")
+                or stage.get("grupo_paralelo")
+                or index
+            )
+        grupo = grupos_por_chave.get(group_key)
+        grupo_paralelo = grupo.ordem if workflow.aprovacao_paralela and grupo else None
         db.session.add(
             WorkflowEtapa(
                 empresa_id=empresa_id,
@@ -506,6 +561,7 @@ def _upsert_obra_workflow_customizado(empresa_id, obra, source_workflow, workflo
                 tipo_aprovador=tipo_aprovador if tipo_aprovador in {'USUARIO', 'PAPEL', 'CLIENTE', 'RESPONSAVEL_OBRA'} else 'PAPEL',
                 papel_id=int(papel_id) if papel_id not in (None, "") else None,
                 usuario_aprovador_id=int(usuario_aprovador_id) if usuario_aprovador_id not in (None, "") else None,
+                grupo_id=grupo.id if grupo else None,
                 grupo_paralelo=grupo_paralelo,
                 obrigatorio=True,
                 obrigatoria=True,
@@ -1477,6 +1533,8 @@ def gerar_obra():
     workflow_selected_raw = (request.form.get('workflow_selecionado_id') or "").strip()
     workflow_config_payload = request.form.get('workflow_config_json')
 
+    is_new_obra = not obra_id
+
     try:
         data_inicio = _parse_date(data_inicio_str)
         data_fim_planejada = _parse_date(data_fim_planejada_str)
@@ -1637,15 +1695,11 @@ def gerar_obra():
         if usuario_responsavel_id:
             _ensure_usuario_gestor_obra(obra.empresa_id, obra, usuario_responsavel_id, criado_por=audit_user_id)
 
-        # Legacy equipe de obra não possui modelo compatível com o schema atual.
-        # O payload é preservado no formulário, mas não é gravado enquanto a tabela de suporte não estiver disponível.
-        if not obra_id:
-            workflow_selected_raw = ""
-            workflow_config_data = {}
-
+        # Em obra nova, o workflow do formulario e gravado apos o flush da obra.
         _ensure_obra_workflow_config_definitions()
         workflow_assignments = workflow_config_data.get("assignments") if isinstance(workflow_config_data.get("assignments"), dict) else {}
         workflow_custom_stages = workflow_config_data.get("custom_stages") if isinstance(workflow_config_data.get("custom_stages"), list) else []
+        workflow_draft_error = None
         if workflow_selected_raw:
             try:
                 workflow_selected_id = int(workflow_selected_raw)
@@ -1674,13 +1728,19 @@ def gerar_obra():
                         workflow_assignments[str(etapa_customizada.id)] = int(responsavel_usuario_id)
                     except (TypeError, ValueError):
                         continue
-            validado = WorkflowService.validar_configuracao_workflow_obra(
-                empresa_id=obra.empresa_id,
-                obra_id=obra.id,
-                workflow_id=workflow_alvo.id,
-                assignments=workflow_assignments,
-                auto_grant_signature=True,
-            )
+            validado = None
+            try:
+                validado = WorkflowService.validar_configuracao_workflow_obra(
+                    empresa_id=obra.empresa_id,
+                    obra_id=obra.id,
+                    workflow_id=workflow_alvo.id,
+                    assignments=workflow_assignments,
+                    auto_grant_signature=True,
+                )
+            except WorkflowResolucaoError as exc:
+                if not is_new_obra:
+                    raise
+                workflow_draft_error = str(exc)
             _set_obra_config_value(
                 empresa_id=obra.empresa_id,
                 obra_id=obra.id,
@@ -1694,8 +1754,14 @@ def gerar_obra():
                 valor={
                     "workflow_id": validado["workflow"].id,
                     "assignments": validado["assignments"],
-                },
+                } if validado else None,
             )
+            if workflow_draft_error:
+                flash(
+                    "Workflow salvo como rascunho. Para ativar ou testar, vincule os usuarios/papeis pendentes: "
+                    f"{workflow_draft_error}",
+                    "warning",
+                )
         else:
             _set_obra_config_value(
                 empresa_id=obra.empresa_id,

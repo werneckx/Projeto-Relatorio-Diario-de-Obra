@@ -695,7 +695,11 @@ class WorkflowService:
                 'papel_id': papel_id,
                 'papel_nome': papel.nome if papel else None,
                 'usuario_aprovador_id': etapa.usuario_aprovador_id,
+                'workflow_group': etapa.grupo.ordem if etapa.grupo else (etapa.grupo_paralelo or etapa.nivel),
+                'grupo_id': etapa.grupo_id,
                 'grupo_paralelo': etapa.grupo_paralelo,
+                'regra_etapa': 'PRIMEIRO' if etapa.grupo and etapa.grupo.regra_aprovacao == 'QUALQUER' else 'TODOS',
+                'regra_aprovacao': etapa.grupo.regra_aprovacao if etapa.grupo and etapa.grupo.regra_aprovacao else 'TODOS',
                 'assinatura_obrigatoria': bool(etapa.assinatura_obrigatoria),
                 'usuario_id': usuario_final_id,
                 'usuario_nome': usuario_final.nome,
@@ -747,7 +751,27 @@ class WorkflowService:
             errors = []
             valid = True
         except WorkflowResolucaoError as exc:
-            etapas = []
+            etapas = [
+                {
+                    'etapa_id': etapa.id,
+                    'workflow_id': workflow.id,
+                    'nivel': etapa.nivel,
+                    'ordem': etapa.ordem,
+                    'nome': etapa.nome,
+                    'tipo_aprovador': etapa.tipo_aprovador,
+                    'papel_id': etapa.papel_id,
+                    'papel_nome': etapa.papel.nome if etapa.papel else None,
+                    'usuario_aprovador_id': etapa.usuario_aprovador_id,
+                    'usuario_nome': etapa.usuario_aprovador.nome if etapa.usuario_aprovador else None,
+                    'workflow_group': etapa.grupo.ordem if etapa.grupo else (etapa.grupo_paralelo or etapa.nivel),
+                    'grupo_id': etapa.grupo_id,
+                    'grupo_paralelo': etapa.grupo_paralelo,
+                    'regra_etapa': 'PRIMEIRO' if etapa.grupo and etapa.grupo.regra_aprovacao == 'QUALQUER' else 'TODOS',
+                    'regra_aprovacao': etapa.grupo.regra_aprovacao if etapa.grupo and etapa.grupo.regra_aprovacao else 'TODOS',
+                    'assinatura_obrigatoria': bool(etapa.assinatura_obrigatoria),
+                }
+                for etapa in WorkflowService.obter_etapas_ordenadas(workflow.id)
+            ]
             errors = [str(exc)]
             valid = False
 

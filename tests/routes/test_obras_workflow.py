@@ -1,15 +1,24 @@
+import json
+
 from app import db
 from app.models.cliente import Cliente
-from app.models.obra import FrenteTrabalho, Obra
+from app.models.configuracao import ObraConfig
+from app.models.obra import FrenteTrabalho, Obra, ObraUsuario
 from app.models.rdo import RDO
 from app.models.usuario import Papel
-from app.models.workflow import WorkflowDefinicao, WorkflowEtapa, WorkflowExecucao
+from app.models.workflow import WorkflowDefinicao, WorkflowEtapa, WorkflowExecucao, WorkflowGrupo
+from app.services.workflow_service import WorkflowService
 
 
-def test_criar_obra_ignora_workflow_individual_ate_obra_existir(client, empresa, usuario):
+def test_criar_obra_salva_workflow_individual_como_rascunho(client, empresa, usuario):
     usuario.troca_senha_obrigatoria = False
     db.session.add(usuario)
 
+    papel_aprovador = Papel(
+        nome="Engenheiro Obra Nova",
+        empresa_id=empresa.id,
+        ativo=True,
+    )
     cliente = Cliente(
         empresa_id=empresa.id,
         razao_social="Cliente Obra Nova",
@@ -24,7 +33,7 @@ def test_criar_obra_ignora_workflow_individual_ate_obra_existir(client, empresa,
         tipo_fluxo="SEQUENCIAL",
         ativo=True,
     )
-    db.session.add_all([cliente, workflow])
+    db.session.add_all([papel_aprovador, cliente, workflow])
     db.session.commit()
 
     with client.session_transaction() as sess:
@@ -39,14 +48,60 @@ def test_criar_obra_ignora_workflow_individual_ate_obra_existir(client, empresa,
             "cliente_id": str(cliente.id),
             "cnpj_obra": "99888777000166",
             "workflow_selecionado_id": str(workflow.id),
-            "workflow_config_json": '{"workflow_id": %d, "custom_stages": []}' % workflow.id,
+            "workflow_config_json": json.dumps({
+                "workflow_id": workflow.id,
+                "aprovacao_paralela": False,
+                "assignments": {},
+                "custom_stages": [
+                    {
+                        "nome": "Etapa 1",
+                        "tipo_aprovador": "PAPEL",
+                        "papel_id": papel_aprovador.id,
+                        "usuario_aprovador_id": None,
+                        "responsavel_usuario_id": None,
+                        "workflow_group": "1",
+                        "grupo_paralelo": None,
+                        "regra_etapa": "TODOS",
+                    }
+                ],
+            }),
         },
         follow_redirects=False,
     )
 
     assert resp.status_code == 302
-    assert Obra.query.filter_by(nome="Obra Nova Sem Workflow Individual", empresa_id=empresa.id).first()
+    obra = Obra.query.filter_by(nome="Obra Nova Sem Workflow Individual", empresa_id=empresa.id).first()
+    assert obra
+    workflow_obra = WorkflowDefinicao.query.filter_by(empresa_id=empresa.id, obra_id=obra.id, ativo=True).first()
+    assert workflow_obra
+    etapa = WorkflowEtapa.query.filter_by(workflow_id=workflow_obra.id).first()
+    assert etapa
+    assert etapa.papel_id == papel_aprovador.id
+    assert WorkflowGrupo.query.filter_by(workflow_id=workflow_obra.id, ativo=True).count() == 1
     assert WorkflowExecucao.query.filter_by(empresa_id=empresa.id).count() == 0
+    assert ObraConfig.query.filter_by(
+        empresa_id=empresa.id,
+        obra_id=obra.id,
+        chave=WorkflowService.WORKFLOW_ASSIGNMENTS_CONFIG_KEY,
+    ).first() is None
+    preview = WorkflowService.construir_preview_workflow_obra(
+        empresa_id=empresa.id,
+        obra_id=obra.id,
+        workflow_id=workflow_obra.id,
+    )
+    assert len(preview["etapas"]) == 1
+    assert preview["etapas"][0]["papel_id"] == papel_aprovador.id
+
+    ObraConfig.query.filter_by(empresa_id=empresa.id, obra_id=obra.id).delete(synchronize_session=False)
+    ObraUsuario.query.filter_by(empresa_id=empresa.id, obra_id=obra.id).delete(synchronize_session=False)
+    WorkflowEtapa.query.filter_by(workflow_id=workflow_obra.id).delete(synchronize_session=False)
+    WorkflowGrupo.query.filter_by(workflow_id=workflow_obra.id).delete(synchronize_session=False)
+    db.session.delete(workflow_obra)
+    db.session.delete(obra)
+    db.session.delete(workflow)
+    db.session.delete(cliente)
+    db.session.delete(papel_aprovador)
+    db.session.commit()
 
 
 def test_testar_workflow_bloqueia_fallback_sem_usuario_na_obra(client, empresa, papel, usuario):

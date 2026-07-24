@@ -893,15 +893,17 @@
 
     </div>
 
-    {% if item and item.id %}
+    {% if obra_governanca.workflow_setup.enabled %}
     <div class="px-5 pt-5">
         <div class="inline-flex rounded-2xl border border-slate-200 bg-slate-50 p-1 gap-1">
         <button type="button" class="obra-governanca-tab-trigger h-10 px-4 rounded-xl text-sm font-bold transition bg-white text-slate-800 shadow-sm" data-tab-trigger="workflow-definicoes" onclick="switchObraGovernancaTab('workflow-definicoes')">
             Definições
         </button>
+        {% if item and item.id %}
         <button type="button" class="obra-governanca-tab-trigger h-10 px-4 rounded-xl text-sm font-bold transition text-slate-500 hover:text-slate-700" data-tab-trigger="workflow-historico" onclick="switchObraGovernancaTab('workflow-historico')">
             Histórico de Execução
         </button>
+        {% endif %}
         </div>
     </div>
 
@@ -1209,9 +1211,11 @@
         </div>
     </div>
 
+    {% if item and item.id %}
     <div class="obra-governanca-tab-panel hidden" data-tab-panel="workflow-historico">
         {% include "cadastros/obras/_workflow_historico_execucoes.html" %}
     </div>
+    {% endif %}
 
     {% else %}
     <div class="p-10 text-center flex flex-col items-center justify-center">
@@ -3968,20 +3972,23 @@
                         responsavel_usuario_id: tipo === 'USUARIO' ?usuarioId : null,
                         assinatura_obrigatoria: globalSignature,
                         regra_etapa: normalizeWorkflowStageRule(stage.regra_etapa || getWorkflowGlobalRule()),
+                        regra_aprovacao: normalizeWorkflowStageRule(stage.regra_etapa || getWorkflowGlobalRule()) === 'PRIMEIRO' ? 'QUALQUER' : 'TODOS',
+                        workflow_group: String(stage.workflow_group || stage.grupo_visual || stage.grupo_paralelo || index + 1),
+                        grupo_paralelo: getWorkflowRules().isParallel ? (Number(stage.workflow_group || stage.grupo_visual || stage.grupo_paralelo || index + 1) || 1) : null,
                         ordem: index + 1,
                     };
                 })
                 .filter((stage) => {
-                    if (stage.tipo_aprovador === 'PAPEL') return Boolean(stage.papel_id && getWorkflowResolvedUserForRole(stage.papel_id));
-                    return Boolean(stage.usuario_aprovador_id && getWorkflowPrimaryRoleForUser(stage.usuario_aprovador_id));
+                    if (stage.tipo_aprovador === 'PAPEL') return Boolean(stage.papel_id);
+                    return Boolean(stage.usuario_aprovador_id);
                 });
         }
 
         function validateWorkflowConfig() {
-            if (!hasBackendItem) return true;
-
             const container = el('workflowEtapasContainer');
             const stages = obraWorkflowState.customStages || [];
+            const workflowId = Number(el('workflow_selecionado_id')?.value || 0) || null;
+            if (!workflowId && !stages.length) return true;
             if (!stages.length) {
                 showToast('O workflow deve ter pelo menos um aprovador.', 'error');
                 if (container) container.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -4012,10 +4019,6 @@
         function syncObraWorkflowConfigField() {
             const hidden = el('workflow_config_json');
             if (!hidden) return;
-            if (!hasBackendItem) {
-                hidden.value = '';
-                return;
-            }
             hidden.value = JSON.stringify({
                 workflow_id: Number(el('workflow_selecionado_id')?.value || 0) || null,
                 aprovacao_paralela: getWorkflowRules().isParallel,
