@@ -3,6 +3,7 @@ import json
 from app import db
 from app.models.cliente import Cliente
 from app.models.configuracao import ObraConfig
+from app.models.empresa import Empresa
 from app.models.obra import FrenteTrabalho, Obra, ObraUsuario
 from app.models.rdo import RDO
 from app.models.usuario import Papel
@@ -177,6 +178,72 @@ def test_criar_obra_com_workflow_padrao_mantem_heranca(client, empresa, usuario)
     db.session.delete(obra)
     WorkflowEtapa.query.filter_by(workflow_id=workflow.id).delete(synchronize_session=False)
     db.session.delete(workflow)
+    db.session.delete(cliente)
+    db.session.commit()
+
+
+def test_criar_obra_rejeita_workflow_de_outra_empresa(client, empresa, usuario):
+    usuario.troca_senha_obrigatoria = False
+    db.session.add(usuario)
+
+    cliente = Cliente(
+        empresa_id=empresa.id,
+        razao_social="Cliente Escopo Workflow",
+        nome_fantasia="Cliente Escopo Workflow",
+        cnpj="22333444000157",
+        ativo=True,
+    )
+    empresa_externa = Empresa(nome="Empresa Externa Workflow", ativo=True)
+    db.session.add(empresa_externa)
+    db.session.flush()
+    workflow_empresa_externa = WorkflowDefinicao(
+        empresa_id=empresa_externa.id,
+        nome="Workflow Outra Empresa",
+        codigo="WF_OUTRA_EMPRESA",
+        tipo_fluxo="SEQUENCIAL",
+        ativo=True,
+    )
+    db.session.add_all([cliente, workflow_empresa_externa])
+    db.session.commit()
+
+    with client.session_transaction() as sess:
+        sess["user_id"] = usuario.id
+        sess["empresa_id"] = empresa.id
+        sess["user_role"] = usuario.papel or "Admin"
+
+    resp = client.post(
+        "/auth/obras/salvar",
+        data={
+            "nome": "Obra Com Workflow Externo",
+            "cliente_id": str(cliente.id),
+            "cnpj_obra": "99888777000168",
+            "workflow_selecionado_id": str(workflow_empresa_externa.id),
+            "workflow_config_json": json.dumps({
+                "workflow_id": workflow_empresa_externa.id,
+                "customizado": True,
+                "aprovacao_paralela": False,
+                "assignments": {},
+                "custom_stages": [
+                    {
+                        "nome": "Etapa 1",
+                        "tipo_aprovador": "USUARIO",
+                        "usuario_aprovador_id": usuario.id,
+                        "responsavel_usuario_id": usuario.id,
+                        "workflow_group": "1",
+                        "regra_etapa": "TODOS",
+                    }
+                ],
+            }),
+        },
+        follow_redirects=False,
+    )
+
+    assert resp.status_code == 302
+    assert Obra.query.filter_by(nome="Obra Com Workflow Externo", empresa_id=empresa.id).first() is None
+    assert WorkflowDefinicao.query.filter_by(empresa_id=empresa.id, nome="Workflow Outra Empresa").first() is None
+
+    db.session.delete(workflow_empresa_externa)
+    db.session.delete(empresa_externa)
     db.session.delete(cliente)
     db.session.commit()
 

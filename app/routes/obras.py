@@ -418,6 +418,10 @@ def _normalizar_regra_aprovacao_obra(valor):
     return "QUALQUER" if regra in {"QUALQUER", "PRIMEIRO", "OU"} else "TODOS"
 
 
+def _get_workflow_obra_no_escopo(empresa_id, obra_id, workflow_id):
+    return WorkflowService.obter_workflow_no_escopo_obra(empresa_id, obra_id, workflow_id)
+
+
 def _upsert_obra_workflow_customizado(empresa_id, obra, source_workflow, workflow_config_data, actor_id):
     custom_stages = workflow_config_data.get("custom_stages") if isinstance(workflow_config_data.get("custom_stages"), list) else []
     if not custom_stages:
@@ -1711,7 +1715,13 @@ def gerar_obra():
             except ValueError:
                 raise WorkflowResolucaoError("Workflow selecionado invÃ¡lido para a obra.")
 
-            workflow_source = db.session.get(WorkflowDefinicao, workflow_selected_id)
+            workflow_source = _get_workflow_obra_no_escopo(
+                obra.empresa_id,
+                obra.id,
+                workflow_selected_id,
+            )
+            if not workflow_source:
+                raise WorkflowResolucaoError("Workflow selecionado Ã© invÃ¡lido para esta empresa.")
             if not _is_workflow_obra_mvp(workflow_source):
                 raise WorkflowResolucaoError("Nesta tela, selecione apenas os workflows Simples, Sequencial ou Paralelo.")
             custom_workflow = None
@@ -1894,7 +1904,9 @@ def preview_workflow_obra(id):
             workflow_id = int(workflow_id_raw)
         except ValueError:
             return jsonify({"ok": False, "error": "Workflow invalido."}), 400
-        workflow = db.session.get(WorkflowDefinicao, workflow_id)
+        workflow = _get_workflow_obra_no_escopo(empresa_id, obra.id, workflow_id)
+        if not workflow:
+            return jsonify({"ok": False, "error": "Workflow invalido para esta obra."}), 404
         if not _is_workflow_obra_mvp(workflow):
             return jsonify({"ok": False, "error": "Use apenas os workflows Simples, Sequencial ou Paralelo nesta tela."}), 400
 
@@ -1965,7 +1977,11 @@ def testar_workflow_obra(id):
         except ValueError:
             return jsonify({"ok": False, "error": "Workflow invalido."}), 400
 
-    workflow = db.session.get(WorkflowDefinicao, workflow_id) if workflow_id else WorkflowService.resolver_workflow(empresa_id, obra.id)
+    workflow = (
+        _get_workflow_obra_no_escopo(empresa_id, obra.id, workflow_id)
+        if workflow_id
+        else WorkflowService.resolver_workflow(empresa_id, obra.id)
+    )
     if not workflow:
         return jsonify({"ok": False, "error": "Nenhum workflow ativo encontrado para esta obra."}), 400
     if not _is_workflow_obra_mvp(workflow):

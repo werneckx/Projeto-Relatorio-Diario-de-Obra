@@ -795,6 +795,38 @@ class TestGeracaoAprovacoes:
             execucao_db = WorkflowExecucao.query.filter_by(rdo_id=rdo.id, ativo=True).first()
             assert execucao_db is not None
 
+    def test_iniciar_execucao_rejeita_workflow_de_outra_empresa(
+        self, app, db_session, empresa, obra, frente_trabalho
+    ):
+        """Execucao nao aceita workflow fora do escopo da obra."""
+        with app.app_context():
+            empresa_externa = Empresa(nome="Empresa Externa Workflow Service", ativo=True)
+            db.session.add(empresa_externa)
+            db.session.flush()
+
+            workflow_externo = WorkflowDefinicao(
+                empresa_id=empresa_externa.id,
+                nome="Workflow Externo Service",
+                codigo="WF_EXTERNO_SERVICE",
+                tipo_fluxo="SEQUENCIAL",
+                ativo=True,
+            )
+            db.session.add(workflow_externo)
+
+            rdo = RDO(
+                empresa_id=empresa.id,
+                obra_id=obra.id,
+                frente_trabalho_id=frente_trabalho.id,
+                status='PENDENTE',
+            )
+            db.session.add(rdo)
+            db.session.flush()
+
+            with pytest.raises(WorkflowResolucaoError, match="Nenhum workflow ativo encontrado"):
+                WorkflowService.iniciar_execucao(rdo.id, workflow_externo.id, sobrescrever=True)
+
+            assert WorkflowExecucao.query.filter_by(rdo_id=rdo.id, ativo=True).first() is None
+
     def test_nova_execucao_usa_responsavel_atualizado_sem_afetar_snapshot_anterior(
         self, app, db_session, empresa, obra, frente_trabalho, usuario, usuario2
     ):

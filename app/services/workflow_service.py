@@ -72,6 +72,31 @@ class WorkflowService:
         return 'Fluxo configuravel com etapas, papeis e paralelismo definidos pela empresa ou pela obra.'
 
     @staticmethod
+    def obter_workflow_no_escopo_obra(
+        empresa_id: int,
+        obra_id: int,
+        workflow_id: Optional[int],
+    ) -> Optional[WorkflowDefinicao]:
+        if not workflow_id:
+            return None
+        try:
+            empresa_id_int = int(empresa_id)
+            obra_id_int = int(obra_id)
+            workflow_id_int = int(workflow_id)
+        except (TypeError, ValueError):
+            return None
+
+        workflow = db.session.get(WorkflowDefinicao, workflow_id_int)
+        if (
+            not workflow
+            or not workflow.ativo
+            or workflow.empresa_id != empresa_id_int
+            or workflow.obra_id not in (None, obra_id_int)
+        ):
+            return None
+        return workflow
+
+    @staticmethod
     def _montar_diagrama_preview_workflow(workflow: WorkflowDefinicao, etapas: Iterable[Dict[str, Any]]) -> Dict[str, Any]:
         etapas_lista = list(etapas or [])
         is_parallel = bool(workflow.aprovacao_paralela)
@@ -726,7 +751,11 @@ class WorkflowService:
         workflow_id: Optional[int] = None,
         assignments: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
-        workflow = db.session.get(WorkflowDefinicao, workflow_id) if workflow_id else WorkflowService.resolver_workflow(empresa_id, obra_id)
+        workflow = (
+            WorkflowService.obter_workflow_no_escopo_obra(empresa_id, obra_id, workflow_id)
+            if workflow_id
+            else WorkflowService.resolver_workflow(empresa_id, obra_id)
+        )
         if not workflow:
             return {
                 'workflow_id': None,
@@ -975,9 +1004,13 @@ class WorkflowService:
         if not rdo:
             raise WorkflowResolucaoError(f"RDO {rdo_id} não encontrado")
 
-        workflow = db.session.get(WorkflowDefinicao, workflow_id) if workflow_id else WorkflowService.resolver_workflow(
-            rdo.empresa_id,
-            rdo.obra_id,
+        workflow = (
+            WorkflowService.obter_workflow_no_escopo_obra(rdo.empresa_id, rdo.obra_id, workflow_id)
+            if workflow_id
+            else WorkflowService.resolver_workflow(
+                rdo.empresa_id,
+                rdo.obra_id,
+            )
         )
         if not workflow:
             raise WorkflowResolucaoError(f"Nenhum workflow ativo encontrado para o RDO {rdo_id}")
